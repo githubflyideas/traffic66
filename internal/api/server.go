@@ -9,6 +9,7 @@ import (
 	"github.com/githubflyideas/traffic66/internal/snmp"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -42,6 +43,7 @@ type Server struct {
 
 	mu       sync.Mutex
 	sessions map[string]session
+	fails    failLimiter
 	rates    rates
 }
 
@@ -97,6 +99,85 @@ func (s *Server) Handler() http.Handler {
 	return mux
 }
 
+// failLimiter locks out a client address after repeated failed logins.
+type failLimiter struct {
+	mu  sync.Mutex
+	m   map[string]*failState
+	now func() time.Time
+}
+
+type failState struct {
+	n           int
+	first, lock time.Time
+}
+
+const (
+	maxFails   = 5
+	failWindow = time.Minute
+	lockFor    = time.Minute
+)
+
+func clientIP(r *http.Request) string {
+	h, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return h
+}
+
+func (f *failLimiter) clock() time.Time {
+	if f.now != nil {
+		return f.now()
+	}
+	return time.Now()
+}
+
+// blocked reports whether ip is locked out.
+func (f *failLimiter) blocked(ip string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	st := f.m[ip]
+	return st != nil && f.clock().Before(st.lock)
+}
+
+// fail records a failed attempt.
+func (f *failLimiter) fail(ip string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	now := f.clock()
+	if f.m == nil {
+		f.m = map[string]*failState{}
+	}
+	if len(f.m) > 10000 { // forget stale entries
+		for k, v := range f.m {
+			if now.Sub(v.first) > failWindow && now.After(v.lock) {
+				delete(f.m, k)
+			}
+		}
+	}
+	st := f.m[ip]
+	if st == nil || now.Sub(st.first) > failWindow {
+		st = &failState{first: now}
+		f.m[ip] = st
+	}
+	st.n++
+	if st.n >= maxFails {
+		st.lock = now.Add(lockFor)
+		st.n, st.first = 0, now
+	}
+}
+
+func (f *failLimiter) ok(ip string) {
+	f.mu.Lock()
+	delete(f.m, ip)
+	f.mu.Unlock()
+}
+
+func tooMany(w http.ResponseWriter) {
+	w.Header().Set("Retry-After", "60")
+	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too many failed logins; try again in a minute"})
+}
+
 func (s *Server) auth(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "); tok != "" && s.LocalTok != "" &&
@@ -104,7 +185,18 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 			next(w, r)
 			return
 		}
-		if u, p, ok := r.BasicAuth(); ok && s.checkPassword(u, p) {
+		if u, p, ok := r.BasicAuth(); ok {
+			ip := clientIP(r)
+			if s.fails.blocked(ip) {
+				tooMany(w)
+				return
+			}
+			if !s.checkPassword(u, p) {
+				s.fails.fail(ip)
+				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login"})
+				return
+			}
+			s.fails.ok(ip)
 			next(w, r)
 			return
 		}
@@ -135,11 +227,18 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
 		return
 	}
+	ip := clientIP(r)
+	if s.fails.blocked(ip) {
+		tooMany(w)
+		return
+	}
 	if !s.checkPassword(in.User, in.Password) {
+		s.fails.fail(ip)
 		time.Sleep(500 * time.Millisecond)
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "wrong user or password"})
 		return
 	}
+	s.fails.ok(ip)
 	b := make([]byte, 24)
 	rand.Read(b)
 	tok := hex.EncodeToString(b)
