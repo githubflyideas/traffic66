@@ -433,7 +433,7 @@ func runTUI(args []string) {
 	data := fs.String("data", "", "data directory of a local traffic66 (for automatic login)")
 	user := fs.String("user", "", "login user (not needed for a local traffic66)")
 	pass := fs.String("password", "", "login password")
-	lang := fs.String("lang", "", "language code, e.g. en, zh, ja (default: from environment)")
+	lang := fs.String("lang", "", "language code, e.g. en, zh, ja, ko (default: from environment)")
 	fs.Parse(args)
 	opt := tui.Options{URL: strings.TrimRight(*server, "/"), User: *user, Password: *pass, Lang: *lang}
 	if *user == "" {

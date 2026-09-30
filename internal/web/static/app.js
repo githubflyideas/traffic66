@@ -2,9 +2,9 @@
 'use strict';
 
 // ------------------------------------------------------------ i18n
-// Ordered by total number of speakers (Ethnologue); Japanese follows the top 11.
+// Ordered by total number of speakers (Ethnologue); Japanese and Korean follow the top 11.
 const LANGS = [['en','English'],['zh','中文'],['hi','हिन्दी'],['es','Español'],['ar','العربية'],['fr','Français'],
-  ['bn','বাংলা'],['pt','Português'],['ru','Русский'],['id','Bahasa Indonesia'],['ur','اردو'],['ja','日本語']];
+  ['bn','বাংলা'],['pt','Português'],['ru','Русский'],['id','Bahasa Indonesia'],['ur','اردو'],['ja','日本語'],['ko','한국어']];
 const RTL = new Set(['ar', 'ur']);
 let LANG = 'en', DICT = {}, EN = {};
 const t = (k, p) => {

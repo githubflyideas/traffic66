@@ -14,8 +14,8 @@ in a web UI and in a terminal UI.
   SNMP) and says why they differ when they do.
 - Top 66 lists, flow paths, countries and networks, threat list matches,
   flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
-- 12 languages: English, 中文, हिन्दी, Español, العربية, Français, বাংলা,
-  Português, Русский, Bahasa Indonesia, اردو, 日本語.
+- 13 languages: English, 中文, हिन्दी, Español, العربية, Français, বাংলা,
+  Português, Русский, Bahasa Indonesia, اردو, 日本語, 한국어.
 
 ## Try it
 
