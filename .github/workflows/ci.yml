@@ -1,0 +1,92 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux-amd64
+          - os: ubuntu-22.04-arm
+            target: linux-arm64
+          - os: macos-14
+            target: darwin-arm64
+          - os: macos-13
+            target: darwin-amd64
+          - os: windows-2022
+            target: windows-amd64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: MinGW (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc
+          path-type: inherit
+      - name: Put MinGW on PATH (Windows)
+        if: runner.os == 'Windows'
+        run: echo "${RUNNER_TEMP}/msys64/mingw64/bin" >> "$GITHUB_PATH"
+      - name: Resolve modules
+        run: go mod tidy
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
+          exe=traffic66; [[ "${{ runner.os }}" == Windows ]] && exe=traffic66.exe
+          scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
+          cp README.md "dist/traffic66-${{ matrix.target }}/"
+          [[ -f LICENSE ]] && cp LICENSE "dist/traffic66-${{ matrix.target }}/"
+          cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
+          "dist/traffic66-${{ matrix.target }}/$exe" version
+      - name: Smoke test (demo starts and serves the API)
+        run: |
+          exe=dist/traffic66-${{ matrix.target }}/traffic66; [[ "${{ runner.os }}" == Windows ]] && exe="$exe.exe"
+          "$exe" demo -data "$RUNNER_TEMP/demo" -password ci -addr 127.0.0.1:18066 -listen "" &
+          for i in $(seq 1 90); do curl -sf -u admin:ci http://127.0.0.1:18066/api/status >/dev/null && break; sleep 2; done
+          curl -sf -u admin:ci "http://127.0.0.1:18066/api/topn?dim=client&limit=66" | head -c 300
+          kill %1 || true
+      - name: Package
+        run: |
+          cd dist
+          if [[ "${{ runner.os }}" == Windows ]]; then 7z a "traffic66-${{ matrix.target }}.zip" "traffic66-${{ matrix.target }}" >/dev/null
+          else tar czf "traffic66-${{ matrix.target }}.tar.gz" "traffic66-${{ matrix.target }}"; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: traffic66-${{ matrix.target }}
+          path: dist/traffic66-${{ matrix.target }}.*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          draft: true

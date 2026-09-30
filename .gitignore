@@ -1,0 +1,7 @@
+/traffic66
+/traffic66.exe
+/dist/
+/traffic66-data/
+/traffic66-demo/
+*.duckdb
+*.duckdb.wal

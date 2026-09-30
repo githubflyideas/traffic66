@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>traffic66</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232a78d6'/%3E%3Cpath d='M3 11l3-4 3 2 4-5' stroke='white' stroke-width='1.8' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app" id="app" hidden>
+<aside>
+  <div class="brand"><span>traffic<b>66</b></span><span class="demo" id="demo" hidden></span></div>
+  <nav class="dash" id="nav" aria-label="Dashboards">
+    <div class="grp" data-i="grp.traffic"></div>
+    <button data-v="overview" data-i="nav.overview"></button>
+    <button data-v="topn" data-i="nav.topn"></button>
+    <button data-v="sankey" data-i="nav.sankey"></button>
+    <button data-v="geo" data-i="nav.geo"></button>
+    <div class="grp" data-i="grp.security"></div>
+    <button data-v="threats" data-i="nav.threats"></button>
+    <div class="grp" data-i="grp.detail"></div>
+    <button data-v="records" data-i="nav.records"></button>
+    <div class="grp" data-i="grp.quality"></div>
+    <button data-v="ifaces" data-i="nav.ifaces"></button>
+    <button data-v="sources"><span data-i="nav.sources"></span><span class="badge" id="srcBadge" hidden></span></button>
+  </nav>
+  <div class="self" id="self"></div>
+  <div class="foot">
+    <select id="lang" aria-label="Language"></select>
+    <button class="linkbtn" id="logout" data-i="top.logout"></button>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="row1">
+      <h1 id="title"></h1>
+      <label class="search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+        <input id="q" autocomplete="off" spellcheck="false"></label>
+      <div class="range" role="group" id="range"></div>
+      <span class="refresh" id="refresh"></span>
+      <button class="btn" id="share" data-i="top.copy"></button>
+    </div>
+    <div class="row2" id="filters" aria-live="polite"></div>
+  </header>
+  <main id="main">
+    <section class="view" id="v-overview"></section>
+    <section class="view" id="v-topn"></section>
+    <section class="view" id="v-sankey"></section>
+    <section class="view" id="v-geo"></section>
+    <section class="view" id="v-threats"></section>
+    <section class="view" id="v-records"></section>
+    <section class="view" id="v-ifaces"></section>
+    <section class="view" id="v-sources"></section>
+  </main>
+</div>
+</div>
+
+<div class="login" id="login" hidden>
+  <form id="loginForm" class="panel">
+    <div class="brand"><span>traffic<b>66</b></span></div>
+    <h2 data-i="login.title"></h2>
+    <label><span data-i="login.user"></span><input name="user" autocomplete="username" required></label>
+    <label><span data-i="login.password"></span><input name="password" type="password" autocomplete="current-password" required></label>
+    <p class="err" id="loginErr" hidden></p>
+    <button class="primary" data-i="login.go"></button>
+  </form>
+</div>
+
+<div class="pop" id="pop" role="menu"></div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>

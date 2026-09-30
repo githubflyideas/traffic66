@@ -1,0 +1,203 @@
+// Package api serves the JSON API and the embedded web UI.
+package api
+
+import (
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/hex"
+	"encoding/json"
+	"github.com/githubflyideas/traffic66/internal/snmp"
+	"io/fs"
+	"log"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/githubflyideas/traffic66/internal/collector"
+	"github.com/githubflyideas/traffic66/internal/dnsres"
+	"github.com/githubflyideas/traffic66/internal/enrich"
+	"github.com/githubflyideas/traffic66/internal/pipeline"
+	"github.com/githubflyideas/traffic66/internal/store"
+)
+
+// Server wires the API together.
+type Server struct {
+	Store    *store.Store
+	Pipe     *pipeline.Pipeline
+	Col      *collector.Collector
+	Inv      *enrich.Inventory
+	ASN      *enrich.ASNDB
+	Thr      *enrich.Threats
+	DNS      *dnsres.Resolver
+	Static   fs.FS
+	Version  string
+	Demo     bool
+	Users    map[string]string
+	LocalTok string // token for the TUI on this machine
+	Capture  func() []CaptureInfo
+	SNMP     func() []snmp.Status
+	Started  time.Time
+	DataDir  string
+
+	mu       sync.Mutex
+	sessions map[string]session
+	rates    rates
+}
+
+type session struct {
+	user string
+	exp  time.Time
+}
+
+// CaptureInfo describes a local capture interface.
+type CaptureInfo struct {
+	Iface   string `json:"iface"`
+	Method  string `json:"method"`
+	Packets uint64 `json:"packets"`
+	Dropped uint64 `json:"dropped"`
+	Flows   int    `json:"active_flows"`
+	Err     string `json:"error,omitempty"`
+}
+
+const cookieName = "t66s"
+
+// Handler returns the HTTP handler.
+func (s *Server) Handler() http.Handler {
+	s.sessions = map[string]session{}
+	if s.Started.IsZero() {
+		s.Started = time.Now()
+	}
+	go s.sampleRates()
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/login", s.login)
+	mux.HandleFunc("POST /api/logout", s.logout)
+	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
+	api("GET /api/status", s.status)
+	api("GET /api/overview", s.overview)
+	api("GET /api/topn", s.topn)
+	api("GET /api/sankey", s.sankey)
+	api("GET /api/records", s.records)
+	api("GET /api/threats", s.threats)
+	api("GET /api/ifaces", s.ifaces)
+	api("GET /api/recon", s.recon)
+	api("GET /api/sources", s.sources)
+	api("POST /api/resolve", s.resolve)
+	api("GET /api/inventory", s.getInventory)
+	api("POST /api/inventory", s.putInventory)
+	static := http.FileServer(http.FS(s.Static))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+			w.Header().Set("Cache-Control", "no-cache")
+		}
+		static.ServeHTTP(w, r)
+	})
+	return mux
+}
+
+func (s *Server) auth(next http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "); tok != "" && s.LocalTok != "" &&
+			subtle.ConstantTimeCompare([]byte(tok), []byte(s.LocalTok)) == 1 {
+			next(w, r)
+			return
+		}
+		if u, p, ok := r.BasicAuth(); ok && s.checkPassword(u, p) {
+			next(w, r)
+			return
+		}
+		if c, err := r.Cookie(cookieName); err == nil {
+			s.mu.Lock()
+			se, ok := s.sessions[c.Value]
+			if ok && time.Now().Before(se.exp) {
+				se.exp = time.Now().Add(12 * time.Hour)
+				s.sessions[c.Value] = se
+				s.mu.Unlock()
+				next(w, r)
+				return
+			}
+			s.mu.Unlock()
+		}
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login"})
+	})
+}
+
+func (s *Server) checkPassword(u, p string) bool {
+	want, ok := s.Users[u]
+	return ok && subtle.ConstantTimeCompare([]byte(want), []byte(p)) == 1
+}
+
+func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	var in struct{ User, Password string }
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
+		return
+	}
+	if !s.checkPassword(in.User, in.Password) {
+		time.Sleep(500 * time.Millisecond)
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "wrong user or password"})
+		return
+	}
+	b := make([]byte, 24)
+	rand.Read(b)
+	tok := hex.EncodeToString(b)
+	s.mu.Lock()
+	now := time.Now()
+	for k, v := range s.sessions {
+		if now.After(v.exp) {
+			delete(s.sessions, k)
+		}
+	}
+	s.sessions[tok] = session{in.User, now.Add(12 * time.Hour)}
+	s.mu.Unlock()
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	writeJSON(w, http.StatusOK, map[string]string{"user": in.User})
+}
+
+func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
+	if c, err := r.Cookie(cookieName); err == nil {
+		s.mu.Lock()
+		delete(s.sessions, c.Value)
+		s.mu.Unlock()
+	}
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: -1})
+	writeJSON(w, http.StatusOK, map[string]string{})
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("api: encode: %v", err)
+	}
+}
+
+func fail(w http.ResponseWriter, err error) {
+	writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+}
+
+// rates samples pipeline counters once per second.
+type rates struct {
+	mu                 sync.Mutex
+	recPerSec, rowRate float64
+	lastRec, lastRow   uint64
+}
+
+func (s *Server) sampleRates() {
+	t := time.NewTicker(time.Second)
+	n := 0
+	for now := range t.C {
+		if n++; n%5 == 0 {
+			s.sampleSources(now)
+		}
+		rec, row := s.Pipe.Records.Load(), s.Pipe.Rows.Load()
+		s.rates.mu.Lock()
+		s.rates.recPerSec = s.rates.recPerSec*0.8 + float64(rec-s.rates.lastRec)*0.2
+		s.rates.rowRate = s.rates.rowRate*0.8 + float64(row-s.rates.lastRow)*0.2
+		s.rates.lastRec, s.rates.lastRow = rec, row
+		s.rates.mu.Unlock()
+	}
+}
