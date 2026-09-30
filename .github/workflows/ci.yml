@@ -21,8 +21,12 @@ jobs:
             target: linux-arm64
           - os: macos-14
             target: darwin-arm64
-          - os: macos-13
+          # Intel macOS runners are being retired: cross-compile on Apple silicon.
+          - os: macos-14
             target: darwin-amd64
+            goarch: amd64
+            cc: clang -arch x86_64
+            cross: true
           - os: windows-2022
             target: windows-amd64
     runs-on: ${{ matrix.os }}
@@ -49,18 +53,26 @@ jobs:
       - name: Vet
         run: go vet ./...
       - name: Test
-        run: go test ./...
+        run: |
+          set -o pipefail
+          # failing tests become annotations, readable without downloading logs
+          go test -count=1 ./... 2>&1 | tee test.log || {
+            grep -E -- '--- FAIL|^\s+\S+_test\.go:[0-9]+:|^FAIL|panic:' test.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done
+            exit 1
+          }
       - name: Build
         run: |
           ver="${GITHUB_REF_NAME#v}"
           [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
           exe=traffic66; [[ "${{ runner.os }}" == Windows ]] && exe=traffic66.exe
+          if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
           scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
           cp README.md "dist/traffic66-${{ matrix.target }}/"
           [[ -f LICENSE ]] && cp LICENSE "dist/traffic66-${{ matrix.target }}/"
           cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
-          "dist/traffic66-${{ matrix.target }}/$exe" version
+          [[ -n "${{ matrix.cross }}" ]] || "dist/traffic66-${{ matrix.target }}/$exe" version
       - name: Smoke test (demo starts and serves the API)
+        if: ${{ !matrix.cross }}
         run: |
           exe=dist/traffic66-${{ matrix.target }}/traffic66; [[ "${{ runner.os }}" == Windows ]] && exe="$exe.exe"
           "$exe" demo -data "$RUNNER_TEMP/demo" -password ci -addr 127.0.0.1:18066 -listen "" &
