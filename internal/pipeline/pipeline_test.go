@@ -163,3 +163,47 @@ func TestTopNIPv6Groups(t *testing.T) {
 		}
 	}
 }
+
+// Detail older than the retention is removed from disk and queries.
+func TestRetention(t *testing.T) {
+	st, err := store.Open(store.Options{Dir: t.TempDir(), RawDays: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	p := New(Config{}, st, enrich.NewInventory(), enrich.NewASNDB(), enrich.NewThreats())
+	now := time.Now().UTC().Truncate(time.Hour)
+	exp := netip.MustParseAddr("10.0.0.1")
+	rec := func(at time.Time) flow.Record {
+		return flow.Record{Start: at, End: at, Src: netip.MustParseAddr("10.1.1.1"), Dst: netip.MustParseAddr("198.51.100.9"),
+			SrcPort: 50000, DstPort: 443, Proto: 6, Bytes: 1000, Packets: 1, Mult: 1, SamplingKnown: true, Exporter: exp, Source: flow.SrcIPFIX}
+	}
+	p.Ingest([]flow.Record{rec(now.Add(-72 * time.Hour)), rec(now.Add(-2 * time.Hour))})
+	p.FlushRows()
+	if err := st.Seal(now); err != nil {
+		t.Fatal(err)
+	}
+	if u := st.Usage(); u.Segments != 1 {
+		t.Fatalf("segments before retention: %+v", u)
+	}
+	if err := st.Retain(now); err != nil {
+		t.Fatal(err)
+	}
+	all := store.Query{From: now.Add(-100 * time.Hour), To: now, Filters: []store.Filter{{Field: "exporter", Value: exp.String()}}}
+	tot, err := st.Totals(all)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Both rows were sealed into one file whose newest row is recent, so the
+	// file is kept: retention works on whole files.
+	if tot.Flows != 2 {
+		t.Fatalf("after retention of a mixed file: %+v", tot)
+	}
+	if err := st.Retain(now.Add(48 * time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	tot, _ = st.Totals(all)
+	if tot.Flows != 0 || st.Usage().Segments != 0 {
+		t.Fatalf("expired data still visible: %+v, %+v", tot, st.Usage())
+	}
+}
