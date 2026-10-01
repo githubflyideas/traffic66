@@ -19,6 +19,10 @@ antarmuka terminal.
   ancaman, catatan flow, enkapsulasi (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - 13 bahasa di antarmuka web dan antarmuka terminal.
 
+![Ringkasan: bandwidth per aplikasi dibanding minggu lalu, apa yang naik, klien dan layanan teratas](images/overview.png)
+
+<sub>Semua tangkapan layar berasal dari `traffic66 demo`, jaringan perusahaan simulasi yang bisa Anda jalankan sendiri (lihat [Coba demo](#1-try-the-demo)).</sub>
+
 <a id="contents"></a>
 
 ## Daftar isi
@@ -502,6 +506,8 @@ hitungan detik, beserta protokol, sampling rate, loss, paket terakhir, dan
 statusnya. Jika status tidak hijau, teks di sebelahnya menjelaskan apa yang
 salah dan apa yang perlu diubah.
 
+![Sumber: setiap perangkat beserta protokol, sampling, loss, dan apa yang perlu diperbaiki](images/sources.png)
+
 Jika sebuah perangkat tidak muncul:
 
 1. Pantau paket di mesin traffic66 (Linux, macOS):
@@ -526,6 +532,8 @@ traffic66 membandingkannya dengan counter interface milik perangkat dan
 menampilkan selisihnya di **Pencocokan antarmuka**, beserta kemungkinan
 penyebabnya bila selisih itu lebih besar daripada yang bisa dijelaskan oleh
 sampling saja.
+
+![Pencocokan antarmuka: estimasi flow di samping counter perangkat untuk setiap interface](images/interfaces.png)
 
 Agar ada counter untuk dibandingkan:
 
@@ -617,6 +625,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 Restart traffic66 setelah menambah atau mengubah daftar. Kecocokan muncul
 di **Intel ancaman**, dikelompokkan per nama daftar.
 
+![Intel ancaman: host internal yang mengirim data ke alamat di daftar ancaman](images/threats.png)
+
 <a id="9-using-the-web-ui"></a>
 
 ## 9. Memakai antarmuka web
@@ -651,9 +661,20 @@ menyalin tautan ke tampilan saat ini secara persis (halaman, rentang waktu,
 dan filter) untuk dikirim ke rekan kerja. Bahasa mengikuti browser; ubah di
 bagian bawah menu.
 
-Top-N untuk rentang waktu panjang diambil dari ringkasan per jam; filter
-tidak tersedia di sana, dan halaman memberi tahu hal itu. Pilih rentang
-yang lebih pendek untuk memfilter.
+Rentang yang lebih panjang dari 6 jam dimulai pada jam penuh, sehingga
+setiap angka di halaman menghitung waktu yang persis sama: "24 jam" mencakup
+24 jam penuh terakhir ditambah jam yang sedang berjalan. Top-N untuk rentang
+ini diambil dari ringkasan per jam; filter tidak tersedia di sana, dan
+halaman memberi tahu hal itu. Pilih rentang yang lebih pendek untuk
+memfilter.
+
+![Top-N: 66 percakapan teratas dalam satu jam terakhir](images/topn.png)
+
+![Jalur trafik: segmen mana memakai aplikasi apa menuju negara mana](images/paths.png)
+
+Ringkasan yang sama dalam bahasa Tionghoa; setiap halaman tersedia dalam 13 bahasa:
+
+![Ringkasan dalam bahasa Tionghoa](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
 
@@ -674,6 +695,10 @@ berjalan sebagai user lain, seperti halnya service, gunakan `-user` dan
 Tombol: 1–8 halaman, ↑↓ pilih, Enter aksi untuk nilai terpilih, f tampilkan
 hanya ini, x kecualikan, / cari, t rentang waktu, c hapus filter, w buka
 tampilan yang sama di browser, q keluar.
+
+![Antarmuka terminal: ringkasan](images/tui-overview.png)
+
+![Antarmuka terminal: klien Top-N](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 

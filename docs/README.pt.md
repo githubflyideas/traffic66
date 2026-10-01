@@ -19,6 +19,10 @@ equipamentos, em uma interface web e em uma interface de terminal.
   MPLS).
 - 13 idiomas na interface web e na interface de terminal.
 
+![Visão geral: banda por aplicação em comparação com a semana passada, o que cresceu, principais clientes e serviços](images/overview.png)
+
+<sub>Todas as capturas de tela vêm do `traffic66 demo`, uma rede corporativa simulada que você mesmo pode executar (veja [Testar a demo](#1-try-the-demo)).</sub>
+
 <a id="contents"></a>
 
 ## Conteúdo
@@ -500,6 +504,8 @@ protocolo, taxa de amostragem, perdas, último pacote e um status. Quando o
 status não está verde, o texto ao lado diz o que está errado e o que
 mudar.
 
+![Fontes: cada equipamento com protocolo, amostragem, perdas e o que corrigir](images/sources.png)
+
 Se um equipamento não aparecer:
 
 1. Verifique se chegam pacotes na máquina do traffic66 (Linux, macOS):
@@ -524,6 +530,8 @@ amostragem. O traffic66 os compara com os contadores de interface do
 próprio equipamento e mostra a diferença em **Conferência de interfaces**,
 com a causa provável quando ela é maior do que a amostragem sozinha
 explica.
+
+![Conferência de interfaces: estimativa de fluxo ao lado do contador do equipamento para cada interface](images/interfaces.png)
 
 Para ter contadores com que comparar:
 
@@ -619,6 +627,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 Reinicie o traffic66 depois de adicionar ou alterar listas. As ocorrências
 aparecem em **Ameaças**, pelo nome da lista.
 
+![Ameaças: um host interno enviando dados para um endereço de uma lista de ameaças](images/threats.png)
+
 <a id="9-using-the-web-ui"></a>
 
 ## 9. Usando a interface web
@@ -653,8 +663,19 @@ de busca opcional, atualização automática a cada 30 segundos e
 intervalo de tempo e filtros) para mandar a um colega. O idioma segue o do
 navegador; dá para trocar no fim do menu.
 
-Em intervalos de tempo longos, o Top-N vem de resumos por hora; lá não há
-filtros, e a página avisa. Escolha um intervalo menor para filtrar.
+Intervalos maiores que 6 horas começam em uma hora cheia, para que todos os
+números da página contem exatamente o mesmo tempo: "24 horas" cobre as
+últimas 24 horas cheias mais a atual. Nesses intervalos, o Top-N vem de
+resumos por hora; lá não há filtros, e a página avisa. Escolha um intervalo
+menor para filtrar.
+
+![Top-N: as 66 maiores conversas da última hora](images/topn.png)
+
+![Caminhos do tráfego: qual segmento usa qual aplicação para qual país](images/paths.png)
+
+A mesma visão geral em chinês; todas as páginas estão disponíveis em 13 idiomas:
+
+![Visão geral em chinês](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
 
@@ -675,6 +696,10 @@ e `-password`. `-lang` escolhe o idioma (`en`, `zh`, `hi`, `es`, `ar`,
 Teclas: 1–8 páginas, ↑↓ selecionar, Enter ações sobre o valor selecionado,
 f mostrar só, x excluir, / buscar, t intervalo de tempo, c limpar filtros,
 w abrir a mesma visão no navegador, q sair.
+
+![Interface de terminal: visão geral](images/tui-overview.png)
+
+![Interface de terminal: Top-N de clientes](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 

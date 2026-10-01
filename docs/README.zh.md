@@ -10,6 +10,10 @@
 - Top 66 排行、流向、国家与运营商网络、威胁情报命中、流记录、封装（GRE、IPIP、VXLAN、GENEVE、MPLS）。
 - Web 界面和终端界面均支持 13 种语言。
 
+![概览：按应用划分的带宽与上周对比、增长情况、主要客户端和服务](images/overview.png)
+
+<sub>所有截图均来自 `traffic66 demo`，这是一个你可以自己运行的模拟公司网络（见 [试用演示](#1-try-the-demo)）。</sub>
+
 <a id="contents"></a>
 
 ## 目录
@@ -437,6 +441,8 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 打开 **接入**。只要设备发来了数据，几秒内就会出现在这里，并显示协议、采样率、丢包、最后收包时间和状态。状态不是绿色时，旁边的文字会说明问题所在以及该改什么。
 
+![接入：每台设备的协议、采样、丢包以及需要修正的地方](images/sources.png)
+
 如果某台设备没有出现：
 
 1. 在 traffic66 主机上抓包看看（Linux、macOS）：`sudo tcpdump -ni any udp port 6343 or udp port 2055 or udp port 4739`。什么都抓不到，说明报文没有到达本机：检查设备配置、路由以及沿途的防火墙。
@@ -448,6 +454,8 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ## 6. 让统计结果与接口计数器对上
 
 流统计是估算值：采样到的报文数乘以采样率。traffic66 会将其与设备自身的接口计数器比对，在 **接口对账** 中显示差值；差值超出采样本身所能解释的范围时，还会给出可能的原因。
+
+![接口对账：每个接口的流量估算值与设备计数器并列对比](images/interfaces.png)
 
 获取用于比对的计数器：
 
@@ -510,6 +518,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 添加或修改列表后需重启 traffic66。命中结果会按列表名显示在 **威胁情报** 中。
 
+![威胁情报：一台内部主机正在向威胁情报列表中的地址发送数据](images/threats.png)
+
 <a id="9-using-the-web-ui"></a>
 
 ## 9. 使用 Web 界面
@@ -536,7 +546,15 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 页面上方有：时间范围（15 分钟到 30 天）、可选的搜索框、每 30 秒自动刷新，以及**复制链接**——复制一个精确指向当前视图（页面、时间范围和过滤条件）的链接，方便发给同事。界面语言跟随浏览器设置，可在菜单底部切换。
 
-长时间范围的 Top-N 来自小时汇总数据，无法使用过滤条件，页面上也会有提示。需要过滤时请选择较短的时间范围。
+超过 6 小时的时间范围从整点开始，因此页面上的每个数字统计的都是完全相同的时间段：“24 小时”涵盖最近 24 个完整小时加上当前这一小时。这些范围的 Top-N 来自小时汇总数据，无法使用过滤条件，页面上也会有提示。需要过滤时请选择较短的时间范围。
+
+![Top-N：最近一小时的前 66 个会话](images/topn.png)
+
+![流向：哪个网段在访问哪个国家的哪个应用](images/paths.png)
+
+同一个概览的中文界面；所有页面都支持 13 种语言：
+
+![中文界面的概览](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
 
@@ -551,6 +569,10 @@ traffic66 -tui                                    # collect and show the termina
 在 traffic66 主机上，只要能读取数据目录，`traffic66 tui` 就会自动登录（数据目录不是默认位置时请指定 `-data`）。如果 traffic66 以其他用户身份运行（作为服务运行时就是这样），请改用 `-user` 和 `-password`。`-lang` 选择语言（`en`、`zh`、`hi`、`es`、`ar`、`fr`、`bn`、`pt`、`ru`、`id`、`ur`、`ja`、`ko`）。
 
 按键：1–8 切换页面，↑↓ 选择，Enter 对选中的值执行操作，f 只看，x 排除，/ 搜索，t 时间范围，c 清除过滤条件，w 在浏览器中打开相同视图，q 退出。
+
+![终端界面：概览](images/tui-overview.png)
+
+![终端界面：Top-N 客户端](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
