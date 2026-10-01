@@ -83,8 +83,10 @@ func TestIngestQuerySeal(t *testing.T) {
 	if d := sum - float64(wantWire); d > 1 || d < -1 {
 		t.Fatalf("series sum %f want %d", sum, wantWire)
 	}
-	// Seal everything older than this hour and query again across hot+parquet.
-	if err := st.Seal(now.Add(time.Hour)); err != nil {
+	// Seal everything and query again across hot+parquet. Seal keeps the
+	// hour that is still open (with 5 minutes' grace), so seal as of two
+	// hours ahead: one hour ahead fails in the first 5 minutes of an hour.
+	if err := st.Seal(now.Add(2 * time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	top2, err := st.TopN(q, "conv", 66)

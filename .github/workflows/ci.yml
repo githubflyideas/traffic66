@@ -15,10 +15,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # built on glibc 2.28 (RHEL 8) so it runs on RHEL/Rocky/Alma 8+,
+          # Ubuntu 20.04+, Debian 10+
           - os: ubuntu-22.04
             target: linux-amd64
+            container: quay.io/pypa/manylinux_2_28_x86_64
           - os: ubuntu-22.04-arm
             target: linux-arm64
+            container: quay.io/pypa/manylinux_2_28_aarch64
           - os: macos-14
             target: darwin-arm64
           - os: macos-15-intel
@@ -27,6 +31,9 @@ jobs:
           - os: windows-latest
             target: windows-amd64
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container || '' }}
+    env:
+      GOFLAGS: -buildvcs=false
     defaults:
       run:
         shell: bash
@@ -35,6 +42,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+      - name: Static C libraries (Linux)
+        if: ${{ matrix.container }}
+        run: |
+          rpm -q glibc-static || dnf install -y glibc-static || dnf --enablerepo=powertools install -y glibc-static
       - name: Resolve modules
         run: go mod tidy
       - name: Vet
@@ -63,15 +74,37 @@ jobs:
             if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
             scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
             cp README.md "dist/traffic66-${{ matrix.target }}/"
+            cp -r docs "dist/traffic66-${{ matrix.target }}/"
             [[ -f LICENSE ]] && cp LICENSE "dist/traffic66-${{ matrix.target }}/"
             cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
             [[ -n "${{ matrix.cross }}" ]] || "dist/traffic66-${{ matrix.target }}/$exe" version
           } 2>&1 | tee build.log
+      - name: Check run-time dependencies
+        run: |
+          exe=dist/traffic66-${{ matrix.target }}/traffic66
+          case "${{ runner.os }}" in
+          Linux)
+            # fully static: no glibc version requirement at all
+            out=$(ldd "$exe" 2>&1 || true); echo "$out"
+            grep -qE 'not a dynamic executable|statically linked' <<<"$out" || { echo "::error::Linux build is not static: $out"; exit 1; } ;;
+          Windows)
+            objdump -p "$exe.exe" | grep 'DLL Name'
+            if objdump -p "$exe.exe" | grep -iE 'DLL Name: *(libstdc|libgcc|libwinpthread|msys)'; then echo "::error::needs MinGW DLLs"; exit 1; fi ;;
+          macOS)
+            otool -L "$exe"
+            if otool -L "$exe" | tail -n +2 | grep -vE '^\s*/(usr/lib|System)/'; then echo "::error::unexpected library"; exit 1; fi
+            otool -l "$exe" | grep -A3 LC_BUILD_VERSION | grep minos ;;
+          esac
       - name: Smoke test (demo starts and serves the API)
         if: ${{ !matrix.cross }}
         run: |
           exe=dist/traffic66-${{ matrix.target }}/traffic66; [[ "${{ runner.os }}" == Windows ]] && exe="$exe.exe"
-          "$exe" demo -data "$RUNNER_TEMP/demo" -password ci -addr 127.0.0.1:18066 -listen "" &
+          # on Windows, run without the build tools on PATH, as on a user's machine
+          if [[ "${{ runner.os }}" == Windows ]]; then
+            env PATH="/c/Windows/System32:/c/Windows" "$exe" demo -data "$RUNNER_TEMP/demo" -password ci -addr 127.0.0.1:18066 -listen "" &
+          else
+            "$exe" demo -data "$RUNNER_TEMP/demo" -password ci -addr 127.0.0.1:18066 -listen "" &
+          fi
           for i in $(seq 1 90); do curl -sf -u admin:ci http://127.0.0.1:18066/api/status >/dev/null && break; sleep 2; done
           curl -sf -u admin:ci "http://127.0.0.1:18066/api/topn?dim=client&limit=66" | head -c 300
           kill %1 || true
@@ -96,9 +129,45 @@ jobs:
           name: traffic66-${{ matrix.target }}
           path: dist/traffic66-${{ matrix.target }}.*
 
+  old-linux:
+    # the Linux packages must run on CentOS 7 (glibc 2.17, kernel 3.10 without
+    # getrandom, emulated with seccomp) and on Alpine (musl)
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux-amd64
+          - os: ubuntu-22.04-arm
+            target: linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: traffic66-${{ matrix.target }}
+      - name: Run on CentOS 7 and Alpine
+        run: |
+          tar xzf traffic66-${{ matrix.target }}.tar.gz
+          d="$PWD/traffic66-${{ matrix.target }}"
+          echo '{"defaultAction":"SCMP_ACT_ALLOW","syscalls":[{"names":["getrandom"],"action":"SCMP_ACT_ERRNO","errnoRet":38}]}' > nogetrandom.json
+          for img in centos:7 alpine:3.20; do
+            echo "::group::$img"
+            docker run --rm --security-opt seccomp="$PWD/nogetrandom.json" -v "$d:/t66" "$img" sh -c '
+              /t66/traffic66 version || exit 1
+              /t66/traffic66 demo -data /tmp/d -password ci -addr 127.0.0.1:18066 -listen "" > /tmp/log 2>&1 &
+              for i in $(seq 1 90); do
+                if wget -q -O /dev/null --header "Authorization: Basic YWRtaW46Y2k=" "http://127.0.0.1:18066/api/topn?dim=client&limit=66" 2>/dev/null ||
+                   curl -sf -o /dev/null -u admin:ci "http://127.0.0.1:18066/api/topn?dim=client&limit=66" 2>/dev/null; then echo "running and serving"; exit 0; fi
+                sleep 2
+              done
+              cat /tmp/log; exit 1' || { echo "::error::does not run on $img"; exit 1; }
+            echo "::endgroup::"
+          done
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, old-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
