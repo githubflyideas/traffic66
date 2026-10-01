@@ -20,6 +20,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/githubflyideas/traffic66/internal/api"
 	"github.com/githubflyideas/traffic66/internal/auth"
@@ -28,6 +30,7 @@ import (
 	"github.com/githubflyideas/traffic66/internal/dnsres"
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/flow"
+	"github.com/githubflyideas/traffic66/internal/geo"
 	"github.com/githubflyideas/traffic66/internal/pipeline"
 	"github.com/githubflyideas/traffic66/internal/sim"
 	"github.com/githubflyideas/traffic66/internal/snmp"
@@ -54,10 +57,10 @@ Run "traffic66 <command> -h" for the flags of a command.
 
 func main() {
 	log.SetFlags(log.LstdFlags)
-	args := os.Args[1:]
+	args := cleanArgs(os.Args[1:])
 	cmd := "serve"
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		cmd, args = args[0], args[1:]
+		cmd, args = strings.ToLower(args[0]), args[1:]
 	}
 	switch cmd {
 	case "serve":
@@ -84,10 +87,72 @@ func main() {
 	case "help", "-h", "--help":
 		fmt.Printf(usage, version)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", cmd)
+		fmt.Fprintf(os.Stderr, "unknown command %q", cmd)
+		if s := nearestCommand(cmd); s != "" {
+			fmt.Fprintf(os.Stderr, " (did you mean %q?)", s)
+		}
+		fmt.Fprint(os.Stderr, "\n\n")
 		fmt.Printf(usage, version)
 		os.Exit(2)
 	}
+}
+
+var commands = []string{"serve", "demo", "tui", "simulate", "passwd", "interfaces", "version", "help"}
+
+// cleanArgs undoes what copying a command from a web page or chat often adds:
+// full-width or non-breaking spaces, quotes around a word, full-width dashes
+// and a trailing full stop. Arguments that become empty are dropped.
+func cleanArgs(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, a := range in {
+		a = strings.TrimFunc(a, func(r rune) bool {
+			return unicode.IsSpace(r) || strings.ContainsRune("'\"`‘’“”「」『』", r)
+		})
+		a = strings.TrimRight(a, ".。,，;；")
+		a = strings.TrimFunc(a, func(r rune) bool {
+			return unicode.IsSpace(r) || strings.ContainsRune("'\"`‘’“”「」『』", r)
+		})
+		if strings.HasPrefix(a, "－") || strings.HasPrefix(a, "—") || strings.HasPrefix(a, "–") {
+			_, n := utf8.DecodeRuneInString(a)
+			a = "-" + a[n:]
+		}
+		if a != "" {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// nearestCommand returns the command within two edits of s, if any.
+func nearestCommand(s string) string {
+	best, bestD := "", 3
+	for _, c := range commands {
+		if d := editDistance(s, c); d < bestD {
+			best, bestD = c, d
+		}
+	}
+	return best
+}
+
+func editDistance(a, b string) int {
+	ra, rb := []rune(a), []rune(b)
+	prev := make([]int, len(rb)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= len(ra); i++ {
+		cur := make([]int, len(rb)+1)
+		cur[0] = i
+		for j := 1; j <= len(rb); j++ {
+			cost := 1
+			if ra[i-1] == rb[j-1] {
+				cost = 0
+			}
+			cur[j] = min(prev[j]+1, cur[j-1]+1, prev[j-1]+cost)
+		}
+		prev = cur
+	}
+	return prev[len(rb)]
 }
 
 type multiFlag []string
@@ -175,8 +240,22 @@ func serve(args []string, demo bool) {
 		} else {
 			log.Printf("ASN table: %d ranges from %s", asn.Size(), asnPath)
 		}
-	} else {
-		log.Printf("no ASN/country table; put one at %s to see countries and networks", filepath.Join(f.data, "asn.tsv.gz"))
+	}
+	for _, name := range []string{"country.mmdb", "asn.mmdb"} {
+		p := filepath.Join(f.data, name)
+		if _, err := os.Stat(p); err != nil {
+			continue
+		}
+		r, err := geo.Open(p)
+		if err != nil {
+			log.Printf("%s: %v", p, err)
+			continue
+		}
+		asn.SetMMDB(r, name)
+		log.Printf("geo database %s: %s", name, r.Type)
+	}
+	if !asn.Loaded() {
+		log.Printf("no country/ASN database; upload one on the Sources page to see countries and networks")
 	}
 	thr := enrich.NewThreats()
 	threatFiles := map[string]string{}

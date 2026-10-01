@@ -18,7 +18,7 @@ in a web UI and in a terminal UI.
   flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - 13 languages in the web UI and the terminal UI.
 
-![Overview: bandwidth by application compared with last week, who grew, top clients and services](docs/images/overview.png)
+![Overview: bandwidth by application compared with last week, top clients and services](docs/images/overview.png)
 
 <sub>All screenshots come from `traffic66 demo`, a simulated company network that you can run yourself (see [Try the demo](#1-try-the-demo)).</sub>
 
@@ -84,7 +84,8 @@ cd traffic66-windows-amd64
 Open http://127.0.0.1:8066 and sign in as `admin` / `try66`. The demo builds
 a small company network with a day of history and live traffic from four
 simulated devices, including two incidents to find: start on **Overview**,
-look at **Who grew**, and click your way from there. Stop it with Ctrl+C.
+click a host in **Top clients**, choose **Show details**, and keep clicking
+from there. Stop it with Ctrl+C.
 Demo data is kept in `traffic66-demo` next to the program; delete that
 folder to start the demo afresh.
 
@@ -521,7 +522,12 @@ the sampling rate is not known yet.
 
 ## 7. Names, SNMP and your own networks
 
-**Sources → Names** in the web UI takes one entry per line. It is saved as
+The quickest way to name a host or a device: click its address on any page
+and choose **Name it…**. Type the name and press Enter; it is saved at
+once and shown everywhere instead of the bare address.
+
+For networks, interfaces and SNMP, **Sources → Names** in the web UI takes
+one entry per line. It is saved as
 `inventory.txt` in the data directory, so you can also edit that file (see
 `inventory.txt.example`). Every line is optional.
 
@@ -558,17 +564,27 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. Countries, networks and threat lists
 
-Countries and network (AS) names need an IP-to-ASN table. Download the free
-one from [iptoasn.com](https://iptoasn.com):
+Countries and network (AS) names need a database that maps addresses to
+them. Upload one in the web UI: **Sources → Countries and networks
+database → Upload a database file…**. It is checked, saved in the data
+directory and used for new traffic at once; no restart is needed. Traffic
+already stored keeps the country it was saved with.
 
-```
-curl -LO https://iptoasn.com/data/ip2asn-combined.tsv.gz
-mv ip2asn-combined.tsv.gz <data directory>/asn.tsv.gz
-```
+Accepted files:
 
-Any file in the same format works (tab separated: first address, last
-address, AS number, country code, AS name; plain or gzip). Restart
-traffic66 after replacing it; download a new one every month or so.
+| File | Gives | Where to get it |
+|---|---|---|
+| DB-IP Lite country or ASN, `.mmdb` | country, or AS number and name | free, no account: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country or ASN, `.mmdb` | country, or AS number and name | free with a MaxMind account: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IP-to-ASN table, `.tsv` or `.tsv.gz` | AS number, AS name and country | free: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+
+Upload a country database and an ASN database to get both; where several
+are loaded, the `.mmdb` files take precedence for what they contain. New
+versions come out monthly: upload the new file the same way to replace the
+old one.
+
+Without the web UI, copy the file into the data directory as
+`country.mmdb`, `asn.mmdb` or `asn.tsv.gz` and restart traffic66.
 
 Threat lists are plain text files with one address or network per line
 (text after `#` or `;` is ignored), saved as `<data directory>/threats/<name>.txt`, for
@@ -592,6 +608,13 @@ port, an application, a country, a device — can be clicked:
 - **Show only this** / **Exclude this** adds a filter. Filters appear
   under the top bar and apply to every page until you remove them.
 - **Show its flow records** opens the matching individual flows.
+- **Show details** (hosts, devices and services) opens a page about that
+  one host or service: its traffic over time by application, who it talks
+  to, which services or clients, countries and its latest flows. Every
+  value there can be clicked again, so you can keep drilling down; the
+  browser's Back button returns.
+- **Name it…** (hosts and devices) gives the address a name, shown
+  everywhere from then on.
 - **Look it up online** opens the address or AS in a public lookup site.
 - **Copy** copies the value.
 
@@ -599,15 +622,14 @@ Pages:
 
 | Page | What it answers |
 |---|---|
-| Overview | How much traffic now and compared with last week, by application; what grew; top clients and services |
-| Top-N | The top 66 of clients, servers, conversations, applications, ports, countries, networks, segments, devices, encapsulation or VLAN |
-| Conversations | Who talks to whom: the top 66 client–server pairs with their service |
+| Overview | How much traffic now and compared with last week, by application; top clients and services |
+| Top-N | One table of the top 66: by default conversations (client, server, service, country). Click a blue column heading to group by it, a number heading to sort; **Group by** offers applications, networks, segments, devices, encapsulation and VLAN |
 | Flow paths | Which segment talks to which application in which country |
 | Geo & networks | Traffic by country and by network (AS) |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
 | Flow records | Individual flows, newest first, with selectable columns |
 | Interface check | Flow numbers next to the interface counters, worst first, with reasons |
-| Sources | Devices, sampling, loss, collectors, SNMP, and **Names** |
+| Sources | Devices, sampling, loss, collectors, SNMP, the countries and networks database, and **Names** |
 
 Above the pages: time range (15 minutes to 30 days), an optional search
 box, automatic refresh every 30 seconds, and **Copy link**, which copies a
@@ -619,12 +641,16 @@ Ranges longer than 6 hours start on a whole hour, so every number on the
 page counts exactly the same time: "24 hours" covers the last 24 whole
 hours plus the current one. Top-N over these ranges comes from hourly
 summaries; filters are not available there, and the page says so. Choose a
-shorter range to filter. **Conversations** always reads the flow detail, so over long ranges
-at high flow rates it can take a while; one hour is fastest.
+shorter range to filter. Conversations always read the flow detail, so over long ranges
+at high flow rates they can take a while; one hour is fastest.
 
-![Top-N: the top 66 clients of the last hour](docs/images/topn.png)
+The side menu shows how much disk the data uses and how much is free;
+hover over the free space to see how much the kept days of detail need at
+the current rate (estimated once there is a day of data).
 
-![Conversations: who talks to whom, with the service](docs/images/conv.png)
+![Top-N: the top 66 conversations of the last hour](docs/images/topn.png)
+
+![Details of one host: its traffic, who it talks to, services, countries and latest flows](docs/images/detail.png)
 
 ![Flow paths: which segment uses which application towards which country](docs/images/paths.png)
 
@@ -646,13 +672,13 @@ traffic66 runs as another user, as a service does, use `-user` and
 `-password` instead. `-lang` picks the language (`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`).
 
-Keys: 1–9 pages, ↑↓ select, Enter actions on the selected value, f show
+Keys: 1–8 pages, ↑↓ select, Enter actions on the selected value, f show
 only, x exclude, / search, t time range, c clear filters, w open the same
 view in a browser, q quit.
 
 ![Terminal UI: overview](docs/images/tui-overview.png)
 
-![Terminal UI: Top-N clients](docs/images/tui-topn.png)
+![Terminal UI: Top-N conversations](docs/images/tui-topn.png)
 
 ## 11. Local capture
 
@@ -761,7 +787,7 @@ Options of `traffic66` and `traffic66 demo`:
 | `-sampling-wait` | `5m` | how long records wait for a sampling rate |
 | `-capture` | | capture on a local interface (repeatable) |
 | `-inventory` | `<data>/inventory.txt` | names file |
-| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table |
+| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` files: upload them, or `<data>/country.mmdb` and `<data>/asn.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | extra threat list as `name=path` (repeatable) |
 | `-dns-upstream` | system resolver | DNS server for showing host names |
 | `-dns-rate` | `20` | reverse lookups per second at most |
@@ -786,7 +812,7 @@ The data directory holds everything:
 | `traffic66.duckdb` | summaries, interface counters and the current hour |
 | `password` | login passwords (hashed) |
 | `inventory.txt` | names (**Sources → Names**) |
-| `asn.tsv.gz`, `threats/` | lookup tables you added |
+| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | countries and networks databases and threat lists you added |
 
 - **Backup**: stop traffic66 and copy the directory. Without stopping,
   copy `raw/`, `password` and `inventory.txt`; the current hour and the
@@ -857,7 +883,7 @@ traffic66 then restarts instead of the machine running out of memory.
 | "waiting for the sampling rate" | The device has not sent its sampler options yet; most resend within minutes. If it never does, export them (`option sampler-table` on Cisco) or mark it `unsampled` in Names if it really is 1:1 |
 | Numbers lower than the interface counters | See **Interface check**: loss on the way, interfaces not sampled, or flows still in the device cache (active timeout longer than 60 s) |
 | Numbers higher than the interface counters | The same traffic sampled on two interfaces or two devices |
-| No countries or networks | No IP-to-ASN table: see [Countries](#8-countries-networks-and-threat-lists) |
+| No countries or networks ("Unknown") | No database loaded: upload one on **Sources**, see [Countries](#8-countries-networks-and-threat-lists) |
 | "The database reached its memory limit" on a page | Choose a shorter time range, or start with a larger `-memory`; details are in the log |
 | Forgot the password | `traffic66 passwd` on the traffic66 machine (add `-data` if traffic66 runs with it) |
 | `Conflicting lock is held` | Another traffic66 already uses this data directory |

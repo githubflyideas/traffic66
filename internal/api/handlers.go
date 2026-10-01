@@ -86,18 +86,6 @@ func limitParam(r *http.Request, def int) int {
 
 // ---------------------------------------------------------------- overview
 
-type mover struct {
-	IP     string  `json:"ip"`
-	Delta  float64 `json:"delta_bps"`
-	Now    float64 `json:"now_bps"`
-	Before float64 `json:"before_bps"`
-	Peer   string  `json:"peer"`
-	Port   string  `json:"port"`
-	CC     string  `json:"cc"`
-	Threat string  `json:"threat,omitempty"`
-	Role   string  `json:"role"` // "client" or "server" for the peer relation
-}
-
 type slicePart struct {
 	Key  string `json:"key"`
 	Wire uint64 `json:"wire"`
@@ -165,9 +153,6 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// movers: internal hosts whose traffic grew the most
-	out["movers"] = s.movers(q, qb)
-
 	donut := func(dim string, keep int) []slicePart {
 		rows, err := s.Store.TopN(q, dim, 20)
 		if err != nil {
@@ -225,85 +210,6 @@ func (s *Server) hostWire(q store.Query, ips []string) map[string]uint64 {
 		}
 	}
 	return out
-}
-
-func (s *Server) movers(q, qb store.Query) []mover {
-	sum := func(q store.Query) map[string]uint64 {
-		m := map[string]uint64{}
-		for _, dim := range []string{"client", "server"} {
-			rows, err := s.Store.TopN(q, dim, 300)
-			if err != nil {
-				continue
-			}
-			for _, t := range rows {
-				if t.Int {
-					m[t.Key] += t.Wire
-				}
-			}
-		}
-		return m
-	}
-	cur := sum(q)
-	// candidates: the busiest internal hosts now; their baseline is exact
-	type kv struct {
-		ip string
-		w  uint64
-	}
-	var cand []kv
-	for ip, w := range cur {
-		cand = append(cand, kv{ip, w})
-	}
-	sort.Slice(cand, func(i, j int) bool { return cand[i].w > cand[j].w })
-	if len(cand) > 40 {
-		cand = cand[:40]
-	}
-	ips := make([]string, len(cand))
-	for i, c := range cand {
-		ips[i] = c.ip
-	}
-	prev := s.hostWire(qb, ips)
-	secs := q.To.Sub(q.From).Seconds()
-	var ms []mover
-	for _, c := range cand {
-		d := (float64(c.w) - float64(prev[c.ip])) * 8 / secs
-		if d <= 0 {
-			continue
-		}
-		ms = append(ms, mover{IP: c.ip, Delta: d, Now: float64(c.w) * 8 / secs, Before: float64(prev[c.ip]) * 8 / secs})
-	}
-	sort.Slice(ms, func(i, j int) bool { return ms[i].Delta > ms[j].Delta })
-	if tot, err := s.Store.Totals(q); err == nil && secs > 0 {
-		floor := float64(tot.Wire) * 8 / secs * 0.01
-		keep := ms[:0]
-		for _, m := range ms {
-			if m.Delta >= floor {
-				keep = append(keep, m)
-			}
-		}
-		ms = keep
-	}
-	if len(ms) > 5 {
-		ms = ms[:5]
-	}
-	for i := range ms {
-		qq := q
-		qq.Filters = append(append([]store.Filter{}, q.Filters...), store.Filter{Field: "ip", Value: ms[i].IP})
-		rows, err := s.Store.TopN(qq, "conv", 1)
-		if err != nil || len(rows) == 0 {
-			continue
-		}
-		t := rows[0]
-		if t.Key == ms[i].IP {
-			ms[i].Peer, ms[i].Role = t.Key2, "client"
-		} else {
-			ms[i].Peer, ms[i].Role = t.Key, "server"
-		}
-		ms[i].Port, ms[i].CC = t.Key3, t.Extra
-		if a, err := netip.ParseAddr(ms[i].Peer); err == nil {
-			ms[i].Threat = s.Thr.Match(a)
-		}
-	}
-	return ms
 }
 
 // ---------------------------------------------------------------- lists
@@ -601,13 +507,15 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	s.rates.mu.Lock()
 	rec, rows := s.rates.recPerSec, s.rates.rowRate
 	s.rates.mu.Unlock()
+	// Disk: what is used and free, and, once there is a day of data, how much
+	// the kept days of detail will need at the current rate. Retention
+	// deletes older data, so the disk does not fill as long as that fits.
 	free := diskFree(s.DataDir)
-	days := -1.0
+	need := int64(-1)
 	if !u.Oldest.IsZero() {
 		age := time.Since(u.Oldest).Hours() / 24
-		if age >= 0.04 && u.DiskBytes > 0 {
-			perDay := float64(u.DiskBytes) / age
-			days = float64(free) / perDay
+		if age >= 1 && u.DiskBytes > 0 {
+			need = int64(float64(u.DiskBytes) / age * float64(s.Store.RetentionDays()))
 		}
 	}
 	warn := 0
@@ -631,7 +539,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"version": s.Version, "demo": s.Demo, "uptime": int64(time.Since(s.Started).Seconds()),
 		"records_per_sec": rec, "rows_per_sec": rows, "dropped": s.Pipe.Dropped.Load(), "dup_rows": s.Pipe.DupRows.Load(), "dedup_full": s.Pipe.DedupFull.Load(),
 		"write_errors": s.Pipe.WriteErrs.Load(), "last_error": s.Pipe.LastError(),
-		"disk_bytes": u.DiskBytes, "disk_free": free, "days_left": days, "oldest": u.Oldest.UnixMilli(),
+		"disk_bytes": u.DiskBytes, "disk_free": free, "disk_need": need, "retention_days": s.Store.RetentionDays(), "oldest": u.Oldest.UnixMilli(),
 		"hot_rows": u.HotRows, "segments": u.Segments, "segment_rows": u.SegmentRows,
 		"dns_upstream": s.DNS.Upstream(), "dns_queries": s.DNS.Queries, "asn_ranges": s.ASN.Size(), "threat_lists": s.Thr.Lists(),
 		"source_warnings": warn, "hosts": names, "skewed": s.Col.Skewed.Load(), "go": runtime.Version(),

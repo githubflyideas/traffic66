@@ -18,7 +18,7 @@ counters से मेल खाते हैं — web UI में भी औ
   flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS)।
 - web UI और terminal UI में 13 भाषाएँ।
 
-![सारांश: पिछले हफ़्ते की तुलना में application के हिसाब से bandwidth, क्या बढ़ा, top clients और services](images/overview.png)
+![सारांश: पिछले हफ़्ते की तुलना में application के हिसाब से bandwidth, top clients और services](images/overview.png)
 
 <sub>सभी स्क्रीनशॉट `traffic66 demo` से लिए गए हैं, एक simulated कंपनी नेटवर्क जिसे आप ख़ुद चला सकते हैं ([डेमो चलाकर देखें](#1-try-the-demo) देखें)।</sub>
 
@@ -88,8 +88,8 @@ cd traffic66-windows-amd64
 http://127.0.0.1:8066 खोलें और `admin` / `try66` से साइन इन करें। डेमो एक
 छोटी कंपनी का नेटवर्क बनाता है, जिसमें एक दिन का इतिहास और चार simulated
 डिवाइसों से live ट्रैफ़िक होता है, और उसमें ढूँढने के लिए दो incidents भी हैं:
-**सारांश** से शुरू करें, **किसका ट्रैफ़िक बढ़ा** देखें, और वहाँ से क्लिक करते
-हुए आगे बढ़ें। Ctrl+C से बंद करें। डेमो का डेटा प्रोग्राम के बगल में
+**सारांश** से शुरू करें, **शीर्ष क्लाइंट** में किसी host पर क्लिक करें,
+**विवरण देखें** चुनें, और वहाँ से क्लिक करते हुए आगे बढ़ें। Ctrl+C से बंद करें। डेमो का डेटा प्रोग्राम के बगल में
 `traffic66-demo` में रहता है; डेमो नए सिरे से शुरू करने के लिए वह फ़ोल्डर
 हटा दें।
 
@@ -553,7 +553,12 @@ export packets traffic66 तक पहुँचने से पहले खो
 
 ## 7. नाम, SNMP और आपके अपने नेटवर्क
 
-web UI में **स्रोत → नाम** हर लाइन में एक entry लेता है। यह data directory में
+किसी host या डिवाइस को नाम देने का सबसे तेज़ तरीका: किसी भी पेज पर उसके address
+पर क्लिक करें और **नाम दें…** चुनें। नाम टाइप करके Enter दबाएँ; यह तुरंत सेव हो
+जाता है और हर जगह खाली address की जगह दिखता है।
+
+नेटवर्क, interfaces और SNMP के लिए, web UI में **स्रोत → नाम** हर लाइन में एक
+entry लेता है। यह data directory में
 `inventory.txt` के रूप में सेव होता है, इसलिए आप वह फ़ाइल सीधे भी edit कर सकते
 हैं (`inventory.txt.example` देखें)। हर लाइन वैकल्पिक है।
 
@@ -591,17 +596,27 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. देश, नेटवर्क और threat lists
 
-देशों और नेटवर्क (AS) के नामों के लिए IP-to-ASN table चाहिए।
-[iptoasn.com](https://iptoasn.com) से मुफ़्त table डाउनलोड करें:
+देशों और नेटवर्क (AS) के नामों के लिए एक database चाहिए जो addresses को उनसे
+जोड़ता है। इसे web UI में अपलोड करें: **स्रोत → देश और नेटवर्क डेटाबेस → डेटाबेस फ़ाइल अपलोड करें…**।
+फ़ाइल जाँची जाती है, data directory में सेव होती है और नए ट्रैफ़िक के लिए तुरंत
+इस्तेमाल होती है; restart की ज़रूरत नहीं। पहले से सेव ट्रैफ़िक वही देश रखता है
+जिसके साथ वह सेव हुआ था।
 
-```
-curl -LO https://iptoasn.com/data/ip2asn-combined.tsv.gz
-mv ip2asn-combined.tsv.gz <data directory>/asn.tsv.gz
-```
+स्वीकार की जाने वाली फ़ाइलें:
 
-इसी format की कोई भी फ़ाइल चलेगी (tab से अलग: पहला address, आख़िरी address,
-AS number, country code, AS name; plain या gzip)। इसे बदलने के बाद traffic66
-restart करें; लगभग हर महीने नई फ़ाइल डाउनलोड करें।
+| फ़ाइल | क्या देती है | कहाँ से लें |
+|---|---|---|
+| DB-IP Lite country या ASN, `.mmdb` | देश, या AS number और नाम | मुफ़्त, बिना account: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country या ASN, `.mmdb` | देश, या AS number और नाम | MaxMind account के साथ मुफ़्त: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IP-to-ASN table, `.tsv` या `.tsv.gz` | AS number, AS name और देश | मुफ़्त: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+
+दोनों पाने के लिए एक country database और एक ASN database अपलोड करें; जहाँ कई
+लोड हों, वहाँ `.mmdb` फ़ाइलों में जो जानकारी है उसके लिए उन्हें प्राथमिकता मिलती
+है। नए versions हर महीने आते हैं: पुरानी फ़ाइल बदलने के लिए नई फ़ाइल इसी तरह
+अपलोड करें।
+
+web UI के बिना, फ़ाइल को data directory में `country.mmdb`, `asn.mmdb` या
+`asn.tsv.gz` नाम से कॉपी करें और traffic66 restart करें।
 
 Threat lists सादी text फ़ाइलें होती हैं, हर लाइन में एक address या नेटवर्क
 (`#` या `;` के बाद का टेक्स्ट नज़रअंदाज़ होता है), जो
@@ -627,6 +642,13 @@ application, देश, डिवाइस — पर क्लिक किय�
 - **केवल यही दिखाएँ** / **इसे हटाएँ** एक filter जोड़ता है। Filters top bar के
   नीचे दिखते हैं और हटाए जाने तक हर पेज पर लागू रहते हैं।
 - **इसके फ़्लो रिकॉर्ड देखें** मेल खाते अलग-अलग flows खोलता है।
+- **विवरण देखें** (hosts, डिवाइस और services) उस एक host या service के बारे में
+  एक पेज खोलता है: समय के साथ application के हिसाब से उसका ट्रैफ़िक, वह किससे
+  बात करता है, कौन-सी services या clients, देश और उसके नवीनतम flows। वहाँ की हर
+  value पर फिर से क्लिक किया जा सकता है, ताकि आप और गहराई में जा सकें; browser
+  का Back बटन वापस ले जाता है।
+- **नाम दें…** (hosts और डिवाइस) address को एक नाम देता है, जो उसके बाद हर जगह
+  दिखता है।
 - **ऑनलाइन खोजें** address या AS को किसी public lookup साइट पर खोलता है।
 - **कॉपी करें** value कॉपी करता है।
 
@@ -634,15 +656,14 @@ application, देश, डिवाइस — पर क्लिक किय�
 
 | पेज | किस सवाल का जवाब देता है |
 |---|---|
-| सारांश | अभी कितना ट्रैफ़िक है और पिछले हफ़्ते की तुलना में कितना, application के हिसाब से; क्या बढ़ा; top clients और services |
-| Top-N | clients, servers, conversations, applications, ports, देशों, नेटवर्कों, segments, डिवाइसों, encapsulation या VLAN के top 66 |
-| बातचीत | कौन किससे बात करता है: top 66 client–server जोड़े, उनकी service के साथ |
+| सारांश | अभी कितना ट्रैफ़िक है और पिछले हफ़्ते की तुलना में कितना, application के हिसाब से; top clients और services |
+| Top-N | top 66 की एक table: डिफ़ॉल्ट रूप से conversations (client, server, service, देश)। किसी नीले column heading पर क्लिक करके उसके हिसाब से group करें, किसी संख्या वाले heading पर क्लिक करके sort करें; **इसके अनुसार समूह** में applications, नेटवर्क, segments, डिवाइस, encapsulation और VLAN मिलते हैं |
 | ट्रैफ़िक के रास्ते | कौन-सा segment किस देश में किस application से बात करता है |
 | भूगोल और नेटवर्क | देश के हिसाब से और नेटवर्क (AS) के हिसाब से ट्रैफ़िक |
 | ख़तरे की जानकारी | वे hosts जिन्होंने आपकी threat lists के addresses से बात की, और उन्होंने कितना भेजा |
 | फ़्लो रिकॉर्ड | अलग-अलग flows, सबसे नए पहले, चुने जा सकने वाले columns के साथ |
 | इंटरफ़ेस मिलान | interface counters के बगल में flow के आँकड़े, सबसे ख़राब पहले, कारणों के साथ |
-| स्रोत | डिवाइस, sampling, loss, collectors, SNMP, और **नाम** |
+| स्रोत | डिवाइस, sampling, loss, collectors, SNMP, देश और नेटवर्क डेटाबेस, और **नाम** |
 
 पेजों के ऊपर: time range (15 मिनट से 30 दिन), एक वैकल्पिक search box, हर 30
 सेकंड पर automatic refresh, और **लिंक कॉपी करें**, जो ठीक मौजूदा view (पेज,
@@ -652,12 +673,16 @@ time range और filters) का link कॉपी करता है ता�
 6 घंटे से लंबी ranges पूरे घंटे से शुरू होती हैं, ताकि पेज का हर आँकड़ा ठीक
 एक जैसा समय गिने: "24 घंटे" में पिछले 24 पूरे घंटे और मौजूदा घंटा शामिल हैं।
 इन ranges पर Top-N घंटेवार summaries से आता है; वहाँ filters उपलब्ध नहीं
-हैं, और पेज यह बता देता है। filter करने के लिए छोटी range चुनें। **बातचीत** हमेशा flow detail पढ़ता है, इसलिए
+हैं, और पेज यह बता देता है। filter करने के लिए छोटी range चुनें। बातचीत (conversations) हमेशा flow detail पढ़ती है, इसलिए
 ऊँची flow दरों पर लंबी ranges में इसमें कुछ समय लग सकता है; एक घंटा सबसे तेज़ है।
 
-![Top-N: पिछले घंटे के top 66 clients](images/topn.png)
+side menu दिखाता है कि data कितनी disk इस्तेमाल करता है और कितनी ख़ाली है;
+ख़ाली जगह पर hover करें तो दिखता है कि मौजूदा दर पर रखे गए दिनों के detail को
+कितनी जगह चाहिए (एक दिन का data होने के बाद अनुमान लगाया जाता है)।
 
-![बातचीत: कौन किससे बात करता है, service के साथ](images/conv.png)
+![Top-N: पिछले घंटे की top 66 conversations](images/topn.png)
+
+![एक host का विवरण: उसका ट्रैफ़िक, वह किससे बात करता है, services, देश और नवीनतम flows](images/detail.png)
 
 ![ट्रैफ़िक के रास्ते: कौन-सा segment किस देश की ओर किस application का इस्तेमाल करता है](images/paths.png)
 
@@ -681,13 +706,13 @@ directory पढ़ सकता है (डिफ़ॉल्ट न हो त
 `-password` इस्तेमाल करें। `-lang` भाषा चुनता है (`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`)।
 
-Keys: 1–9 पेज, ↑↓ चुनें, Enter चुनी गई value पर actions, f केवल यही दिखाएँ,
+Keys: 1–8 पेज, ↑↓ चुनें, Enter चुनी गई value पर actions, f केवल यही दिखाएँ,
 x हटाएँ, / search, t time range, c filters साफ़ करें, w यही view browser में
 खोलें, q बाहर निकलें।
 
 ![Terminal UI: सारांश](images/tui-overview.png)
 
-![Terminal UI: Top-N clients](images/tui-topn.png)
+![Terminal UI: Top-N conversations](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -808,7 +833,7 @@ packets (जैसे दो mirror ports पर) दो बार गिने 
 | `-sampling-wait` | `5m` | records sampling rate का कितनी देर इंतज़ार करें |
 | `-capture` | | local interface पर capture (दोहराया जा सकता है) |
 | `-inventory` | `<data>/inventory.txt` | नामों की फ़ाइल |
-| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table |
+| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` फ़ाइलें: उन्हें अपलोड करें, या `<data>/country.mmdb` और `<data>/asn.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | अतिरिक्त threat list, `name=path` के रूप में (दोहराया जा सकता है) |
 | `-dns-upstream` | system resolver | host names दिखाने के लिए DNS server |
 | `-dns-rate` | `20` | प्रति सेकंड अधिकतम reverse lookups |
@@ -835,7 +860,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `traffic66.duckdb` | summaries, interface counters और मौजूदा घंटा |
 | `password` | login पासवर्ड (hashed) |
 | `inventory.txt` | नाम (**स्रोत → नाम**) |
-| `asn.tsv.gz`, `threats/` | आपकी जोड़ी हुई lookup tables |
+| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | आपके जोड़े हुए देश और नेटवर्क databases और threat lists |
 
 - **बैकअप**: traffic66 रोकें और directory कॉपी करें। बिना रोके
   `raw/`, `password` और `inventory.txt` कॉपी करें; तब मौजूदा घंटा और
@@ -912,7 +937,7 @@ restart हो जाता है।
 | "waiting for the sampling rate" | डिवाइस ने अभी तक अपने sampler options नहीं भेजे; ज़्यादातर कुछ मिनटों में दोबारा भेज देते हैं। अगर कभी न भेजे, तो उन्हें export करवाएँ (Cisco पर `option sampler-table`) या अगर वह सच में 1:1 है तो नाम में उसे `unsampled` लिखें |
 | आँकड़े interface counters से कम | **इंटरफ़ेस मिलान** देखें: रास्ते में loss, interfaces sample नहीं हो रहे, या flows अभी डिवाइस के cache में हैं (active timeout 60 s से लंबा) |
 | आँकड़े interface counters से ज़्यादा | वही ट्रैफ़िक दो interfaces या दो डिवाइसों पर sample हो रहा है |
-| कोई देश या नेटवर्क नहीं | IP-to-ASN table नहीं है: [देश](#8-countries-networks-and-threat-lists) देखें |
+| कोई देश या नेटवर्क नहीं ("अज्ञात") | कोई database लोड नहीं है: **स्रोत** पर एक अपलोड करें, [देश](#8-countries-networks-and-threat-lists) देखें |
 | पेज पर "डेटाबेस अपनी मेमोरी सीमा तक पहुँच गया और जवाब नहीं दे सका" | छोटी समय सीमा चुनें, या बड़े `-memory` के साथ शुरू करें; विवरण log में है |
 | पासवर्ड भूल गए | traffic66 मशीन पर `traffic66 passwd` (अगर traffic66 `-data` के साथ चलता है तो `-data` जोड़ें) |
 | `Conflicting lock is held` | कोई दूसरा traffic66 पहले से यही data directory इस्तेमाल कर रहा है |

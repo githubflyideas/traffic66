@@ -19,7 +19,7 @@ propios equipos, tanto en una interfaz web como en una interfaz de terminal.
   MPLS).
 - 13 idiomas en la interfaz web y en la de terminal.
 
-![Resumen: ancho de banda por aplicación frente a la semana pasada, qué ha crecido, principales clientes y servicios](images/overview.png)
+![Resumen: ancho de banda por aplicación frente a la semana pasada, principales clientes y servicios](images/overview.png)
 
 <sub>Todas las capturas de pantalla proceden de `traffic66 demo`, una red de empresa simulada que puede ejecutar usted mismo (vea [Probar la demo](#1-try-the-demo)).</sub>
 
@@ -89,8 +89,9 @@ cd traffic66-windows-amd64
 Abra http://127.0.0.1:8066 e inicie sesión como `admin` / `try66`. La demo
 monta la red de una pequeña empresa con un día de historial y tráfico en
 vivo de cuatro equipos simulados, e incluye dos incidentes por descubrir:
-empiece en **Resumen**, mire **Quién ha crecido** y siga haciendo clic a
-partir de ahí. Deténgala con Ctrl+C. Los datos de la demo se guardan en
+empiece en **Resumen**, haga clic en un host de **Principales clientes**,
+elija **Ver detalles** y siga haciendo clic a partir de ahí. Deténgala con
+Ctrl+C. Los datos de la demo se guardan en
 `traffic66-demo`, junto al programa; borre esa carpeta para empezar la demo
 desde cero.
 
@@ -561,7 +562,13 @@ antes de llegar a traffic66 o aún no se conoce la tasa de muestreo.
 
 ## 7. Nombres, SNMP y redes propias
 
-**Fuentes → Nombres** en la interfaz web admite una entrada por línea. Se
+La forma más rápida de ponerle nombre a un host o a un equipo: haga clic en
+su dirección en cualquier página y elija **Ponerle nombre…**. Escriba el
+nombre y pulse Enter; se guarda al momento y se muestra en todas partes en
+lugar de la dirección sin más.
+
+Para redes, interfaces y SNMP, **Fuentes → Nombres** en la interfaz web
+admite una entrada por línea. Se
 guarda como `inventory.txt` en el directorio de datos, así que también
 puede editar ese archivo (vea `inventory.txt.example`). Todas las líneas
 son opcionales.
@@ -602,18 +609,28 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. Países, redes y listas de amenazas
 
-Los países y los nombres de red (AS) necesitan una tabla IP-a-ASN. Descargue
-la gratuita de [iptoasn.com](https://iptoasn.com):
+Los países y los nombres de red (AS) necesitan una base de datos que asocie
+las direcciones con ellos. Súbala en la interfaz web: **Fuentes → Base de
+datos de países y redes → Subir un archivo de base de datos…**. Se
+comprueba, se guarda en el directorio de datos y se usa al momento para el
+tráfico nuevo; no hace falta reiniciar. El tráfico ya almacenado conserva el
+país con el que se guardó.
 
-```
-curl -LO https://iptoasn.com/data/ip2asn-combined.tsv.gz
-mv ip2asn-combined.tsv.gz <data directory>/asn.tsv.gz
-```
+Archivos admitidos:
 
-Sirve cualquier archivo con el mismo formato (separado por tabuladores:
-primera dirección, última dirección, número de AS, código de país, nombre
-del AS; en texto plano o gzip). Reinicie traffic66 después de sustituirlo;
-descargue uno nuevo más o menos cada mes.
+| Archivo | Aporta | Dónde conseguirlo |
+|---|---|---|
+| DB-IP Lite country o ASN, `.mmdb` | país, o número y nombre de AS | gratis, sin cuenta: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country o ASN, `.mmdb` | país, o número y nombre de AS | gratis con una cuenta de MaxMind: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| Tabla IP-a-ASN, `.tsv` o `.tsv.gz` | número de AS, nombre de AS y país | gratis: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+
+Suba una base de datos de países y otra de ASN para tener ambas cosas; si
+hay varias cargadas, los archivos `.mmdb` tienen prioridad en lo que
+contienen. Cada mes salen versiones nuevas: suba el archivo nuevo de la
+misma manera para sustituir al anterior.
+
+Sin la interfaz web, copie el archivo en el directorio de datos como
+`country.mmdb`, `asn.mmdb` o `asn.tsv.gz` y reinicie traffic66.
 
 Las listas de amenazas son archivos de texto plano con una dirección o red
 por línea (se ignora lo que va tras `#` o `;`), guardados como
@@ -641,6 +658,13 @@ dirección, un puerto, una aplicación, un país, un equipo) admite clic:
   que los quite.
 - **Ver sus registros de flujo** abre los flujos individuales
   correspondientes.
+- **Ver detalles** (hosts, equipos y servicios) abre una página sobre ese
+  host o servicio: su tráfico en el tiempo por aplicación, con quién habla,
+  qué servicios o clientes, países y sus últimos flujos. Ahí también se
+  puede hacer clic en cualquier valor, así que puede seguir profundizando;
+  el botón Atrás del navegador vuelve.
+- **Ponerle nombre…** (hosts y equipos) le da un nombre a la dirección, que
+  se muestra en todas partes a partir de entonces.
 - **Buscarlo en línea** abre la dirección o el AS en un sitio público de
   consulta.
 - **Copiar** copia el valor.
@@ -649,15 +673,14 @@ Páginas:
 
 | Página | Qué responde |
 |---|---|
-| Resumen | Cuánto tráfico hay ahora y frente a la semana pasada, por aplicación; qué ha crecido; principales clientes y servicios |
-| Top-N | Los 66 primeros clientes, servidores, conversaciones, aplicaciones, puertos, países, redes, segmentos, equipos, encapsulaciones o VLAN |
-| Conversaciones | Quién habla con quién: los 66 primeros pares cliente–servidor con su servicio |
+| Resumen | Cuánto tráfico hay ahora y frente a la semana pasada, por aplicación; principales clientes y servicios |
+| Top-N | Una sola tabla de los 66 primeros: por defecto, conversaciones (cliente, servidor, servicio, país). Haga clic en un encabezado de columna azul para agrupar por él, o en un encabezado numérico para ordenar; **Agrupar por** ofrece aplicaciones, redes, segmentos, equipos, encapsulación y VLAN |
 | Rutas de tráfico | Qué segmento habla con qué aplicación en qué país |
 | Geografía y redes | Tráfico por país y por red (AS) |
 | Inteligencia de amenazas | Hosts que hablaron con direcciones de sus listas de amenazas y cuánto enviaron |
 | Registros de flujo | Flujos individuales, del más reciente al más antiguo, con columnas seleccionables |
 | Verificación de interfaces | Cifras de flujo junto a los contadores de interfaz, de peor a mejor, con motivos |
-| Fuentes | Equipos, muestreo, pérdidas, colectores, SNMP y **Nombres** |
+| Fuentes | Equipos, muestreo, pérdidas, colectores, SNMP, la base de datos de países y redes, y **Nombres** |
 
 Encima de las páginas: rango de tiempo (de 15 minutos a 30 días), un cuadro
 de búsqueda opcional, refresco automático cada 30 segundos y **Copiar enlace**, que copia un enlace exactamente a la vista actual
@@ -668,12 +691,17 @@ Los rangos de más de 6 horas empiezan en una hora en punto, de modo que
 todas las cifras de la página cuentan exactamente el mismo tiempo: "24 horas"
 abarca las últimas 24 horas completas más la actual. En estos rangos, Top-N
 sale de resúmenes horarios; ahí no hay filtros, y la página lo indica. Elija
-un rango más corto para filtrar. **Conversaciones** siempre lee el detalle de flujos,
-así que en rangos largos con muchos flujos puede tardar; una hora es lo más rápido.
+un rango más corto para filtrar. Las conversaciones siempre leen el detalle de flujos,
+así que en rangos largos con muchos flujos pueden tardar; una hora es lo más rápido.
 
-![Top-N: los 66 primeros clientes de la última hora](images/topn.png)
+El menú lateral muestra cuánto disco usan los datos y cuánto queda libre;
+pase el ratón por el espacio libre para ver cuánto necesitan, al ritmo
+actual, los días de detalle que se conservan (se estima en cuanto hay un
+día de datos).
 
-![Conversaciones: quién habla con quién, con el servicio](images/conv.png)
+![Top-N: las 66 primeras conversaciones de la última hora](images/topn.png)
+
+![Detalles de un host: su tráfico, con quién habla, servicios, países y últimos flujos](images/detail.png)
 
 ![Rutas de tráfico: qué segmento usa qué aplicación hacia qué país](images/paths.png)
 
@@ -697,13 +725,13 @@ defecto). Si traffic66 se ejecuta con otro usuario, como ocurre con un
 servicio, use `-user` y `-password`. `-lang` elige el idioma (`en`, `zh`,
 `hi`, `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`).
 
-Teclas: 1–9 páginas, ↑↓ seleccionar, Enter acciones sobre el valor
+Teclas: 1–8 páginas, ↑↓ seleccionar, Enter acciones sobre el valor
 seleccionado, f mostrar solo, x excluir, / buscar, t rango de tiempo,
 c quitar filtros, w abrir la misma vista en un navegador, q salir.
 
 ![Interfaz de terminal: resumen](images/tui-overview.png)
 
-![Interfaz de terminal: Top-N de clientes](images/tui-topn.png)
+![Interfaz de terminal: Top-N de conversaciones](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -828,7 +856,7 @@ Opciones de `traffic66` y `traffic66 demo`:
 | `-sampling-wait` | `5m` | cuánto esperan los registros a una tasa de muestreo |
 | `-capture` | | captura en una interfaz local (repetible) |
 | `-inventory` | `<data>/inventory.txt` | archivo de nombres |
-| `-asn` | `<data>/asn.tsv.gz` | tabla IP-a-ASN |
+| `-asn` | `<data>/asn.tsv.gz` | tabla IP-a-ASN (archivos `.mmdb`: súbalos, o `<data>/country.mmdb` y `<data>/asn.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | lista de amenazas adicional como `name=path` (repetible) |
 | `-dns-upstream` | resolver del sistema | servidor DNS para mostrar nombres de host |
 | `-dns-rate` | `20` | máximo de resoluciones inversas por segundo |
@@ -855,7 +883,7 @@ El directorio de datos lo contiene todo:
 | `traffic66.duckdb` | resúmenes, contadores de interfaz y la hora en curso |
 | `password` | contraseñas de acceso (con hash) |
 | `inventory.txt` | nombres (**Fuentes → Nombres**) |
-| `asn.tsv.gz`, `threats/` | tablas de consulta que haya añadido |
+| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | bases de datos de países y redes y listas de amenazas que haya añadido |
 
 - **Copia de seguridad**: detenga traffic66 y copie el directorio. Sin
   detenerlo, copie `raw/`, `password` e `inventory.txt`; en ese caso faltan
@@ -935,7 +963,7 @@ máquina sin memoria.
 | "waiting for the sampling rate" | El equipo aún no ha enviado sus opciones de sampler; la mayoría las reenvía en pocos minutos. Si no lo hace nunca, expórtelas (`option sampler-table` en Cisco) o márquelo como `unsampled` en Nombres si de verdad es 1:1 |
 | Cifras por debajo de los contadores de interfaz | Vea **Verificación de interfaces**: pérdidas por el camino, interfaces sin muestrear o flujos aún en la caché del equipo (timeout activo superior a 60 s) |
 | Cifras por encima de los contadores de interfaz | El mismo tráfico se muestrea en dos interfaces o en dos equipos |
-| No hay países ni redes | Falta la tabla IP-a-ASN: vea [Países](#8-countries-networks-and-threat-lists) |
+| No hay países ni redes ("Desconocido") | No hay ninguna base de datos cargada: suba una en **Fuentes**; vea [Países](#8-countries-networks-and-threat-lists) |
 | "La base de datos llegó a su límite de memoria y no pudo responder" en una página | Elija un intervalo más corto o inicie con un `-memory` mayor; los detalles están en el registro |
 | Contraseña olvidada | `traffic66 passwd` en la máquina de traffic66 (añada `-data` si traffic66 se ejecuta con él) |
 | `Conflicting lock is held` | Otro traffic66 ya usa este directorio de datos |

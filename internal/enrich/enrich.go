@@ -6,14 +6,19 @@ package enrich
 import (
 	"bufio"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/githubflyideas/traffic66/internal/geo"
 )
 
 // ---------------------------------------------------------------- locality
@@ -335,12 +340,59 @@ type asRange struct {
 	org    string
 }
 
-// ASNDB maps address ranges to ASN, country and organisation, loaded from a
-// tab-separated file: range_start range_end as_number country description.
+// ASNDB maps addresses to ASN, country and organisation. Sources: a
+// tab-separated table (range_start range_end as_number country description,
+// as published by iptoasn.com) and MaxMind DB files (.mmdb, as GeoLite2 and
+// DB-IP Lite): a country database and an ASN database. When several are
+// loaded, the .mmdb files win for what they hold.
 type ASNDB struct {
-	mu     sync.RWMutex
-	v4, v6 []asRange
+	mu      sync.RWMutex
+	v4, v6  []asRange
+	tsvFile string
+	cty, as *geo.Reader
+	ctyFile string
+	asFile  string
 }
+
+// GeoSource describes one loaded database.
+type GeoSource struct {
+	Kind    string    `json:"kind"`    // "table", "country" or "asn"
+	File    string    `json:"file"`    // file name in the data directory
+	Type    string    `json:"type"`    // database type from the file
+	Built   time.Time `json:"built"`   // build date of an .mmdb
+	Entries int       `json:"entries"` // ranges in a table
+}
+
+// SetMMDB installs an .mmdb reader as the country or ASN database.
+func (db *ASNDB) SetMMDB(r *geo.Reader, file string) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if r.Kind() == "asn" {
+		db.as, db.asFile = r, file
+	} else {
+		db.cty, db.ctyFile = r, file
+	}
+}
+
+// Sources lists the loaded databases.
+func (db *ASNDB) Sources() []GeoSource {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	var out []GeoSource
+	if n := len(db.v4) + len(db.v6); n > 0 {
+		out = append(out, GeoSource{Kind: "table", File: db.tsvFile, Type: "IP to ASN table", Entries: n})
+	}
+	if db.cty != nil {
+		out = append(out, GeoSource{Kind: "country", File: db.ctyFile, Type: db.cty.Type, Built: db.cty.Built})
+	}
+	if db.as != nil {
+		out = append(out, GeoSource{Kind: "asn", File: db.asFile, Type: db.as.Type, Built: db.as.Built})
+	}
+	return out
+}
+
+// Loaded reports whether any database is loaded.
+func (db *ASNDB) Loaded() bool { return len(db.Sources()) > 0 }
 
 func NewASNDB() *ASNDB { return &ASNDB{} }
 
@@ -350,6 +402,28 @@ func (db *ASNDB) Size() int {
 	return len(db.v4) + len(db.v6)
 }
 
+// LoadTable parses a TSV table without installing it, for validation.
+func LoadTable(r io.Reader) (*ASNDB, error) {
+	t := NewASNDB()
+	if err := t.Load(r); err != nil {
+		return nil, err
+	}
+	if t.Size() == 0 {
+		return nil, errors.New("no address ranges found; expected tab-separated lines: first address, last address, AS number, country, name")
+	}
+	return t, nil
+}
+
+// TakeTable installs the ranges of another ASNDB as this one's table.
+func (db *ASNDB) TakeTable(o *ASNDB, file string) {
+	o.mu.RLock()
+	v4, v6 := o.v4, o.v6
+	o.mu.RUnlock()
+	db.mu.Lock()
+	db.v4, db.v6, db.tsvFile = v4, v6, file
+	db.mu.Unlock()
+}
+
 // LoadFile reads a .tsv or .tsv.gz file and replaces the table.
 func (db *ASNDB) LoadFile(path string) error {
 	f, err := os.Open(path)
@@ -357,6 +431,7 @@ func (db *ASNDB) LoadFile(path string) error {
 		return err
 	}
 	defer f.Close()
+	defer func() { db.mu.Lock(); db.tsvFile = filepath.Base(path); db.mu.Unlock() }()
 	var r io.Reader = f
 	if strings.HasSuffix(path, ".gz") {
 		gz, err := gzip.NewReader(f)
@@ -409,7 +484,7 @@ func (db *ASNDB) Load(r io.Reader) error {
 }
 
 // Lookup returns the ASN, country code and organisation for a.
-func (db *ASNDB) Lookup(a netip.Addr) (uint32, string, string) {
+func (db *ASNDB) Lookup(a netip.Addr) (asn uint32, cc, org string) {
 	a = a.Unmap()
 	db.mu.RLock()
 	defer db.mu.RUnlock()
@@ -417,11 +492,20 @@ func (db *ASNDB) Lookup(a netip.Addr) (uint32, string, string) {
 	if a.Is6() {
 		t = db.v6
 	}
-	i := sort.Search(len(t), func(i int) bool { return a.Less(t[i].lo) }) - 1
-	if i < 0 || t[i].hi.Less(a) {
-		return 0, "", ""
+	if i := sort.Search(len(t), func(i int) bool { return a.Less(t[i].lo) }) - 1; i >= 0 && !t[i].hi.Less(a) {
+		asn, cc, org = t[i].asn, t[i].cc, t[i].org
 	}
-	return t[i].asn, t[i].cc, t[i].org
+	if db.cty != nil {
+		if in, ok := db.cty.Lookup(a); ok && in.Country != "" {
+			cc = in.Country
+		}
+	}
+	if db.as != nil {
+		if in, ok := db.as.Lookup(a); ok && in.ASN != 0 {
+			asn, org = in.ASN, in.Org
+		}
+	}
+	return asn, cc, org
 }
 
 // ---------------------------------------------------------------- threats

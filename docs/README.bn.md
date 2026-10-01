@@ -18,7 +18,7 @@ database-এ রাখে, এবং দেখায় কে bandwidth ব্�
   record, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS)।
 - web UI ও terminal UI-তে 13টি ভাষা।
 
-![সারসংক্ষেপ: গত সপ্তাহের তুলনায় application অনুযায়ী bandwidth, কী বেড়েছে, শীর্ষ client ও service](images/overview.png)
+![সারসংক্ষেপ: গত সপ্তাহের তুলনায় application অনুযায়ী bandwidth, শীর্ষ client ও service](images/overview.png)
 
 <sub>সব স্ক্রিনশট `traffic66 demo` থেকে নেওয়া, একটি simulated কোম্পানি নেটওয়ার্ক যা আপনি নিজেই চালাতে পারেন ([ডেমো চালিয়ে দেখুন](#1-try-the-demo) দেখুন)।</sub>
 
@@ -88,8 +88,8 @@ cd traffic66-windows-amd64
 http://127.0.0.1:8066 খুলুন এবং `admin` / `try66` দিয়ে সাইন ইন করুন। ডেমো
 একটি ছোট কোম্পানির নেটওয়ার্ক তৈরি করে, যাতে এক দিনের ইতিহাস আর চারটি
 simulated ডিভাইস থেকে live ট্রাফিক থাকে, সাথে খুঁজে বের করার মতো দুটি
-incident: **সারসংক্ষেপ** থেকে শুরু করুন, **কার ট্রাফিক বেড়েছে** দেখুন, তারপর
-ক্লিক করে করে এগোন। Ctrl+C দিয়ে বন্ধ করুন। ডেমোর ডেটা প্রোগ্রামের পাশে
+incident: **সারসংক্ষেপ** থেকে শুরু করুন, **শীর্ষ ক্লায়েন্ট**-এ একটি host-এ ক্লিক করুন,
+**বিস্তারিত দেখুন** বেছে নিন, তারপর ক্লিক করে করে এগোন। Ctrl+C দিয়ে বন্ধ করুন। ডেমোর ডেটা প্রোগ্রামের পাশে
 `traffic66-demo`-তে থাকে; ডেমো নতুন করে শুরু করতে ওই ফোল্ডারটি মুছে দিন।
 
 ডেমো আসল installation-এর মতো একই port ব্যবহার করে (8066, এবং UDP 6343,
@@ -551,7 +551,12 @@ packet traffic66-এ পৌঁছানোর আগেই হারাচ্ছ
 
 ## 7. নাম, SNMP ও আপনার নিজের নেটওয়ার্ক
 
-web UI-র **উৎস → নাম** প্রতি লাইনে একটি entry নেয়। এটি data directory-তে
+কোনো host বা ডিভাইসের নাম দেওয়ার সবচেয়ে দ্রুত উপায়: যেকোনো পেজে তার address-এ
+ক্লিক করে **নাম দিন…** বেছে নিন। নাম টাইপ করে Enter চাপুন; সেটি সঙ্গে সঙ্গে
+সেভ হয় এবং সব জায়গায় খালি address-এর বদলে দেখানো হয়।
+
+নেটওয়ার্ক, interface ও SNMP-এর জন্য web UI-র **উৎস → নাম** প্রতি লাইনে একটি
+entry নেয়। এটি data directory-তে
 `inventory.txt` হিসেবে সেভ হয়, তাই আপনি ফাইলটি সরাসরিও edit করতে পারেন
 (`inventory.txt.example` দেখুন)। প্রতিটি লাইন ঐচ্ছিক।
 
@@ -589,17 +594,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. দেশ, নেটওয়ার্ক ও threat list
 
-দেশ ও নেটওয়ার্ক (AS)-এর নামের জন্য একটি IP-to-ASN table লাগে।
-[iptoasn.com](https://iptoasn.com) থেকে বিনামূল্যের table ডাউনলোড করুন:
+দেশ ও নেটওয়ার্ক (AS)-এর নামের জন্য এমন একটি database লাগে যা address থেকে
+সেগুলো বের করে। web UI-তে সেটি আপলোড করুন: **উৎস → দেশ ও নেটওয়ার্ক ডেটাবেস → ডেটাবেস ফাইল আপলোড করুন…**।
+ফাইলটি যাচাই করা হয়, data directory-তে সেভ হয় এবং নতুন ট্রাফিকের জন্য সঙ্গে
+সঙ্গে ব্যবহার হয়; restart লাগে না। আগে থেকে সংরক্ষিত ট্রাফিক যে দেশ নিয়ে সেভ
+হয়েছিল সেটিই রাখে।
 
-```
-curl -LO https://iptoasn.com/data/ip2asn-combined.tsv.gz
-mv ip2asn-combined.tsv.gz <data directory>/asn.tsv.gz
-```
+গ্রহণযোগ্য ফাইল:
 
-একই format-এর যেকোনো ফাইল চলবে (tab দিয়ে আলাদা: প্রথম address, শেষ address,
-AS number, country code, AS name; plain বা gzip)। বদলানোর পর traffic66
-restart করুন; মোটামুটি প্রতি মাসে নতুন একটি ডাউনলোড করুন।
+| ফাইল | কী দেয় | কোথায় পাবেন |
+|---|---|---|
+| DB-IP Lite country বা ASN, `.mmdb` | দেশ, অথবা AS number ও নাম | বিনামূল্যে, account ছাড়া: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country বা ASN, `.mmdb` | দেশ, অথবা AS number ও নাম | MaxMind account থাকলে বিনামূল্যে: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IP-to-ASN table, `.tsv` বা `.tsv.gz` | AS number, AS name ও দেশ | বিনামূল্যে: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+
+দুটোই পেতে একটি country database ও একটি ASN database আপলোড করুন; একাধিক লোড
+থাকলে, `.mmdb` ফাইলগুলোতে যা আছে সে বিষয়ে সেগুলোই অগ্রাধিকার পায়। নতুন
+version প্রতি মাসে বের হয়: পুরোনোটি বদলাতে নতুন ফাইল একইভাবে আপলোড করুন।
+
+web UI ছাড়া, ফাইলটি data directory-তে `country.mmdb`, `asn.mmdb` বা
+`asn.tsv.gz` নামে কপি করুন এবং traffic66 restart করুন।
 
 Threat list হলো সাধারণ text ফাইল, প্রতি লাইনে একটি address বা নেটওয়ার্ক
 (`#` বা `;`-এর পরের লেখা উপেক্ষা করা হয়), সেভ করা হয়
@@ -625,6 +639,13 @@ application, দেশ, ডিভাইস — ক্লিক করা যা�
 - **শুধু এটি দেখান** / **এটি বাদ দিন** একটি filter যোগ করে। Filter top bar-এর
   নিচে দেখা যায় এবং সরিয়ে না দেওয়া পর্যন্ত প্রতিটি পেজে প্রযোজ্য থাকে।
 - **এর ফ্লো রেকর্ড দেখুন** মিলে যাওয়া আলাদা আলাদা flow খোলে।
+- **বিস্তারিত দেখুন** (host, ডিভাইস ও service) ওই একটি host বা service সম্পর্কে
+  একটি পেজ খোলে: সময়ের সাথে application অনুযায়ী তার ট্রাফিক, সে কার সাথে কথা
+  বলে, কোন service বা client, দেশ এবং তার সর্বশেষ flow। সেখানকার প্রতিটি value
+  আবার ক্লিক করা যায়, তাই আরও গভীরে যেতে পারেন; browser-এর Back বোতাম ফিরিয়ে
+  আনে।
+- **নাম দিন…** (host ও ডিভাইস) address-টিকে একটি নাম দেয়, যা তারপর থেকে সব
+  জায়গায় দেখানো হয়।
 - **অনলাইনে খুঁজুন** address বা AS কোনো public lookup সাইটে খোলে।
 - **কপি করুন** value-টি কপি করে।
 
@@ -632,15 +653,14 @@ application, দেশ, ডিভাইস — ক্লিক করা যা�
 
 | পেজ | কোন প্রশ্নের উত্তর দেয় |
 |---|---|
-| সারসংক্ষেপ | এখন কত ট্রাফিক আর গত সপ্তাহের তুলনায় কত, application অনুযায়ী; কী বেড়েছে; শীর্ষ client ও service |
-| Top-N | client, server, conversation, application, port, দেশ, নেটওয়ার্ক, segment, ডিভাইস, encapsulation বা VLAN-এর শীর্ষ 66 |
-| কথোপকথন | কে কার সাথে কথা বলে: শীর্ষ 66 client–server জোড়া, তাদের service সহ |
+| সারসংক্ষেপ | এখন কত ট্রাফিক আর গত সপ্তাহের তুলনায় কত, application অনুযায়ী; শীর্ষ client ও service |
+| Top-N | শীর্ষ 66-এর একটি table: ডিফল্টভাবে conversation (client, server, service, দেশ)। কোনো নীল column heading-এ ক্লিক করলে সেটি অনুযায়ী group হয়, সংখ্যার heading-এ ক্লিক করলে sort হয়; **গ্রুপের ভিত্তি**-তে application, নেটওয়ার্ক, segment, ডিভাইস, encapsulation ও VLAN পাওয়া যায় |
 | ট্রাফিকের পথ | কোন segment কোন দেশের কোন application-এর সাথে কথা বলে |
 | ভূগোল ও নেটওয়ার্ক | দেশ ও নেটওয়ার্ক (AS) অনুযায়ী ট্রাফিক |
 | হুমকির তথ্য | যেসব host আপনার threat list-এর address-এর সাথে কথা বলেছে, এবং কতটা পাঠিয়েছে |
 | ফ্লো রেকর্ড | আলাদা আলাদা flow, নতুনগুলো আগে, বেছে নেওয়া যায় এমন column সহ |
 | ইন্টারফেস মিলানো | interface counter-এর পাশে flow-এর সংখ্যা, সবচেয়ে খারাপগুলো আগে, কারণসহ |
-| উৎস | ডিভাইস, sampling, loss, collector, SNMP, এবং **নাম** |
+| উৎস | ডিভাইস, sampling, loss, collector, SNMP, দেশ ও নেটওয়ার্ক ডেটাবেস, এবং **নাম** |
 
 পেজগুলোর ওপরে: time range (15 মিনিট থেকে 30 দিন), একটি ঐচ্ছিক search box,
 প্রতি 30 সেকেন্ডে automatic refresh, এবং **লিংক কপি করুন**, যা ঠিক বর্তমান
@@ -650,12 +670,16 @@ view-এর (পেজ, time range ও filter) link কপি করে, যা�
 6 ঘণ্টার চেয়ে লম্বা range পূর্ণ ঘণ্টা থেকে শুরু হয়, যাতে পেজের প্রতিটি
 সংখ্যা ঠিক একই সময় গোনে: "24 ঘণ্টা" মানে শেষ 24টি পূর্ণ ঘণ্টা আর চলতি
 ঘণ্টা। এই range-গুলোতে Top-N আসে ঘণ্টাভিত্তিক summary থেকে; সেখানে filter
-পাওয়া যায় না, আর পেজেই তা বলা থাকে। filter করতে ছোট range বেছে নিন। **কথোপকথন** সবসময় flow-এর বিস্তারিত
+পাওয়া যায় না, আর পেজেই তা বলা থাকে। filter করতে ছোট range বেছে নিন। কথোপকথন (conversation) সবসময় flow-এর বিস্তারিত
 তথ্য পড়ে, তাই উচ্চ flow rate-এ লম্বা range-এ কিছুটা সময় লাগতে পারে; এক ঘণ্টা সবচেয়ে দ্রুত।
 
-![Top-N: গত এক ঘণ্টার শীর্ষ 66 client](images/topn.png)
+পাশের menu দেখায় data কতটা disk ব্যবহার করছে আর কতটা খালি আছে; খালি জায়গার
+ওপর hover করলে দেখা যায় বর্তমান হারে রাখা দিনগুলোর বিস্তারিত তথ্যের জন্য কতটা
+জায়গা লাগবে (এক দিনের data জমা হলে হিসাব করা হয়)।
 
-![কথোপকথন: কে কার সাথে কথা বলে, service সহ](images/conv.png)
+![Top-N: গত এক ঘণ্টার শীর্ষ 66 conversation](images/topn.png)
+
+![একটি host-এর বিস্তারিত: তার ট্রাফিক, সে কার সাথে কথা বলে, service, দেশ ও সর্বশেষ flow](images/detail.png)
 
 ![ট্রাফিকের পথ: কোন segment কোন দেশের দিকে কোন application ব্যবহার করে](images/paths.png)
 
@@ -679,13 +703,13 @@ service হিসেবে চলে, তার বদলে `-user` ও `-passw
 ভাষা বেছে নেয় (`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`)।
 
-Key: 1–9 পেজ, ↑↓ বাছাই, Enter বাছাই করা value-র action, f শুধু এটি দেখান,
+Key: 1–8 পেজ, ↑↓ বাছাই, Enter বাছাই করা value-র action, f শুধু এটি দেখান,
 x বাদ দিন, / search, t time range, c filter মুছুন, w একই view browser-এ খুলুন,
 q বেরিয়ে যান।
 
 ![Terminal UI: সারসংক্ষেপ](images/tui-overview.png)
 
-![Terminal UI: Top-N client](images/tui-topn.png)
+![Terminal UI: Top-N conversation](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -806,7 +830,7 @@ port-এ) দুবার গোনা হয়।
 | `-sampling-wait` | `5m` | record কতক্ষণ sampling rate-এর জন্য অপেক্ষা করবে |
 | `-capture` | | local interface-এ capture (একাধিকবার দেওয়া যায়) |
 | `-inventory` | `<data>/inventory.txt` | নামের ফাইল |
-| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table |
+| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` ফাইল: সেগুলো আপলোড করুন, অথবা `<data>/country.mmdb` ও `<data>/asn.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | অতিরিক্ত threat list, `name=path` আকারে (একাধিকবার দেওয়া যায়) |
 | `-dns-upstream` | system resolver | host name দেখানোর জন্য DNS server |
 | `-dns-rate` | `20` | প্রতি সেকেন্ডে সর্বোচ্চ reverse lookup |
@@ -833,7 +857,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `traffic66.duckdb` | summary, interface counter ও চলতি ঘণ্টা |
 | `password` | login পাসওয়ার্ড (hashed) |
 | `inventory.txt` | নাম (**উৎস → নাম**) |
-| `asn.tsv.gz`, `threats/` | আপনার যোগ করা lookup table |
+| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | আপনার যোগ করা দেশ ও নেটওয়ার্ক database এবং threat list |
 
 - **ব্যাকআপ**: traffic66 বন্ধ করে directory কপি করুন। বন্ধ না করে কপি করলে
   `raw/`, `password` ও `inventory.txt` কপি করুন; তখন চলতি ঘণ্টা আর summary বাদ
@@ -908,7 +932,7 @@ container-এর memory limit। `-memory`-র ভাগের প্রায�
 | "waiting for the sampling rate" | ডিভাইস এখনও sampler options পাঠায়নি; বেশিরভাগই কয়েক মিনিটের মধ্যে আবার পাঠায়। কখনো না পাঠালে সেগুলো export করান (Cisco-তে `option sampler-table`) অথবা সত্যিই 1:1 হলে নাম-এ সেটিকে `unsampled` চিহ্নিত করুন |
 | সংখ্যা interface counter-এর চেয়ে কম | **ইন্টারফেস মিলানো** দেখুন: পথে loss, interface sample হচ্ছে না, অথবা flow এখনও ডিভাইসের cache-এ (active timeout 60 s-এর বেশি) |
 | সংখ্যা interface counter-এর চেয়ে বেশি | একই ট্রাফিক দুটি interface বা দুটি ডিভাইসে sample হচ্ছে |
-| কোনো দেশ বা নেটওয়ার্ক নেই | IP-to-ASN table নেই: [দেশ](#8-countries-networks-and-threat-lists) দেখুন |
+| কোনো দেশ বা নেটওয়ার্ক নেই ("অজানা") | কোনো database লোড করা নেই: **উৎস**-এ একটি আপলোড করুন, [দেশ](#8-countries-networks-and-threat-lists) দেখুন |
 | পেজে "ডেটাবেস তার মেমরি সীমায় পৌঁছেছে এবং উত্তর দিতে পারেনি" | ছোট সময়সীমা বেছে নিন, অথবা বড় `-memory` দিয়ে চালু করুন; বিস্তারিত log-এ আছে |
 | পাসওয়ার্ড ভুলে গেছেন | traffic66 মেশিনে `traffic66 passwd` (traffic66 `-data` দিয়ে চললে `-data` যোগ করুন) |
 | `Conflicting lock is held` | অন্য একটি traffic66 ইতিমধ্যে এই data directory ব্যবহার করছে |

@@ -10,7 +10,7 @@
 - Top 66 排行、流向、国家与运营商网络、威胁情报命中、流记录、封装（GRE、IPIP、VXLAN、GENEVE、MPLS）。
 - Web 界面和终端界面均支持 13 种语言。
 
-![概览：按应用划分的带宽与上周对比、增长情况、主要客户端和服务](images/overview.png)
+![概览：按应用划分的带宽与上周对比、主要客户端和服务](images/overview.png)
 
 <sub>所有截图均来自 `traffic66 demo`，这是一个你可以自己运行的模拟公司网络（见 [试用演示](#1-try-the-demo)）。</sub>
 
@@ -75,7 +75,7 @@ cd traffic66-windows-amd64
 .\traffic66.exe demo -password try66
 ```
 
-打开 http://127.0.0.1:8066，用 `admin` / `try66` 登录。演示模式会搭建一个小型公司网络，带一天的历史数据，外加四台模拟设备的实时流量，其中埋了两起异常事件等你去找：从 **概览** 开始，看 **比平时多了谁**，然后一路点下去即可。按 Ctrl+C 停止。演示数据保存在程序旁边的 `traffic66-demo` 目录中，删除该目录即可从头开始。
+打开 http://127.0.0.1:8066，用 `admin` / `try66` 登录。演示模式会搭建一个小型公司网络，带一天的历史数据，外加四台模拟设备的实时流量，其中埋了两起异常事件等你去找：从 **概览** 开始，在 **Top 客户端** 中点击一台主机，选择 **查看详情**，然后继续一路点下去即可。按 Ctrl+C 停止。演示数据保存在程序旁边的 `traffic66-demo` 目录中，删除该目录即可从头开始。
 
 演示模式使用与正式安装相同的端口（8066，以及 UDP 6343、2055、4739）。如果要和正式实例同时运行，请换用其他端口：`traffic66 demo -password try66 -addr :8067 -listen ""`。
 
@@ -472,7 +472,9 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 ## 7. 名称、SNMP 与自有网段
 
-Web 界面中的 **接入 → 名称** 每行一条。内容保存为数据目录下的 `inventory.txt`，因此也可以直接编辑该文件（参考 `inventory.txt.example`）。每一行都是可选的。
+给主机或设备命名最快的方法：在任意页面点击它的地址，选择 **起个名字…**。输入名称后按 Enter，立即保存，之后在所有地方都显示该名称，而不是光秃秃的地址。
+
+网段、接口和 SNMP 则在 Web 界面的 **接入 → 名称** 中配置，每行一条。内容保存为数据目录下的 `inventory.txt`，因此也可以直接编辑该文件（参考 `inventory.txt.example`）。每一行都是可选的。
 
 ```
 # your networks: traffic between them is "internal"
@@ -502,14 +504,19 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. 国家、运营商网络与威胁情报列表
 
-显示国家和网络（AS）名称需要一张 IP 到 ASN 的映射表。可从[iptoasn.com](https://iptoasn.com) 免费下载：
+显示国家和网络（AS）名称需要一个把地址映射到国家和网络的数据库。在 Web 界面中上传即可：**接入 → 国家和运营商数据库 → 上传数据库文件…**。文件会经过校验、保存到数据目录，并立即用于新的流量，无需重启。已经存储的流量保留保存时的国家。
 
-```
-curl -LO https://iptoasn.com/data/ip2asn-combined.tsv.gz
-mv ip2asn-combined.tsv.gz <data directory>/asn.tsv.gz
-```
+可接受的文件：
 
-任何相同格式的文件都可以（Tab 分隔：起始地址、结束地址、AS 号、国家代码、AS 名称；纯文本或 gzip 均可）。替换后需重启 traffic66；建议每月左右更新一次。
+| 文件 | 提供 | 获取途径 |
+|---|---|---|
+| DB-IP Lite country 或 ASN，`.mmdb` | 国家，或 AS 号和名称 | 免费，无需账号：[db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country 或 ASN，`.mmdb` | 国家，或 AS 号和名称 | 注册 MaxMind 账号后免费：[maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IP 到 ASN 映射表，`.tsv` 或 `.tsv.gz` | AS 号、AS 名称和国家 | 免费：[iptoasn.com](https://iptoasn.com)（`ip2asn-combined.tsv.gz`） |
+
+同时上传一个国家数据库和一个 ASN 数据库即可两者兼得；加载了多个时，`.mmdb` 文件对其包含的内容优先。新版本每月发布：用同样的方式上传新文件即可替换旧文件。
+
+不使用 Web 界面时，把文件复制到数据目录，命名为 `country.mmdb`、`asn.mmdb` 或 `asn.tsv.gz`，然后重启 traffic66。
 
 威胁情报列表是纯文本文件，每行一个地址或网段（`#` 或 `;` 之后的内容会被忽略），保存为 `<data directory>/threats/<name>.txt`，例如：
 
@@ -530,6 +537,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 - **只看它** / **排除它**：添加过滤条件。过滤条件显示在顶栏下方，在你移除之前对所有页面生效。
 - **看它的流记录**：打开匹配的单条流记录。
+- **查看详情**（主机、设备和服务）：打开关于该主机或服务的页面：按应用划分的流量随时间的变化、它在和谁通信、哪些服务或客户端、国家以及最新的流记录。那里的每个值都可以再次点击，因此可以一路深挖下去；用浏览器的后退按钮返回。
+- **起个名字…**（主机和设备）：给该地址起个名字，此后在所有地方显示。
 - **在外部网站查询**：在公共查询网站中打开该地址或 AS。
 - **复制**：复制该值。
 
@@ -537,23 +546,24 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 | 页面 | 回答什么问题 |
 |---|---|
-| 概览 | 当前流量多大、与上周相比如何，按应用拆分；什么在增长；主要客户端和服务 |
-| Top-N | 客户端、服务器、会话、应用、端口、国家、网络、网段、设备、封装或 VLAN 的前 66 名 |
-| 会话 | 谁在和谁通信：前 66 个客户端–服务器对及其服务 |
+| 概览 | 当前流量多大、与上周相比如何，按应用拆分；主要客户端和服务 |
+| Top-N | 一张前 66 名的表：默认是会话（客户端、服务器、服务、国家）。点击蓝色列标题按该列分组，点击数字列标题排序；**分组方式** 还提供应用、网络、网段、设备、封装和 VLAN |
 | 流向 | 哪个网段在访问哪个国家的哪个应用 |
 | 地理与运营商 | 按国家和按网络（AS）统计的流量 |
 | 威胁情报 | 与威胁情报列表中地址有通信的主机，以及它们发送了多少流量 |
 | 流记录 | 单条流记录，最新的在前，可选择显示列 |
 | 接口对账 | 流统计与接口计数器并列对比，差异最大的在前，附原因 |
-| 接入 | 设备、采样、丢包、采集器、SNMP，以及 **名称** |
+| 接入 | 设备、采样、丢包、采集器、SNMP、国家和运营商数据库，以及 **名称** |
 
 页面上方有：时间范围（15 分钟到 30 天）、可选的搜索框、每 30 秒自动刷新，以及**复制链接**——复制一个精确指向当前视图（页面、时间范围和过滤条件）的链接，方便发给同事。界面语言跟随浏览器设置，可在菜单底部切换。
 
-超过 6 小时的时间范围从整点开始，因此页面上的每个数字统计的都是完全相同的时间段：“24 小时”涵盖最近 24 个完整小时加上当前这一小时。这些范围的 Top-N 来自小时汇总数据，无法使用过滤条件，页面上也会有提示。需要过滤时请选择较短的时间范围。**会话** 页面始终读取流明细，因此在流量速率高时选择长时间范围可能需要等一会儿；1 小时最快。
+超过 6 小时的时间范围从整点开始，因此页面上的每个数字统计的都是完全相同的时间段：“24 小时”涵盖最近 24 个完整小时加上当前这一小时。这些范围的 Top-N 来自小时汇总数据，无法使用过滤条件，页面上也会有提示。需要过滤时请选择较短的时间范围。会话始终读取流明细，因此在流量速率高时选择长时间范围可能需要等一会儿；1 小时最快。
 
-![Top-N：最近一小时的前 66 个客户端](images/topn.png)
+侧边菜单显示数据占用了多少磁盘、还剩多少空间；鼠标悬停在剩余空间上，可以看到按当前速率保留各天明细所需的空间（有一天的数据后开始估算）。
 
-![会话：谁在和谁通信，以及所用服务](images/conv.png)
+![Top-N：最近一小时的前 66 个会话](images/topn.png)
+
+![单台主机的详情：它的流量、在和谁通信、服务、国家和最新流记录](images/detail.png)
 
 ![流向：哪个网段在访问哪个国家的哪个应用](images/paths.png)
 
@@ -573,11 +583,11 @@ traffic66 -tui                                    # collect and show the termina
 
 在 traffic66 主机上，只要能读取数据目录，`traffic66 tui` 就会自动登录（数据目录不是默认位置时请指定 `-data`）。如果 traffic66 以其他用户身份运行（作为服务运行时就是这样），请改用 `-user` 和 `-password`。`-lang` 选择语言（`en`、`zh`、`hi`、`es`、`ar`、`fr`、`bn`、`pt`、`ru`、`id`、`ur`、`ja`、`ko`）。
 
-按键：1–9 切换页面，↑↓ 选择，Enter 对选中的值执行操作，f 只看，x 排除，/ 搜索，t 时间范围，c 清除过滤条件，w 在浏览器中打开相同视图，q 退出。
+按键：1–8 切换页面，↑↓ 选择，Enter 对选中的值执行操作，f 只看，x 排除，/ 搜索，t 时间范围，c 清除过滤条件，w 在浏览器中打开相同视图，q 退出。
 
 ![终端界面：概览](images/tui-overview.png)
 
-![终端界面：Top-N 客户端](images/tui-topn.png)
+![终端界面：Top-N 会话](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -682,7 +692,7 @@ sudo traffic66 -capture en0
 | `-sampling-wait` | `5m` | 记录等待采样率的最长时间 |
 | `-capture` | | 在本机网卡上抓包（可重复指定） |
 | `-inventory` | `<data>/inventory.txt` | 名称文件 |
-| `-asn` | `<data>/asn.tsv.gz` | IP 到 ASN 映射表 |
+| `-asn` | `<data>/asn.tsv.gz` | IP 到 ASN 映射表（`.mmdb` 文件：在 Web 界面上传，或放在 `<data>/country.mmdb` 和 `<data>/asn.mmdb`） |
 | `-threat` | `<data>/threats/*.txt` | 额外的威胁情报列表，格式为 `name=path`（可重复指定） |
 | `-dns-upstream` | 系统解析器 | 用于显示主机名的 DNS 服务器 |
 | `-dns-rate` | `20` | 每秒反向解析次数上限 |
@@ -708,7 +718,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `traffic66.duckdb` | 汇总数据、接口计数器和当前小时的数据 |
 | `password` | 登录密码（哈希） |
 | `inventory.txt` | 名称（**接入 → 名称**） |
-| `asn.tsv.gz`, `threats/` | 你添加的查询表 |
+| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | 你添加的国家和运营商数据库以及威胁情报列表 |
 
 - **备份**：停止 traffic66，复制整个目录。如果不停服务，就复制 `raw/`、`password`和 `inventory.txt`；这样会缺少当前小时的数据和汇总数据。
 - **迁移**：停止 traffic66，移动目录，启动时用 `-data` 指向新位置。
@@ -752,7 +762,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | "waiting for the sampling rate" | 设备尚未发送采样器选项；大多数设备几分钟内会重发。如果一直不发，请配置导出（Cisco 上为 `option sampler-table`）；如果确实是 1:1，可在名称中标记为 `unsampled` |
 | 统计值低于接口计数器 | 查看 **接口对账**：途中丢包、有接口未采样，或流仍在设备缓存中（活动超时超过 60 秒） |
 | 统计值高于接口计数器 | 同一流量在两个接口或两台设备上被采样 |
-| 没有国家或网络信息 | 缺少 IP 到 ASN 映射表：见 [国家](#8-countries-networks-and-threat-lists) |
+| 没有国家或网络信息（"未知"） | 未加载数据库：在 **接入** 上传一个，见 [国家](#8-countries-networks-and-threat-lists) |
 | 页面上出现 "数据库达到内存上限，无法完成这次查询" | 选择更短的时间范围，或用更大的 `-memory` 启动；详细信息见日志 |
 | 忘记密码 | 在 traffic66 主机上执行 `traffic66 passwd`（如果 traffic66 运行时使用了 `-data`，也加上它） |
 | `Conflicting lock is held` | 另一个 traffic66 正在使用该数据目录 |
