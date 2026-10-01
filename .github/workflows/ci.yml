@@ -57,7 +57,7 @@ jobs:
           set -o pipefail
           # failing tests become annotations, readable without downloading logs
           go test -count=1 ./... 2>&1 | tee test.log || {
-            { grep -E 'undefined reference|multiple definition|cannot find -l|collect2|ld(\.exe)?: ' test.log | sort -u | head -8
+            { grep -B4 'collect2' test.log | grep -v '^--$' | grep -v 'go-link' | cut -c1-300 | head -8
               grep -E -- '--- FAIL|^\s+\S+_test\.go:[0-9]+:|panic:' test.log | head -8; } | while IFS= read -r l; do echo "::error::${l:0:400}"; done
             exit 1
           }
