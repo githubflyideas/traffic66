@@ -34,8 +34,9 @@ type Server struct {
 	Static   fs.FS
 	Version  string
 	Demo     bool
-	Users    map[string]string
-	LocalTok string // token for the TUI on this machine
+	Users    map[string]string          // fixed passwords (tests)
+	Check    func(user, pw string) bool // login check; replaces Users when set
+	LocalTok string                     // token for the TUI on this machine
 	Capture  func() []CaptureInfo
 	SNMP     func() []snmp.Status
 	Started  time.Time
@@ -217,6 +218,9 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 }
 
 func (s *Server) checkPassword(u, p string) bool {
+	if s.Check != nil {
+		return s.Check(u, p)
+	}
 	want, ok := s.Users[u]
 	return ok && subtle.ConstantTimeCompare([]byte(want), []byte(p)) == 1
 }

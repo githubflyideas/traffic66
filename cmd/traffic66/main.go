@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/githubflyideas/traffic66/internal/api"
+	"github.com/githubflyideas/traffic66/internal/auth"
 	"github.com/githubflyideas/traffic66/internal/capture"
 	"github.com/githubflyideas/traffic66/internal/collector"
 	"github.com/githubflyideas/traffic66/internal/dnsres"
@@ -43,6 +44,7 @@ Usage:
   traffic66 demo [flags]        run with a built-in simulated network
   traffic66 tui [flags]         terminal UI (connects to a running traffic66)
   traffic66 simulate -to HOST   send simulated exports to another collector
+  traffic66 passwd [flags]      set the login password
   traffic66 interfaces          list interfaces usable for local capture
   traffic66 version
 
@@ -65,6 +67,8 @@ func main() {
 		runTUI(args)
 	case "simulate":
 		simulate(args)
+	case "passwd":
+		passwd(args)
 	case "interfaces":
 		list, err := capture.Interfaces()
 		if err != nil {
@@ -108,15 +112,15 @@ type serveFlags struct {
 func serve(args []string, demo bool) {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	var f serveFlags
-	defData := "traffic66-data"
+	defData := defaultDir("traffic66-data")
 	if demo {
-		defData = "traffic66-demo"
+		defData = defaultDir("traffic66-demo")
 	}
 	fs.StringVar(&f.addr, "addr", ":8066", "web UI and API address")
 	fs.StringVar(&f.data, "data", defData, "data directory")
 	fs.StringVar(&f.listen, "listen", "sflow=:6343,netflow=:2055,ipfix=:4739", "UDP collectors as name=addr, comma separated; every port accepts every protocol; empty disables")
 	fs.StringVar(&f.user, "user", "admin", "login user")
-	fs.StringVar(&f.password, "password", "", "login password (default: generated and printed once)")
+	fs.StringVar(&f.password, "password", "", "login password for this run instead of the stored one (or set TRAFFIC66_PASSWORD)")
 	fs.StringVar(&f.asn, "asn", "", "ASN/country table (TSV: start end asn cc org, optionally .gz); default <data>/asn.tsv[.gz] if present")
 	fs.StringVar(&f.inventory, "inventory", "", "inventory file with network, device and host names (default <data>/inventory.txt)")
 	fs.Var(&f.threats, "threat", "threat list as name=path (repeatable); default <data>/threats/*.txt")
@@ -133,7 +137,7 @@ func serve(args []string, demo bool) {
 	fs.Parse(args)
 
 	if err := os.MkdirAll(f.data, 0o755); err != nil {
-		log.Fatalf("data directory: %v", err)
+		log.Fatalf("cannot create the data directory: %v; choose one with -data", err)
 	}
 	if demo {
 		prepareDemo(f.data)
@@ -278,11 +282,7 @@ func serve(args []string, demo bool) {
 	}
 	go poller.Run(ctx)
 
-	password := f.password
-	if password == "" {
-		password = randomHex(8)
-		log.Printf("login: user %q, password %q (set -password to choose one)", f.user, password)
-	}
+	checker := loginChecker(f.data, f.user, f.password)
 	tok := randomHex(24)
 	tokPath := filepath.Join(f.data, ".tui-token")
 	os.WriteFile(tokPath, []byte(tok), 0o600)
@@ -294,7 +294,7 @@ func serve(args []string, demo bool) {
 		dns = dnsres.New(dnsres.Options{Upstream: f.dnsUpstream, PerSecond: f.dnsRate, TTL: f.dnsTTL})
 	}
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Static: web.FS(), Version: version,
-		Demo: demo, Users: map[string]string{f.user: password}, LocalTok: tok, DataDir: f.data, Started: time.Now()}
+		Demo: demo, Check: checker.Check, LocalTok: tok, DataDir: f.data, Started: time.Now()}
 	srv.SNMP = poller.Status
 	srv.Capture = func() []api.CaptureInfo {
 		var out []api.CaptureInfo
@@ -437,7 +437,7 @@ func runTUI(args []string) {
 	fs.Parse(args)
 	opt := tui.Options{URL: strings.TrimRight(*server, "/"), User: *user, Password: *pass, Lang: *lang}
 	if *user == "" {
-		for _, d := range []string{*data, "traffic66-data", "traffic66-demo"} {
+		for _, d := range []string{*data, defaultDir("traffic66-data"), defaultDir("traffic66-demo"), "traffic66-data", "traffic66-demo"} {
 			if d == "" {
 				continue
 			}
@@ -483,4 +483,104 @@ func simulate(args []string) {
 		}
 		conn.WriteToUDP(b, d)
 	}, 90*time.Second)
+}
+
+// defaultDir is name next to the executable, so the data directory does not
+// depend on the folder traffic66 is started from (a service starts in / or
+// C:\Windows\System32).
+func defaultDir(name string) string {
+	exe, err := os.Executable()
+	if err != nil {
+		return name
+	}
+	if r, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = r
+	}
+	return filepath.Join(filepath.Dir(exe), name)
+}
+
+// loginChecker decides where the password comes from: -password, then
+// TRAFFIC66_PASSWORD, then the password file in the data directory. On the
+// very first start it creates the file with a generated password.
+func loginChecker(dir, user, flagPw string) *auth.FileChecker {
+	pw := flagPw
+	if pw == "" {
+		pw = os.Getenv("TRAFFIC66_PASSWORD")
+	}
+	if pw != "" {
+		log.Printf("login: user %q with the password given at start", user)
+		return auth.NewFileChecker(dir, map[string]string{user: pw})
+	}
+	file := filepath.Join(dir, auth.FileName)
+	es, err := auth.Load(dir)
+	if err != nil {
+		log.Fatalf("%s: %v", file, err)
+	}
+	if len(es) == 0 {
+		pw = auth.Generate()
+		if err := auth.Set(dir, user, pw); err != nil {
+			log.Fatalf("saving the password: %v", err)
+		}
+		log.Printf("first start: sign in as user %q with password %q", user, pw)
+		log.Printf("this password is kept (hashed) in %s; change it with: traffic66 passwd -data %s", file, quoteArg(dir))
+	} else {
+		var users []string
+		for _, e := range es {
+			users = append(users, e.User)
+		}
+		log.Printf("login: user %s, password from %s (change it with: traffic66 passwd)", strings.Join(users, ", "), file)
+	}
+	return auth.NewFileChecker(dir, nil)
+}
+
+func quoteArg(s string) string {
+	if strings.ContainsAny(s, " \t\"'") {
+		return `"` + s + `"`
+	}
+	return s
+}
+
+func passwd(args []string) {
+	fs := flag.NewFlagSet("passwd", flag.ExitOnError)
+	data := fs.String("data", defaultDir("traffic66-data"), "data directory")
+	user := fs.String("user", "admin", "login user")
+	gen := fs.Bool("generate", false, "generate a random password and print it")
+	fs.Parse(args)
+	if err := os.MkdirAll(*data, 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	pw := os.Getenv("TRAFFIC66_PASSWORD")
+	switch {
+	case *gen:
+		pw = auth.Generate()
+	case pw == "":
+		a, err := tui.ReadSecret("new password for " + *user + ": ")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if len(a) < 8 {
+			fmt.Fprintln(os.Stderr, "use at least 8 characters")
+			os.Exit(1)
+		}
+		b, err := tui.ReadSecret("again: ")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if a != b {
+			fmt.Fprintln(os.Stderr, "the passwords differ; nothing changed")
+			os.Exit(1)
+		}
+		pw = a
+	}
+	if err := auth.Set(*data, *user, pw); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if *gen {
+		fmt.Printf("user %s, password %s\n", *user, pw)
+	}
+	fmt.Printf("saved in %s; a running traffic66 uses it from the next login\n", filepath.Join(*data, auth.FileName))
 }
