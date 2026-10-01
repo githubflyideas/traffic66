@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -153,7 +154,15 @@ func Open(opt Options) (*Store, error) {
 		}
 		return nil
 	}
-	c, err := duckdb.NewConnector(filepath.Join(opt.Dir, "traffic66.duckdb"), init)
+	// Everything DuckDB needs is linked in: never download or load
+	// extensions, and keep DuckDB's home in the data directory so it does not
+	// look up the user's home (which a static build cannot do reliably).
+	dsn := filepath.Join(opt.Dir, "traffic66.duckdb") + "?" + url.Values{
+		"autoinstall_known_extensions": {"false"},
+		"autoload_known_extensions":    {"false"},
+		"home_directory":               {opt.Dir},
+	}.Encode()
+	c, err := duckdb.NewConnector(dsn, init)
 	if err != nil {
 		return nil, err
 	}

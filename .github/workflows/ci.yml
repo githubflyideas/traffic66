@@ -42,6 +42,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+      - name: Static C libraries (Linux)
+        if: ${{ matrix.container }}
+        run: |
+          rpm -q glibc-static || dnf install -y glibc-static || dnf --enablerepo=powertools install -y glibc-static
       - name: Resolve modules
         run: go mod tidy
       - name: Vet
@@ -80,16 +84,9 @@ jobs:
           exe=dist/traffic66-${{ matrix.target }}/traffic66
           case "${{ runner.os }}" in
           Linux)
-            ldd "$exe" | while read -r l; do echo "::notice::$l"; done
-            # libstdc++/libgcc_s from the system are fine as long as only old
-            # symbol versions are used (gcc-toolset links the rest statically)
-            if ldd "$exe" | grep -vE 'linux-vdso|ld-linux|lib(c|m|pthread|dl|rt|resolv|stdc\+\+|gcc_s)\.so'; then echo "::error::unexpected shared library"; exit 1; fi
-            newest() { objdump -T "$exe" | { grep -o "$1_[0-9.]*" || true; } | sort -uV | tail -1; }
-            older() { [[ -z "$1" || "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" == "$2" ]]; }
-            g=$(newest GLIBC); x=$(newest GLIBCXX); c=$(newest CXXABI)
-            echo "::notice::needs $g ${x:-no-libstdc++} $c"
-            older "$g" GLIBC_2.28 || { echo "::error::needs $g, newer than glibc 2.28"; exit 1; }
-            older "$x" GLIBCXX_3.4.25 || { echo "::error::needs $x, newer than gcc 8"; exit 1; } ;;
+            # fully static: no glibc version requirement at all
+            out=$(ldd "$exe" 2>&1 || true); echo "$out"
+            grep -qE 'not a dynamic executable|statically linked' <<<"$out" || { echo "::error::Linux build is not static: $out"; exit 1; } ;;
           Windows)
             objdump -p "$exe.exe" | grep 'DLL Name'
             if objdump -p "$exe.exe" | grep -iE 'DLL Name: *(libstdc|libgcc|libwinpthread|msys)'; then echo "::error::needs MinGW DLLs"; exit 1; fi ;;
@@ -132,9 +129,45 @@ jobs:
           name: traffic66-${{ matrix.target }}
           path: dist/traffic66-${{ matrix.target }}.*
 
+  old-linux:
+    # the Linux packages must run on CentOS 7 (glibc 2.17, kernel 3.10 without
+    # getrandom, emulated with seccomp) and on Alpine (musl)
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux-amd64
+          - os: ubuntu-22.04-arm
+            target: linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: traffic66-${{ matrix.target }}
+      - name: Run on CentOS 7 and Alpine
+        run: |
+          tar xzf traffic66-${{ matrix.target }}.tar.gz
+          d="$PWD/traffic66-${{ matrix.target }}"
+          echo '{"defaultAction":"SCMP_ACT_ALLOW","syscalls":[{"names":["getrandom"],"action":"SCMP_ACT_ERRNO","errnoRet":38}]}' > nogetrandom.json
+          for img in centos:7 alpine:3.20; do
+            echo "::group::$img"
+            docker run --rm --security-opt seccomp="$PWD/nogetrandom.json" -v "$d:/t66" "$img" sh -c '
+              /t66/traffic66 version || exit 1
+              /t66/traffic66 demo -data /tmp/d -password ci -addr 127.0.0.1:18066 -listen "" > /tmp/log 2>&1 &
+              for i in $(seq 1 90); do
+                if wget -q -O /dev/null --header "Authorization: Basic YWRtaW46Y2k=" "http://127.0.0.1:18066/api/topn?dim=client&limit=66" 2>/dev/null ||
+                   curl -sf -o /dev/null -u admin:ci "http://127.0.0.1:18066/api/topn?dim=client&limit=66" 2>/dev/null; then echo "running and serving"; exit 0; fi
+                sleep 2
+              done
+              cat /tmp/log; exit 1' || { echo "::error::does not run on $img"; exit 1; }
+            echo "::endgroup::"
+          done
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, old-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
