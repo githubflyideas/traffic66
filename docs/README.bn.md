@@ -24,7 +24,7 @@ database-এ রাখে, এবং দেখায় কে bandwidth ব্�
 
 1. [ডেমো চালিয়ে দেখুন](#1-try-the-demo)
 2. [ইনস্টল](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [সাইন ইন ও পাসওয়ার্ড](#3-sign-in-and-passwords)
+3. [ইউজার ও পাসওয়ার্ড](#3-users-and-passwords)
 4. [আপনার ডিভাইস থেকে flow পাঠান](#4-send-flows-from-your-devices)
 5. [flow পৌঁছাচ্ছে কি না দেখুন](#5-check-that-flows-arrive)
 6. [সংখ্যাগুলো interface counter-এর সাথে মেলান](#6-make-the-numbers-match-the-interface-counters)
@@ -259,32 +259,106 @@ sudo launchctl bootout system/traffic66
 macOS firewall চালু থাকলে System Settings → Network → Firewall → Options-এ
 traffic66-এর জন্য incoming connection-এর অনুমতি দিন।
 
-<a id="3-sign-in-and-passwords"></a>
+<a id="3-users-and-passwords"></a>
 
-## 3. সাইন ইন ও পাসওয়ার্ড
+## 3. ইউজার ও পাসওয়ার্ড
 
-`http://<traffic66 machine>:8066` খুলে সাইন ইন করুন। ইউজার `admin`, যদি না
-আপনি অন্য কিছু বেছে নিয়ে থাকেন।
+**সংক্ষেপে:** ইউজার ও পাসওয়ার্ড থাকে data directory-র একটিমাত্র ফাইল
+`password`-এ। এটি কখনো হাতে edit করবেন না: `traffic66 passwd` command ইউজার
+যোগ করে, বদলায়, তালিকা দেখায় ও মুছে ফেলে। `http://<traffic66 machine>:8066`
+খুলে এদের যেকোনো একজন হিসেবে সাইন ইন করুন।
 
-- প্রথমবার চালুর আগে পাসওয়ার্ড সেট না করলে traffic66 নিজেই একটি তৈরি করে
-  এবং log-এ একবার প্রিন্ট করে:
-  `first start: sign in as user "admin" with password "…"`।
-  Linux-এ এটি খুঁজুন `journalctl -u traffic66 | grep "first start"` দিয়ে।
-- পাসওয়ার্ড hash করে data directory-র `password` ফাইলে রাখা হয়। restart-এর
-  পরেও একই থাকে।
-- বদলাতে, বা ভুলে গেলে নতুন সেট করতে, traffic66 মেশিনে:
+<a id="the-first-sign-in"></a>
+
+### প্রথম সাইন ইন
+
+প্রথমবার চালু হলে traffic66 একটি random পাসওয়ার্ডসহ ইউজার `admin` তৈরি করে
+এবং সেটি একবার দেখায়:
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- Windows-এ double-click করে চালু করলে: কালো window-তে।
+- terminal-এ চালু করলে: সেই terminal-এ।
+- Linux service: `journalctl -u traffic66 | grep "first start"`
+- macOS service: `grep "first start" /Library/Logs/traffic66.log`
+
+দেখতে পাননি? `traffic66 passwd` (নিচে দেখুন) দিয়ে নতুন সেট করুন। প্রথমবার
+চালুর আগে `traffic66 passwd` দিয়ে পাসওয়ার্ড সেট করে থাকলে, যেমনটা ওপরের
+install ধাপগুলোতে করা হয়, কিছুই generate হয় না।
+
+<a id="where-the-users-are-stored"></a>
+
+### ইউজার কোথায় রাখা হয়
+
+data directory-র `password` ফাইলে:
+
+| traffic66 কীভাবে চলে | ফাইল |
+|---|---|
+| unpack করে নিজের folder থেকে চালু (default) | প্রোগ্রামের পাশে `traffic66-data/password` |
+| Linux service (সেকশন 2) | `/var/lib/traffic66/password` |
+| Windows startup task (সেকশন 2) | `C:\traffic66\traffic66-data\password` |
+| macOS service (সেকশন 2) | `/Library/Application Support/traffic66/password` |
+| ডেমো | প্রোগ্রামের পাশে `traffic66-demo/password` |
+
+প্রতি ইউজারের জন্য এক লাইন। পাসওয়ার্ড salted hash হিসেবে রাখা হয়, তাই ফাইল
+থেকে কেউ সেগুলো আবার পড়তে পারে না, আপনিও না; পাসওয়ার্ড ভুলে গেলে নতুন সেট
+করুন। ফাইলটি শুধু এর owner পড়তে পারে।
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+<a id="managing-users"></a>
+
+### ইউজার পরিচালনা
+
+এগুলো traffic66 মেশিনে চালান:
+
+| কাজ | Command |
+|---|---|
+| `admin`-এর পাসওয়ার্ড বদলানো | `traffic66 passwd` |
+| ইউজার `alice` যোগ করা, বা তার পাসওয়ার্ড বদলানো | `traffic66 passwd -user alice` |
+| ইউজার `alice` মুছে ফেলা | `traffic66 passwd -user alice -delete` |
+| ইউজারদের তালিকা দেখা | `traffic66 passwd -list` |
+| random পাসওয়ার্ড সেট করে প্রিন্ট করা | `traffic66 passwd -generate` (অন্য ইউজারের জন্য `-user` সহ) |
+
+- command নতুন পাসওয়ার্ড দুবার চায় এবং আপনি যা টাইপ করেন তা দেখায় না।
+  অন্তত 8 অক্ষর ব্যবহার করুন।
+- traffic66 `-data` দিয়ে চললে command-এও একই `-data` যোগ করুন। সেকশন 2-এর
+  Linux service-এর জন্য:
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  `traffic66 passwd -generate` একটি random পাসওয়ার্ড তৈরি করে প্রিন্ট করে।
-  চলমান traffic66 পরের সাইন ইনেই নতুন পাসওয়ার্ড গ্রহণ করে; restart লাগে না।
-- আরও ইউজার: `traffic66 passwd -data <data directory> -user alice`। সব
-  ইউজার একই জিনিস দেখে।
-- script ও container-এর জন্য, environment-এ `TRAFFIC66_PASSWORD=…` বা command
-  line-এ `-password …` ওই run-এর জন্য সংরক্ষিত পাসওয়ার্ডের বদলে পাসওয়ার্ড সেট
-  করে। environment-ই ভালো: command line মেশিনের অন্য ইউজাররা দেখতে পায়।
+  Windows-এ (PowerShell, Administrator হিসেবে):
+
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- পরিবর্তন সঙ্গে সঙ্গে কার্যকর হয়, restart লাগে না: নতুন পাসওয়ার্ড পরের সাইন
+  ইনেই কাজ করে, আর মুছে ফেলা ইউজার খোলা browser থেকে sign out হয়ে যায়।
+- শেষ অবশিষ্ট ইউজারকে মোছা যায় না; আগে আরেকজন ইউজার যোগ করুন।
+- সব ইউজার একই জিনিস দেখে ও বদলাতে পারে; কোনো role নেই।
+
+<a id="passwords-for-scripts-and-containers"></a>
+
+### script ও container-এর জন্য পাসওয়ার্ড
+
+environment-এ `TRAFFIC66_PASSWORD=…`, বা command line-এ `-password …` দিলে
+traffic66 ওই run-এ ঠিক একজন ইউজারকেই গ্রহণ করে: `-user` দিয়ে দেওয়া ইউজার
+(default `admin`), ওই পাসওয়ার্ডসহ। তখন `password` ফাইল উপেক্ষা করা হয় এবং
+বদলানো হয় না। environment variable-ই ভালো: command line মেশিনের অন্য ইউজাররা
+দেখতে পায়।
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
 
 এক মিনিটের মধ্যে পাঁচবার ভুল পাসওয়ার্ড দিলে সেই address এক মিনিটের জন্য block
 হয়।
@@ -617,7 +691,7 @@ port-এ) দুবার গোনা হয়।
 | `traffic66` | flow সংগ্রহ করে ও web UI চালায় |
 | `traffic66 demo` | একই, একটি simulated নেটওয়ার্ক সহ |
 | `traffic66 tui` | চলমান traffic66-এর জন্য terminal UI |
-| `traffic66 passwd` | login পাসওয়ার্ড সেট করে |
+| `traffic66 passwd` | ইউজার যোগ করে, বদলায়, তালিকা দেখায় বা মুছে ফেলে (দেখুন [ইউজার ও পাসওয়ার্ড](#3-users-and-passwords)) |
 | `traffic66 simulate -to HOST` | কোনো collector-এ simulated export পাঠায় |
 | `traffic66 interfaces` | local capture-এর জন্য interface-এর তালিকা |
 | `traffic66 version` | version প্রিন্ট করে |
@@ -629,8 +703,8 @@ port-এ) দুবার গোনা হয়।
 | `-addr` | `:8066` | web UI-র address; শুধু এই মেশিনের জন্য `127.0.0.1:8066` |
 | `-data` | প্রোগ্রামের পাশে `traffic66-data` | data directory |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP collector, `name=address` আকারে, comma দিয়ে আলাদা; খালি রাখলে বন্ধ |
-| `-user` | `admin` | প্রথম generated পাসওয়ার্ড ও `-password`-এর ইউজার |
-| `-password` | সংরক্ষিত পাসওয়ার্ড | শুধু এই run-এর পাসওয়ার্ড (`TRAFFIC66_PASSWORD`-ও) |
+| `-user` | `admin` | প্রথম চালুতে তৈরি হওয়া ইউজারের নাম, এবং যে ইউজারের ক্ষেত্রে `-password` প্রযোজ্য |
+| `-password` | সেট করা নেই | এই run-এ শুধু এই পাসওয়ার্ডসহ `-user`-কে গ্রহণ করে, `password` ফাইল উপেক্ষা করে (`TRAFFIC66_PASSWORD`-ও) |
 | `-retention-days` | `30` | কত দিনের flow detail রাখা হবে; summary 400 দিন রাখা হয় |
 | `-memory` | `0.10` | physical memory-র কত অংশ database ব্যবহার করতে পারবে |
 | `-l2-overhead` | `18` | NetFlow/IPFIX byte count-এ প্রতি packet-এ যোগ করা byte |
@@ -725,7 +799,7 @@ summary থেকে এবং 0.2 s-এর কম সময় নেয়। 
 | সংখ্যা interface counter-এর চেয়ে কম | **ইন্টারফেস মিলানো** দেখুন: পথে loss, interface sample হচ্ছে না, অথবা flow এখনও ডিভাইসের cache-এ (active timeout 60 s-এর বেশি) |
 | সংখ্যা interface counter-এর চেয়ে বেশি | একই ট্রাফিক দুটি interface বা দুটি ডিভাইসে sample হচ্ছে |
 | কোনো দেশ বা নেটওয়ার্ক নেই | IP-to-ASN table নেই: [দেশ](#8-countries-networks-and-threat-lists) দেখুন |
-| পাসওয়ার্ড ভুলে গেছেন | traffic66 মেশিনে `traffic66 passwd -data <data directory>` |
+| পাসওয়ার্ড ভুলে গেছেন | traffic66 মেশিনে `traffic66 passwd` (traffic66 `-data` দিয়ে চললে `-data` যোগ করুন) |
 | `Conflicting lock is held` | অন্য একটি traffic66 ইতিমধ্যে এই data directory ব্যবহার করছে |
 | `receive buffer is only … KB` | Linux UDP buffer সীমিত রাখে: `net.core.rmem_max=16777216` সেট করুন ([Linux](#linux) দেখুন) |
 | `cannot create the data directory` | এই ইউজারের জন্য প্রোগ্রাম ফোল্ডার writable নয়: `-data` দিন |

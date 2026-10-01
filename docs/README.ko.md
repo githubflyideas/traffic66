@@ -22,7 +22,7 @@ sFlow, NetFlow, IPFIX 플로 분석을 하나의 프로그램으로 처리합니
 
 1. [데모 실행해 보기](#1-try-the-demo)
 2. [설치](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [로그인과 비밀번호](#3-sign-in-and-passwords)
+3. [사용자와 비밀번호](#3-users-and-passwords)
 4. [장비에서 플로 보내기](#4-send-flows-from-your-devices)
 5. [플로 수신 확인](#5-check-that-flows-arrive)
 6. [수치를 인터페이스 카운터와 맞추기](#6-make-the-numbers-match-the-interface-counters)
@@ -252,32 +252,105 @@ sudo launchctl bootout system/traffic66
 macOS 방화벽이 켜져 있다면 시스템 설정 → 네트워크 → 방화벽 → 옵션에서 traffic66의 수신
 연결을 허용하십시오.
 
-<a id="3-sign-in-and-passwords"></a>
+<a id="3-users-and-passwords"></a>
 
-## 3. 로그인과 비밀번호
+## 3. 사용자와 비밀번호
 
-`http://<traffic66 machine>:8066`을 열고 로그인합니다. 따로 정하지 않았다면 사용자는
-`admin`입니다.
+**요약:** 사용자와 비밀번호는 데이터 디렉터리의 파일 하나, `password`에 저장됩니다.
+이 파일을 직접 편집할 일은 없습니다. 사용자 추가, 변경, 목록 확인, 삭제는
+`traffic66 passwd` 명령으로 합니다. `http://<traffic66 machine>:8066`을 열고
+그중 한 사용자로 로그인합니다.
 
-- 첫 시작 전에 비밀번호를 설정하지 않았다면 traffic66이 비밀번호를 만들어 로그에 한 번만
-  출력합니다:
-  `first start: sign in as user "admin" with password "…"`.
-  Linux에서는 `journalctl -u traffic66 | grep "first start"`로 찾을 수 있습니다.
-- 비밀번호는 해시되어 데이터 디렉터리의 `password` 파일에 저장됩니다. 재시작해도
-  바뀌지 않습니다.
-- 비밀번호를 바꾸거나, 잊어버려서 새로 설정하려면 traffic66 서버에서 다음을 실행합니다:
+<a id="the-first-sign-in"></a>
+
+### 첫 로그인
+
+traffic66은 처음 시작할 때 임의의 비밀번호로 사용자 `admin`을 만들고, 그 비밀번호를
+한 번만 보여 줍니다:
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- Windows에서 더블클릭으로 시작한 경우: 검은 창에 표시됩니다.
+- 터미널에서 시작한 경우: 그 터미널에 표시됩니다.
+- Linux 서비스: `journalctl -u traffic66 | grep "first start"`
+- macOS 서비스: `grep "first start" /Library/Logs/traffic66.log`
+
+놓쳤다면 `traffic66 passwd`(아래 참조)로 새 비밀번호를 설정합니다. 위의 설치 절차처럼
+첫 시작 전에 `traffic66 passwd`로 비밀번호를 설정해 두었다면 비밀번호가 생성되지
+않습니다.
+
+<a id="where-the-users-are-stored"></a>
+
+### 사용자가 저장되는 곳
+
+데이터 디렉터리의 `password` 파일입니다:
+
+| traffic66 실행 방식 | 파일 |
+|---|---|
+| 압축을 풀고 그 폴더에서 시작(기본) | 프로그램 옆의 `traffic66-data/password` |
+| Linux 서비스(섹션 2) | `/var/lib/traffic66/password` |
+| Windows 시작 작업(섹션 2) | `C:\traffic66\traffic66-data\password` |
+| macOS 서비스(섹션 2) | `/Library/Application Support/traffic66/password` |
+| 데모 | 프로그램 옆의 `traffic66-demo/password` |
+
+사용자마다 한 줄입니다. 비밀번호는 솔트를 넣은 해시로 저장되므로 누구도 파일에서
+비밀번호를 다시 읽어 낼 수 없으며, 본인도 마찬가지입니다. 비밀번호를 잊어버렸다면
+새로 설정합니다. 이 파일은 소유자만 읽을 수 있습니다.
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+<a id="managing-users"></a>
+
+### 사용자 관리
+
+traffic66 서버에서 다음을 실행합니다:
+
+| 작업 | 명령 |
+|---|---|
+| `admin`의 비밀번호 변경 | `traffic66 passwd` |
+| 사용자 `alice` 추가 또는 비밀번호 변경 | `traffic66 passwd -user alice` |
+| 사용자 `alice` 삭제 | `traffic66 passwd -user alice -delete` |
+| 사용자 목록 보기 | `traffic66 passwd -list` |
+| 임의의 비밀번호를 설정하고 출력 | `traffic66 passwd -generate`(다른 사용자는 `-user` 추가) |
+
+- 명령은 새 비밀번호를 두 번 묻고, 입력하는 내용은 화면에 표시하지 않습니다.
+  8자 이상을 사용합니다.
+- traffic66을 `-data`와 함께 실행한다면 명령에도 같은 `-data`를 붙입니다.
+  섹션 2의 Linux 서비스라면:
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  `traffic66 passwd -generate`는 임의의 비밀번호를 만들어 출력합니다. 실행 중인 traffic66은
-  다음 로그인부터 새 비밀번호를 받아들이며, 재시작할 필요가 없습니다.
-- 사용자 추가: `traffic66 passwd -data <data directory> -user alice`. 모든 사용자에게
-  같은 화면이 보입니다.
-- 스크립트나 컨테이너에서는 환경 변수 `TRAFFIC66_PASSWORD=…` 또는 명령줄의
-  `-password …`로, 저장된 비밀번호 대신 해당 실행에만 쓸 비밀번호를 지정할 수 있습니다.
-  환경 변수를 권장합니다. 명령줄은 같은 서버의 다른 사용자에게 보이기 때문입니다.
+  Windows에서는(관리자 권한 PowerShell):
+
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- 변경 사항은 재시작 없이 바로 적용됩니다. 새 비밀번호는 다음 로그인부터 쓸 수 있고,
+  삭제된 사용자는 열려 있는 브라우저에서 로그아웃됩니다.
+- 마지막 남은 사용자는 삭제할 수 없습니다. 먼저 다른 사용자를 추가합니다.
+- 모든 사용자가 같은 것을 보고 바꿀 수 있습니다. 역할 구분은 없습니다.
+
+<a id="passwords-for-scripts-and-containers"></a>
+
+### 스크립트와 컨테이너용 비밀번호
+
+환경 변수 `TRAFFIC66_PASSWORD=…` 또는 명령줄의 `-password …`를 쓰면 traffic66은
+그 실행 동안 사용자 한 명만 받아들입니다. `-user`로 지정한 사용자(기본값 `admin`)와
+그 비밀번호입니다. 이때 `password` 파일은 무시되며 변경되지도 않습니다. 환경 변수를
+권장합니다. 명령줄은 같은 서버의 다른 사용자에게 보이기 때문입니다.
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
 
 1분 안에 비밀번호를 다섯 번 틀린 주소는 1분간 차단됩니다.
 
@@ -598,7 +671,7 @@ traffic66 -capture eth1               # repeat -capture for more interfaces
 | `traffic66` | 플로를 수집하고 웹 UI 제공 |
 | `traffic66 demo` | 위와 같으나 시뮬레이션 네트워크 사용 |
 | `traffic66 tui` | 실행 중인 traffic66용 터미널 UI |
-| `traffic66 passwd` | 로그인 비밀번호 설정 |
+| `traffic66 passwd` | 사용자 추가, 변경, 목록 확인, 삭제([사용자와 비밀번호](#3-users-and-passwords) 참조) |
 | `traffic66 simulate -to HOST` | 수집기로 시뮬레이션 익스포트 전송 |
 | `traffic66 interfaces` | 로컬 캡처용 인터페이스 목록 |
 | `traffic66 version` | 버전 출력 |
@@ -610,8 +683,8 @@ traffic66 -capture eth1               # repeat -capture for more interfaces
 | `-addr` | `:8066` | 웹 UI 주소. `127.0.0.1:8066`이면 이 서버에서만 접근 |
 | `-data` | 프로그램 옆의 `traffic66-data` | 데이터 디렉터리 |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP 수집기를 `name=address` 형식으로 쉼표 구분. 비우면 비활성화 |
-| `-user` | `admin` | 처음 생성되는 비밀번호와 `-password`에 해당하는 사용자 |
-| `-password` | 저장된 비밀번호 | 이번 실행에만 쓰는 비밀번호(`TRAFFIC66_PASSWORD`도 가능) |
+| `-user` | `admin` | 첫 시작 때 만들어지는 사용자의 이름이자 `-password`가 적용되는 사용자 |
+| `-password` | 설정 안 함 | 이번 실행에서는 `password` 파일을 무시하고 `-user`와 이 비밀번호만 허용(`TRAFFIC66_PASSWORD`도 가능) |
 | `-retention-days` | `30` | 플로 상세 보관 일수. 요약은 400일 보관 |
 | `-memory` | `0.10` | 데이터베이스가 사용할 수 있는 물리 메모리 비율 |
 | `-l2-overhead` | `18` | NetFlow/IPFIX 바이트 수에 패킷당 더하는 바이트 |
@@ -699,7 +772,7 @@ Top 66은 약 9초이며, 소요 시간은 범위에 비례해 늘고 코어가 
 | 수치가 인터페이스 카운터보다 낮음 | **인터페이스 대조** 확인: 경로상 유실, 샘플링되지 않은 인터페이스, 또는 플로가 아직 장비 캐시에 있음(액티브 타임아웃이 60초보다 김) |
 | 수치가 인터페이스 카운터보다 높음 | 같은 트래픽을 두 인터페이스 또는 두 장비에서 샘플링함 |
 | 국가나 네트워크가 표시되지 않음 | IP-ASN 매핑 테이블이 없음: [국가](#8-countries-networks-and-threat-lists) 참조 |
-| 비밀번호를 잊어버림 | traffic66 서버에서 `traffic66 passwd -data <data directory>` |
+| 비밀번호를 잊어버림 | traffic66 서버에서 `traffic66 passwd`(traffic66을 `-data`와 함께 실행한다면 `-data` 추가) |
 | `Conflicting lock is held` | 다른 traffic66이 이미 이 데이터 디렉터리를 사용 중 |
 | `receive buffer is only … KB` | Linux가 UDP 버퍼를 제한함: `net.core.rmem_max=16777216` 설정([Linux](#linux) 참조) |
 | `cannot create the data directory` | 이 사용자에게 프로그램 폴더 쓰기 권한이 없음: `-data` 지정 |

@@ -100,14 +100,45 @@ func Set(dir, user, pw string) error {
 	if err != nil {
 		return err
 	}
-	var b strings.Builder
-	b.WriteString("# traffic66 login; change with: traffic66 passwd\n")
+	var out []Entry
 	for _, e := range entries {
 		if e.User != user {
-			fmt.Fprintf(&b, "%s:%s\n", e.User, e.Hash)
+			out = append(out, e)
 		}
 	}
-	fmt.Fprintf(&b, "%s:%s\n", user, Hash(pw))
+	return write(dir, append(out, Entry{user, Hash(pw)}))
+}
+
+// ErrLastUser is returned when deleting the only remaining user.
+var ErrLastUser = errors.New("this is the only user; add another user first")
+
+// Delete removes user from the password file in dir.
+func Delete(dir, user string) error {
+	entries, err := Load(dir)
+	if err != nil {
+		return err
+	}
+	var out []Entry
+	for _, e := range entries {
+		if e.User != user {
+			out = append(out, e)
+		}
+	}
+	if len(out) == len(entries) {
+		return fmt.Errorf("no user %q", user)
+	}
+	if len(out) == 0 {
+		return ErrLastUser
+	}
+	return write(dir, out)
+}
+
+func write(dir string, entries []Entry) error {
+	var b strings.Builder
+	b.WriteString("# traffic66 login, one user per line; change with: traffic66 passwd\n")
+	for _, e := range entries {
+		fmt.Fprintf(&b, "%s:%s\n", e.User, e.Hash)
+	}
 	tmp := filepath.Join(dir, FileName+".tmp")
 	if err := os.WriteFile(tmp, []byte(b.String()), 0o600); err != nil {
 		return err
@@ -202,4 +233,18 @@ func (f *FileChecker) Check(user, pw string) bool {
 	c := f.c
 	f.mu.Unlock()
 	return c.Check(user, pw)
+}
+
+// Exists reports whether user can currently sign in.
+func (f *FileChecker) Exists(user string) bool {
+	if f.fixed != nil {
+		_, ok := f.fixed[user]
+		return ok
+	}
+	f.Check("", "") // reload the file if it changed
+	f.mu.Lock()
+	c := f.c
+	f.mu.Unlock()
+	_, ok := c.hashes[user]
+	return ok
 }

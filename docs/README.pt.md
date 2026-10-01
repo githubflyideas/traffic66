@@ -25,7 +25,7 @@ equipamentos, em uma interface web e em uma interface de terminal.
 
 1. [Testar a demo](#1-try-the-demo)
 2. [Instalação](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [Login e senhas](#3-sign-in-and-passwords)
+3. [Usuários e senhas](#3-users-and-passwords)
 4. [Enviar fluxos dos seus equipamentos](#4-send-flows-from-your-devices)
 5. [Verificar se os fluxos estão chegando](#5-check-that-flows-arrive)
 6. [Fazer os números baterem com os contadores de interface](#6-make-the-numbers-match-the-interface-counters)
@@ -262,35 +262,107 @@ sudo launchctl bootout system/traffic66
 Se o firewall do macOS estiver ativo, permita conexões de entrada para o
 traffic66 em Ajustes do Sistema → Rede → Firewall → Opções.
 
-<a id="3-sign-in-and-passwords"></a>
+<a id="3-users-and-passwords"></a>
 
-## 3. Login e senhas
+## 3. Usuários e senhas
 
-Abra `http://<traffic66 machine>:8066` e faça login. O usuário é `admin`,
-a menos que você tenha escolhido outro.
+**Em resumo:** usuários e senhas ficam em um único arquivo, `password`, no
+diretório de dados. Você nunca o edita à mão: o comando `traffic66 passwd`
+adiciona, altera, lista e remove usuários. Abra
+`http://<traffic66 machine>:8066` e faça login com um deles.
 
-- Se você não definiu uma senha antes da primeira execução, o traffic66
-  gera uma e a mostra uma única vez no log:
-  `first start: sign in as user "admin" with password "…"`.
-  No Linux, encontre-a com `journalctl -u traffic66 | grep "first start"`.
-- A senha fica guardada, em hash, no arquivo `password` do diretório de
-  dados. Ela se mantém entre reinicializações.
-- Para trocá-la, ou definir uma nova depois de esquecê-la, na máquina do
-  traffic66:
+<a id="the-first-sign-in"></a>
+
+### O primeiro login
+
+Na primeira execução, o traffic66 cria o usuário `admin` com uma senha
+aleatória e a mostra uma única vez:
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- Iniciado com clique duplo no Windows: na janela preta.
+- Em um terminal: no terminal.
+- Serviço do Linux: `journalctl -u traffic66 | grep "first start"`
+- Serviço do macOS: `grep "first start" /Library/Logs/traffic66.log`
+
+Perdeu? Defina uma nova com `traffic66 passwd` (abaixo). Se você definiu uma
+senha com `traffic66 passwd` antes da primeira execução, como fazem os
+passos de instalação acima, nenhuma é gerada.
+
+<a id="where-the-users-are-stored"></a>
+
+### Onde os usuários ficam guardados
+
+No arquivo `password` do diretório de dados:
+
+| Como o traffic66 é executado | Arquivo |
+|---|---|
+| Descompactado e iniciado da própria pasta (padrão) | `traffic66-data/password` ao lado do programa |
+| Serviço do Linux (seção 2) | `/var/lib/traffic66/password` |
+| Tarefa de inicialização do Windows (seção 2) | `C:\traffic66\traffic66-data\password` |
+| Serviço do macOS (seção 2) | `/Library/Application Support/traffic66/password` |
+| Demo | `traffic66-demo/password` ao lado do programa |
+
+Uma linha por usuário. As senhas são guardadas como hashes com salt, então
+ninguém consegue recuperá-las do arquivo, nem mesmo você; se uma senha for
+esquecida, defina uma nova. Só o dono do arquivo pode lê-lo.
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+<a id="managing-users"></a>
+
+### Gerenciar usuários
+
+Execute estes comandos na máquina do traffic66:
+
+| Para | Comando |
+|---|---|
+| Trocar a senha de `admin` | `traffic66 passwd` |
+| Adicionar o usuário `alice`, ou trocar a senha dela | `traffic66 passwd -user alice` |
+| Remover o usuário `alice` | `traffic66 passwd -user alice -delete` |
+| Listar os usuários | `traffic66 passwd -list` |
+| Definir uma senha aleatória e exibi-la | `traffic66 passwd -generate` (com `-user` para outros usuários) |
+
+- O comando pede a nova senha duas vezes e não mostra o que você digita.
+  Use pelo menos 8 caracteres.
+- Quando o traffic66 roda com `-data`, adicione o mesmo `-data` ao comando.
+  Para o serviço do Linux da seção 2:
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  `traffic66 passwd -generate` gera uma senha aleatória e a exibe. Um
-  traffic66 em execução aceita a nova senha no próximo login; não é preciso
-  reiniciar.
-- Mais usuários: `traffic66 passwd -data <data directory> -user alice`.
-  Todos os usuários veem a mesma coisa.
-- Para scripts e contêineres, `TRAFFIC66_PASSWORD=…` no ambiente ou
-  `-password …` na linha de comando define a senha daquela execução no
-  lugar da senha guardada. Prefira o ambiente: linhas de comando ficam
-  visíveis para outros usuários da máquina.
+  No Windows (PowerShell como administrador):
+
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- As mudanças valem na hora, sem reiniciar: uma senha nova funciona no
+  próximo login, e um usuário removido é desconectado dos navegadores
+  abertos.
+- O último usuário restante não pode ser removido; adicione outro antes.
+- Todos os usuários veem e podem alterar as mesmas coisas; não há papéis.
+
+<a id="passwords-for-scripts-and-containers"></a>
+
+### Senhas para scripts e contêineres
+
+`TRAFFIC66_PASSWORD=…` no ambiente, ou `-password …` na linha de comando,
+faz o traffic66 aceitar exatamente um usuário naquela execução: o indicado
+por `-user` (padrão `admin`) com essa senha. O arquivo `password` é então
+ignorado e não é alterado. Prefira a variável de ambiente: linhas de comando
+ficam visíveis para outros usuários da máquina.
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
 
 Depois de cinco senhas erradas em um minuto, o endereço fica bloqueado por
 um minuto.
@@ -639,7 +711,7 @@ Comandos:
 | `traffic66` | coleta fluxos e serve a interface web |
 | `traffic66 demo` | o mesmo, com uma rede simulada |
 | `traffic66 tui` | interface de terminal para um traffic66 em execução |
-| `traffic66 passwd` | define uma senha de login |
+| `traffic66 passwd` | adiciona, altera, lista ou remove usuários (veja [Usuários e senhas](#3-users-and-passwords)) |
 | `traffic66 simulate -to HOST` | envia exportações simuladas para um coletor |
 | `traffic66 interfaces` | lista as interfaces para captura local |
 | `traffic66 version` | mostra a versão |
@@ -651,8 +723,8 @@ Opções de `traffic66` e `traffic66 demo`:
 | `-addr` | `:8066` | endereço da interface web; `127.0.0.1:8066` só para esta máquina |
 | `-data` | `traffic66-data` ao lado do programa | diretório de dados |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | coletores UDP no formato `name=address`, separados por vírgula; vazio desativa |
-| `-user` | `admin` | usuário da primeira senha gerada e de `-password` |
-| `-password` | senha guardada | senha só para esta execução (também `TRAFFIC66_PASSWORD`) |
+| `-user` | `admin` | nome do usuário criado na primeira execução e do usuário ao qual `-password` se aplica |
+| `-password` | não definido | aceita só `-user` com esta senha nesta execução, ignorando o arquivo `password` (também `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | dias de detalhe de fluxo mantidos; os resumos são mantidos por 400 dias |
 | `-memory` | `0.10` | fração da memória física que o banco de dados pode usar |
 | `-l2-overhead` | `18` | bytes por pacote somados às contagens de bytes de NetFlow/IPFIX |
@@ -749,7 +821,7 @@ conforme a sua taxa de fluxos (mostrada em **Fontes**) e `-retention-days`.
 | Números abaixo dos contadores de interface | Veja **Conferência de interfaces**: perdas no caminho, interfaces não amostradas ou fluxos ainda no cache do equipamento (timeout ativo acima de 60 s) |
 | Números acima dos contadores de interface | O mesmo tráfego amostrado em duas interfaces ou dois equipamentos |
 | Sem países nem redes | Falta a tabela IP-para-ASN: veja [Países](#8-countries-networks-and-threat-lists) |
-| Esqueci a senha | `traffic66 passwd -data <data directory>` na máquina do traffic66 |
+| Esqueci a senha | `traffic66 passwd` na máquina do traffic66 (adicione `-data` se o traffic66 roda com ele) |
 | `Conflicting lock is held` | Outro traffic66 já usa este diretório de dados |
 | `receive buffer is only … KB` | O Linux limita os buffers UDP: defina `net.core.rmem_max=16777216` (veja [Linux](#linux)) |
 | `cannot create the data directory` | Este usuário não tem permissão de escrita na pasta do programa: informe `-data` |

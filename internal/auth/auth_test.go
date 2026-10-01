@@ -67,3 +67,22 @@ func TestFileCheckerSeesChanges(t *testing.T) {
 		t.Fatal("change of the password file not picked up")
 	}
 }
+
+func TestDelete(t *testing.T) {
+	dir := t.TempDir()
+	Set(dir, "admin", "a")
+	Set(dir, "alice", "b")
+	if err := Delete(dir, "nobody"); err == nil {
+		t.Fatal("deleting an unknown user succeeded")
+	}
+	if err := Delete(dir, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(dir, "admin"); err != ErrLastUser {
+		t.Fatalf("deleting the last user: %v", err)
+	}
+	es, _ := Load(dir)
+	if len(es) != 1 || es[0].User != "admin" || !NewChecker(nil, es).Check("admin", "a") {
+		t.Fatalf("%+v", es)
+	}
+}

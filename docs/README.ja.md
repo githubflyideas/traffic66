@@ -16,7 +16,7 @@ sFlow・NetFlow・IPFIX のフロー分析を 1 つのプログラムで行い�
 
 1. [デモを試す](#1-try-the-demo)
 2. [インストール](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [サインインとパスワード](#3-sign-in-and-passwords)
+3. [ユーザーとパスワード](#3-users-and-passwords)
 4. [機器からフローを送る](#4-send-flows-from-your-devices)
 5. [フローの受信を確認する](#5-check-that-flows-arrive)
 6. [数値をインターフェースカウンターと一致させる](#6-make-the-numbers-match-the-interface-counters)
@@ -228,23 +228,91 @@ sudo launchctl bootout system/traffic66
 
 macOS のファイアウォールが有効な場合は、「システム設定 → ネットワーク → ファイアウォール →オプション」で traffic66 への着信接続を許可してください。
 
-<a id="3-sign-in-and-passwords"></a>
+<a id="3-users-and-passwords"></a>
 
-## 3. サインインとパスワード
+## 3. ユーザーとパスワード
 
-`http://<traffic66 machine>:8066` を開いてサインインします。別のユーザー名を指定していなければ、ユーザーは `admin` です。
+**要点**：ユーザーとパスワードは、データディレクトリ内の 1 つのファイル `password` に保存されます。このファイルを手で編集することはありません。ユーザーの追加・変更・一覧表示・削除は `traffic66 passwd` コマンドで行います。`http://<traffic66 machine>:8066` を開き、いずれかのユーザーでサインインします。
 
-- 初回起動前にパスワードを設定しなかった場合、traffic66 がパスワードを生成し、ログに 1 回だけ出力します：`first start: sign in as user "admin" with password "…"`。Linux では `journalctl -u traffic66 | grep "first start"` で確認できます。
-- パスワードはハッシュ化され、データディレクトリ内の `password` ファイルに保存されます。再起動しても変わりません。
-- 変更する場合や、忘れて再設定する場合は、traffic66 のマシンで次を実行します：
+<a id="the-first-sign-in"></a>
+
+### 初回のサインイン
+
+traffic66 は初回起動時に、ランダムなパスワードでユーザー `admin` を作成し、そのパスワードを 1 回だけ表示します：
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- Windows でダブルクリックして起動した場合：黒いウィンドウに表示されます。
+- ターミナルから起動した場合：そのターミナルに表示されます。
+- Linux サービス：`journalctl -u traffic66 | grep "first start"`
+- macOS サービス：`grep "first start" /Library/Logs/traffic66.log`
+
+見逃した場合は、`traffic66 passwd`（後述）で新しいパスワードを設定してください。上のインストール手順のように、初回起動前に `traffic66 passwd` でパスワードを設定しておけば、パスワードは生成されません。
+
+<a id="where-the-users-are-stored"></a>
+
+### ユーザーの保存場所
+
+データディレクトリ内の `password` ファイルです：
+
+| traffic66 の動かし方 | ファイル |
+|---|---|
+| 展開したフォルダーから起動（デフォルト） | プログラムと同じ場所の `traffic66-data/password` |
+| Linux サービス（セクション 2） | `/var/lib/traffic66/password` |
+| Windows スタートアップタスク（セクション 2） | `C:\traffic66\traffic66-data\password` |
+| macOS サービス（セクション 2） | `/Library/Application Support/traffic66/password` |
+| デモ | プログラムと同じ場所の `traffic66-demo/password` |
+
+1 行に 1 ユーザーです。パスワードはソルト付きハッシュで保存されるため、誰もファイルから読み戻すことはできません。あなた自身も同じです。パスワードを忘れた場合は、新しく設定してください。このファイルは所有者だけが読み取れます。
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+<a id="managing-users"></a>
+
+### ユーザーの管理
+
+traffic66 のマシンで次を実行します：
+
+| 目的 | コマンド |
+|---|---|
+| `admin` のパスワードを変更 | `traffic66 passwd` |
+| ユーザー `alice` を追加、またはそのパスワードを変更 | `traffic66 passwd -user alice` |
+| ユーザー `alice` を削除 | `traffic66 passwd -user alice -delete` |
+| ユーザーを一覧表示 | `traffic66 passwd -list` |
+| ランダムなパスワードを設定して表示 | `traffic66 passwd -generate`（他のユーザーには `-user` を付ける） |
+
+- コマンドは新しいパスワードを 2 回入力するよう求め、入力内容は表示しません。8 文字以上にしてください。
+- traffic66 を `-data` 付きで動かしている場合は、コマンドにも同じ `-data` を付けます。セクション 2 の Linux サービスの場合：
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  `traffic66 passwd -generate` はランダムなパスワードを生成して表示します。稼働中の traffic66は次回のサインインから新しいパスワードを受け付けます。再起動は不要です。
-- ユーザーの追加：`traffic66 passwd -data <data directory> -user alice`。どのユーザーにも同じ内容が表示されます。
-- スクリプトやコンテナでは、環境変数 `TRAFFIC66_PASSWORD=…` またはコマンドラインの`-password …` で、保存済みのパスワードの代わりにその実行時だけのパスワードを指定できます。環境変数を推奨します。コマンドラインはマシンの他のユーザーからも見えるためです。
+  Windows の場合（管理者として PowerShell を実行）：
+
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- 変更は再起動なしですぐに反映されます。新しいパスワードは次回のサインインから使え、削除したユーザーは開いているブラウザーからサインアウトされます。
+- 最後に残ったユーザーは削除できません。先に別のユーザーを追加してください。
+- どのユーザーも同じものを閲覧・変更できます。ロールはありません。
+
+<a id="passwords-for-scripts-and-containers"></a>
+
+### スクリプトやコンテナ用のパスワード
+
+環境変数 `TRAFFIC66_PASSWORD=…` またはコマンドラインの `-password …` を指定すると、traffic66 はその実行中、`-user` で指定したユーザー（デフォルトは `admin`）1 人だけを、そのパスワードで受け付けます。このとき `password` ファイルは無視され、変更もされません。環境変数を推奨します。コマンドラインはマシンの他のユーザーからも見えるためです。
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
 
 1 分以内に 5 回パスワードを間違えたアドレスは、1 分間ブロックされます。
 
@@ -514,7 +582,7 @@ traffic66 -capture eth1               # repeat -capture for more interfaces
 | `traffic66` | フローを収集し Web UI を提供 |
 | `traffic66 demo` | 同上、シミュレートしたネットワークで動作 |
 | `traffic66 tui` | 稼働中の traffic66 用のターミナル UI |
-| `traffic66 passwd` | ログインパスワードを設定 |
+| `traffic66 passwd` | ユーザーの追加・変更・一覧表示・削除（[ユーザーとパスワード](#3-users-and-passwords) を参照） |
 | `traffic66 simulate -to HOST` | シミュレートしたエクスポートをコレクターに送信 |
 | `traffic66 interfaces` | ローカルキャプチャ用のインターフェースを一覧表示 |
 | `traffic66 version` | バージョンを表示 |
@@ -526,8 +594,8 @@ traffic66 -capture eth1               # repeat -capture for more interfaces
 | `-addr` | `:8066` | Web UI のアドレス。`127.0.0.1:8066` でこのマシンからのみ |
 | `-data` | プログラムと同じ場所の `traffic66-data` | データディレクトリ |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP コレクターを `name=address` のカンマ区切りで指定。空にすると無効 |
-| `-user` | `admin` | 初回生成パスワードと `-password` に対応するユーザー |
-| `-password` | 保存済みのパスワード | この実行時だけのパスワード（`TRAFFIC66_PASSWORD` でも可） |
+| `-user` | `admin` | 初回起動時に作成されるユーザーの名前。`-password` が適用されるユーザーでもある |
+| `-password` | 未設定 | この実行では `password` ファイルを無視し、`-user` とこのパスワードだけを受け付ける（`TRAFFIC66_PASSWORD` でも可） |
 | `-retention-days` | `30` | フロー詳細の保存日数。集計は 400 日保存 |
 | `-memory` | `0.10` | データベースが使用できる物理メモリの割合 |
 | `-l2-overhead` | `18` | NetFlow/IPFIX のバイト数にパケットあたり加算するバイト数 |
@@ -601,7 +669,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | 数値がインターフェースカウンターより小さい | **インターフェース照合** を確認：途中でのロス、サンプリングされていないインターフェース、またはフローがまだ機器のキャッシュ内にある（アクティブタイムアウトが 60 秒より長い） |
 | 数値がインターフェースカウンターより大きい | 同じトラフィックを 2 つのインターフェースまたは 2 台の機器でサンプリングしています |
 | 国やネットワークが表示されない | IP-ASN 対応表がありません：[国](#8-countries-networks-and-threat-lists) を参照 |
-| パスワードを忘れた | traffic66 のマシンで `traffic66 passwd -data <data directory>` |
+| パスワードを忘れた | traffic66 のマシンで `traffic66 passwd`（traffic66 を `-data` 付きで動かしている場合は `-data` も付ける） |
 | `Conflicting lock is held` | 別の traffic66 がすでにこのデータディレクトリを使っています |
 | `receive buffer is only … KB` | Linux が UDP バッファを制限しています：`net.core.rmem_max=16777216` を設定（[Linux](#linux) を参照） |
 | `cannot create the data directory` | このユーザーはプログラムのフォルダーに書き込めません：`-data` を指定してください |

@@ -36,6 +36,7 @@ type Server struct {
 	Demo     bool
 	Users    map[string]string          // fixed passwords (tests)
 	Check    func(user, pw string) bool // login check; replaces Users when set
+	Exists   func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
 	LocalTok string                     // token for the TUI on this machine
 	Capture  func() []CaptureInfo
 	SNMP     func() []snmp.Status
@@ -204,6 +205,10 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 		if c, err := r.Cookie(cookieName); err == nil {
 			s.mu.Lock()
 			se, ok := s.sessions[c.Value]
+			if ok && s.Exists != nil && !s.Exists(se.user) {
+				delete(s.sessions, c.Value)
+				ok = false
+			}
 			if ok && time.Now().Before(se.exp) {
 				se.exp = time.Now().Add(12 * time.Hour)
 				s.sessions[c.Value] = se
