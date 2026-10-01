@@ -629,6 +629,15 @@ func (a *app) openBrowser() {
 		h.Set("f", strings.Join(parts, ","))
 	}
 	u := a.opt.URL + "/#" + h.Encode()
+	if err := OpenBrowser(u); err != nil {
+		a.flash(a.t("tui.open_failed", "url", u))
+		return
+	}
+	a.flash(a.t("tui.opened"))
+}
+
+// OpenBrowser opens u in the default web browser.
+func OpenBrowser(u string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
@@ -638,11 +647,7 @@ func (a *app) openBrowser() {
 	default:
 		cmd = exec.Command("xdg-open", u)
 	}
-	if err := cmd.Start(); err != nil {
-		a.flash(a.t("tui.open_failed", "url", u))
-		return
-	}
-	a.flash(a.t("tui.opened"))
+	return cmd.Start()
 }
 
 // ------------------------------------------------------------ drawing

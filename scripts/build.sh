@@ -14,6 +14,15 @@ case "$(uname -s)" in
     export CGO_LDFLAGS="-L$tmp ${CGO_LDFLAGS:-}"
     ldflags="$ldflags -extldflags=-static-libgcc"
     ;;
+  MINGW*|MSYS*|CYGWIN*)
+    # link the MinGW runtime statically: no libstdc++/libgcc/libwinpthread
+    # DLLs are needed next to the program
+    ldflags="$ldflags -extldflags=-static"
+    ;;
+  Darwin)
+    # run on macOS 11 and later, not only on the version it was built on
+    export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}"
+    ;;
 esac
 go build -trimpath -ldflags "$ldflags" -o "$out" ./cmd/traffic66
 echo "built $out"

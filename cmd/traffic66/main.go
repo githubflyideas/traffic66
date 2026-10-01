@@ -110,6 +110,7 @@ type serveFlags struct {
 }
 
 func serve(args []string, demo bool) {
+	doubleClick = startedByDoubleClick()
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	var f serveFlags
 	defData := defaultDir("traffic66-data")
@@ -137,14 +138,14 @@ func serve(args []string, demo bool) {
 	fs.Parse(args)
 
 	if err := os.MkdirAll(f.data, 0o755); err != nil {
-		log.Fatalf("cannot create the data directory: %v; choose one with -data", err)
+		fatalf("cannot create the data directory: %v; choose one with -data", err)
 	}
 	if demo {
 		prepareDemo(f.data)
 	}
 	st, err := store.Open(store.Options{Dir: f.data, MemoryFraction: f.mem, RawDays: f.retention})
 	if err != nil {
-		log.Fatalf("store: %v", err)
+		fatalf("store: %v", err)
 	}
 	defer st.Close()
 
@@ -154,7 +155,7 @@ func serve(args []string, demo bool) {
 	}
 	inv, err := enrich.LoadInventory(invPath)
 	if err != nil {
-		log.Fatalf("inventory %s: %v", invPath, err)
+		fatalf("inventory %s: %v", invPath, err)
 	}
 	asn := enrich.NewASNDB()
 	asnPath := f.asn
@@ -305,11 +306,15 @@ func serve(args []string, demo bool) {
 	}
 	ln, err := net.Listen("tcp", f.addr)
 	if err != nil {
-		log.Fatalf("web: %v", err)
+		fatalf("web: %v", err)
 	}
 	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go hs.Serve(ln)
 	log.Printf("web UI: http://%s", displayAddr(ln.Addr()))
+	if doubleClick {
+		log.Printf("opening the web UI in your browser; close this window to stop traffic66")
+		tui.OpenBrowser("http://" + displayAddr(ln.Addr()))
+	}
 
 	if f.tuiAfter {
 		err := tui.Run(ctx, tui.Options{URL: "http://" + displayAddr(ln.Addr()), Token: tok})
@@ -514,12 +519,12 @@ func loginChecker(dir, user, flagPw string) *auth.FileChecker {
 	file := filepath.Join(dir, auth.FileName)
 	es, err := auth.Load(dir)
 	if err != nil {
-		log.Fatalf("%s: %v", file, err)
+		fatalf("%s: %v", file, err)
 	}
 	if len(es) == 0 {
 		pw = auth.Generate()
 		if err := auth.Set(dir, user, pw); err != nil {
-			log.Fatalf("saving the password: %v", err)
+			fatalf("saving the password: %v", err)
 		}
 		log.Printf("first start: sign in as user %q with password %q", user, pw)
 		log.Printf("this password is kept (hashed) in %s; change it with: traffic66 passwd -data %s", file, quoteArg(dir))
@@ -583,4 +588,18 @@ func passwd(args []string) {
 		fmt.Printf("user %s, password %s\n", *user, pw)
 	}
 	fmt.Printf("saved in %s; a running traffic66 uses it from the next login\n", filepath.Join(*data, auth.FileName))
+}
+
+// doubleClick is set when traffic66 was started from Explorer on Windows:
+// it then opens the browser, and an error keeps the window open long
+// enough to be read instead of closing it at once.
+var doubleClick bool
+
+func fatalf(format string, args ...any) {
+	log.Printf(format, args...)
+	if doubleClick {
+		fmt.Fprintln(os.Stderr, "\npress Enter to close this window")
+		fmt.Scanln()
+	}
+	os.Exit(1)
 }
