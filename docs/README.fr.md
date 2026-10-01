@@ -158,6 +158,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -864,6 +866,14 @@ Mesuré sur 10 minutes de collecte continue (pic de 0,58 Go sur une machine
 de 8 Go) et pendant le chargement d'une heure de flux à onze fois ce débit
 avec les limites d'une machine de 2 Go (pic de 0,74 Go).
 
+`-memory` est un budget, pas un plafond strict : la limite de Go est souple
+et la base de données peut dépasser brièvement sa part. Pour un plafond
+strict, utilisez celui du système d'exploitation : `MemoryMax=` dans l'unité
+systemd (section 2) ou la limite mémoire d'un conteneur. Prévoyez environ
+2,5 fois la part `-memory` et au moins 1 Go ; `MemoryMax=2G` convient aux
+machines jusqu'à 8 Go avec la part par défaut. traffic66 redémarre alors au
+lieu que la machine manque de mémoire.
+
 <a id="16-troubleshooting"></a>
 
 ## 16. Dépannage
@@ -875,6 +885,7 @@ avec les limites d'une machine de 2 Go (pic de 0,74 Go).
 | Chiffres inférieurs aux compteurs d'interface | Voir **Contrôle des interfaces** : pertes en route, interfaces non échantillonnées, ou flux encore dans le cache de l'équipement (timeout actif supérieur à 60 s) |
 | Chiffres supérieurs aux compteurs d'interface | Le même trafic est échantillonné sur deux interfaces ou deux équipements |
 | Pas de pays ni de réseaux | Pas de table IP-vers-ASN : voir [Pays](#8-countries-networks-and-threat-lists) |
+| "La base de données a atteint sa limite de mémoire et n'a pas pu répondre" sur une page | Choisissez une période plus courte, ou lancez avec un `-memory` plus grand ; les détails sont dans le journal |
 | Mot de passe oublié | `traffic66 passwd` sur la machine traffic66 (ajoutez `-data` si traffic66 tourne avec) |
 | `Conflicting lock is held` | Un autre traffic66 utilise déjà ce répertoire de données |
 | `receive buffer is only … KB` | Linux limite les tampons UDP : définissez `net.core.rmem_max=16777216` (voir [Linux](#linux)) |

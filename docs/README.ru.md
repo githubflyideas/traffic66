@@ -151,6 +151,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -836,6 +838,14 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 с 8 ГБ) и при загрузке часа потоков с интенсивностью в одиннадцать раз
 выше с ограничениями машины с 2 ГБ (пик 0,74 ГБ).
 
+`-memory` — это бюджет, а не жёсткий предел: лимит Go мягкий, и база данных
+может ненадолго превысить свою долю. Для жёсткого предела используйте
+средства операционной системы: `MemoryMax=` в unit-файле systemd (раздел 2)
+или лимит памяти контейнера. Закладывайте примерно в 2,5 раза больше доли
+`-memory` и не меньше 1 ГБ; при доле по умолчанию `MemoryMax=2G` подходит
+для машин с ОЗУ до 8 ГБ. Тогда перезапускается traffic66, а не у машины
+заканчивается память.
+
 <a id="16-troubleshooting"></a>
 
 ## 16. Устранение неполадок
@@ -847,6 +857,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | Цифры ниже счётчиков интерфейсов | См. **Сверка интерфейсов**: потери по пути, несэмплируемые интерфейсы или потоки ещё в кеше устройства (active timeout больше 60 с) |
 | Цифры выше счётчиков интерфейсов | Один и тот же трафик сэмплируется на двух интерфейсах или двух устройствах |
 | Нет стран и сетей | Нет таблицы IP-to-ASN: см. [Страны](#8-countries-networks-and-threat-lists) |
+| "База данных упёрлась в лимит памяти и не смогла ответить" на странице | Выберите период покороче или запустите с бо́льшим `-memory`; подробности в журнале |
 | Забыт пароль | `traffic66 passwd` на машине с traffic66 (добавьте `-data`, если traffic66 запущен с ним) |
 | `Conflicting lock is held` | Этот каталог данных уже использует другой экземпляр traffic66 |
 | `receive buffer is only … KB` | Linux ограничивает размер UDP-буферов: задайте `net.core.rmem_max=16777216` (см. [Linux](#linux)) |

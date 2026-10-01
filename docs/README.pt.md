@@ -153,6 +153,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -844,6 +846,14 @@ Medido em 10 minutos de coleta contínua (pico de 0,58 GB em uma máquina de
 8 GB) e ao carregar uma hora de fluxos a onze vezes essa taxa com os limites
 de uma máquina de 2 GB (pico de 0,74 GB).
 
+`-memory` é um orçamento, não um teto rígido: o limite do Go é flexível e o
+banco de dados pode ultrapassar brevemente sua parte. Para um teto rígido,
+use o do sistema operacional: `MemoryMax=` na unit systemd (seção 2) ou o
+limite de memória de um contêiner. Reserve cerca de 2,5 vezes a parte do
+`-memory` e pelo menos 1 GB; `MemoryMax=2G` serve para máquinas com até
+8 GB com a parte padrão. Assim o traffic66 reinicia em vez de a máquina
+ficar sem memória.
+
 <a id="16-troubleshooting"></a>
 
 ## 16. Solução de problemas
@@ -855,6 +865,7 @@ de uma máquina de 2 GB (pico de 0,74 GB).
 | Números abaixo dos contadores de interface | Veja **Conferência de interfaces**: perdas no caminho, interfaces não amostradas ou fluxos ainda no cache do equipamento (timeout ativo acima de 60 s) |
 | Números acima dos contadores de interface | O mesmo tráfego amostrado em duas interfaces ou dois equipamentos |
 | Sem países nem redes | Falta a tabela IP-para-ASN: veja [Países](#8-countries-networks-and-threat-lists) |
+| "O banco de dados atingiu o limite de memória e não conseguiu responder" em uma página | Escolha um período menor ou inicie com um `-memory` maior; os detalhes estão no log |
 | Esqueci a senha | `traffic66 passwd` na máquina do traffic66 (adicione `-data` se o traffic66 roda com ele) |
 | `Conflicting lock is held` | Outro traffic66 já usa este diretório de dados |
 | `receive buffer is only … KB` | O Linux limita os buffers UDP: defina `net.core.rmem_max=16777216` (veja [Linux](#linux)) |

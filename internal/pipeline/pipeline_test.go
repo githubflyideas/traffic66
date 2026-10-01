@@ -283,3 +283,22 @@ func TestDedupWindow(t *testing.T) {
 		t.Fatalf("%d minutes kept after the window moved", len(p.dedup))
 	}
 }
+
+func TestDedupCap(t *testing.T) {
+	p, _ := setup(t)
+	old := dedupMaxPerMinute
+	dedupMaxPerMinute = 100
+	defer func() { dedupMaxPerMinute = old }()
+	now := time.Now().UTC().Truncate(time.Minute)
+	e1 := origin{exporter: netip.MustParseAddr("10.0.0.1")}
+	for i := 0; i < 150; i++ {
+		k := dkey{netip.MustParseAddr("10.1.1.1"), netip.MustParseAddr("198.51.100.9"), uint16(1000 + i), 443, 6}
+		p.isDup(now, k, e1)
+	}
+	if n := len(p.dedup[now]); n != 100 {
+		t.Fatalf("%d flows kept, cap 100", n)
+	}
+	if p.DedupFull.Load() != 50 {
+		t.Fatalf("DedupFull %d, want 50", p.DedupFull.Load())
+	}
+}

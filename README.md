@@ -141,6 +141,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -779,6 +781,13 @@ collection (peak 0.58 GB on an 8 GB machine) and while loading an hour of
 flows at eleven times that rate with the limits of a 2 GB machine (peak
 0.74 GB).
 
+`-memory` is a budget, not a hard cap: the Go limit is soft and the
+database can briefly exceed its share. For a hard cap use the operating
+system's: `MemoryMax=` in the systemd unit (section 2) or a container's
+memory limit. Allow about 2.5 times the `-memory` share and at least 1 GB;
+`MemoryMax=2G` suits machines with up to 8 GB at the default share.
+traffic66 then restarts instead of the machine running out of memory.
+
 ## 16. Troubleshooting
 
 | Symptom | Cause and fix |
@@ -788,6 +797,7 @@ flows at eleven times that rate with the limits of a 2 GB machine (peak
 | Numbers lower than the interface counters | See **Interface check**: loss on the way, interfaces not sampled, or flows still in the device cache (active timeout longer than 60 s) |
 | Numbers higher than the interface counters | The same traffic sampled on two interfaces or two devices |
 | No countries or networks | No IP-to-ASN table: see [Countries](#8-countries-networks-and-threat-lists) |
+| "The database reached its memory limit" on a page | Choose a shorter time range, or start with a larger `-memory`; details are in the log |
 | Forgot the password | `traffic66 passwd` on the traffic66 machine (add `-data` if traffic66 runs with it) |
 | `Conflicting lock is held` | Another traffic66 already uses this data directory |
 | `receive buffer is only … KB` | Linux limits UDP buffers: set `net.core.rmem_max=16777216` (see [Linux](#linux)) |

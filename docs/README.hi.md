@@ -151,6 +151,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -823,6 +825,14 @@ detection, batches) लगभग 90 MB लेता है; कुल मिल�
 (8 GB मशीन पर peak 0.58 GB) और 2 GB मशीन की limits के साथ इससे ग्यारह गुना
 rate पर एक घंटे के flows load करते समय (peak 0.74 GB) मापा गया।
 
+`-memory` एक budget है, hard cap नहीं: Go की limit soft है और database
+थोड़ी देर के लिए अपने हिस्से से ज़्यादा ले सकता है। Hard cap के लिए
+operating system की limit इस्तेमाल करें: systemd unit में `MemoryMax=`
+(अनुभाग 2) या container की memory limit। `-memory` वाले हिस्से का लगभग
+2.5 गुना और कम से कम 1 GB रखें; डिफ़ॉल्ट हिस्से पर 8 GB तक की मशीनों के
+लिए `MemoryMax=2G` ठीक है। तब मशीन की memory खत्म होने के बजाय traffic66
+restart हो जाता है।
+
 <a id="16-troubleshooting"></a>
 
 ## 16. समस्या निवारण
@@ -834,6 +844,7 @@ rate पर एक घंटे के flows load करते समय (peak 0
 | आँकड़े interface counters से कम | **इंटरफ़ेस मिलान** देखें: रास्ते में loss, interfaces sample नहीं हो रहे, या flows अभी डिवाइस के cache में हैं (active timeout 60 s से लंबा) |
 | आँकड़े interface counters से ज़्यादा | वही ट्रैफ़िक दो interfaces या दो डिवाइसों पर sample हो रहा है |
 | कोई देश या नेटवर्क नहीं | IP-to-ASN table नहीं है: [देश](#8-countries-networks-and-threat-lists) देखें |
+| पेज पर "डेटाबेस अपनी मेमोरी सीमा तक पहुँच गया और जवाब नहीं दे सका" | छोटी समय सीमा चुनें, या बड़े `-memory` के साथ शुरू करें; विवरण log में है |
 | पासवर्ड भूल गए | traffic66 मशीन पर `traffic66 passwd` (अगर traffic66 `-data` के साथ चलता है तो `-data` जोड़ें) |
 | `Conflicting lock is held` | कोई दूसरा traffic66 पहले से यही data directory इस्तेमाल कर रहा है |
 | `receive buffer is only … KB` | Linux UDP buffers सीमित रखता है: `net.core.rmem_max=16777216` सेट करें ([Linux](#linux) देखें) |

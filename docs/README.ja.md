@@ -124,6 +124,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -682,6 +684,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 
 メモリ：`-memory`（デフォルトは物理メモリの 10%、最低 256 MB）はデータベースのキャッシュを制限し、プログラムのその他の部分には同じ大きさのソフト上限がかかります。毎秒 5,000 フローでは、プログラム自身のデータ（デコード、重複検出、バッチ）は約 90 MB です。全体では 0.6–0.8 GB を見込んでください。RAM 2 GB のマシンで足ります。10 分間の連続収集（8 GB のマシンでピーク 0.58 GB）と、2 GB のマシンの制限下でその 11 倍のレートで 1 時間分のフローを取り込んだとき（ピーク 0.74 GB）に実測しました。
 
+`-memory` は予算であり、厳密な上限ではありません。Go の制限はソフト上限で、データベースも一時的に自分の割り当てを超えることがあります。厳密な上限が必要なら OS の仕組みを使ってください：systemd ユニットの `MemoryMax=`（セクション 2）またはコンテナのメモリ制限です。`-memory` の割り当ての約 2.5 倍、かつ 1 GB 以上を見込んでください。デフォルトの割り当てなら、物理メモリ 8 GB までのマシンには `MemoryMax=2G` が適しています。こうすると、マシンのメモリが枯渇する代わりに traffic66 が再起動します。
+
 <a id="16-troubleshooting"></a>
 
 ## 16. トラブルシューティング
@@ -693,6 +697,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | 数値がインターフェースカウンターより小さい | **インターフェース照合** を確認：途中でのロス、サンプリングされていないインターフェース、またはフローがまだ機器のキャッシュ内にある（アクティブタイムアウトが 60 秒より長い） |
 | 数値がインターフェースカウンターより大きい | 同じトラフィックを 2 つのインターフェースまたは 2 台の機器でサンプリングしています |
 | 国やネットワークが表示されない | IP-ASN 対応表がありません：[国](#8-countries-networks-and-threat-lists) を参照 |
+| ページに "データベースがメモリ上限に達したため、応答できませんでした" と表示される | 期間を短くするか、より大きな `-memory` で起動してください。詳細はログにあります |
 | パスワードを忘れた | traffic66 のマシンで `traffic66 passwd`（traffic66 を `-data` 付きで動かしている場合は `-data` も付ける） |
 | `Conflicting lock is held` | 別の traffic66 がすでにこのデータディレクトリを使っています |
 | `receive buffer is only … KB` | Linux が UDP バッファを制限しています：`net.core.rmem_max=16777216` を設定（[Linux](#linux) を参照） |

@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -23,6 +24,31 @@ import (
 	"github.com/githubflyideas/traffic66/internal/store"
 )
 
+// loadSetup applies the program's memory rules (database share and the same
+// soft limit for Go, each at least 256 MB) and skips machines too small for
+// a load test, so an undersized runner is not mistaken for a product failure.
+func loadSetup(t *testing.T) float64 {
+	if os.Getenv("T66_LOAD") == "" {
+		t.Skip("set T66_LOAD=1 to run the load test")
+	}
+	total := store.TotalMemory()
+	if total < 1500<<20 {
+		t.Skipf("load test needs at least 1.5 GB of memory; this machine has %d MB", total>>20)
+	}
+	frac := 0.10
+	if v, err := strconv.ParseFloat(os.Getenv("T66_LOAD_MEMORY"), 64); err == nil {
+		frac = v
+	}
+	if os.Getenv("GOMEMLIMIT") == "" {
+		lim := int64(float64(total) * frac)
+		if lim < 256<<20 {
+			lim = 256 << 20
+		}
+		debug.SetMemoryLimit(lim)
+	}
+	return frac
+}
+
 func cpuTime() time.Duration {
 	var ru syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &ru)
@@ -32,9 +58,7 @@ func cpuTime() time.Duration {
 // TestLoadUDP sends IPFIX over UDP at the design rate and checks that
 // nothing is dropped. Run with T66_LOAD=1 (optionally T66_LOAD_RATE, _SECS).
 func TestLoadUDP(t *testing.T) {
-	if os.Getenv("T66_LOAD") == "" {
-		t.Skip("set T66_LOAD=1 to run the load test")
-	}
+	frac := loadSetup(t)
 	rate, _ := strconv.Atoi(os.Getenv("T66_LOAD_RATE"))
 	if rate == 0 {
 		rate = 5000
@@ -43,7 +67,7 @@ func TestLoadUDP(t *testing.T) {
 	if secs == 0 {
 		secs = 60
 	}
-	st, err := store.Open(store.Options{Dir: t.TempDir(), RawDays: 30, MemoryFraction: 0.10})
+	st, err := store.Open(store.Options{Dir: t.TempDir(), RawDays: 30, MemoryFraction: frac})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,9 +134,7 @@ func TestLoadUDP(t *testing.T) {
 // the queries the UI makes. Run with T66_LOAD=1 T66_LOAD_HOURS=n
 // (T66_LOAD_MEMORY sets the database's memory share, GOMEMLIMIT the Go one).
 func TestLoadQueries(t *testing.T) {
-	if os.Getenv("T66_LOAD") == "" {
-		t.Skip("set T66_LOAD=1 to run the load test")
-	}
+	frac := loadSetup(t)
 	hours, _ := strconv.Atoi(os.Getenv("T66_LOAD_HOURS"))
 	if hours == 0 {
 		hours = 1
@@ -120,10 +142,6 @@ func TestLoadQueries(t *testing.T) {
 	dir := os.Getenv("T66_LOAD_DIR")
 	if dir == "" {
 		dir = t.TempDir()
-	}
-	frac := 0.10
-	if v, err := strconv.ParseFloat(os.Getenv("T66_LOAD_MEMORY"), 64); err == nil {
-		frac = v // e.g. 0.01 for the 256 MB minimum of a small machine
 	}
 	st, err := store.Open(store.Options{Dir: dir, RawDays: 30, MemoryFraction: frac})
 	if err != nil {

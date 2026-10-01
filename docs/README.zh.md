@@ -124,6 +124,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -682,6 +684,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 
 内存：`-memory`（默认为物理内存的 10%，至少 256 MB）限制数据库缓存，程序其余部分另有同样大小的软上限。每秒 5,000 条流时，程序自身的数据（解码、去重、批次）约占 90 MB；总计约 0.6–0.8 GB，因此 2 GB 内存的机器即可满足。实测条件：连续采集 10 分钟（8 GB 机器上峰值 0.58 GB），以及在 2 GB 机器的限制下以该速率的 11 倍导入 1 小时的流（峰值 0.74 GB）。
 
+`-memory` 是预算，不是硬上限：Go 的限制是软上限，数据库也可能短时超出自己的份额。需要硬上限时请使用操作系统的机制：systemd unit 中的 `MemoryMax=`（第 2 节），或容器的内存限制。请预留约 `-memory` 份额的 2.5 倍，且不少于 1 GB；按默认份额，物理内存不超过 8 GB 的机器用 `MemoryMax=2G` 即可。这样超限时重启的是 traffic66，而不是整台机器内存耗尽。
+
 <a id="16-troubleshooting"></a>
 
 ## 16. 故障排查
@@ -693,6 +697,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | 统计值低于接口计数器 | 查看 **接口对账**：途中丢包、有接口未采样，或流仍在设备缓存中（活动超时超过 60 秒） |
 | 统计值高于接口计数器 | 同一流量在两个接口或两台设备上被采样 |
 | 没有国家或网络信息 | 缺少 IP 到 ASN 映射表：见 [国家](#8-countries-networks-and-threat-lists) |
+| 页面上出现 "数据库达到内存上限，无法完成这次查询" | 选择更短的时间范围，或用更大的 `-memory` 启动；详细信息见日志 |
 | 忘记密码 | 在 traffic66 主机上执行 `traffic66 passwd`（如果 traffic66 运行时使用了 `-data`，也加上它） |
 | `Conflicting lock is held` | 另一个 traffic66 正在使用该数据目录 |
 | `receive buffer is only … KB` | Linux 限制了 UDP 缓冲区：设置 `net.core.rmem_max=16777216`（见 [Linux](#linux)） |

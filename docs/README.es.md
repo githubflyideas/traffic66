@@ -154,6 +154,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -843,6 +845,14 @@ de RAM. Medido durante 10 minutos de captura continua (pico de 0,58 GB en
 una máquina de 8 GB) y al cargar una hora de flujos a once veces esa tasa
 con los límites de una máquina de 2 GB (pico de 0,74 GB).
 
+`-memory` es un presupuesto, no un tope estricto: el límite de Go es blando y
+la base de datos puede superar brevemente su parte. Para un tope estricto use
+el del sistema operativo: `MemoryMax=` en la unidad systemd (sección 2) o el
+límite de memoria de un contenedor. Reserve unas 2,5 veces la parte de
+`-memory` y al menos 1 GB; `MemoryMax=2G` sirve para máquinas de hasta 8 GB
+con la parte por defecto. Así se reinicia traffic66 en lugar de quedarse la
+máquina sin memoria.
+
 <a id="16-troubleshooting"></a>
 
 ## 16. Resolución de problemas
@@ -854,6 +864,7 @@ con los límites de una máquina de 2 GB (pico de 0,74 GB).
 | Cifras por debajo de los contadores de interfaz | Vea **Verificación de interfaces**: pérdidas por el camino, interfaces sin muestrear o flujos aún en la caché del equipo (timeout activo superior a 60 s) |
 | Cifras por encima de los contadores de interfaz | El mismo tráfico se muestrea en dos interfaces o en dos equipos |
 | No hay países ni redes | Falta la tabla IP-a-ASN: vea [Países](#8-countries-networks-and-threat-lists) |
+| "La base de datos llegó a su límite de memoria y no pudo responder" en una página | Elija un intervalo más corto o inicie con un `-memory` mayor; los detalles están en el registro |
 | Contraseña olvidada | `traffic66 passwd` en la máquina de traffic66 (añada `-data` si traffic66 se ejecuta con él) |
 | `Conflicting lock is held` | Otro traffic66 ya usa este directorio de datos |
 | `receive buffer is only … KB` | Linux limita los búferes UDP: fije `net.core.rmem_max=16777216` (vea [Linux](#linux)) |

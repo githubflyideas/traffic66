@@ -214,6 +214,7 @@
 "empty.nodata": "Aucune donnée sur cette période.",
 "empty.first": "Rien reçu pour l'instant. Envoyez le sFlow sur le port UDP 6343, le NetFlow sur 2055 ou l'IPFIX sur 4739 de cette machine.",
 "err.load": "Chargement impossible : {e}",
+"err.db_memory": "La base de données a atteint sa limite de mémoire et n'a pas pu répondre. Choisissez une période plus courte, ou lancez traffic66 avec un -memory plus grand.", "err.db_busy": "La base de données n'a pas pu répondre pour l'instant ; la raison figure dans le journal de traffic66. La page réessaiera dans 30 secondes.",
 "login.title": "Connexion",
 "login.user": "Utilisateur",
 "login.password": "Mot de passe",
