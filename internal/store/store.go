@@ -438,3 +438,6 @@ func (s *Store) Close() error {
 
 // TotalMemory is the machine's physical memory in bytes.
 func TotalMemory() uint64 { return totalMemory() }
+
+// RetentionDays is how many days of flow detail are kept.
+func (s *Store) RetentionDays() int { return s.opt.RawDays }

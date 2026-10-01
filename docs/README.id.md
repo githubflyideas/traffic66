@@ -19,7 +19,7 @@ antarmuka terminal.
   ancaman, catatan flow, enkapsulasi (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - 13 bahasa di antarmuka web dan antarmuka terminal.
 
-![Ringkasan: bandwidth per aplikasi dibanding minggu lalu, apa yang naik, klien dan layanan teratas](images/overview.png)
+![Ringkasan: bandwidth per aplikasi dibanding minggu lalu, klien dan layanan teratas](images/overview.png)
 
 <sub>Semua tangkapan layar berasal dari `traffic66 demo`, jaringan perusahaan simulasi yang bisa Anda jalankan sendiri (lihat [Coba demo](#1-try-the-demo)).</sub>
 
@@ -89,8 +89,8 @@ cd traffic66-windows-amd64
 Buka http://127.0.0.1:8066 dan login sebagai `admin` / `try66`. Demo ini
 membangun jaringan kantor kecil dengan riwayat satu hari dan trafik live
 dari empat perangkat simulasi, lengkap dengan dua insiden yang bisa Anda
-cari: mulai dari **Ringkasan**, lihat **Siapa yang naik**, lalu telusuri
-dengan mengeklik. Hentikan dengan Ctrl+C. Data demo disimpan di
+cari: mulai dari **Ringkasan**, klik sebuah host di **Klien teratas**, pilih
+**Lihat detail**, lalu terus telusuri dengan mengeklik. Hentikan dengan Ctrl+C. Data demo disimpan di
 `traffic66-demo` di sebelah program; hapus folder itu untuk memulai demo
 dari awal.
 
@@ -562,7 +562,12 @@ mencapai traffic66, atau sampling rate belum diketahui.
 
 ## 7. Nama, SNMP, dan jaringan Anda sendiri
 
-**Sumber → Nama** di antarmuka web menerima satu entri per baris. Isinya
+Cara tercepat memberi nama host atau perangkat: klik alamatnya di halaman mana
+pun lalu pilih **Beri nama…**. Ketik namanya dan tekan Enter; nama langsung
+disimpan dan ditampilkan di mana-mana menggantikan alamat polosnya.
+
+Untuk jaringan, interface, dan SNMP, **Sumber → Nama** di antarmuka web
+menerima satu entri per baris. Isinya
 disimpan sebagai `inventory.txt` di direktori data, jadi Anda juga bisa
 mengedit file itu langsung (lihat `inventory.txt.example`). Setiap baris
 bersifat opsional.
@@ -602,18 +607,27 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. Negara, jaringan, dan daftar ancaman
 
-Nama negara dan jaringan (AS) membutuhkan tabel IP-to-ASN. Unduh yang
-gratis dari [iptoasn.com](https://iptoasn.com):
+Negara dan nama jaringan (AS) membutuhkan basis data yang memetakan alamat ke
+keduanya. Unggah di antarmuka web: **Sumber → Basis data negara dan jaringan → Unggah file basis data…**.
+File diperiksa, disimpan di direktori data, dan langsung dipakai untuk trafik
+baru; tidak perlu restart. Trafik yang sudah tersimpan tetap memakai negara
+saat ia disimpan.
 
-```
-curl -LO https://iptoasn.com/data/ip2asn-combined.tsv.gz
-mv ip2asn-combined.tsv.gz <data directory>/asn.tsv.gz
-```
+File yang diterima:
 
-File apa pun dengan format yang sama bisa dipakai (dipisah tab: alamat
-pertama, alamat terakhir, nomor AS, kode negara, nama AS; teks biasa atau
-gzip). Restart traffic66 setelah menggantinya; unduh yang baru kira-kira
-sebulan sekali.
+| File | Memberikan | Tempat mendapatkannya |
+|---|---|---|
+| DB-IP Lite country atau ASN, `.mmdb` | negara, atau nomor dan nama AS | gratis, tanpa akun: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country atau ASN, `.mmdb` | negara, atau nomor dan nama AS | gratis dengan akun MaxMind: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| Tabel IP-to-ASN, `.tsv` atau `.tsv.gz` | nomor AS, nama AS, dan negara | gratis: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+
+Unggah basis data negara dan basis data ASN untuk mendapatkan keduanya; bila
+beberapa dimuat, file `.mmdb` didahulukan untuk isi yang dimilikinya. Versi
+baru terbit setiap bulan: unggah file baru dengan cara yang sama untuk
+mengganti yang lama.
+
+Tanpa antarmuka web, salin file ke direktori data sebagai `country.mmdb`,
+`asn.mmdb`, atau `asn.tsv.gz` lalu restart traffic66.
 
 Daftar ancaman adalah file teks biasa berisi satu alamat atau jaringan per
 baris (teks setelah `#` atau `;` diabaikan), disimpan sebagai
@@ -640,6 +654,13 @@ aplikasi, negara, perangkat — bisa diklik:
   muncul di bawah bar atas dan berlaku di semua halaman sampai Anda
   menghapusnya.
 - **Lihat catatan flow-nya** membuka flow-flow individual yang cocok.
+- **Lihat detail** (host, perangkat, dan layanan) membuka halaman tentang satu
+  host atau layanan itu: trafiknya dari waktu ke waktu per aplikasi, dengan
+  siapa ia berbicara, layanan atau klien mana, negara, dan flow terbarunya.
+  Setiap nilai di sana bisa diklik lagi, jadi Anda bisa terus menelusuri;
+  tombol Back di browser membawa Anda kembali.
+- **Beri nama…** (host dan perangkat) memberi alamat itu sebuah nama, yang
+  sejak itu ditampilkan di mana-mana.
 - **Cari secara online** membuka alamat atau AS tersebut di situs lookup
   publik.
 - **Salin** menyalin nilainya.
@@ -648,15 +669,14 @@ Halaman:
 
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
-| Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; apa yang naik; klien dan layanan teratas |
-| Top-N | 66 teratas untuk klien, server, percakapan, aplikasi, port, negara, jaringan, segmen, perangkat, enkapsulasi, atau VLAN |
-| Percakapan | Siapa berbicara dengan siapa: 66 pasangan klien–server teratas beserta layanannya |
+| Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; klien dan layanan teratas |
+| Top-N | Satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Klik judul kolom biru untuk mengelompokkan menurut kolom itu, judul kolom angka untuk mengurutkan; **Kelompokkan menurut** menawarkan aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
 | Jalur trafik | Segmen mana berbicara dengan aplikasi apa di negara mana |
 | Geografi & jaringan | Trafik per negara dan per jaringan (AS) |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
 | Catatan flow | Flow individual, terbaru di atas, dengan kolom yang bisa dipilih |
 | Pencocokan antarmuka | Angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
-| Sumber | Perangkat, sampling, loss, collector, SNMP, dan **Nama** |
+| Sumber | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, dan **Nama** |
 
 Di atas halaman: rentang waktu (15 menit sampai 30 hari), kotak pencarian
 opsional, refresh otomatis setiap 30 detik, dan **Salin tautan**, yang
@@ -669,13 +689,18 @@ setiap angka di halaman menghitung waktu yang persis sama: "24 jam" mencakup
 24 jam penuh terakhir ditambah jam yang sedang berjalan. Top-N untuk rentang
 ini diambil dari ringkasan per jam; filter tidak tersedia di sana, dan
 halaman memberi tahu hal itu. Pilih rentang yang lebih pendek untuk
-memfilter. **Percakapan** selalu membaca detail flow, jadi untuk rentang
-panjang dengan laju flow tinggi halaman ini bisa butuh waktu; satu jam paling
+memfilter. Percakapan selalu dibaca dari detail flow, jadi untuk rentang
+panjang dengan laju flow tinggi bisa butuh waktu; satu jam paling
 cepat.
 
-![Top-N: 66 klien teratas dalam satu jam terakhir](images/topn.png)
+Menu samping menunjukkan berapa banyak disk yang dipakai data dan berapa yang
+masih kosong; arahkan kursor ke ruang kosong untuk melihat berapa yang
+dibutuhkan detail untuk hari-hari yang disimpan pada laju saat ini
+(diperkirakan setelah ada data satu hari).
 
-![Percakapan: siapa berbicara dengan siapa, beserta layanannya](images/conv.png)
+![Top-N: 66 percakapan teratas dalam satu jam terakhir](images/topn.png)
+
+![Detail satu host: trafiknya, dengan siapa ia berbicara, layanan, negara, dan flow terbaru](images/detail.png)
 
 ![Jalur trafik: segmen mana memakai aplikasi apa menuju negara mana](images/paths.png)
 
@@ -699,13 +724,13 @@ berjalan sebagai user lain, seperti halnya service, gunakan `-user` dan
 `-password`. `-lang` memilih bahasa (`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`).
 
-Tombol: 1–9 halaman, ↑↓ pilih, Enter aksi untuk nilai terpilih, f tampilkan
+Tombol: 1–8 halaman, ↑↓ pilih, Enter aksi untuk nilai terpilih, f tampilkan
 hanya ini, x kecualikan, / cari, t rentang waktu, c hapus filter, w buka
 tampilan yang sama di browser, q keluar.
 
 ![Antarmuka terminal: ringkasan](images/tui-overview.png)
 
-![Antarmuka terminal: klien Top-N](images/tui-topn.png)
+![Antarmuka terminal: percakapan Top-N](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -828,7 +853,7 @@ Opsi untuk `traffic66` dan `traffic66 demo`:
 | `-sampling-wait` | `5m` | berapa lama record menunggu sampling rate |
 | `-capture` | | capture di interface lokal (bisa diulang) |
 | `-inventory` | `<data>/inventory.txt` | file nama |
-| `-asn` | `<data>/asn.tsv.gz` | tabel IP-to-ASN |
+| `-asn` | `<data>/asn.tsv.gz` | tabel IP-to-ASN (file `.mmdb`: unggah, atau `<data>/country.mmdb` dan `<data>/asn.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | daftar ancaman tambahan dalam format `name=path` (bisa diulang) |
 | `-dns-upstream` | resolver sistem | server DNS untuk menampilkan nama host |
 | `-dns-rate` | `20` | maksimum reverse lookup per detik |
@@ -855,7 +880,7 @@ Semua tersimpan di direktori data:
 | `traffic66.duckdb` | ringkasan, counter interface, dan jam berjalan |
 | `password` | kata sandi login (dalam bentuk hash) |
 | `inventory.txt` | nama (**Sumber → Nama**) |
-| `asn.tsv.gz`, `threats/` | tabel lookup yang Anda tambahkan |
+| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
 
 - **Backup**: hentikan traffic66 lalu salin direktorinya. Tanpa
   menghentikannya, salin `raw/`, `password`, dan `inventory.txt`; jam
@@ -934,7 +959,7 @@ kehabisan memori.
 | "waiting for the sampling rate" | Perangkat belum mengirim sampler options; kebanyakan mengirim ulang dalam beberapa menit. Jika tidak pernah, ekspor opsi itu (`option sampler-table` di Cisco) atau tandai perangkat sebagai `unsampled` di Nama jika memang 1:1 |
 | Angka lebih rendah dari counter interface | Lihat **Pencocokan antarmuka**: loss di jalan, interface tidak di-sampling, atau flow masih di cache perangkat (active timeout lebih dari 60 detik) |
 | Angka lebih tinggi dari counter interface | Trafik yang sama di-sampling di dua interface atau dua perangkat |
-| Tidak ada negara atau jaringan | Tidak ada tabel IP-to-ASN: lihat [Negara](#8-countries-networks-and-threat-lists) |
+| Tidak ada negara atau jaringan ("Tidak diketahui") | Tidak ada basis data yang dimuat: unggah di **Sumber**, lihat [Negara](#8-countries-networks-and-threat-lists) |
 | "Basis data mencapai batas memorinya dan tidak bisa menjawab" di sebuah halaman | Pilih rentang waktu yang lebih pendek, atau jalankan dengan `-memory` yang lebih besar; detailnya ada di log |
 | Lupa kata sandi | `traffic66 passwd` di mesin traffic66 (tambahkan `-data` jika traffic66 berjalan dengannya) |
 | `Conflicting lock is held` | traffic66 lain sudah memakai direktori data ini |

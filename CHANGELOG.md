@@ -5,23 +5,48 @@ heading is the version number.
 
 ## 0.1.2
 
-Using it
-- New **Conversations** page in the web UI and the terminal UI (key 3): who
-  talks to whom, with client, server, service and traffic. The terminal UI's
-  pages are now 1–9.
-- The side menu no longer shows group headings that looked like buttons but
-  did nothing; groups are separated by lines.
+Drill-down and naming
+- **Show details** on any host, device or service opens a page about it:
+  traffic over time by application, who it talks to, services or clients,
+  countries and the latest flows. Everything on it can be clicked again to
+  keep drilling down; the browser's Back button returns.
+- **Name it…** on any host or device names it on the spot; the name is
+  saved and shown everywhere. The Names box on Sources now shows examples.
+
+Countries and networks database
+- Upload a database on the Sources page: MaxMind GeoLite2 or DB-IP Lite
+  `.mmdb` files (country or ASN) or an IP-to-ASN table (`.tsv`, `.tsv.gz`).
+  It is checked, saved and used for new traffic at once, without a
+  restart. The `.mmdb` reader was checked against MaxMind's own reader on
+  60,000 lookups in six DB-IP databases with no difference.
+
+Simpler pages
+- Top-N is one table: conversations (client, server, service, country) by
+  default; click a column heading to group by it, a number heading to
+  sort. The row of eleven tabs is gone; the less common groupings are in
+  **Group by**.
+- "Who grew" is gone from the overview (web and terminal UI).
+- Flow paths: labels, bars and flows can all be clicked; before, only the
+  thin bars could.
+- The side menu no longer shows group headings that looked like buttons;
+  "Log out" no longer wraps.
+- Disk in the side menu shows used and free space; hovering over the free
+  space shows how much the kept days of detail need at the current rate.
+  The old "days left" figure was an unreliable extrapolation.
+
+Capture
 - Windows local capture by name: `-capture Wi-Fi`, `-capture Ethernet` or
-  the number from `traffic66 interfaces`, instead of Npcap's
-  `\Device\NPF_{…}` names. `traffic66 interfaces` now shows each adapter's
+  the number from `traffic66 interfaces`, which now shows each adapter's
   Windows connection name and address.
+- Commands copied from a web page or chat work: full-width spaces, quotes,
+  full-width dashes and a trailing full stop around words are ignored, and
+  a mistyped command gets a "did you mean" hint.
 
 Documentation
-- README section "Local capture" rewritten with step-by-step instructions
-  for Windows, Linux and macOS, including what a Wi-Fi adapter can and
-  cannot see (13 languages).
-- This changelog; releases now carry these notes instead of a list of pull
-  requests.
+- README (13 languages): drill-down, naming, the database upload, local
+  capture step by step for Windows, Linux and macOS including what Wi-Fi
+  can and cannot see, new screenshots.
+- This changelog; releases take their notes from it.
 
 ## 0.1.1
 

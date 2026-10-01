@@ -160,15 +160,7 @@ func (a *app) load(pg, rng, di int, filters []filter, ifc string) page {
 			Series struct {
 				Values [][]float64
 			}
-			Baseline []float64
-			Movers   []struct {
-				IP     string  `json:"ip"`
-				Delta  float64 `json:"delta_bps"`
-				Peer   string
-				Port   string
-				CC     string
-				Threat string
-			}
+			Baseline   []float64
 			TopClients []topRow `json:"top_clients"`
 		}
 		if err := a.get("overview", q(nil), &d); err != nil {
@@ -196,18 +188,6 @@ func (a *app) load(pg, rng, di int, filters []filter, ifc string) page {
 		}
 		p.top = append(p.top, chart(total, d.Baseline, w-12, 7)...)
 		p.top = append(p.top, txt(""))
-		mv := section{title: a.t("ov.movers"), cols: []column{{head: a.t("field.ip"), width: 34}, {head: "", width: 12, right: true}, {head: ""}}}
-		for _, m := range d.Movers {
-			reason := ""
-			if m.Peer != "" {
-				reason = a.t("ov.mover_reason", "peer", a.hostLabel(m.Peer), "port", m.Port, "cc", a.cc(m.CC))
-			}
-			r := row{cells: []line{a.host(m.IP), styled(red, "+"+fmtBps(m.Delta)), txt(reason)}, target: ipTarget(a, m.IP)}
-			if m.Threat != "" {
-				r.cells[2] = append(r.cells[2], seg{red, "  [" + m.Threat + "]"})
-			}
-			mv.rows = append(mv.rows, r)
-		}
 		tc := section{title: a.t("ov.top_clients"), cols: []column{{head: a.t("col.client"), width: 34}, {head: a.t("col.traffic"), width: 10, right: true}, {head: ""}, {head: a.t("col.vs_week"), width: 10, right: true}}}
 		maxw := 1.0
 		for _, r := range d.TopClients {
@@ -221,17 +201,9 @@ func (a *app) load(pg, rng, di int, filters []filter, ifc string) page {
 			}
 			tc.rows = append(tc.rows, row{cells: []line{a.host(r.Key), txt(fmtBytes(r.Wire)), styled(blue, barCells(r.Wire, maxw, 30)), txt(ch)}, target: ipTarget(a, r.Key)})
 		}
-		p.sections = []section{mv, tc}
+		p.sections = []section{tc}
 
-	case "topn", "conv":
-		conv := pageKeys[pg] == "conv"
-		if conv { // Conversations page: the Top-N of conversations, no tabs
-			for i, k := range dims {
-				if k == "conv" {
-					di = i
-				}
-			}
-		}
+	case "topn":
 		var d struct{ Rows []topRow }
 		if err := a.get("topn", q(map[string]string{"dim": dims[di], "limit": "66"}), &d); err != nil {
 			return fail(err)
@@ -244,11 +216,7 @@ func (a *app) load(pg, rng, di int, filters []filter, ifc string) page {
 				tabs = append(tabs, seg{"", " " + a.t("dim."+k) + " "})
 			}
 		}
-		if conv {
-			p.top = append(p.top, txt(a.t("conv.sub")), txt(""))
-		} else {
-			p.top = append(p.top, tabs, txt(""))
-		}
+		p.top = append(p.top, tabs, txt(""))
 		sec := section{title: a.t("topn.title", "n", "66"), cols: []column{{head: "#", width: 3, right: true}, {head: a.t("dim." + dims[di])}, {head: a.t("col.traffic"), width: 10, right: true}, {head: "%", width: 6, right: true}, {head: "", width: 24}, {head: a.t("col.flows"), width: 9, right: true}}}
 		tot, maxw := 0.0, 1.0
 		for _, r := range d.Rows {

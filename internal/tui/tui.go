@@ -153,9 +153,9 @@ type page struct {
 	err      string
 }
 
-var pageKeys = []string{"overview", "topn", "conv", "sankey", "geo", "threats", "records", "ifaces", "sources"}
+var pageKeys = []string{"overview", "topn", "sankey", "geo", "threats", "records", "ifaces", "sources"}
 var ranges = []string{"15m", "1h", "6h", "24h", "7d", "30d"}
-var dims = []string{"client", "server", "conv", "app", "port", "country", "asn", "segment", "exporter", "encap", "vlan"}
+var dims = []string{"conv", "client", "server", "app", "port", "country", "asn", "segment", "exporter", "encap", "vlan"}
 
 type app struct {
 	opt    Options

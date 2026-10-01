@@ -33,7 +33,7 @@ nav.dash button[aria-current="page"]{background:var(--accent-soft);color:var(--a
 .self .live.ok{color:var(--good)}.self .live.idle{color:var(--ink-3)}
 .foot{display:flex;gap:8px;align-items:center;padding:0 18px 14px}
 .foot select{flex:1;border:1px solid var(--line-2);border-radius:6px;padding:3px 6px;background:var(--surface);font-size:13px}
-.linkbtn{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:12.5px;padding:2px}
+.linkbtn{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:12.5px;padding:2px;white-space:nowrap}
 .linkbtn:hover{color:var(--accent-ink)}
 
 .main{min-width:0}
@@ -166,3 +166,27 @@ textarea.inv{width:100%;min-height:180px;border:1px solid var(--line-2);border-r
 .login label{display:grid;gap:4px;font-size:13px;color:var(--ink-2)}
 .login input{border:1px solid var(--line-2);border-radius:7px;padding:8px 10px}
 .login .err{color:var(--crit);margin:0;font-size:13px}
+
+/* sortable / regrouping column headings */
+th.sk{cursor:pointer;user-select:none}
+th.sk:hover{color:var(--accent-ink)}
+th.sk[aria-sort]{color:var(--ink)}
+th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
+th.gk{cursor:pointer;color:var(--accent-ink);text-decoration:underline dotted;text-underline-offset:3px}
+.dimsel{border:1px solid var(--line-2);border-radius:6px;padding:4px 8px;background:var(--surface);font-size:13px}
+.ph .tools{display:flex;gap:10px;align-items:center;margin-inline-start:auto;font-size:12.5px;color:var(--ink-3)}
+/* sankey: labels and flows are clickable too */
+.sankey text{cursor:pointer}.sankey text:hover{fill:var(--accent-ink)}
+.sankey rect.hit{fill:transparent}
+/* naming form in the popup */
+.pop form{display:flex;gap:6px;padding:6px 6px 2px}
+.pop form input{flex:1;min-width:0;border:1px solid var(--line-2);border-radius:6px;padding:5px 8px;font:inherit}
+.pop form button{width:auto;background:var(--accent);color:#fff;justify-content:center}
+.pop form button:hover{background:var(--accent-ink)}
+/* detail page */
+.dhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.dhead h2{font-size:20px;margin:0}
+.dhead .sub{color:var(--ink-3)}
+.helpbox{background:var(--surface-2);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--ink-2);margin:0 0 10px}
+.helpbox pre{margin:6px 0 0;font-size:12px;white-space:pre-wrap}
+.geo li{margin:3px 0}
