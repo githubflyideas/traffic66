@@ -43,11 +43,14 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
-          install: mingw-w64-ucrt-x86_64-gcc
+          install: mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-lld
           path-type: inherit
       - name: Put MinGW on PATH (Windows)
         if: runner.os == 'Windows'
-        run: echo "${RUNNER_TEMP}/msys64/ucrt64/bin" >> "$GITHUB_PATH"
+        run: |
+          echo "${RUNNER_TEMP}/msys64/ucrt64/bin" >> "$GITHUB_PATH"
+          # GNU ld crashes on the DuckDB static libraries; lld links them
+          echo "CGO_LDFLAGS=-fuse-ld=lld" >> "$GITHUB_ENV"
       - name: Resolve modules
         run: go mod tidy
       - name: Vet
@@ -60,7 +63,7 @@ jobs:
           # GNU ld on Windows crashes linking DuckDB with full debug info
           [[ "${{ runner.os }}" == Windows ]] && flags='-ldflags=-s -w'
           go test -count=1 ${flags:+"$flags"} ./... 2>&1 | tee test.log || {
-            { grep -B4 'collect2' test.log | grep -v '^--$' | grep -v 'go-link' | cut -c1-300 | head -8
+            { grep -B6 'collect2' test.log | grep -iE 'undefined|ld(\.lld|\.exe)?:|error|warning' | grep -v 'collect2' | sed 's#.*go-link-[0-9]*##' | cut -c1-300 | sort -u | head -8
               grep -E -- '--- FAIL|^\s+\S+_test\.go:[0-9]+:|panic:' test.log | head -8; } | while IFS= read -r l; do echo "::error::${l:0:400}"; done
             exit 1
           }
