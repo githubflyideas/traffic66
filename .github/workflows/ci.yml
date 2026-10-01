@@ -21,9 +21,10 @@ jobs:
             target: linux-arm64
           - os: macos-14
             target: darwin-arm64
-          - os: macos-13
+          - os: macos-15-intel
             target: darwin-amd64
-          - os: windows-2022
+          # the runner's own MinGW gcc links DuckDB (as in duckdb-go's CI)
+          - os: windows-latest
             target: windows-amd64
     runs-on: ${{ matrix.os }}
     defaults:
@@ -34,33 +35,40 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-      - name: MinGW (Windows)
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          install: mingw-w64-ucrt-x86_64-gcc
-          path-type: inherit
-      - name: Put MinGW on PATH (Windows)
-        if: runner.os == 'Windows'
-        run: echo "${RUNNER_TEMP}/msys64/ucrt64/bin" >> "$GITHUB_PATH"
       - name: Resolve modules
         run: go mod tidy
       - name: Vet
         run: go vet ./...
       - name: Test
-        run: go test ./...
-      - name: Build
         run: |
-          ver="${GITHUB_REF_NAME#v}"
-          [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
-          exe=traffic66; [[ "${{ runner.os }}" == Windows ]] && exe=traffic66.exe
-          scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
-          cp README.md "dist/traffic66-${{ matrix.target }}/"
-          [[ -f LICENSE ]] && cp LICENSE "dist/traffic66-${{ matrix.target }}/"
-          cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
-          "dist/traffic66-${{ matrix.target }}/$exe" version
+          set -o pipefail
+          # failing tests become annotations, readable without downloading logs
+          flags=""
+          # GNU ld on Windows crashes linking DuckDB with full debug info
+          [[ "${{ runner.os }}" == Windows ]] && flags='-ldflags=-s -w'
+          go test -count=1 ${flags:+"$flags"} ./... 2>&1 | tee test.log || {
+            { grep -B6 'collect2' test.log | grep -iE 'undefined|ld(\.lld|\.exe)?:|error|warning' | grep -v 'collect2' | sed 's#.*go-link-[0-9]*##' | cut -c1-300 | sort -u | head -8
+              grep -E -- '--- FAIL|^\s+\S+_test\.go:[0-9]+:|panic:' test.log | head -4
+              grep -vE '^(ok|\?) ' test.log | tail -8 | cut -c1-300; } | while IFS= read -r l; do echo "::error::${l:0:400}"; done
+            exit 1
+          }
+      - name: Build
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          {
+            ver="${GITHUB_REF_NAME#v}"
+            [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
+            exe=traffic66; [[ "${{ runner.os }}" == Windows ]] && exe=traffic66.exe
+            if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
+            scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
+            cp README.md "dist/traffic66-${{ matrix.target }}/"
+            [[ -f LICENSE ]] && cp LICENSE "dist/traffic66-${{ matrix.target }}/"
+            cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
+            [[ -n "${{ matrix.cross }}" ]] || "dist/traffic66-${{ matrix.target }}/$exe" version
+          } 2>&1 | tee build.log
       - name: Smoke test (demo starts and serves the API)
+        if: ${{ !matrix.cross }}
         run: |
           exe=dist/traffic66-${{ matrix.target }}/traffic66; [[ "${{ runner.os }}" == Windows ]] && exe="$exe.exe"
           "$exe" demo -data "$RUNNER_TEMP/demo" -password ci -addr 127.0.0.1:18066 -listen "" &
@@ -72,6 +80,17 @@ jobs:
           cd dist
           if [[ "${{ runner.os }}" == Windows ]]; then 7z a "traffic66-${{ matrix.target }}.zip" "traffic66-${{ matrix.target }}" >/dev/null
           else tar czf "traffic66-${{ matrix.target }}.tar.gz" "traffic66-${{ matrix.target }}"; fi
+      - name: Publish logs to a branch (Windows failures)
+        if: failure() && runner.os == 'Windows'
+        run: |
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          cp test.log build.log "$RUNNER_TEMP/" 2>/dev/null || true
+          git checkout --orphan "ci-logs-${{ github.run_id }}"
+          git rm -rfq --cached . && git clean -fdxq
+          cp "$RUNNER_TEMP"/*.log . 2>/dev/null || true
+          go env > go-env.log
+          git add -f *.log && git commit -qm "logs ${{ github.run_id }}"
+          git push -q origin "HEAD:refs/heads/ci-logs-${{ github.run_id }}"
       - uses: actions/upload-artifact@v4
         with:
           name: traffic66-${{ matrix.target }}
