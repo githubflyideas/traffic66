@@ -467,7 +467,7 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 - `net`: private ranges (10/8, 172.16/12, 192.168/16, 100.64/10) are
   always yours. Add your public ranges so traffic to and from them counts
-  as yours too; the name shows up in **Top-N → Segment** and in the flow
+  as yours too; the name shows up in **Top-N → Segments** and in the flow
   paths.
 - `snmp <device> <community> [<management address>[:port]]`: the device
   is the address flows come from. Add the management address when the
