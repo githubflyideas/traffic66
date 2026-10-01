@@ -247,3 +247,39 @@ func TestLongRangeConsistent(t *testing.T) {
 		t.Fatalf("Top-N clients add up to %d, totals say %d", sum, tot.Wire)
 	}
 }
+
+// TestDedupWindow checks that the dedup table keeps a fixed window of data
+// time: a long flow spread over many minutes must not push the current
+// minute out (it did when the table kept the 8 most recently created
+// minutes), and minutes older than the window are dropped.
+func TestDedupWindow(t *testing.T) {
+	p, _ := setup(t)
+	now := time.Now().UTC().Truncate(time.Minute)
+	a := dkey{netip.MustParseAddr("10.1.1.1"), netip.MustParseAddr("198.51.100.9"), 50000, 443, 6}
+	e1 := origin{exporter: netip.MustParseAddr("10.0.0.1")}
+	e2 := origin{exporter: netip.MustParseAddr("10.0.0.2")}
+	if p.isDup(now, a, e1) {
+		t.Fatal("first report is a duplicate")
+	}
+	// a 60-minute flow from another host touches 60 older minutes
+	b := dkey{netip.MustParseAddr("10.1.1.2"), netip.MustParseAddr("198.51.100.9"), 50001, 443, 6}
+	for m := 1; m <= 60; m++ {
+		p.isDup(now.Add(-time.Duration(m)*time.Minute), b, e1)
+	}
+	if !p.isDup(now, a, e2) {
+		t.Fatal("second observation point not recognised as duplicate after a long flow")
+	}
+	if p.isDup(now, a, e1) {
+		t.Fatal("same observation point counted as duplicate")
+	}
+	for m := range p.dedup {
+		if m.Before(now.Add(-dedupWindow)) {
+			t.Fatalf("minute %v outside the window kept", m)
+		}
+	}
+	// the window moves with data time
+	p.isDup(now.Add(20*time.Minute), a, e1)
+	if len(p.dedup) != 1 {
+		t.Fatalf("%d minutes kept after the window moved", len(p.dedup))
+	}
+}

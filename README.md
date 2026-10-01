@@ -693,7 +693,7 @@ Options of `traffic66` and `traffic66 demo`:
 | `-user` | `admin` | name of the user created on first start, and of the user `-password` applies to |
 | `-password` | not set | accept only `-user` with this password for this run, ignoring the `password` file (also `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | days of flow detail kept; summaries are kept 400 days |
-| `-memory` | `0.10` | share of physical memory the database may use |
+| `-memory` | `0.10` | share of physical memory for the database cache, and the same again as a soft limit for the rest of the program (each at least 256 MB) |
 | `-l2-overhead` | `18` | bytes per packet added to NetFlow/IPFIX byte counts |
 | `-sampling-wait` | `5m` | how long records wait for a sampling rate |
 | `-capture` | | capture on a local interface (repeatable) |
@@ -760,8 +760,8 @@ The data directory holds everything:
 ## 15. Sizing
 
 Measured at 5,000 flows per second on a 2-core machine: detail uses about
-12 GB of disk per day plus about 1.5 GB for the current hour, the program
-about 0.5 GB of memory and a sixth of one core. Overviews of long time
+12 GB of disk per day plus about 1.5 GB for the current hour, and the
+program a sixth of one core. Overviews of long time
 ranges come from summaries and take under 0.2 s. Queries over detail scan
 about 22 million rows per hour: one host over 1 hour takes under 1 s, a
 1-hour Top 66 of all conversations about 9 s; the time grows with the range
@@ -769,6 +769,15 @@ and shrinks with more cores.
 
 Disk for 30 days at 5,000 flows/s is therefore about 360 GB; scale it with
 your flow rate (shown on **Sources**) and `-retention-days`.
+
+Memory: `-memory` (default 10% of RAM, at least 256 MB) limits the
+database cache, and the rest of the program gets a soft limit of the same
+size. At 5,000 flows per second the program's own data (decoding, duplicate
+detection, batches) takes about 90 MB; in total expect 0.6–0.8 GB, so a
+machine with 2 GB of RAM is enough. Measured over 10 minutes of continuous
+collection (peak 0.58 GB on an 8 GB machine) and while loading an hour of
+flows at eleven times that rate with the limits of a 2 GB machine (peak
+0.74 GB).
 
 ## 16. Troubleshooting
 

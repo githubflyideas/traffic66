@@ -428,3 +428,6 @@ func (s *Store) Close() error {
 	s.DB.Close()
 	return s.conn.Close()
 }
+
+// TotalMemory is the machine's physical memory in bytes.
+func TotalMemory() uint64 { return totalMemory() }

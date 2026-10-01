@@ -732,7 +732,7 @@ Capture किए जा रहे interfaces **स्रोत** पर दि�
 | `-user` | `admin` | पहली बार शुरू होने पर बनाए गए यूज़र का नाम, और उस यूज़र का जिस पर `-password` लागू होता है |
 | `-password` | सेट नहीं | इस run में केवल इसी पासवर्ड के साथ `-user` को स्वीकार करता है, `password` फ़ाइल को अनदेखा करके (`TRAFFIC66_PASSWORD` भी) |
 | `-retention-days` | `30` | flow detail कितने दिन रखा जाए; summaries 400 दिन रखी जाती हैं |
-| `-memory` | `0.10` | physical memory का कितना हिस्सा database इस्तेमाल कर सकता है |
+| `-memory` | `0.10` | physical memory का कितना हिस्सा database cache के लिए, और उतना ही बाकी प्रोग्राम के लिए soft limit (हर एक कम से कम 256 MB) |
 | `-l2-overhead` | `18` | NetFlow/IPFIX byte counts में हर packet पर जोड़े जाने वाले bytes |
 | `-sampling-wait` | `5m` | records sampling rate का कितनी देर इंतज़ार करें |
 | `-capture` | | local interface पर capture (दोहराया जा सकता है) |
@@ -805,8 +805,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 ## 15. क्षमता का अनुमान
 
 2-core मशीन पर 5,000 flows प्रति सेकंड पर मापा गया: detail रोज़ लगभग 12 GB
-disk लेता है, साथ में मौजूदा घंटे के लिए लगभग 1.5 GB; प्रोग्राम लगभग 0.5 GB
-memory और एक core का छठा हिस्सा लेता है। लंबी time ranges के overviews
+disk लेता है, साथ में मौजूदा घंटे के लिए लगभग 1.5 GB; प्रोग्राम एक core का
+छठा हिस्सा लेता है। लंबी time ranges के overviews
 summaries से आते हैं और 0.2 s से कम लेते हैं। Detail पर queries हर घंटे के
 लगभग 2.2 करोड़ rows scan करती हैं: 1 घंटे में एक host 1 s से कम लेता है, सभी
 conversations का 1 घंटे का Top 66 लगभग 9 s; समय range के साथ बढ़ता है और
@@ -814,6 +814,14 @@ conversations का 1 घंटे का Top 66 लगभग 9 s; समय ra
 
 इसलिए 5,000 flows/s पर 30 दिनों के लिए disk लगभग 360 GB है; इसे अपने flow rate
 (**स्रोत** पर दिखता है) और `-retention-days` के अनुपात में बढ़ाएँ-घटाएँ।
+
+Memory: `-memory` (डिफ़ॉल्ट RAM का 10%, कम से कम 256 MB) database cache को
+सीमित करता है, और बाकी प्रोग्राम को उतने ही आकार की soft limit मिलती है।
+5,000 flows प्रति सेकंड पर प्रोग्राम का अपना data (decoding, duplicate
+detection, batches) लगभग 90 MB लेता है; कुल मिलाकर 0.6–0.8 GB मानकर चलें,
+इसलिए 2 GB RAM वाली मशीन काफ़ी है। लगातार 10 मिनट collection के दौरान
+(8 GB मशीन पर peak 0.58 GB) और 2 GB मशीन की limits के साथ इससे ग्यारह गुना
+rate पर एक घंटे के flows load करते समय (peak 0.74 GB) मापा गया।
 
 <a id="16-troubleshooting"></a>
 

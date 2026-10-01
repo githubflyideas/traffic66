@@ -29,6 +29,9 @@ func (d *Decoder) decodeIPFIX(b []byte, addr netip.Addr, now time.Time) (Result,
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	s := d.session(key{addr, domain, flow.SrcIPFIX})
+	if s == nil {
+		return Result{}, ErrTooManyExporters
+	}
 	s.touch(now, time.Unix(int64(exportTime), 0))
 
 	var res Result

@@ -749,7 +749,7 @@ Opciones de `traffic66` y `traffic66 demo`:
 | `-user` | `admin` | nombre del usuario creado en el primer arranque, y del usuario al que se aplica `-password` |
 | `-password` | sin definir | en esta ejecución acepta solo `-user` con esta contraseña, sin usar el archivo `password` (también `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | días de detalle de flujos que se conservan; los resúmenes se guardan 400 días |
-| `-memory` | `0.10` | fracción de la memoria física que puede usar la base de datos |
+| `-memory` | `0.10` | fracción de la memoria física para la caché de la base de datos, y otro tanto como límite blando para el resto del programa (cada uno al menos 256 MB) |
 | `-l2-overhead` | `18` | bytes por paquete sumados a los bytes de NetFlow/IPFIX |
 | `-sampling-wait` | `5m` | cuánto esperan los registros a una tasa de muestreo |
 | `-capture` | | captura en una interfaz local (repetible) |
@@ -824,7 +824,7 @@ El directorio de datos lo contiene todo:
 
 Medido a 5.000 flujos por segundo en una máquina de 2 núcleos: el detalle
 ocupa unos 12 GB de disco al día más aproximadamente 1,5 GB para la hora en
-curso, y el programa unos 0,5 GB de memoria y una sexta parte de un núcleo.
+curso, y el programa una sexta parte de un núcleo.
 Las vistas generales de rangos largos salen de resúmenes y tardan menos de
 0,2 s. Las consultas sobre el detalle recorren unos 22 millones de filas por
 hora: un host durante 1 hora tarda menos de 1 s, un Top 66 de 1 hora de
@@ -833,6 +833,15 @@ más núcleos.
 
 Por tanto, 30 días a 5.000 flujos/s ocupan unos 360 GB de disco; escálelo
 según su tasa de flujos (visible en **Fuentes**) y `-retention-days`.
+
+Memoria: `-memory` (por defecto el 10 % de la RAM, al menos 256 MB) limita
+la caché de la base de datos, y el resto del programa recibe un límite
+blando del mismo tamaño. A 5.000 flujos por segundo, los datos propios del
+programa (decodificación, detección de duplicados, lotes) ocupan unos
+90 MB; en total cuente con 0,6–0,8 GB, así que basta una máquina con 2 GB
+de RAM. Medido durante 10 minutos de captura continua (pico de 0,58 GB en
+una máquina de 8 GB) y al cargar una hora de flujos a once veces esa tasa
+con los límites de una máquina de 2 GB (pico de 0,74 GB).
 
 <a id="16-troubleshooting"></a>
 

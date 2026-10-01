@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -106,7 +107,8 @@ func TestLoadUDP(t *testing.T) {
 }
 
 // TestLoadQueries bulk-loads hours of flows at the design rate and times
-// the queries the UI makes. Run with T66_LOAD=1 T66_LOAD_HOURS=n.
+// the queries the UI makes. Run with T66_LOAD=1 T66_LOAD_HOURS=n
+// (T66_LOAD_MEMORY sets the database's memory share, GOMEMLIMIT the Go one).
 func TestLoadQueries(t *testing.T) {
 	if os.Getenv("T66_LOAD") == "" {
 		t.Skip("set T66_LOAD=1 to run the load test")
@@ -119,7 +121,11 @@ func TestLoadQueries(t *testing.T) {
 	if dir == "" {
 		dir = t.TempDir()
 	}
-	st, err := store.Open(store.Options{Dir: dir, RawDays: 30, MemoryFraction: 0.10})
+	frac := 0.10
+	if v, err := strconv.ParseFloat(os.Getenv("T66_LOAD_MEMORY"), 64); err == nil {
+		frac = v // e.g. 0.01 for the 256 MB minimum of a small machine
+	}
+	st, err := store.Open(store.Options{Dir: dir, RawDays: 30, MemoryFraction: frac})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +148,10 @@ func TestLoadQueries(t *testing.T) {
 	t0 := time.Now()
 	var n int
 	for m := begin; m.Before(end); m = m.Add(time.Minute) {
-		recs := make([]flow.Record, 0, 5000*60)
+		// one minute at the design rate, written in chunks as the live
+		// pipeline does, so the test itself fits on small machines
+		const chunk = 20000
+		recs := make([]flow.Record, 0, chunk)
 		for i := 0; i < 5000*60; i++ {
 			ts := m.Add(time.Duration(rng.IntN(60000)) * time.Millisecond)
 			cl := netip.AddrFrom4([4]byte{10, 1, byte(rng.IntN(20)), byte(rng.IntN(250))})
@@ -164,11 +173,14 @@ func TestLoadQueries(t *testing.T) {
 				SrcPort: uint16(1024 + rng.IntN(60000)), DstPort: []uint16{443, 80, 53, 22, 8801}[rng.IntN(5)], Proto: 6,
 				Bytes: pk * uint64(40+rng.IntN(1460)), Packets: pk, Mult: 100, Sampling: 100, SamplingKnown: true,
 				InIf: 1, OutIf: 2, Exporter: exp, Source: flow.SrcIPFIX})
+			if len(recs) == chunk || i == 5000*60-1 {
+				p.Ingest(recs)
+				p.FlushRows()
+				n += len(recs)
+				recs = recs[:0]
+			}
 		}
-		p.Ingest(recs)
-		p.FlushRows()
 		p.FlushRollups() // the live pipeline flushes rollups every minute too
-		n += len(recs)
 		if m.Minute() == 59 {
 			if err := st.Seal(m.Add(2 * time.Minute)); err != nil {
 				t.Fatal(err)
@@ -208,6 +220,10 @@ func TestLoadQueries(t *testing.T) {
 }
 
 func logPeakMemory(t *testing.T) {
+	runtime.GC()
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	t.Logf("Go heap in use after GC: %d MB (Go total from the OS: %d MB)", ms.HeapInuse>>20, ms.Sys>>20)
 	if b, err := os.ReadFile("/proc/self/status"); err == nil {
 		for _, l := range strings.Split(string(b), "\n") {
 			if strings.HasPrefix(l, "VmHWM") {

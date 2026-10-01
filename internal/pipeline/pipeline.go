@@ -6,6 +6,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"hash/maphash"
 	"log"
 	"math"
 	"net/netip"
@@ -37,13 +38,14 @@ type Pipeline struct {
 	in  chan []flow.Record
 	ctr chan []flow.IfCounters
 
-	mu    sync.Mutex
-	batch []store.Row
-	rTS   map[store.TSKey]*store.Counters
-	rHost map[store.HostKey]*store.Counters
-	rDim  map[store.DimKey]*store.Counters
-	dedup map[time.Time]map[dkey]origin
-	order []time.Time
+	mu     sync.Mutex
+	batch  []store.Row
+	rTS    map[store.TSKey]*store.Counters
+	rHost  map[store.HostKey]*store.Counters
+	rDim   map[store.DimKey]*store.Counters
+	dedup  map[time.Time]map[uint64]uint32 // minute → 5-tuple hash → origin hash
+	newest time.Time                       // newest minute in dedup
+	seed   maphash.Seed
 
 	Records   atomic.Uint64
 	Rows      atomic.Uint64
@@ -79,7 +81,8 @@ func New(cfg Config, st *store.Store, inv *enrich.Inventory, asn *enrich.ASNDB, 
 		rTS:   map[store.TSKey]*store.Counters{},
 		rHost: map[store.HostKey]*store.Counters{},
 		rDim:  map[store.DimKey]*store.Counters{},
-		dedup: map[time.Time]map[dkey]origin{},
+		dedup: map[time.Time]map[uint64]uint32{},
+		seed:  maphash.MakeSeed(),
 	}
 }
 
@@ -376,25 +379,44 @@ func minuteSlices(start, end time.Time) []slice {
 	return out
 }
 
+// dedupWindow is how far back reports of the same minute are compared:
+// exporters report a flow up to their active timeout (plus any wait for a
+// sampling rate) after it happened.
+const dedupWindow = 8 * time.Minute
+
 // isDup reports whether another observation point already reported this
 // packet direction in this minute.
+//
+// Only hashes are kept: 64 bits of the 5-tuple and 32 of the observation
+// point, about 25 bytes per flow and minute instead of about 200. At the
+// design rate (300,000 flows a minute, nearly all with distinct ports) the
+// table holds about 60 MB. Two different flows in the same minute share a
+// 64-bit hash with a probability of about 1 in 10^9 per minute.
 func (p *Pipeline) isDup(t time.Time, k dkey, o origin) bool {
-	m := p.dedup[t]
-	if m == nil {
-		m = map[dkey]origin{}
-		p.dedup[t] = m
-		p.order = append(p.order, t)
-		for len(p.order) > 8 {
-			delete(p.dedup, p.order[0])
-			p.order = p.order[1:]
+	if t.After(p.newest) {
+		p.newest = t
+		for m := range p.dedup {
+			if m.Before(t.Add(-dedupWindow)) {
+				delete(p.dedup, m)
+			}
 		}
 	}
-	prev, ok := m[k]
+	if t.Before(p.newest.Add(-dedupWindow)) {
+		return false // older than anything kept: nothing to compare with
+	}
+	m := p.dedup[t]
+	if m == nil {
+		m = map[uint64]uint32{}
+		p.dedup[t] = m
+	}
+	kh := maphash.Comparable(p.seed, k)
+	oh := uint32(maphash.Comparable(p.seed, o))
+	prev, ok := m[kh]
 	if !ok {
-		m[k] = o
+		m[kh] = oh
 		return false
 	}
-	return prev != o
+	return prev != oh
 }
 
 func (p *Pipeline) rollup(r *store.Row, hasPeer bool) {

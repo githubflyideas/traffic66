@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -127,7 +128,7 @@ func serve(args []string, demo bool) {
 	fs.Var(&f.threats, "threat", "threat list as name=path (repeatable); default <data>/threats/*.txt")
 	fs.Var(&f.captures, "capture", "capture locally on this interface (repeatable); see 'traffic66 interfaces'")
 	fs.IntVar(&f.retention, "retention-days", 30, "days of flow detail to keep (rollups keep 400 days)")
-	fs.Float64Var(&f.mem, "memory", 0.10, "share of physical memory the database may use")
+	fs.Float64Var(&f.mem, "memory", 0.10, "share of physical memory for the database cache, and the same again as a soft limit for the rest of the program (each at least 256 MB)")
 	fs.IntVar(&f.l2, "l2-overhead", 18, "bytes added per packet to IP-layer counts to match interface counters")
 	fs.DurationVar(&f.hold, "sampling-wait", 5*time.Minute, "how long to hold NetFlow/IPFIX records waiting for the sampling rate")
 	fs.StringVar(&f.dnsUpstream, "dns-upstream", "", "DNS server for reverse lookups (default: system resolver)")
@@ -143,6 +144,7 @@ func serve(args []string, demo bool) {
 	if demo {
 		prepareDemo(f.data)
 	}
+	setGoMemoryLimit(f.mem)
 	st, err := store.Open(store.Options{Dir: f.data, MemoryFraction: f.mem, RawDays: f.retention})
 	if err != nil {
 		fatalf("store: %v", err)
@@ -643,4 +645,22 @@ func fatalf(format string, args ...any) {
 		fmt.Scanln()
 	}
 	os.Exit(1)
+}
+
+// setGoMemoryLimit gives the Go side of the program (decoding, the dedup
+// table, row batches) a soft memory limit of the same size as the database's
+// share, so that -memory bounds the whole process at about twice that share
+// instead of only DuckDB. A soft limit makes the garbage collector work
+// harder near it; it cannot stop live data from exceeding it. GOMEMLIMIT in
+// the environment takes precedence.
+func setGoMemoryLimit(frac float64) {
+	if os.Getenv("GOMEMLIMIT") != "" {
+		return
+	}
+	lim := int64(float64(store.TotalMemory()) * frac)
+	if lim < 256<<20 {
+		lim = 256 << 20
+	}
+	debug.SetMemoryLimit(lim)
+	log.Printf("memory: database %d MB and program %d MB (soft), from -memory %.2f", lim>>20, lim>>20, frac)
 }

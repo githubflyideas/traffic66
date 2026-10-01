@@ -733,7 +733,7 @@ Capture ہونے والے interfaces **ذرائع** پر نظر آتے ہیں۔ 
 | `-user` | `admin` | پہلی بار شروع ہونے پر بننے والے یوزر کا نام، اور اس یوزر کا جس پر `-password` لاگو ہوتا ہے |
 | `-password` | سیٹ نہیں | اس run میں صرف اسی پاس ورڈ کے ساتھ `-user` کو قبول کرتا ہے، `password` فائل کو نظرانداز کر کے (`TRAFFIC66_PASSWORD` بھی) |
 | `-retention-days` | `30` | flow detail کتنے دن رکھی جائے؛ summaries 400 دن رکھی جاتی ہیں |
-| `-memory` | `0.10` | physical memory کا کتنا حصہ database استعمال کر سکتا ہے |
+| `-memory` | `0.10` | physical memory کا کتنا حصہ database cache کے لیے، اور اتنا ہی باقی پروگرام کے لیے soft limit (ہر ایک کم از کم 256 MB) |
 | `-l2-overhead` | `18` | NetFlow/IPFIX byte counts میں ہر packet پر جوڑے جانے والے bytes |
 | `-sampling-wait` | `5m` | records کتنی دیر sampling rate کا انتظار کریں |
 | `-capture` | | local interface پر capture (دہرایا جا سکتا ہے) |
@@ -805,8 +805,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 ## 15. گنجائش کا اندازہ
 
 2-core مشین پر 5,000 flows فی سیکنڈ پر ناپا گیا: detail روزانہ تقریباً 12 GB
-disk لیتی ہے، ساتھ موجودہ گھنٹے کے لیے تقریباً 1.5 GB؛ پروگرام تقریباً 0.5 GB
-memory اور ایک core کا چھٹا حصہ لیتا ہے۔ لمبی time ranges کے overviews
+disk لیتی ہے، ساتھ موجودہ گھنٹے کے لیے تقریباً 1.5 GB؛ پروگرام ایک core کا
+چھٹا حصہ لیتا ہے۔ لمبی time ranges کے overviews
 summaries سے آتے ہیں اور 0.2 s سے کم لیتے ہیں۔ detail پر queries فی گھنٹہ
 تقریباً 2 کروڑ 20 لاکھ rows scan کرتی ہیں: 1 گھنٹے میں ایک host کے لیے 1 s سے کم،
 تمام conversations کا 1 گھنٹے کا Top 66 تقریباً 9 s؛ وقت range کے ساتھ بڑھتا ہے
@@ -814,6 +814,14 @@ summaries سے آتے ہیں اور 0.2 s سے کم لیتے ہیں۔ detail پ�
 
 لہٰذا 5,000 flows/s پر 30 دن کے لیے disk تقریباً 360 GB ہے؛ اسے اپنے flow rate
 (**ذرائع** پر نظر آتا ہے) اور `-retention-days` کے تناسب سے بڑھائیں یا گھٹائیں۔
+
+Memory: `-memory` (ڈیفالٹ RAM کا 10%، کم از کم 256 MB) database cache کو
+محدود کرتا ہے، اور باقی پروگرام کو اتنے ہی سائز کی soft limit ملتی ہے۔ 5,000
+flows فی سیکنڈ پر پروگرام کا اپنا data (decoding، duplicate detection، batches)
+تقریباً 90 MB لیتا ہے؛ کل ملا کر 0.6–0.8 GB مان کر چلیں، اس لیے 2 GB RAM والی
+مشین کافی ہے۔ مسلسل 10 منٹ collection کے دوران (8 GB مشین پر peak 0.58 GB) اور
+2 GB مشین کی limits کے ساتھ اس سے گیارہ گنا rate پر ایک گھنٹے کے flows load
+کرتے وقت (peak 0.74 GB) ناپا گیا۔
 
 <a id="16-troubleshooting"></a>
 

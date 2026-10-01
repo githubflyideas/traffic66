@@ -751,7 +751,7 @@ Opções de `traffic66` e `traffic66 demo`:
 | `-user` | `admin` | nome do usuário criado na primeira execução e do usuário ao qual `-password` se aplica |
 | `-password` | não definido | aceita só `-user` com esta senha nesta execução, ignorando o arquivo `password` (também `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | dias de detalhe de fluxo mantidos; os resumos são mantidos por 400 dias |
-| `-memory` | `0.10` | fração da memória física que o banco de dados pode usar |
+| `-memory` | `0.10` | fração da memória física para o cache do banco de dados, e o mesmo valor como limite flexível para o resto do programa (cada um com pelo menos 256 MB) |
 | `-l2-overhead` | `18` | bytes por pacote somados às contagens de bytes de NetFlow/IPFIX |
 | `-sampling-wait` | `5m` | quanto tempo os registros esperam por uma taxa de amostragem |
 | `-capture` | | captura em uma interface local (repetível) |
@@ -826,7 +826,7 @@ O diretório de dados guarda tudo:
 
 Medido a 5.000 fluxos por segundo em uma máquina com 2 núcleos: o detalhe
 ocupa cerca de 12 GB de disco por dia, mais cerca de 1,5 GB para a hora
-atual; o programa usa cerca de 0,5 GB de memória e um sexto de um núcleo.
+atual; o programa usa um sexto de um núcleo.
 Visões gerais de intervalos longos vêm dos resumos e levam menos de 0,2 s.
 Consultas sobre o detalhe varrem cerca de 22 milhões de linhas por hora: um
 host em 1 hora leva menos de 1 s, um Top 66 de 1 hora de todas as conversas
@@ -834,6 +834,15 @@ cerca de 9 s; o tempo cresce com o intervalo e cai com mais núcleos.
 
 Portanto, 30 dias a 5.000 fluxos/s ocupam cerca de 360 GB de disco; ajuste
 conforme a sua taxa de fluxos (mostrada em **Fontes**) e `-retention-days`.
+
+Memória: `-memory` (padrão 10% da RAM, pelo menos 256 MB) limita o cache do
+banco de dados, e o resto do programa recebe um limite flexível do mesmo
+tamanho. A 5.000 fluxos por segundo, os dados do próprio programa
+(decodificação, detecção de duplicatas, lotes) ocupam cerca de 90 MB; no
+total, conte com 0,6–0,8 GB, então uma máquina com 2 GB de RAM basta.
+Medido em 10 minutos de coleta contínua (pico de 0,58 GB em uma máquina de
+8 GB) e ao carregar uma hora de fluxos a onze vezes essa taxa com os limites
+de uma máquina de 2 GB (pico de 0,74 GB).
 
 <a id="16-troubleshooting"></a>
 
