@@ -21,13 +21,10 @@ jobs:
             target: linux-arm64
           - os: macos-14
             target: darwin-arm64
-          # Intel macOS runners are being retired: cross-compile on Apple silicon.
-          - os: macos-14
+          - os: macos-15-intel
             target: darwin-amd64
-            goarch: amd64
-            cc: clang -arch x86_64
-            cross: true
-          - os: windows-2022
+          # the runner's own MinGW gcc links DuckDB (as in duckdb-go's CI)
+          - os: windows-latest
             target: windows-amd64
     runs-on: ${{ matrix.os }}
     defaults:
@@ -38,16 +35,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-      - name: MinGW (Windows)
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          install: mingw-w64-ucrt-x86_64-gcc
-          path-type: inherit
-      - name: Put MinGW on PATH (Windows)
-        if: runner.os == 'Windows'
-        run: echo "${RUNNER_TEMP}/msys64/ucrt64/bin" >> "$GITHUB_PATH"
       - name: Resolve modules
         run: go mod tidy
       - name: Vet
