@@ -6,8 +6,8 @@ import (
 )
 
 func TestCleanArgs(t *testing.T) {
-	got := cleanArgs([]string{"　interfaces'.", "－capture", "“Wi-Fi”", " ", "-listen", ":8066"})
-	want := []string{"interfaces", "-capture", "Wi-Fi", "-listen", ":8066"}
+	got := cleanArgs([]string{"　interfaces'.", "－capture", "“Wi-Fi”", " ", "-listen", ""})
+	want := []string{"interfaces", "-capture", "Wi-Fi", "-listen", ""}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %q want %q", got, want)
 	}

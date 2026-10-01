@@ -101,11 +101,16 @@ var commands = []string{"serve", "demo", "tui", "simulate", "passwd", "interface
 
 // cleanArgs undoes what copying a command from a web page or chat often adds:
 // full-width or non-breaking spaces, quotes around a word, full-width dashes
-// and a trailing full stop. Arguments that become empty are dropped.
+// and a trailing full stop. Arguments that were only such characters are
+// dropped; an empty argument is kept.
 func cleanArgs(in []string) []string {
 	out := make([]string, 0, len(in))
-	for _, a := range in {
-		a = strings.TrimFunc(a, func(r rune) bool {
+	for _, orig := range in {
+		if orig == "" { // an empty value given on purpose, e.g. -listen ""
+			out = append(out, orig)
+			continue
+		}
+		a := strings.TrimFunc(orig, func(r rune) bool {
 			return unicode.IsSpace(r) || strings.ContainsRune("'\"`‘’“”「」『』", r)
 		})
 		a = strings.TrimRight(a, ".。,，;；")
