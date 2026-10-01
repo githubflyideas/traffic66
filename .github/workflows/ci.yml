@@ -68,15 +68,18 @@ jobs:
       - name: Build
         if: ${{ !cancelled() }}
         run: |
-          ver="${GITHUB_REF_NAME#v}"
-          [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
-          exe=traffic66; [[ "${{ runner.os }}" == Windows ]] && exe=traffic66.exe
-          if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
-          scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
-          cp README.md "dist/traffic66-${{ matrix.target }}/"
-          [[ -f LICENSE ]] && cp LICENSE "dist/traffic66-${{ matrix.target }}/"
-          cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
-          [[ -n "${{ matrix.cross }}" ]] || "dist/traffic66-${{ matrix.target }}/$exe" version
+          set -o pipefail
+          {
+            ver="${GITHUB_REF_NAME#v}"
+            [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
+            exe=traffic66; [[ "${{ runner.os }}" == Windows ]] && exe=traffic66.exe
+            if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
+            scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
+            cp README.md "dist/traffic66-${{ matrix.target }}/"
+            [[ -f LICENSE ]] && cp LICENSE "dist/traffic66-${{ matrix.target }}/"
+            cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
+            [[ -n "${{ matrix.cross }}" ]] || "dist/traffic66-${{ matrix.target }}/$exe" version
+          } 2>&1 | tee build.log
       - name: Smoke test (demo starts and serves the API)
         if: ${{ !matrix.cross }}
         run: |
@@ -90,6 +93,17 @@ jobs:
           cd dist
           if [[ "${{ runner.os }}" == Windows ]]; then 7z a "traffic66-${{ matrix.target }}.zip" "traffic66-${{ matrix.target }}" >/dev/null
           else tar czf "traffic66-${{ matrix.target }}.tar.gz" "traffic66-${{ matrix.target }}"; fi
+      - name: Publish logs to a branch (Windows failures)
+        if: failure() && runner.os == 'Windows'
+        run: |
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          cp test.log build.log "$RUNNER_TEMP/" 2>/dev/null || true
+          git checkout --orphan "ci-logs-${{ github.run_id }}"
+          git rm -rfq --cached . && git clean -fdxq
+          cp "$RUNNER_TEMP"/*.log . 2>/dev/null || true
+          go env > go-env.log
+          git add -f *.log && git commit -qm "logs ${{ github.run_id }}"
+          git push -q origin "HEAD:refs/heads/ci-logs-${{ github.run_id }}"
       - uses: actions/upload-artifact@v4
         with:
           name: traffic66-${{ matrix.target }}
