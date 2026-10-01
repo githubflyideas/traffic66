@@ -209,3 +209,41 @@ func TestRetention(t *testing.T) {
 		t.Fatalf("expired data still visible: %+v, %+v", tot, st.Usage())
 	}
 }
+
+// TestLongRangeConsistent checks that for a range served from summaries,
+// starting on a whole hour (as the API does), Top-N adds up to the same total
+// as the per-minute totals, so every number on a page counts the same window.
+func TestLongRangeConsistent(t *testing.T) {
+	p, st := setup(t)
+	now := time.Now().UTC().Truncate(time.Minute)
+	cli := []netip.Addr{netip.MustParseAddr("10.1.1.1"), netip.MustParseAddr("10.1.1.2"), netip.MustParseAddr("10.1.1.3")}
+	srv := netip.MustParseAddr("198.51.100.9")
+	exp := netip.MustParseAddr("10.0.0.1")
+	var recs []flow.Record
+	for m := 0; m < 30*60; m += 7 {
+		ts := now.Add(-time.Duration(m) * time.Minute)
+		c := cli[m%3]
+		recs = append(recs, flow.Record{Start: ts, End: ts.Add(50 * time.Second), Src: c, Dst: srv, SrcPort: 50000, DstPort: 443,
+			Proto: 6, Bytes: uint64(1000 + m), Packets: 10, Mult: 1, SamplingKnown: true, Exporter: exp, Source: flow.SrcNetFlow9})
+	}
+	p.Ingest(recs)
+	p.FlushRows()
+	p.FlushRollups()
+	// To is the moment of the query, after the newest record, as in the API.
+	q := store.Query{From: now.Add(-24*time.Hour - 17*time.Minute).Truncate(time.Hour), To: now.Add(30 * time.Second)}
+	tot, err := st.Totals(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	top, err := st.TopN(q, "client", 66)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sum uint64
+	for _, r := range top {
+		sum += r.Wire
+	}
+	if sum != tot.Wire || sum == 0 {
+		t.Fatalf("Top-N clients add up to %d, totals say %d", sum, tot.Wire)
+	}
+}

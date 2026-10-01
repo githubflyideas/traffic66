@@ -22,6 +22,13 @@ var ranges = map[string]time.Duration{
 	"7d": 7 * 24 * time.Hour, "30d": 30 * 24 * time.Hour,
 }
 
+// longRange is the span above which queries are answered from hourly
+// summaries. Such ranges start on a whole hour, so that every number on a
+// page (totals and charts per minute, Top-N and the other summaries per hour)
+// counts exactly the same window; "24 hours" then covers the last 24 whole
+// hours plus the current one.
+const longRange = 6 * time.Hour
+
 func parseQuery(r *http.Request) (store.Query, error) {
 	v := r.URL.Query()
 	now := time.Now().UTC()
@@ -33,12 +40,21 @@ func parseQuery(r *http.Request) (store.Query, error) {
 			return q, errors.New("bad from/to")
 		}
 		q.From, q.To = time.UnixMilli(fm).UTC(), time.UnixMilli(tm).UTC()
+		if q.To.Sub(q.From) > longRange {
+			q.From = q.From.Truncate(time.Hour)
+			if t := q.To.Truncate(time.Hour); !t.Equal(q.To) {
+				q.To = t.Add(time.Hour)
+			}
+		}
 	} else {
 		d, ok := ranges[v.Get("range")]
 		if !ok {
 			d = 24 * time.Hour
 		}
 		q.From = now.Add(-d)
+		if d > longRange {
+			q.From = q.From.Truncate(time.Hour)
+		}
 	}
 	if f := v.Get("f"); f != "" {
 		if err := json.Unmarshal([]byte(f), &q.Filters); err != nil {

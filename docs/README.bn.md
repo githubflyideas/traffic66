@@ -18,6 +18,10 @@ database-এ রাখে, এবং দেখায় কে bandwidth ব্�
   record, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS)।
 - web UI ও terminal UI-তে 13টি ভাষা।
 
+![সারসংক্ষেপ: গত সপ্তাহের তুলনায় application অনুযায়ী bandwidth, কী বেড়েছে, শীর্ষ client ও service](images/overview.png)
+
+<sub>সব স্ক্রিনশট `traffic66 demo` থেকে নেওয়া, একটি simulated কোম্পানি নেটওয়ার্ক যা আপনি নিজেই চালাতে পারেন ([ডেমো চালিয়ে দেখুন](#1-try-the-demo) দেখুন)।</sub>
+
 <a id="contents"></a>
 
 ## সূচিপত্র
@@ -494,6 +498,8 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 তার protocol, sampling rate, loss, শেষ packet আর status সহ। status সবুজ না
 হলে পাশের লেখাটি বলে দেয় কী সমস্যা আর কী বদলাতে হবে।
 
+![উৎস: প্রতিটি ডিভাইস, তার protocol, sampling, loss আর কী ঠিক করতে হবে](images/sources.png)
+
 কোনো ডিভাইস না দেখা গেলে:
 
 1. traffic66 মেশিনে packet দেখুন (Linux, macOS):
@@ -516,6 +522,8 @@ Flow-এর সংখ্যা আসলে অনুমান: sampled packet �
 এগুলো ডিভাইসের নিজের interface counter-এর সাথে তুলনা করে এবং পার্থক্য
 **ইন্টারফেস মিলানো**-তে দেখায়; পার্থক্য শুধু sampling দিয়ে ব্যাখ্যা করা যায়
 তার চেয়ে বেশি হলে সম্ভাব্য কারণও দেখায়।
+
+![ইন্টারফেস মিলানো: প্রতিটি interface-এর জন্য ডিভাইসের counter-এর পাশে flow-এর অনুমান](images/interfaces.png)
 
 তুলনার জন্য counter পেতে:
 
@@ -603,6 +611,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 list যোগ বা পরিবর্তনের পর traffic66 restart করুন। match-গুলো
 **হুমকির তথ্য**-তে list-এর নাম অনুযায়ী দেখা যায়।
 
+![হুমকির তথ্য: একটি internal host একটি threat list-এর address-এ ডেটা পাঠাচ্ছে](images/threats.png)
+
 <a id="9-using-the-web-ui"></a>
 
 ## 9. web UI ব্যবহার
@@ -634,8 +644,18 @@ application, দেশ, ডিভাইস — ক্লিক করা যা�
 view-এর (পেজ, time range ও filter) link কপি করে, যাতে সহকর্মীকে পাঠানো যায়।
 ভাষা browser অনুযায়ী ঠিক হয়; menu-র নিচ থেকে বদলান।
 
-লম্বা time range-এ Top-N আসে ঘণ্টাভিত্তিক summary থেকে; সেখানে filter পাওয়া
-যায় না, আর পেজেই তা বলা থাকে। filter করতে ছোট range বেছে নিন।
+6 ঘণ্টার চেয়ে লম্বা range পূর্ণ ঘণ্টা থেকে শুরু হয়, যাতে পেজের প্রতিটি
+সংখ্যা ঠিক একই সময় গোনে: "24 ঘণ্টা" মানে শেষ 24টি পূর্ণ ঘণ্টা আর চলতি
+ঘণ্টা। এই range-গুলোতে Top-N আসে ঘণ্টাভিত্তিক summary থেকে; সেখানে filter
+পাওয়া যায় না, আর পেজেই তা বলা থাকে। filter করতে ছোট range বেছে নিন।
+
+![Top-N: গত এক ঘণ্টার শীর্ষ 66 conversation](images/topn.png)
+
+![ট্রাফিকের পথ: কোন segment কোন দেশের দিকে কোন application ব্যবহার করে](images/paths.png)
+
+একই সারসংক্ষেপ চীনা ভাষায়; প্রতিটি পেজ 13টি ভাষায় পাওয়া যায়:
+
+![চীনা ভাষায় সারসংক্ষেপ](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
 
@@ -656,6 +676,10 @@ service হিসেবে চলে, তার বদলে `-user` ও `-passw
 Key: 1–8 পেজ, ↑↓ বাছাই, Enter বাছাই করা value-র action, f শুধু এটি দেখান,
 x বাদ দিন, / search, t time range, c filter মুছুন, w একই view browser-এ খুলুন,
 q বেরিয়ে যান।
+
+![Terminal UI: সারসংক্ষেপ](images/tui-overview.png)
+
+![Terminal UI: Top-N client](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 

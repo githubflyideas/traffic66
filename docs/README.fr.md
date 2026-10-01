@@ -21,6 +21,10 @@ terminal.
   IPIP, VXLAN, GENEVE, MPLS).
 - 13 langues dans l'interface web et dans l'interface terminal.
 
+![Vue d'ensemble : bande passante par application comparée à la semaine dernière, ce qui a augmenté, principaux clients et services](images/overview.png)
+
+<sub>Toutes les captures d'écran proviennent de `traffic66 demo`, un réseau d'entreprise simulé que vous pouvez lancer vous-même (voir [Essayer la démo](#1-try-the-demo)).</sub>
+
 <a id="contents"></a>
 
 ## Sommaire
@@ -512,6 +516,8 @@ quelques secondes, avec son protocole, son taux d'échantillonnage, ses
 pertes, son dernier paquet et un état. Quand l'état n'est pas vert, le
 texte à côté indique ce qui ne va pas et ce qu'il faut changer.
 
+![Sources : chaque équipement avec son protocole, son échantillonnage, ses pertes et ce qu'il faut corriger](images/sources.png)
+
 Si un équipement n'apparaît pas :
 
 1. Surveillez l'arrivée des paquets sur la machine traffic66 (Linux, macOS) :
@@ -538,6 +544,8 @@ multipliés par le taux d'échantillonnage. traffic66 les compare aux
 compteurs d'interface de l'équipement et affiche l'écart dans
 **Contrôle des interfaces**, avec la cause probable quand il dépasse ce que
 l'échantillonnage seul explique.
+
+![Contrôle des interfaces : estimation des flux à côté du compteur de l'équipement pour chaque interface](images/interfaces.png)
 
 Pour disposer de compteurs de comparaison :
 
@@ -632,6 +640,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 Redémarrez traffic66 après avoir ajouté ou modifié des listes. Les
 correspondances apparaissent dans **Menaces**, par nom de liste.
 
+![Menaces : un hôte interne qui envoie des données à une adresse figurant sur une liste de menaces](images/threats.png)
+
 <a id="9-using-the-web-ui"></a>
 
 ## 9. Utiliser l'interface web
@@ -667,9 +677,20 @@ champ de recherche facultatif, le rafraîchissement automatique toutes les
 (page, plage de temps et filtres) à envoyer à un collègue. La langue suit
 celle du navigateur ; on la change en bas du menu.
 
-Sur de longues plages de temps, Top-N s'appuie sur des agrégats horaires ;
-les filtres n'y sont pas disponibles, et la page le signale. Choisissez une
-plage plus courte pour filtrer.
+Les plages de plus de 6 heures commencent à une heure pile, si bien que
+chaque chiffre de la page porte exactement sur la même durée : "24 heures"
+couvre les 24 dernières heures entières plus l'heure en cours. Sur ces
+plages, Top-N s'appuie sur des agrégats horaires ; les filtres n'y sont pas
+disponibles, et la page le signale. Choisissez une plage plus courte pour
+filtrer.
+
+![Top-N : les 66 premières conversations de la dernière heure](images/topn.png)
+
+![Chemins du trafic : quel segment utilise quelle application vers quel pays](images/paths.png)
+
+La même vue d'ensemble en chinois ; toutes les pages sont disponibles en 13 langues :
+
+![Vue d'ensemble en chinois](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
 
@@ -692,6 +713,10 @@ Touches : 1–8 pages, ↑↓ sélection, Entrée actions sur la valeur
 sélectionnée, f afficher seulement, x exclure, / rechercher, t plage de
 temps, c effacer les filtres, w ouvrir la même vue dans un navigateur,
 q quitter.
+
+![Interface terminal : vue d'ensemble](images/tui-overview.png)
+
+![Interface terminal : Top-N des clients](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 

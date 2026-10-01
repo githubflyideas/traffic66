@@ -19,6 +19,10 @@ propios equipos, tanto en una interfaz web como en una interfaz de terminal.
   MPLS).
 - 13 idiomas en la interfaz web y en la de terminal.
 
+![Resumen: ancho de banda por aplicación frente a la semana pasada, qué ha crecido, principales clientes y servicios](images/overview.png)
+
+<sub>Todas las capturas de pantalla proceden de `traffic66 demo`, una red de empresa simulada que puede ejecutar usted mismo (vea [Probar la demo](#1-try-the-demo)).</sub>
+
 <a id="contents"></a>
 
 ## Contenido
@@ -502,6 +506,8 @@ protocolo, tasa de muestreo, pérdidas, último paquete y un estado. Cuando el
 estado no está en verde, el texto de al lado indica qué falla y qué hay que
 cambiar.
 
+![Fuentes: cada equipo con su protocolo, muestreo, pérdidas y qué corregir](images/sources.png)
+
 Si un equipo no aparece:
 
 1. Observe si llegan paquetes a la máquina de traffic66 (Linux, macOS):
@@ -525,6 +531,8 @@ Las cifras de flujo son estimaciones: paquetes muestreados por la tasa de
 muestreo. traffic66 las compara con los contadores de interfaz del propio
 equipo y muestra la diferencia en **Verificación de interfaces**, con la
 causa probable cuando es mayor de lo que explica el propio muestreo.
+
+![Verificación de interfaces: estimación de flujos junto al contador del equipo para cada interfaz](images/interfaces.png)
 
 Para disponer de contadores con los que comparar:
 
@@ -617,6 +625,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 Reinicie traffic66 después de añadir o modificar listas. Las coincidencias
 aparecen en **Inteligencia de amenazas**, por nombre de lista.
 
+![Inteligencia de amenazas: un host interno enviando datos a una dirección de una lista de amenazas](images/threats.png)
+
 <a id="9-using-the-web-ui"></a>
 
 ## 9. Uso de la interfaz web
@@ -651,8 +661,19 @@ de búsqueda opcional, refresco automático cada 30 segundos y **Copiar enlace**
 (página, rango de tiempo y filtros) para enviárselo a un compañero. El idioma sigue al del
 navegador; se cambia al final del menú.
 
-En rangos de tiempo largos, Top-N sale de resúmenes horarios; ahí no hay
-filtros, y la página lo indica. Elija un rango más corto para filtrar.
+Los rangos de más de 6 horas empiezan en una hora en punto, de modo que
+todas las cifras de la página cuentan exactamente el mismo tiempo: "24 horas"
+abarca las últimas 24 horas completas más la actual. En estos rangos, Top-N
+sale de resúmenes horarios; ahí no hay filtros, y la página lo indica. Elija
+un rango más corto para filtrar.
+
+![Top-N: las 66 primeras conversaciones de la última hora](images/topn.png)
+
+![Rutas de tráfico: qué segmento usa qué aplicación hacia qué país](images/paths.png)
+
+El mismo resumen en chino; todas las páginas están disponibles en 13 idiomas:
+
+![Resumen en chino](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
 
@@ -673,6 +694,10 @@ servicio, use `-user` y `-password`. `-lang` elige el idioma (`en`, `zh`,
 Teclas: 1–8 páginas, ↑↓ seleccionar, Enter acciones sobre el valor
 seleccionado, f mostrar solo, x excluir, / buscar, t rango de tiempo,
 c quitar filtros, w abrir la misma vista en un navegador, q salir.
+
+![Interfaz de terminal: resumen](images/tui-overview.png)
+
+![Interfaz de terminal: Top-N de clientes](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 

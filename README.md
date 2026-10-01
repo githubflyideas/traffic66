@@ -18,6 +18,10 @@ in a web UI and in a terminal UI.
   flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - 13 languages in the web UI and the terminal UI.
 
+![Overview: bandwidth by application compared with last week, who grew, top clients and services](docs/images/overview.png)
+
+<sub>All screenshots come from `traffic66 demo`, a simulated company network that you can run yourself (see [Try the demo](#1-try-the-demo)).</sub>
+
 ## Contents
 
 1. [Try the demo](#1-try-the-demo)
@@ -468,6 +472,8 @@ with its protocol, sampling rate, loss, last packet and a status. When the
 status is not green, the text next to it says what is wrong and what to
 change.
 
+![Sources: each device with protocol, sampling, loss and what to fix](docs/images/sources.png)
+
 If a device does not appear:
 
 1. Watch for packets on the traffic66 machine (Linux, macOS):
@@ -488,6 +494,8 @@ Flow numbers are estimates: sampled packets times the sampling rate.
 traffic66 compares them with the device's own interface counters and shows
 the difference on **Interface check**, with the likely cause when it is
 larger than sampling alone explains.
+
+![Interface check: flow estimate next to the device counter for every interface](docs/images/interfaces.png)
 
 To get counters to compare with:
 
@@ -572,6 +580,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 Restart traffic66 after adding or changing lists. Matches appear on
 **Threat intel**, by list name.
 
+![Threat intel: an internal host sending data to an address on a threat list](docs/images/threats.png)
+
 ## 9. Using the web UI
 
 You should rarely need to type. Every value on every page — an address, a
@@ -602,8 +612,19 @@ link to exactly the current view (page, time range and filters) to send to
 a colleague. The language follows the browser; change it at the bottom of
 the menu.
 
-Top-N over long time ranges comes from hourly summaries; filters are not
-available there, and the page says so. Choose a shorter range to filter.
+Ranges longer than 6 hours start on a whole hour, so every number on the
+page counts exactly the same time: "24 hours" covers the last 24 whole
+hours plus the current one. Top-N over these ranges comes from hourly
+summaries; filters are not available there, and the page says so. Choose a
+shorter range to filter.
+
+![Top-N: the top 66 conversations of the last hour](docs/images/topn.png)
+
+![Flow paths: which segment uses which application towards which country](docs/images/paths.png)
+
+The same overview in Chinese; every page is available in 13 languages:
+
+![Overview in Chinese](docs/images/overview-zh.png)
 
 ## 10. Terminal UI
 
@@ -622,6 +643,10 @@ traffic66 runs as another user, as a service does, use `-user` and
 Keys: 1–8 pages, ↑↓ select, Enter actions on the selected value, f show
 only, x exclude, / search, t time range, c clear filters, w open the same
 view in a browser, q quit.
+
+![Terminal UI: overview](docs/images/tui-overview.png)
+
+![Terminal UI: Top-N clients](docs/images/tui-topn.png)
 
 ## 11. Local capture
 

@@ -20,6 +20,10 @@ embedded database میں رکھتا ہے، اور دکھاتا ہے کہ bandwid
   flow records، encapsulation (GRE، IPIP، VXLAN، GENEVE، MPLS)۔
 - web UI اور terminal UI میں 13 زبانیں۔
 
+![جائزہ: پچھلے ہفتے کے مقابلے میں application کے حساب سے bandwidth، کیا بڑھا، سرفہرست clients اور services](images/overview.png)
+
+<sub>تمام اسکرین شاٹس `traffic66 demo` سے لیے گئے ہیں، ایک simulated کمپنی نیٹ ورک جسے آپ خود چلا سکتے ہیں ([ڈیمو چلا کر دیکھیں](#1-try-the-demo) دیکھیں)۔</sub>
+
 <a id="contents"></a>
 
 ## فہرست
@@ -496,6 +500,8 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 اپنے protocol، sampling rate، loss، آخری packet اور status کے ساتھ۔ جب status
 سبز نہ ہو تو اس کے ساتھ لکھا متن بتاتا ہے کہ کیا خرابی ہے اور کیا بدلنا ہے۔
 
+![ذرائع: ہر ڈیوائس، اس کا protocol، sampling، loss اور کیا ٹھیک کرنا ہے](images/sources.png)
+
 اگر کوئی ڈیوائس نظر نہ آئے:
 
 1. traffic66 مشین پر packets دیکھیں (Linux، macOS):
@@ -518,6 +524,8 @@ Flow کے اعداد اندازے ہوتے ہیں: sampled packets ضرب sampli
 انہیں ڈیوائس کے اپنے interface counters سے ملاتا ہے اور فرق **انٹرفیس جانچ** پر
 دکھاتا ہے؛ جب فرق صرف sampling سے سمجھ میں آنے والے فرق سے زیادہ ہو تو ممکنہ
 وجہ بھی بتاتا ہے۔
+
+![انٹرفیس جانچ: ہر interface کے لیے ڈیوائس کے counter کے ساتھ flow کا اندازہ](images/interfaces.png)
 
 موازنے کے لیے counters حاصل کرنے کے لیے:
 
@@ -606,6 +614,8 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 lists شامل کرنے یا بدلنے کے بعد traffic66 restart کریں۔ matches
 **خطرے کی معلومات** پر list کے نام کے حساب سے نظر آتے ہیں۔
 
+![خطرے کی معلومات: ایک internal host جو threat list کے ایک address کو ڈیٹا بھیج رہا ہے](images/threats.png)
+
 <a id="9-using-the-web-ui"></a>
 
 ## 9. web UI کا استعمال
@@ -637,8 +647,18 @@ application، ملک، ڈیوائس — پر کلک کیا جا سکتا ہے:
 time range اور filters) کا link کاپی کرتا ہے تاکہ آپ اسے کسی ساتھی کو بھیج
 سکیں۔ زبان browser کے مطابق ہوتی ہے؛ menu کے نیچے سے بدلیں۔
 
-لمبی time ranges پر ٹاپ N گھنٹہ وار summaries سے آتا ہے؛ وہاں filters دستیاب
-نہیں، اور صفحہ یہ بتا دیتا ہے۔ filter کرنے کے لیے چھوٹی range چنیں۔
+6 گھنٹے سے لمبی ranges پورے گھنٹے سے شروع ہوتی ہیں، تاکہ صفحے کا ہر عدد
+بالکل ایک ہی وقت گنے: "24 گھنٹے" میں آخری 24 پورے گھنٹے اور موجودہ گھنٹہ
+شامل ہیں۔ ان ranges پر ٹاپ N گھنٹہ وار summaries سے آتا ہے؛ وہاں filters
+دستیاب نہیں، اور صفحہ یہ بتا دیتا ہے۔ filter کرنے کے لیے چھوٹی range چنیں۔
+
+![ٹاپ N: پچھلے گھنٹے کی top 66 conversations](images/topn.png)
+
+![ٹریفک کے راستے: کون سا segment کس ملک کی طرف کون سی application استعمال کرتا ہے](images/paths.png)
+
+یہی جائزہ چینی زبان میں؛ ہر صفحہ 13 زبانوں میں دستیاب ہے:
+
+![چینی زبان میں جائزہ](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
 
@@ -659,6 +679,10 @@ directory پڑھ سکے (ڈیفالٹ نہ ہو تو `-data` دیں)۔ اگر tr
 Keys: 1–8 صفحات، ↑↓ منتخب کریں، Enter منتخب value پر actions، f صرف یہ
 دکھائیں، x خارج کریں، / search، t time range، c filters صاف کریں، w یہی view
 browser میں کھولیں، q باہر نکلیں۔
+
+![Terminal UI: جائزہ](images/tui-overview.png)
+
+![Terminal UI: ٹاپ N clients](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
