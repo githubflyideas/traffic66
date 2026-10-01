@@ -56,12 +56,16 @@ jobs:
         run: |
           set -o pipefail
           # failing tests become annotations, readable without downloading logs
-          go test -count=1 ./... 2>&1 | tee test.log || {
+          flags=""
+          # GNU ld on Windows crashes linking DuckDB with full debug info
+          [[ "${{ runner.os }}" == Windows ]] && flags='-ldflags=-s -w'
+          go test -count=1 ${flags:+"$flags"} ./... 2>&1 | tee test.log || {
             { grep -B4 'collect2' test.log | grep -v '^--$' | grep -v 'go-link' | cut -c1-300 | head -8
               grep -E -- '--- FAIL|^\s+\S+_test\.go:[0-9]+:|panic:' test.log | head -8; } | while IFS= read -r l; do echo "::error::${l:0:400}"; done
             exit 1
           }
       - name: Build
+        if: ${{ !cancelled() }}
         run: |
           ver="${GITHUB_REF_NAME#v}"
           [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
