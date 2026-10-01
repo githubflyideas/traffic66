@@ -174,7 +174,8 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      # attach the archives to the release of this tag; a release published
+      # in the web UI stays published, and a plain tag push publishes one
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          draft: true
