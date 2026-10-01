@@ -80,11 +80,16 @@ jobs:
           exe=dist/traffic66-${{ matrix.target }}/traffic66
           case "${{ runner.os }}" in
           Linux)
-            ldd "$exe"
-            if ldd "$exe" | grep -vE 'linux-vdso|ld-linux|lib(c|m|pthread|dl|rt)\.so'; then echo "::error::unexpected shared library"; exit 1; fi
-            max=$(objdump -T "$exe" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
-            echo "needs $max"
-            [[ "$(printf '%s\nGLIBC_2.28\n' "$max" | sort -V | tail -1)" == GLIBC_2.28 ]] || { echo "::error::needs $max, newer than glibc 2.28"; exit 1; } ;;
+            ldd "$exe" | while read -r l; do echo "::notice::$l"; done
+            # libstdc++/libgcc_s from the system are fine as long as only old
+            # symbol versions are used (gcc-toolset links the rest statically)
+            if ldd "$exe" | grep -vE 'linux-vdso|ld-linux|lib(c|m|pthread|dl|rt|stdc\+\+|gcc_s)\.so'; then echo "::error::unexpected shared library"; exit 1; fi
+            newest() { objdump -T "$exe" | grep -o "$1_[0-9.]*" | sort -uV | tail -1; }
+            older() { [[ -z "$1" || "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" == "$2" ]]; }
+            g=$(newest GLIBC); x=$(newest GLIBCXX); c=$(newest CXXABI)
+            echo "::notice::needs $g ${x:-no-libstdc++} $c"
+            older "$g" GLIBC_2.28 || { echo "::error::needs $g, newer than glibc 2.28"; exit 1; }
+            older "$x" GLIBCXX_3.4.25 || { echo "::error::needs $x, newer than gcc 8"; exit 1; } ;;
           Windows)
             objdump -p "$exe.exe" | grep 'DLL Name'
             if objdump -p "$exe.exe" | grep -iE 'DLL Name: *(libstdc|libgcc|libwinpthread|msys)'; then echo "::error::needs MinGW DLLs"; exit 1; fi ;;
