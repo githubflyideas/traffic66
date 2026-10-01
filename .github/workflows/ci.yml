@@ -63,6 +63,7 @@ jobs:
             if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
             scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
             cp README.md "dist/traffic66-${{ matrix.target }}/"
+            cp -r docs "dist/traffic66-${{ matrix.target }}/"
             [[ -f LICENSE ]] && cp LICENSE "dist/traffic66-${{ matrix.target }}/"
             cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
             [[ -n "${{ matrix.cross }}" ]] || "dist/traffic66-${{ matrix.target }}/$exe" version

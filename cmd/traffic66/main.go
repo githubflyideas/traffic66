@@ -528,7 +528,7 @@ func loginChecker(dir, user, flagPw string) *auth.FileChecker {
 		for _, e := range es {
 			users = append(users, e.User)
 		}
-		log.Printf("login: user %s, password from %s (change it with: traffic66 passwd)", strings.Join(users, ", "), file)
+		log.Printf("login: user %s, password from %s (change it with: traffic66 passwd -data %s)", strings.Join(users, ", "), file, quoteArg(dir))
 	}
 	return auth.NewFileChecker(dir, nil)
 }
