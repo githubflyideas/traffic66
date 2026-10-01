@@ -71,6 +71,7 @@
 "issue.decode_errors": "일부 데이터그램을 해석하지 못했습니다. 장비가 올바른 포트와 프로토콜로 보내는지 확인하세요.",
 "empty.nodata": "이 기간에는 데이터가 없습니다.", "empty.first": "아직 받은 것이 없습니다. 이 장비의 UDP 6343으로 sFlow, 2055로 NetFlow, 4739로 IPFIX를 보내세요.",
 "err.load": "불러오지 못했습니다: {e}",
+"err.db_memory": "데이터베이스가 메모리 한도에 도달해 응답하지 못했습니다. 기간을 줄이거나 더 큰 -memory로 traffic66을 시작하세요.", "err.db_busy": "데이터베이스가 지금은 응답하지 못했습니다. 원인은 traffic66 로그에 있습니다. 30초 후에 다시 시도합니다.",
 "login.title": "로그인", "login.user": "사용자", "login.password": "비밀번호", "login.go": "로그인", "login.bad": "사용자 또는 비밀번호가 틀립니다",
 "demo.badge": "데모",
 "tui.help": "↑↓ 선택  Enter 동작  f 만 보기  x 제외  / 검색  t 시간  1-8 페이지  c 지우기  w 브라우저  q 종료",

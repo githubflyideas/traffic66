@@ -214,6 +214,7 @@
 "empty.nodata": "Tidak ada data pada periode ini.",
 "empty.first": "Belum ada yang diterima. Kirim sFlow ke UDP 6343, NetFlow ke 2055, atau IPFIX ke 4739 di mesin ini.",
 "err.load": "Gagal memuat: {e}",
+"err.db_memory": "Basis data mencapai batas memorinya dan tidak bisa menjawab. Pilih rentang waktu yang lebih pendek, atau jalankan traffic66 dengan -memory yang lebih besar.", "err.db_busy": "Basis data belum bisa menjawab saat ini; penyebabnya ada di log traffic66. Halaman akan mencoba lagi dalam 30 detik.",
 "login.title": "Masuk",
 "login.user": "Pengguna",
 "login.password": "Kata sandi",

@@ -214,6 +214,7 @@
 "empty.nodata": "这段时间没有数据。",
 "empty.first": "还没有收到任何数据。把 sFlow 发到本机 UDP 6343，NetFlow 发到 2055，IPFIX 发到 4739。",
 "err.load": "加载失败：{e}",
+"err.db_memory": "数据库达到内存上限，无法完成这次查询。请缩短时间范围，或用更大的 -memory 启动 traffic66。", "err.db_busy": "数据库暂时无法回答，原因已写入 traffic66 日志。页面 30 秒后会自动重试。",
 "login.title": "登录",
 "login.user": "用户名",
 "login.password": "密码",

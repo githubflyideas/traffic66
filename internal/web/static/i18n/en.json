@@ -214,6 +214,7 @@
 "empty.nodata": "No data in this period.",
 "empty.first": "Nothing received yet. Send sFlow to UDP 6343, NetFlow to 2055 or IPFIX to 4739 on this machine.",
 "err.load": "Could not load: {e}",
+"err.db_memory": "The database reached its memory limit and could not answer. Choose a shorter time range, or start traffic66 with a larger -memory.", "err.db_busy": "The database could not answer just now; the reason is in the traffic66 log. The page tries again in 30 seconds.",
 "login.title": "Sign in",
 "login.user": "User",
 "login.password": "Password",

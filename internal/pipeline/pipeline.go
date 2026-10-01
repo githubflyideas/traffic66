@@ -47,9 +47,12 @@ type Pipeline struct {
 	newest time.Time                       // newest minute in dedup
 	seed   maphash.Seed
 
-	Records   atomic.Uint64
-	Rows      atomic.Uint64
-	DupRows   atomic.Uint64
+	Records atomic.Uint64
+	Rows    atomic.Uint64
+	DupRows atomic.Uint64
+	// DedupFull counts flows not checked for duplicates because the minute
+	// already held dedupMaxPerMinute flows.
+	DedupFull atomic.Uint64
 	Dropped   atomic.Uint64
 	WriteErrs atomic.Uint64
 	lastErr   atomic.Value
@@ -384,6 +387,11 @@ func minuteSlices(start, end time.Time) []slice {
 // sampling rate) after it happened.
 const dedupWindow = 8 * time.Minute
 
+// dedupMaxPerMinute caps the flows remembered per minute (about 25 MB), so a
+// flood of distinct flows cannot grow memory beyond 8 × that. Flows beyond
+// it are counted in DedupFull and treated as not duplicated.
+var dedupMaxPerMinute = 1_000_000
+
 // isDup reports whether another observation point already reported this
 // packet direction in this minute.
 //
@@ -413,6 +421,12 @@ func (p *Pipeline) isDup(t time.Time, k dkey, o origin) bool {
 	oh := uint32(maphash.Comparable(p.seed, o))
 	prev, ok := m[kh]
 	if !ok {
+		if len(m) >= dedupMaxPerMinute {
+			if p.DedupFull.Add(1) == 1 {
+				log.Printf("pipeline: more than %d distinct flows in a minute; flows beyond that are not checked for duplicates", dedupMaxPerMinute)
+			}
+			return false
+		}
 		m[kh] = oh
 		return false
 	}

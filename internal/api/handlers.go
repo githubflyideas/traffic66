@@ -629,7 +629,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"version": s.Version, "demo": s.Demo, "uptime": int64(time.Since(s.Started).Seconds()),
-		"records_per_sec": rec, "rows_per_sec": rows, "dropped": s.Pipe.Dropped.Load(), "dup_rows": s.Pipe.DupRows.Load(),
+		"records_per_sec": rec, "rows_per_sec": rows, "dropped": s.Pipe.Dropped.Load(), "dup_rows": s.Pipe.DupRows.Load(), "dedup_full": s.Pipe.DedupFull.Load(),
 		"write_errors": s.Pipe.WriteErrs.Load(), "last_error": s.Pipe.LastError(),
 		"disk_bytes": u.DiskBytes, "disk_free": free, "days_left": days, "oldest": u.Oldest.UnixMilli(),
 		"hot_rows": u.HotRows, "segments": u.Segments, "segment_rows": u.SegmentRows,

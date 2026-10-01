@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -283,8 +284,29 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	}
 }
 
+// duckErr matches DuckDB's error format ("Out of Memory Error: …").
+var duckErr = regexp.MustCompile(`\b[A-Z][A-Za-z]* Error: `)
+
+// fail answers a failed request. Mistakes in the request (a bad filter)
+// are returned as they are. Database failures are logged in full and the
+// browser gets only their kind, so pages can say "the database is at its
+// memory limit" instead of showing SQL.
 func fail(w http.ResponseWriter, err error) {
-	writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+	msg := err.Error()
+	kind := ""
+	switch {
+	case strings.Contains(msg, "Out of Memory") || strings.Contains(msg, "memory_limit") || strings.Contains(msg, "failed to allocate"):
+		kind = "memory"
+	case duckErr.MatchString(msg) || strings.Contains(msg, "database") || strings.Contains(msg, "driver:"):
+		kind = "storage"
+	}
+	if kind == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": msg})
+		return
+	}
+	log.Printf("api: database (%s): %v", kind, err)
+	w.Header().Set("Retry-After", "30")
+	writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database " + kind, "kind": kind})
 }
 
 // rates samples pipeline counters once per second.

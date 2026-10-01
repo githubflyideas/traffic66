@@ -158,7 +158,7 @@ async function api(path, extra = {}) {
   const res = await fetch('/api/' + path + '?' + p);
   if (res.status === 401) { showLogin(); throw new Error('login'); }
   const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j.error || res.statusText);
+  if (!res.ok) { const e = new Error(j.error || res.statusText); e.kind = j.kind; throw e; }
   return j;
 }
 const spanMs = () => ({'15m': 9e5, '1h': 36e5, '6h': 216e5, '24h': 864e5, '7d': 6048e5, '30d': 2592e6})[state.r];
@@ -334,7 +334,13 @@ let loadSeq = 0;
 function panel(cls, title, sub, body) {
   return `<div class="panel ${cls}"><div class="ph"><h2>${title}</h2>${sub ? `<span class="sub">${sub}</span>` : ''}</div>${body}</div>`;
 }
-function errorBox(err) { return `<div class="panel"><div class="empty">${esc(t('err.load', {e: err.message}))}</div></div>`; }
+// Database failures get a plain explanation; the details are in the log.
+function errMsg(err) {
+  if (err.kind === 'memory') return t('err.db_memory');
+  if (err.kind === 'storage') return t('err.db_busy');
+  return t('err.load', {e: err.message});
+}
+function errorBox(err) { return `<div class="panel"><div class="empty">${esc(errMsg(err))}</div></div>`; }
 
 views.overview = async (el) => {
   const [d, ifs] = await Promise.all([api('overview'), api('ifaces').catch(() => null)]);

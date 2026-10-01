@@ -154,6 +154,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -842,6 +844,14 @@ pengumpulan terus-menerus (puncak 0,58 GB di mesin 8 GB) dan saat memuat
 flow satu jam dengan laju sebelas kali lipat dengan batas mesin 2 GB
 (puncak 0,74 GB).
 
+`-memory` adalah anggaran, bukan batas keras: batas Go bersifat lunak dan
+database bisa sesaat melebihi bagiannya. Untuk batas keras gunakan milik
+sistem operasi: `MemoryMax=` di unit systemd (bagian 2) atau batas memori
+container. Sediakan sekitar 2,5 kali bagian `-memory` dan minimal 1 GB;
+`MemoryMax=2G` cocok untuk mesin dengan RAM hingga 8 GB pada bagian
+default. Dengan begitu traffic66 yang di-restart, bukan mesin yang
+kehabisan memori.
+
 <a id="16-troubleshooting"></a>
 
 ## 16. Pemecahan masalah
@@ -853,6 +863,7 @@ flow satu jam dengan laju sebelas kali lipat dengan batas mesin 2 GB
 | Angka lebih rendah dari counter interface | Lihat **Pencocokan antarmuka**: loss di jalan, interface tidak di-sampling, atau flow masih di cache perangkat (active timeout lebih dari 60 detik) |
 | Angka lebih tinggi dari counter interface | Trafik yang sama di-sampling di dua interface atau dua perangkat |
 | Tidak ada negara atau jaringan | Tidak ada tabel IP-to-ASN: lihat [Negara](#8-countries-networks-and-threat-lists) |
+| "Basis data mencapai batas memorinya dan tidak bisa menjawab" di sebuah halaman | Pilih rentang waktu yang lebih pendek, atau jalankan dengan `-memory` yang lebih besar; detailnya ada di log |
 | Lupa kata sandi | `traffic66 passwd` di mesin traffic66 (tambahkan `-data` jika traffic66 berjalan dengannya) |
 | `Conflicting lock is held` | traffic66 lain sudah memakai direktori data ini |
 | `receive buffer is only … KB` | Linux membatasi buffer UDP: atur `net.core.rmem_max=16777216` (lihat [Linux](#linux)) |

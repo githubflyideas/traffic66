@@ -149,6 +149,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -817,6 +819,13 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 جهاز بذاكرة 8 GB) وأثناء تحميل ساعة من التدفقات بأحد عشر ضعف ذلك المعدّل
 ضمن حدود جهاز بذاكرة 2 GB (ذروة 0.74 GB).
 
+`-memory` ميزانية وليس حدًّا صارمًا: حدّ Go مرن، وقد تتجاوز قاعدة البيانات
+حصتها لفترة قصيرة. للحصول على حدّ صارم استخدم حدّ نظام التشغيل: `MemoryMax=`
+في وحدة systemd (القسم 2) أو حدّ ذاكرة الحاوية. خصّص نحو 2.5 ضعف حصة
+`-memory` وما لا يقل عن 1 GB؛ ويناسب `MemoryMax=2G` الأجهزة التي تصل ذاكرتها
+إلى 8 GB مع الحصة الافتراضية. عندها يُعاد تشغيل traffic66 بدلًا من نفاد ذاكرة
+الجهاز.
+
 <a id="16-troubleshooting"></a>
 
 ## 16. استكشاف الأخطاء وإصلاحها
@@ -828,6 +837,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | الأرقام أقل من عدّادات الواجهات | انظر **مطابقة الواجهات**: فقد في الطريق، أو واجهات لا تؤخذ منها عينات، أو تدفقات ما زالت في ذاكرة الجهاز المؤقتة (مهلة التدفق النشط أطول من 60 ثانية) |
 | الأرقام أعلى من عدّادات الواجهات | تؤخذ عينات الحركة نفسها على واجهتين أو جهازين |
 | لا توجد دول أو شبكات | لا يوجد جدول IP-to-ASN: انظر [الدول](#8-countries-networks-and-threat-lists) |
+| ظهور "بلغت قاعدة البيانات حد الذاكرة ولم تتمكن من الإجابة" في صفحة | اختر مدة أقصر، أو شغّل البرنامج بقيمة `-memory` أكبر؛ التفاصيل في السجل |
 | نسيت كلمة المرور | `traffic66 passwd` على جهاز traffic66 (أضف `-data` إذا كان traffic66 يعمل به) |
 | `Conflicting lock is held` | نسخة أخرى من traffic66 تستخدم دليل البيانات هذا |
 | `receive buffer is only … KB` | يحدّ Linux من مخازن UDP المؤقتة: اضبط `net.core.rmem_max=16777216` (انظر [Linux](#linux)) |

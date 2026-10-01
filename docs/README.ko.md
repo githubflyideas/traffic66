@@ -144,6 +144,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -791,6 +793,12 @@ Top 66은 약 9초이며, 소요 시간은 범위에 비례해 늘고 코어가 
 서버면 충분합니다. 10분간 연속 수집(8 GB 서버에서 최대 0.58 GB)과, 2 GB 서버의 한도로 그
 11배 속도에서 1시간 분량의 플로를 적재할 때(최대 0.74 GB) 측정했습니다.
 
+`-memory`는 예산이지 하드 한도가 아닙니다. Go 한도는 소프트 한도이고 데이터베이스도
+잠시 자기 몫을 넘을 수 있습니다. 하드 한도가 필요하면 운영체제의 기능을 쓰세요: systemd 유닛의
+`MemoryMax=`(섹션 2) 또는 컨테이너의 메모리 한도. `-memory` 몫의 약 2.5배, 최소 1 GB를
+잡으세요. 기본 몫이라면 RAM 8 GB 이하 서버에는 `MemoryMax=2G`가 적당합니다. 그러면 서버
+메모리가 바닥나는 대신 traffic66이 재시작됩니다.
+
 <a id="16-troubleshooting"></a>
 
 ## 16. 문제 해결
@@ -802,6 +810,7 @@ Top 66은 약 9초이며, 소요 시간은 범위에 비례해 늘고 코어가 
 | 수치가 인터페이스 카운터보다 낮음 | **인터페이스 대조** 확인: 경로상 유실, 샘플링되지 않은 인터페이스, 또는 플로가 아직 장비 캐시에 있음(액티브 타임아웃이 60초보다 김) |
 | 수치가 인터페이스 카운터보다 높음 | 같은 트래픽을 두 인터페이스 또는 두 장비에서 샘플링함 |
 | 국가나 네트워크가 표시되지 않음 | IP-ASN 매핑 테이블이 없음: [국가](#8-countries-networks-and-threat-lists) 참조 |
+| 페이지에 "데이터베이스가 메모리 한도에 도달해 응답하지 못했습니다" 표시 | 기간을 줄이거나 더 큰 `-memory`로 시작. 자세한 내용은 로그 참조 |
 | 비밀번호를 잊어버림 | traffic66 서버에서 `traffic66 passwd`(traffic66을 `-data`와 함께 실행한다면 `-data` 추가) |
 | `Conflicting lock is held` | 다른 traffic66이 이미 이 데이터 디렉터리를 사용 중 |
 | `receive buffer is only … KB` | Linux가 UDP 버퍼를 제한함: `net.core.rmem_max=16777216` 설정([Linux](#linux) 참조) |

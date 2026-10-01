@@ -150,6 +150,8 @@ Wants=network-online.target
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
+# hard memory limit for the whole process (see Sizing)
+MemoryMax=2G
 # only needed for local capture (-capture):
 #AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
@@ -820,6 +822,13 @@ flow-এ প্রোগ্রামের নিজস্ব data (decoding, du
 limit নিয়ে এর এগারো গুণ rate-এ এক ঘণ্টার flow load করার সময় (peak 0.74 GB)
 মাপা হয়েছে।
 
+`-memory` একটি budget, hard cap নয়: Go-র limit soft, আর database অল্প
+সময়ের জন্য তার ভাগের চেয়ে বেশি নিতে পারে। Hard cap-এর জন্য operating
+system-এর limit ব্যবহার করুন: systemd unit-এ `MemoryMax=` (সেকশন 2) অথবা
+container-এর memory limit। `-memory`-র ভাগের প্রায় 2.5 গুণ এবং অন্তত 1 GB
+রাখুন; ডিফল্ট ভাগে 8 GB পর্যন্ত মেশিনের জন্য `MemoryMax=2G` উপযুক্ত। তখন
+মেশিনের memory ফুরিয়ে যাওয়ার বদলে traffic66 restart হয়।
+
 <a id="16-troubleshooting"></a>
 
 ## 16. সমস্যা সমাধান
@@ -831,6 +840,7 @@ limit নিয়ে এর এগারো গুণ rate-এ এক ঘণ্
 | সংখ্যা interface counter-এর চেয়ে কম | **ইন্টারফেস মিলানো** দেখুন: পথে loss, interface sample হচ্ছে না, অথবা flow এখনও ডিভাইসের cache-এ (active timeout 60 s-এর বেশি) |
 | সংখ্যা interface counter-এর চেয়ে বেশি | একই ট্রাফিক দুটি interface বা দুটি ডিভাইসে sample হচ্ছে |
 | কোনো দেশ বা নেটওয়ার্ক নেই | IP-to-ASN table নেই: [দেশ](#8-countries-networks-and-threat-lists) দেখুন |
+| পেজে "ডেটাবেস তার মেমরি সীমায় পৌঁছেছে এবং উত্তর দিতে পারেনি" | ছোট সময়সীমা বেছে নিন, অথবা বড় `-memory` দিয়ে চালু করুন; বিস্তারিত log-এ আছে |
 | পাসওয়ার্ড ভুলে গেছেন | traffic66 মেশিনে `traffic66 passwd` (traffic66 `-data` দিয়ে চললে `-data` যোগ করুন) |
 | `Conflicting lock is held` | অন্য একটি traffic66 ইতিমধ্যে এই data directory ব্যবহার করছে |
 | `receive buffer is only … KB` | Linux UDP buffer সীমিত রাখে: `net.core.rmem_max=16777216` সেট করুন ([Linux](#linux) দেখুন) |

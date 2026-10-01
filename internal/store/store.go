@@ -135,8 +135,12 @@ func Open(opt Options) (*Store, error) {
 	if err := os.MkdirAll(filepath.Join(opt.Dir, "raw"), 0o755); err != nil {
 		return nil, err
 	}
+	// DuckDB spills large queries to tmp; it must exist and be writable
+	// before the first connection sets temp_directory.
 	tmp := filepath.Join(opt.Dir, "tmp")
-	os.MkdirAll(tmp, 0o755)
+	if err := os.MkdirAll(tmp, 0o755); err != nil {
+		return nil, fmt.Errorf("cannot create the database's temporary directory %s: %w", tmp, err)
+	}
 	memMB := int64(float64(totalMemory()) * opt.MemoryFraction / (1 << 20))
 	if memMB < 256 {
 		memMB = 256
@@ -149,7 +153,7 @@ func Open(opt Options) (*Store, error) {
 			"SET preserve_insertion_order=false",
 		} {
 			if _, err := ex.ExecContext(context.Background(), q, nil); err != nil {
-				return fmt.Errorf("%s: %w", q, err)
+				return fmt.Errorf("database setup failed (%s): %w", q, err)
 			}
 		}
 		return nil
@@ -164,7 +168,10 @@ func Open(opt Options) (*Store, error) {
 	}.Encode()
 	c, err := duckdb.NewConnector(dsn, init)
 	if err != nil {
-		return nil, err
+		if strings.Contains(err.Error(), "lock") {
+			return nil, fmt.Errorf("the data directory %s is in use by another traffic66 (%w)", opt.Dir, err)
+		}
+		return nil, fmt.Errorf("cannot open the database in %s: %w", opt.Dir, err)
 	}
 	s := &Store{opt: opt, conn: c, DB: sql.OpenDB(c)}
 	for _, q := range schema {
@@ -173,7 +180,7 @@ func Open(opt Options) (*Store, error) {
 		}
 	}
 	if err := s.openAppenders(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot open the database for writing: %w", err)
 	}
 	if err := s.loadSegments(); err != nil {
 		return nil, err

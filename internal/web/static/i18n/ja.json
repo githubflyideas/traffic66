@@ -214,6 +214,7 @@
 "empty.nodata": "この期間のデータはありません。",
 "empty.first": "まだ何も受信していません。このマシンの UDP 6343 に sFlow、2055 に NetFlow、4739 に IPFIX を送ってください。",
 "err.load": "読み込めませんでした：{e}",
+"err.db_memory": "データベースがメモリ上限に達したため、応答できませんでした。期間を短くするか、より大きな -memory で traffic66 を起動してください。", "err.db_busy": "データベースが今は応答できませんでした。理由は traffic66 のログに記録されています。30 秒後に自動で再試行します。",
 "login.title": "ログイン",
 "login.user": "ユーザー名",
 "login.password": "パスワード",
