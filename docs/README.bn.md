@@ -634,6 +634,7 @@ application, দেশ, ডিভাইস — ক্লিক করা যা�
 |---|---|
 | সারসংক্ষেপ | এখন কত ট্রাফিক আর গত সপ্তাহের তুলনায় কত, application অনুযায়ী; কী বেড়েছে; শীর্ষ client ও service |
 | Top-N | client, server, conversation, application, port, দেশ, নেটওয়ার্ক, segment, ডিভাইস, encapsulation বা VLAN-এর শীর্ষ 66 |
+| কথোপকথন | কে কার সাথে কথা বলে: শীর্ষ 66 client–server জোড়া, তাদের service সহ |
 | ট্রাফিকের পথ | কোন segment কোন দেশের কোন application-এর সাথে কথা বলে |
 | ভূগোল ও নেটওয়ার্ক | দেশ ও নেটওয়ার্ক (AS) অনুযায়ী ট্রাফিক |
 | হুমকির তথ্য | যেসব host আপনার threat list-এর address-এর সাথে কথা বলেছে, এবং কতটা পাঠিয়েছে |
@@ -649,9 +650,12 @@ view-এর (পেজ, time range ও filter) link কপি করে, যা�
 6 ঘণ্টার চেয়ে লম্বা range পূর্ণ ঘণ্টা থেকে শুরু হয়, যাতে পেজের প্রতিটি
 সংখ্যা ঠিক একই সময় গোনে: "24 ঘণ্টা" মানে শেষ 24টি পূর্ণ ঘণ্টা আর চলতি
 ঘণ্টা। এই range-গুলোতে Top-N আসে ঘণ্টাভিত্তিক summary থেকে; সেখানে filter
-পাওয়া যায় না, আর পেজেই তা বলা থাকে। filter করতে ছোট range বেছে নিন।
+পাওয়া যায় না, আর পেজেই তা বলা থাকে। filter করতে ছোট range বেছে নিন। **কথোপকথন** সবসময় flow-এর বিস্তারিত
+তথ্য পড়ে, তাই উচ্চ flow rate-এ লম্বা range-এ কিছুটা সময় লাগতে পারে; এক ঘণ্টা সবচেয়ে দ্রুত।
 
-![Top-N: গত এক ঘণ্টার শীর্ষ 66 conversation](images/topn.png)
+![Top-N: গত এক ঘণ্টার শীর্ষ 66 client](images/topn.png)
+
+![কথোপকথন: কে কার সাথে কথা বলে, service সহ](images/conv.png)
 
 ![ট্রাফিকের পথ: কোন segment কোন দেশের দিকে কোন application ব্যবহার করে](images/paths.png)
 
@@ -675,7 +679,7 @@ service হিসেবে চলে, তার বদলে `-user` ও `-passw
 ভাষা বেছে নেয় (`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`)।
 
-Key: 1–8 পেজ, ↑↓ বাছাই, Enter বাছাই করা value-র action, f শুধু এটি দেখান,
+Key: 1–9 পেজ, ↑↓ বাছাই, Enter বাছাই করা value-র action, f শুধু এটি দেখান,
 x বাদ দিন, / search, t time range, c filter মুছুন, w একই view browser-এ খুলুন,
 q বেরিয়ে যান।
 
@@ -687,21 +691,86 @@ q বেরিয়ে যান।
 
 ## 11. Local capture
 
-Flow export ছাড়াও traffic66 কোনো local network interface-এর packet থেকে
-নিজেই flow তৈরি করতে পারে, যেমন একটি mirror (SPAN) port:
+Flow export গ্রহণ করা ছাড়াও traffic66 যে মেশিনে চলে তার কোনো network
+interface-এর packet থেকে নিজেই flow তৈরি করতে পারে। সে কী দেখতে পায় তা
+interface-এর ওপর নির্ভর করে:
+
+| Interface | traffic66 কী দেখে |
+|---|---|
+| switch-এর mirror (SPAN) port-এ যুক্ত একটি অতিরিক্ত network port | switch যত ট্রাফিক mirror করে সবই: পুরো একটি নেটওয়ার্ক বা uplink |
+| মেশিনের নিজের Ethernet বা Wi-Fi | শুধু এই মেশিনের নিজের ট্রাফিক |
+
+Wi-Fi adapter অন্য ডিভাইসের ট্রাফিক দেখতে পায় না। পুরো একটি Wi-Fi নেটওয়ার্ক
+দেখতে চাইলে router বা access point থেকে flow export করান (সেকশন 4), অথবা
+access point যে switch port-এ যুক্ত, সেটি mirror করুন।
+
+<a id="windows-1"></a>
+
+### Windows
+
+1. [Npcap](https://npcap.com) তার default option দিয়েই ইনস্টল করুন। যদি
+   "Restrict Npcap driver's access to Administrators only" টিক দেন, তাহলে
+   traffic66 Administrator হিসেবে চালান।
+2. Interface-এর তালিকা দেখুন (PowerShell):
+
+   ```
+   C:\traffic66\traffic66.exe interfaces
+   ```
+
+   ```
+   #   Name      Address          Adapter / device
+   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
+   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
+   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
+   ```
+
+   Name column হলো Windows-এর network settings-এ connection-এর নাম; যে
+   interface ব্যবহার হচ্ছে, তার একটি address থাকে।
+3. Wi-Fi-তে capture করুন, নাম বা নম্বর দিয়ে:
+
+   ```
+   C:\traffic66\traffic66.exe -capture Wi-Fi
+   C:\traffic66\traffic66.exe -capture 2
+   ```
+
+   নামে space থাকলে quote-এর মধ্যে লিখুন: `-capture "Ethernet 2"`। একাধিক
+   interface-এ capture করতে `-capture` বারবার দিন। শুধু capture চাইলে, কোনো
+   flow collector ছাড়া, `-listen=` যোগ করুন। সেকশন 2-এর startup task-এর জন্য
+   option-টি `-Argument`-এ যোগ করুন:
+   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`।
+
+<a id="linux-1"></a>
+
+### Linux
 
 ```
-traffic66 interfaces                  # list interfaces
-traffic66 -capture eth1               # repeat -capture for more interfaces
+traffic66 interfaces
+sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
+traffic66 -capture eth1
 ```
 
-- Linux: root লাগে, অথবা `CAP_NET_RAW` ও `CAP_NET_ADMIN` capability
-  (`sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66`, অথবা
-  ওপরের systemd unit-এর `AmbientCapabilities` লাইন)।
-- macOS: root লাগে (BPF device); কিছু ইনস্টল করতে হয় না।
-- Windows: আগে [Npcap](https://npcap.com) ইনস্টল করুন।
+Capture-এর জন্য root লাগে, অথবা `CAP_NET_RAW` ও `CAP_NET_ADMIN` capability:
+ওপরের `setcap` লাইন, অথবা সেকশন 2-এর systemd unit-এর `AmbientCapabilities`
+লাইন। Wi-Fi interface-এর নাম সাধারণত `wlan0` বা `wlp…` হয়।
 
-Capture করা interface **উৎস**-এ দেখা যায়। দুবার দেখা packet (যেমন দুটি mirror
+<a id="macos-1"></a>
+
+### macOS
+
+```
+traffic66 interfaces
+sudo traffic66 -capture en0
+```
+
+Capture-এর জন্য root লাগে; কিছু ইনস্টল করতে হয় না। MacBook-এ `en0` হলো Wi-Fi।
+
+<a id="checking-that-it-works"></a>
+
+### কাজ করছে কি না যাচাই করুন
+
+**উৎস** প্রতিটি capture করা interface দেখায়, capture method আর দেখা packet-এর
+সংখ্যাসহ। Flow-গুলো ডিভাইস `127.0.0.1` (এই মেশিন) থেকে আসছে বলে দেখায়,
+প্রতিটি পেজে, অন্য যেকোনো ডিভাইসের মতোই। দুবার দেখা packet (যেমন দুটি mirror
 port-এ) দুবার গোনা হয়।
 
 <a id="12-options"></a>

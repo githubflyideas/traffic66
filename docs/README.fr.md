@@ -666,6 +666,7 @@ Pages :
 |---|---|
 | Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; ce qui a augmenté ; principaux clients et services |
 | Top-N | Le top 66 des clients, serveurs, conversations, applications, ports, pays, réseaux, segments, équipements, encapsulations ou VLAN |
+| Conversations | Qui parle à qui : le top 66 des paires client–serveur avec leur service |
 | Chemins du trafic | Quel segment parle à quelle application dans quel pays |
 | Géographie et réseaux | Trafic par pays et par réseau (AS) |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
@@ -684,9 +685,12 @@ chaque chiffre de la page porte exactement sur la même durée : "24 heures"
 couvre les 24 dernières heures entières plus l'heure en cours. Sur ces
 plages, Top-N s'appuie sur des agrégats horaires ; les filtres n'y sont pas
 disponibles, et la page le signale. Choisissez une plage plus courte pour
-filtrer.
+filtrer. **Conversations** lit toujours le détail des flux : sur de longues plages
+avec beaucoup de flux, cela peut prendre un moment ; une heure est le plus rapide.
 
-![Top-N : les 66 premières conversations de la dernière heure](images/topn.png)
+![Top-N : le top 66 des clients de la dernière heure](images/topn.png)
+
+![Conversations : qui parle à qui, avec le service](images/conv.png)
 
 ![Chemins du trafic : quel segment utilise quelle application vers quel pays](images/paths.png)
 
@@ -711,7 +715,7 @@ c'est le cas d'un service, utilisez plutôt `-user` et `-password`. `-lang`
 choisit la langue (`en`, `zh`, `hi`, `es`, `ar`, `fr`, `bn`, `pt`, `ru`,
 `id`, `ur`, `ja`, `ko`).
 
-Touches : 1–8 pages, ↑↓ sélection, Entrée actions sur la valeur
+Touches : 1–9 pages, ↑↓ sélection, Entrée actions sur la valeur
 sélectionnée, f afficher seulement, x exclure, / rechercher, t plage de
 temps, c effacer les filtres, w ouvrir la même vue dans un navigateur,
 q quitter.
@@ -724,23 +728,92 @@ q quitter.
 
 ## 11. Capture locale
 
-En plus des exports de flux, traffic66 peut construire lui-même des flux à
-partir des paquets d'une interface réseau locale, par exemple un port
-miroir (SPAN) :
+En plus de recevoir des exports de flux, traffic66 peut construire lui-même
+des flux à partir des paquets d'une interface réseau de la machine sur
+laquelle il tourne. Ce qu'il voit dépend de l'interface :
+
+| Interface | Ce que voit traffic66 |
+|---|---|
+| Un port réseau libre relié au port miroir (SPAN) d'un switch | Tout le trafic que le switch recopie : un réseau entier ou un lien montant |
+| L'Ethernet ou le Wi-Fi de la machine elle-même | Uniquement le trafic de cette machine |
+
+Les cartes Wi-Fi ne voient pas le trafic des autres équipements. Pour voir
+tout un réseau Wi-Fi, faites exporter les flux par le routeur ou le point
+d'accès (section 4), ou mettez en miroir le port du switch auquel le point
+d'accès est relié.
+
+<a id="windows-1"></a>
+
+### Windows
+
+1. Installez [Npcap](https://npcap.com) avec ses options par défaut. Si vous
+   cochez "Restrict Npcap driver's access to Administrators only", lancez
+   traffic66 en tant qu'administrateur.
+2. Listez les interfaces (PowerShell) :
+
+   ```
+   C:\traffic66\traffic66.exe interfaces
+   ```
+
+   ```
+   #   Name      Address          Adapter / device
+   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
+   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
+   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
+   ```
+
+   La colonne Name est le nom de la connexion dans les paramètres réseau de
+   Windows ; l'interface utilisée a une adresse.
+3. Capturez sur le Wi-Fi, par nom ou par numéro :
+
+   ```
+   C:\traffic66\traffic66.exe -capture Wi-Fi
+   C:\traffic66\traffic66.exe -capture 2
+   ```
+
+   Mettez entre guillemets les noms qui contiennent des espaces :
+   `-capture "Ethernet 2"`. Répétez `-capture` pour capturer sur plusieurs
+   interfaces. Ajoutez `-listen=` si vous voulez seulement la capture, sans
+   collecteurs de flux. Pour la tâche de démarrage de la section 2, ajoutez
+   l'option à `-Argument` :
+   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`.
+
+<a id="linux-1"></a>
+
+### Linux
 
 ```
-traffic66 interfaces                  # list interfaces
-traffic66 -capture eth1               # repeat -capture for more interfaces
+traffic66 interfaces
+sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
+traffic66 -capture eth1
 ```
 
-- Linux : nécessite root, ou les capabilities `CAP_NET_RAW` et
-  `CAP_NET_ADMIN` (`sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66`,
-  ou la ligne `AmbientCapabilities` de l'unité systemd ci-dessus).
-- macOS : nécessite root (périphériques BPF) ; rien à installer.
-- Windows : installez d'abord [Npcap](https://npcap.com).
+La capture nécessite root, ou les capabilities `CAP_NET_RAW` et
+`CAP_NET_ADMIN` : la ligne `setcap` ci-dessus, ou la ligne
+`AmbientCapabilities` de l'unité systemd de la section 2. Les interfaces
+Wi-Fi s'appellent généralement `wlan0` ou `wlp…`.
 
-Les interfaces capturées sont listées dans **Sources**. Les paquets vus
-deux fois (par exemple sur deux ports miroir) sont comptés deux fois.
+<a id="macos-1"></a>
+
+### macOS
+
+```
+traffic66 interfaces
+sudo traffic66 -capture en0
+```
+
+La capture nécessite root ; rien à installer. Sur les MacBook, `en0` est le
+Wi-Fi.
+
+<a id="checking-that-it-works"></a>
+
+### Vérifier que ça fonctionne
+
+**Sources** liste chaque interface capturée avec la méthode de capture et le
+nombre de paquets vus. Les flux apparaissent comme provenant de l'équipement
+`127.0.0.1` (cette machine), sur toutes les pages, comme ceux de n'importe
+quel autre équipement. Les paquets vus deux fois (par exemple sur deux ports
+miroir) sont comptés deux fois.
 
 <a id="12-options"></a>
 

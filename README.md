@@ -601,6 +601,7 @@ Pages:
 |---|---|
 | Overview | How much traffic now and compared with last week, by application; what grew; top clients and services |
 | Top-N | The top 66 of clients, servers, conversations, applications, ports, countries, networks, segments, devices, encapsulation or VLAN |
+| Conversations | Who talks to whom: the top 66 client–server pairs with their service |
 | Flow paths | Which segment talks to which application in which country |
 | Geo & networks | Traffic by country and by network (AS) |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
@@ -618,9 +619,12 @@ Ranges longer than 6 hours start on a whole hour, so every number on the
 page counts exactly the same time: "24 hours" covers the last 24 whole
 hours plus the current one. Top-N over these ranges comes from hourly
 summaries; filters are not available there, and the page says so. Choose a
-shorter range to filter.
+shorter range to filter. **Conversations** always reads the flow detail, so over long ranges
+at high flow rates it can take a while; one hour is fastest.
 
-![Top-N: the top 66 conversations of the last hour](docs/images/topn.png)
+![Top-N: the top 66 clients of the last hour](docs/images/topn.png)
+
+![Conversations: who talks to whom, with the service](docs/images/conv.png)
 
 ![Flow paths: which segment uses which application towards which country](docs/images/paths.png)
 
@@ -642,7 +646,7 @@ traffic66 runs as another user, as a service does, use `-user` and
 `-password` instead. `-lang` picks the language (`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`).
 
-Keys: 1–8 pages, ↑↓ select, Enter actions on the selected value, f show
+Keys: 1–9 pages, ↑↓ select, Enter actions on the selected value, f show
 only, x exclude, / search, t time range, c clear filters, w open the same
 view in a browser, q quit.
 
@@ -652,22 +656,79 @@ view in a browser, q quit.
 
 ## 11. Local capture
 
-Besides flow exports, traffic66 can make flows itself from packets on a
-local network interface, for example a mirror (SPAN) port:
+Besides receiving flow exports, traffic66 can build flows itself from the
+packets on a network interface of the machine it runs on. What it sees
+depends on the interface:
+
+| Interface | What traffic66 sees |
+|---|---|
+| A spare network port connected to a switch's mirror (SPAN) port | All traffic the switch mirrors: a whole network or uplink |
+| The machine's own Ethernet or Wi-Fi | Only this machine's own traffic |
+
+Wi-Fi adapters cannot see other devices' traffic. To see a whole Wi-Fi
+network, let the router or access point export flows (section 4), or mirror
+the switch port the access point is connected to.
+
+### Windows
+
+1. Install [Npcap](https://npcap.com) with its default options. If you tick
+   "Restrict Npcap driver's access to Administrators only", run traffic66 as
+   Administrator.
+2. List the interfaces (PowerShell):
+
+   ```
+   C:\traffic66\traffic66.exe interfaces
+   ```
+
+   ```
+   #   Name      Address          Adapter / device
+   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
+   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
+   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
+   ```
+
+   The Name column is the connection name from Windows' network settings;
+   the interface in use has an address.
+3. Capture on Wi-Fi, by name or by number:
+
+   ```
+   C:\traffic66\traffic66.exe -capture Wi-Fi
+   C:\traffic66\traffic66.exe -capture 2
+   ```
+
+   Put names with spaces in quotes: `-capture "Ethernet 2"`. Repeat
+   `-capture` to capture on several interfaces. Add `-listen=` if you only
+   want capture and no flow collectors. For the startup task in section 2,
+   add the option to `-Argument`:
+   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`.
+
+### Linux
 
 ```
-traffic66 interfaces                  # list interfaces
-traffic66 -capture eth1               # repeat -capture for more interfaces
+traffic66 interfaces
+sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
+traffic66 -capture eth1
 ```
 
-- Linux: needs root, or the capabilities `CAP_NET_RAW` and `CAP_NET_ADMIN`
-  (`sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66`, or
-  the `AmbientCapabilities` line in the systemd unit above).
-- macOS: needs root (BPF devices); nothing to install.
-- Windows: install [Npcap](https://npcap.com) first.
+Capture needs root or the capabilities `CAP_NET_RAW` and `CAP_NET_ADMIN`:
+the `setcap` line above, or the `AmbientCapabilities` line in the systemd
+unit in section 2. Wi-Fi interfaces are usually named `wlan0` or `wlp…`.
 
-Captured interfaces are listed on **Sources**. Packets seen
-twice (for example on two mirror ports) are counted twice.
+### macOS
+
+```
+traffic66 interfaces
+sudo traffic66 -capture en0
+```
+
+Capture needs root; nothing to install. On MacBooks `en0` is the Wi-Fi.
+
+### Checking that it works
+
+**Sources** lists each captured interface with the capture method and the
+number of packets seen. The flows appear as coming from the device
+`127.0.0.1` (this machine), on every page, like any other device's. Packets
+seen twice (for example on two mirror ports) are counted twice.
 
 ## 12. Options
 

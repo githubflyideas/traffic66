@@ -650,6 +650,7 @@ Halaman:
 |---|---|
 | Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; apa yang naik; klien dan layanan teratas |
 | Top-N | 66 teratas untuk klien, server, percakapan, aplikasi, port, negara, jaringan, segmen, perangkat, enkapsulasi, atau VLAN |
+| Percakapan | Siapa berbicara dengan siapa: 66 pasangan klien–server teratas beserta layanannya |
 | Jalur trafik | Segmen mana berbicara dengan aplikasi apa di negara mana |
 | Geografi & jaringan | Trafik per negara dan per jaringan (AS) |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
@@ -668,9 +669,13 @@ setiap angka di halaman menghitung waktu yang persis sama: "24 jam" mencakup
 24 jam penuh terakhir ditambah jam yang sedang berjalan. Top-N untuk rentang
 ini diambil dari ringkasan per jam; filter tidak tersedia di sana, dan
 halaman memberi tahu hal itu. Pilih rentang yang lebih pendek untuk
-memfilter.
+memfilter. **Percakapan** selalu membaca detail flow, jadi untuk rentang
+panjang dengan laju flow tinggi halaman ini bisa butuh waktu; satu jam paling
+cepat.
 
-![Top-N: 66 percakapan teratas dalam satu jam terakhir](images/topn.png)
+![Top-N: 66 klien teratas dalam satu jam terakhir](images/topn.png)
+
+![Percakapan: siapa berbicara dengan siapa, beserta layanannya](images/conv.png)
 
 ![Jalur trafik: segmen mana memakai aplikasi apa menuju negara mana](images/paths.png)
 
@@ -694,7 +699,7 @@ berjalan sebagai user lain, seperti halnya service, gunakan `-user` dan
 `-password`. `-lang` memilih bahasa (`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`).
 
-Tombol: 1–8 halaman, ↑↓ pilih, Enter aksi untuk nilai terpilih, f tampilkan
+Tombol: 1–9 halaman, ↑↓ pilih, Enter aksi untuk nilai terpilih, f tampilkan
 hanya ini, x kecualikan, / cari, t rentang waktu, c hapus filter, w buka
 tampilan yang sama di browser, q keluar.
 
@@ -706,22 +711,89 @@ tampilan yang sama di browser, q keluar.
 
 ## 11. Capture lokal
 
-Selain menerima ekspor flow, traffic66 bisa membuat flow sendiri dari paket
-di interface jaringan lokal, misalnya port mirror (SPAN):
+Selain menerima ekspor flow, traffic66 bisa membuat flow sendiri dari paket di
+interface jaringan mesin tempat ia berjalan. Apa yang terlihat bergantung pada
+interface-nya:
+
+| Interface | Yang dilihat traffic66 |
+|---|---|
+| Port jaringan cadangan yang terhubung ke port mirror (SPAN) sebuah switch | Semua trafik yang di-mirror switch: seluruh jaringan atau uplink |
+| Ethernet atau Wi-Fi milik mesin itu sendiri | Hanya trafik mesin ini sendiri |
+
+Adapter Wi-Fi tidak bisa melihat trafik perangkat lain. Untuk melihat seluruh
+jaringan Wi-Fi, biarkan router atau access point mengekspor flow (bagian 4),
+atau mirror port switch tempat access point terhubung.
+
+<a id="windows-1"></a>
+
+### Windows
+
+1. Pasang [Npcap](https://npcap.com) dengan opsi default-nya. Jika Anda
+   mencentang "Restrict Npcap driver's access to Administrators only",
+   jalankan traffic66 sebagai Administrator.
+2. Tampilkan daftar interface (PowerShell):
+
+   ```
+   C:\traffic66\traffic66.exe interfaces
+   ```
+
+   ```
+   #   Name      Address          Adapter / device
+   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
+   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
+   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
+   ```
+
+   Kolom Name adalah nama koneksi dari pengaturan jaringan Windows; interface
+   yang sedang dipakai punya alamat.
+3. Capture di Wi-Fi, berdasarkan nama atau nomor:
+
+   ```
+   C:\traffic66\traffic66.exe -capture Wi-Fi
+   C:\traffic66\traffic66.exe -capture 2
+   ```
+
+   Beri tanda kutip pada nama yang mengandung spasi: `-capture "Ethernet 2"`.
+   Ulangi `-capture` untuk capture di beberapa interface. Tambahkan `-listen=`
+   jika Anda hanya ingin capture tanpa collector flow. Untuk startup task di
+   bagian 2, tambahkan opsinya ke `-Argument`:
+   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`.
+
+<a id="linux-1"></a>
+
+### Linux
 
 ```
-traffic66 interfaces                  # list interfaces
-traffic66 -capture eth1               # repeat -capture for more interfaces
+traffic66 interfaces
+sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
+traffic66 -capture eth1
 ```
 
-- Linux: butuh root, atau capability `CAP_NET_RAW` dan `CAP_NET_ADMIN`
-  (`sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66`,
-  atau baris `AmbientCapabilities` di unit systemd di atas).
-- macOS: butuh root (perangkat BPF); tidak ada yang perlu dipasang.
-- Windows: pasang [Npcap](https://npcap.com) terlebih dahulu.
+Capture butuh root, atau capability `CAP_NET_RAW` dan `CAP_NET_ADMIN`: baris
+`setcap` di atas, atau baris `AmbientCapabilities` di unit systemd di bagian 2.
+Interface Wi-Fi biasanya bernama `wlan0` atau `wlp…`.
 
-Interface yang di-capture tercantum di **Sumber**. Paket yang terlihat dua
-kali (misalnya di dua port mirror) dihitung dua kali.
+<a id="macos-1"></a>
+
+### macOS
+
+```
+traffic66 interfaces
+sudo traffic66 -capture en0
+```
+
+Capture butuh root; tidak ada yang perlu dipasang. Di MacBook, `en0` adalah
+Wi-Fi.
+
+<a id="checking-that-it-works"></a>
+
+### Memeriksa apakah capture berjalan
+
+**Sumber** mencantumkan setiap interface yang di-capture beserta metode
+capture dan jumlah paket yang terlihat. Flow-nya tampil seolah berasal dari
+perangkat `127.0.0.1` (mesin ini), di setiap halaman, sama seperti flow
+perangkat lain. Paket yang terlihat dua kali (misalnya di dua port mirror)
+dihitung dua kali.
 
 <a id="12-options"></a>
 

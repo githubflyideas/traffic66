@@ -3,8 +3,10 @@ package capture
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -70,8 +72,9 @@ type pcapIf struct {
 	flags       uint32
 }
 
-// Interfaces lists Npcap devices.
-func Interfaces() ([]string, error) {
+// devices lists Npcap devices with the Windows connection name ("Wi-Fi",
+// "Ethernet") and IPv4 address of each, matched by the adapter GUID.
+func devices() ([]Device, error) {
 	if err := loadNpcap(); err != nil {
 		return nil, err
 	}
@@ -81,11 +84,89 @@ func Interfaces() ([]string, error) {
 		return nil, fmt.Errorf("pcap_findalldevs: %s", cstr(&errbuf[0]))
 	}
 	defer pFreeAll.Call(uintptr(unsafe.Pointer(all)))
-	var out []string
+	byGUID := adaptersByGUID()
+	var out []Device
 	for d := all; d != nil; d = d.next {
-		out = append(out, fmt.Sprintf("%s  %s", cstr(d.name), cstr(d.description)))
+		dev := Device{Num: len(out) + 1, Name: cstr(d.name), Desc: cstr(d.description)}
+		if i := strings.Index(dev.Name, "{"); i >= 0 {
+			if a, ok := byGUID[strings.ToUpper(dev.Name[i:])]; ok {
+				dev.Friendly, dev.Addrs = a.name, a.addrs
+			}
+		}
+		if dev.Friendly == "" {
+			if strings.HasSuffix(dev.Name, "Loopback") {
+				dev.Friendly = "Loopback"
+			} else {
+				dev.Friendly = dev.Name
+			}
+		}
+		out = append(out, dev)
 	}
 	return out, nil
+}
+
+type adapter struct {
+	name  string
+	addrs []string
+}
+
+// adaptersByGUID maps "{GUID}" to the connection name and IPv4 addresses.
+func adaptersByGUID() map[string]adapter {
+	out := map[string]adapter{}
+	size := uint32(16 << 10)
+	var buf []byte
+	for i := 0; i < 3; i++ {
+		buf = make([]byte, size)
+		err := syscall.GetAdaptersInfo((*syscall.IpAdapterInfo)(unsafe.Pointer(&buf[0])), &size)
+		if err == nil {
+			break
+		}
+		if err != syscall.ERROR_BUFFER_OVERFLOW {
+			return out
+		}
+		buf = nil
+	}
+	if buf == nil {
+		return out
+	}
+	ifs, _ := net.Interfaces()
+	byIndex := map[int]net.Interface{}
+	for _, i := range ifs {
+		byIndex[i.Index] = i
+	}
+	for ai := (*syscall.IpAdapterInfo)(unsafe.Pointer(&buf[0])); ai != nil; ai = ai.Next {
+		guid := strings.ToUpper(cstr(&ai.AdapterName[0]))
+		a := adapter{}
+		if ni, ok := byIndex[int(ai.Index)]; ok {
+			a.name = ni.Name
+			if addrs, err := ni.Addrs(); err == nil {
+				for _, ad := range addrs {
+					if ipn, ok := ad.(*net.IPNet); ok && ipn.IP.To4() != nil {
+						a.addrs = append(a.addrs, ipn.IP.String())
+					}
+				}
+			}
+		}
+		for ip := &ai.IpAddressList; ip != nil && len(a.addrs) == 0; ip = ip.Next {
+			if s := cstr(&ip.IpAddress.String[0]); s != "" && s != "0.0.0.0" {
+				a.addrs = append(a.addrs, s)
+			}
+		}
+		if a.name == "" {
+			a.name = cstr(&ai.Description[0])
+		}
+		out[guid] = a
+	}
+	return out
+}
+
+// Interfaces lists Npcap devices for "traffic66 interfaces".
+func Interfaces() ([]string, error) {
+	ds, err := devices()
+	if err != nil {
+		return nil, err
+	}
+	return formatDevices(ds), nil
 }
 
 type npcap struct {
@@ -97,7 +178,15 @@ func open(iface string) (source, error) {
 	if err := loadNpcap(); err != nil {
 		return nil, err
 	}
-	name := append([]byte(iface), 0)
+	ds, err := devices()
+	if err != nil {
+		return nil, err
+	}
+	dev, err := resolveDevice(iface, ds)
+	if err != nil {
+		return nil, err
+	}
+	name := append([]byte(dev), 0)
 	errbuf := make([]byte, 256)
 	h, _, _ := pOpenLive.Call(uintptr(unsafe.Pointer(&name[0])), 256, 1, 200, uintptr(unsafe.Pointer(&errbuf[0])))
 	if h == 0 {

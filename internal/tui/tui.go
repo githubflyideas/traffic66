@@ -153,7 +153,7 @@ type page struct {
 	err      string
 }
 
-var pageKeys = []string{"overview", "topn", "sankey", "geo", "threats", "records", "ifaces", "sources"}
+var pageKeys = []string{"overview", "topn", "conv", "sankey", "geo", "threats", "records", "ifaces", "sources"}
 var ranges = []string{"15m", "1h", "6h", "24h", "7d", "30d"}
 var dims = []string{"client", "server", "conv", "app", "port", "country", "asn", "segment", "exporter", "encap", "vlan"}
 
@@ -540,7 +540,7 @@ func (a *app) key(k string) {
 	case "enter", "f", "x":
 		if tg := a.selTarget(); tg != nil {
 			if k == "enter" {
-				if a.pg == 6 { // interface list: enter selects
+				if pageKeys[a.pg] == "ifaces" { // interface list: enter selects
 					a.ifc = tg.value
 					a.kick()
 					return
@@ -556,7 +556,7 @@ func (a *app) key(k string) {
 			}
 		}
 	default:
-		if len(k) == 1 && k[0] >= '1' && k[0] <= '8' {
+		if len(k) == 1 && k[0] >= '1' && int(k[0]-'1') < len(pageKeys) {
 			a.pg = int(k[0] - '1')
 			a.resetSel()
 			a.kick()

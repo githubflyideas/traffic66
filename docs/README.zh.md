@@ -539,6 +539,7 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 |---|---|
 | 概览 | 当前流量多大、与上周相比如何，按应用拆分；什么在增长；主要客户端和服务 |
 | Top-N | 客户端、服务器、会话、应用、端口、国家、网络、网段、设备、封装或 VLAN 的前 66 名 |
+| 会话 | 谁在和谁通信：前 66 个客户端–服务器对及其服务 |
 | 流向 | 哪个网段在访问哪个国家的哪个应用 |
 | 地理与运营商 | 按国家和按网络（AS）统计的流量 |
 | 威胁情报 | 与威胁情报列表中地址有通信的主机，以及它们发送了多少流量 |
@@ -548,9 +549,11 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 页面上方有：时间范围（15 分钟到 30 天）、可选的搜索框、每 30 秒自动刷新，以及**复制链接**——复制一个精确指向当前视图（页面、时间范围和过滤条件）的链接，方便发给同事。界面语言跟随浏览器设置，可在菜单底部切换。
 
-超过 6 小时的时间范围从整点开始，因此页面上的每个数字统计的都是完全相同的时间段：“24 小时”涵盖最近 24 个完整小时加上当前这一小时。这些范围的 Top-N 来自小时汇总数据，无法使用过滤条件，页面上也会有提示。需要过滤时请选择较短的时间范围。
+超过 6 小时的时间范围从整点开始，因此页面上的每个数字统计的都是完全相同的时间段：“24 小时”涵盖最近 24 个完整小时加上当前这一小时。这些范围的 Top-N 来自小时汇总数据，无法使用过滤条件，页面上也会有提示。需要过滤时请选择较短的时间范围。**会话** 页面始终读取流明细，因此在流量速率高时选择长时间范围可能需要等一会儿；1 小时最快。
 
-![Top-N：最近一小时的前 66 个会话](images/topn.png)
+![Top-N：最近一小时的前 66 个客户端](images/topn.png)
+
+![会话：谁在和谁通信，以及所用服务](images/conv.png)
 
 ![流向：哪个网段在访问哪个国家的哪个应用](images/paths.png)
 
@@ -570,7 +573,7 @@ traffic66 -tui                                    # collect and show the termina
 
 在 traffic66 主机上，只要能读取数据目录，`traffic66 tui` 就会自动登录（数据目录不是默认位置时请指定 `-data`）。如果 traffic66 以其他用户身份运行（作为服务运行时就是这样），请改用 `-user` 和 `-password`。`-lang` 选择语言（`en`、`zh`、`hi`、`es`、`ar`、`fr`、`bn`、`pt`、`ru`、`id`、`ur`、`ja`、`ko`）。
 
-按键：1–8 切换页面，↑↓ 选择，Enter 对选中的值执行操作，f 只看，x 排除，/ 搜索，t 时间范围，c 清除过滤条件，w 在浏览器中打开相同视图，q 退出。
+按键：1–9 切换页面，↑↓ 选择，Enter 对选中的值执行操作，f 只看，x 排除，/ 搜索，t 时间范围，c 清除过滤条件，w 在浏览器中打开相同视图，q 退出。
 
 ![终端界面：概览](images/tui-overview.png)
 
@@ -580,18 +583,71 @@ traffic66 -tui                                    # collect and show the termina
 
 ## 11. 本地抓包
 
-除了接收流导出，traffic66 还能直接从本机网卡上的报文生成流，例如镜像（SPAN）端口：
+除了接收流导出，traffic66 还能直接从运行它的机器的网卡上抓取报文并自行生成流。能看到什么取决于所用的网卡：
+
+| 网卡 | traffic66 能看到什么 |
+|---|---|
+| 一个空闲网口，接到交换机的镜像（SPAN）端口 | 交换机镜像过来的全部流量：整个网络或一条上联链路 |
+| 本机自己的以太网或 Wi-Fi | 只有本机自己的流量 |
+
+Wi-Fi 网卡看不到其他设备的流量。要看整个 Wi-Fi 网络，请让路由器或无线接入点导出流（第 4 节），或者镜像接入点所连接的那个交换机端口。
+
+<a id="windows-1"></a>
+
+### Windows
+
+1. 使用默认选项安装 [Npcap](https://npcap.com)。如果勾选了 "Restrict Npcap driver's access to Administrators only"，请以管理员身份运行 traffic66。
+2. 列出网卡（PowerShell）：
+
+   ```
+   C:\traffic66\traffic66.exe interfaces
+   ```
+
+   ```
+   #   Name      Address          Adapter / device
+   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
+   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
+   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
+   ```
+
+   Name 列是 Windows 网络设置中的连接名称；正在使用的网卡带有地址。
+3. 按名称或编号在 Wi-Fi 上抓包：
+
+   ```
+   C:\traffic66\traffic66.exe -capture Wi-Fi
+   C:\traffic66\traffic66.exe -capture 2
+   ```
+
+   名称中含空格时请加引号：`-capture "Ethernet 2"`。重复 `-capture` 即可在多个网卡上抓包。如果只想抓包、不需要流采集器，请加上 `-listen=`。对于第 2 节中的开机启动任务，把该选项加到 `-Argument` 中：`-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`。
+
+<a id="linux-1"></a>
+
+### Linux
 
 ```
-traffic66 interfaces                  # list interfaces
-traffic66 -capture eth1               # repeat -capture for more interfaces
+traffic66 interfaces
+sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
+traffic66 -capture eth1
 ```
 
-- Linux：需要 root，或具备 `CAP_NET_RAW` 和 `CAP_NET_ADMIN` 能力（`sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66`，或使用上文 systemd unit 中的 `AmbientCapabilities` 那一行）。
-- macOS：需要 root（BPF 设备），无需安装其他软件。
-- Windows：请先安装 [Npcap](https://npcap.com)。
+抓包需要 root，或具备 `CAP_NET_RAW` 和 `CAP_NET_ADMIN` 能力：即上面的 `setcap` 那一行，或第 2 节 systemd unit 中的 `AmbientCapabilities` 那一行。Wi-Fi 网卡通常名为 `wlan0` 或 `wlp…`。
 
-抓包的网卡会列在 **接入** 中。同一报文被看到两次（例如在两个镜像端口上）会被计算两次。
+<a id="macos-1"></a>
+
+### macOS
+
+```
+traffic66 interfaces
+sudo traffic66 -capture en0
+```
+
+抓包需要 root，无需安装其他软件。在 MacBook 上 `en0` 就是 Wi-Fi。
+
+<a id="checking-that-it-works"></a>
+
+### 确认是否生效
+
+**接入** 中会列出每个抓包网卡，以及抓包方式和已看到的报文数。这些流在所有页面上都显示为来自设备 `127.0.0.1`（即本机），和其他设备的流一样。同一报文被看到两次（例如在两个镜像端口上）会被计算两次。
 
 <a id="12-options"></a>
 
