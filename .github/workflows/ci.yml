@@ -5,6 +5,13 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  # One-click release: Actions → ci → Run workflow, enter a version.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.1.1 (leave empty to only build and clean up branches)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -68,8 +75,11 @@ jobs:
         run: |
           set -o pipefail
           {
-            ver="${GITHUB_REF_NAME#v}"
-            [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
+            ver="${{ inputs.version }}"
+            if [[ -z "$ver" ]]; then
+              ver="${GITHUB_REF_NAME#v}"
+              [[ "$GITHUB_REF" == refs/tags/* ]] || ver="0.1.0-${GITHUB_SHA::7}"
+            fi
             exe=traffic66; [[ "${{ runner.os }}" == Windows ]] && exe=traffic66.exe
             if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
             scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
@@ -113,17 +123,6 @@ jobs:
           cd dist
           if [[ "${{ runner.os }}" == Windows ]]; then 7z a "traffic66-${{ matrix.target }}.zip" "traffic66-${{ matrix.target }}" >/dev/null
           else tar czf "traffic66-${{ matrix.target }}.tar.gz" "traffic66-${{ matrix.target }}"; fi
-      - name: Publish logs to a branch (Windows failures)
-        if: failure() && runner.os == 'Windows'
-        run: |
-          git config user.name ci && git config user.email ci@users.noreply.github.com
-          cp test.log build.log "$RUNNER_TEMP/" 2>/dev/null || true
-          git checkout --orphan "ci-logs-${{ github.run_id }}"
-          git rm -rfq --cached . && git clean -fdxq
-          cp "$RUNNER_TEMP"/*.log . 2>/dev/null || true
-          go env > go-env.log
-          git add -f *.log && git commit -qm "logs ${{ github.run_id }}"
-          git push -q origin "HEAD:refs/heads/ci-logs-${{ github.run_id }}"
       - uses: actions/upload-artifact@v4
         with:
           name: traffic66-${{ matrix.target }}
@@ -166,16 +165,45 @@ jobs:
           done
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
     needs: [build, old-linux]
     runs-on: ubuntu-latest
     steps:
+      - name: Version must be new
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ inputs.version }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::version must look like 0.1.1"; exit 1; }
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then echo "::error::$TAG already exists; choose a higher version"; exit 1; fi
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
-      # attach the archives to the release of this tag; a release published
-      # in the web UI stays published, and a plain tag push publishes one
+      # a tag push attaches the archives to that tag's release; a manual run
+      # creates the tag on the commit it built and publishes the release
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ github.event_name == 'workflow_dispatch' && format('traffic66 {0}', inputs.version) || '' }}
+          generate_release_notes: true
           files: dist/*
+
+  cleanup:
+    # a manual run also deletes branches that are merged or abandoned: every
+    # branch except main, the default branch, and branches of open pull requests
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT: ${{ github.event.repository.default_branch }}
+        run: |
+          open=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[].head.ref')
+          for b in $(gh api "repos/$GITHUB_REPOSITORY/branches?per_page=100" --paginate --jq '.[].name'); do
+            if [[ "$b" == main || "$b" == "$DEFAULT" ]] || grep -qxF "$b" <<<"$open"; then echo "keep   $b"; continue; fi
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$b" && echo "delete $b"
+          done
