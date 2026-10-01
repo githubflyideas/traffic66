@@ -48,7 +48,7 @@ sFlow, NetFlow, IPFIX 플로 분석을 하나의 프로그램으로 처리합니
 | 시스템 | 압축 파일 |
 |---|---|
 | Windows 10/11, Server 2016 이상(x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux x86-64: 커널 3.2 이상의 모든 배포판(CentOS 7, Alpine 포함) | `traffic66-linux-amd64.tar.gz` |
 | Linux ARM64: 동일한 배포판 | `traffic66-linux-arm64.tar.gz` |
 | macOS 11 이상, Apple 실리콘 | `traffic66-darwin-arm64.tar.gz` |
 | macOS 11 이상, Intel | `traffic66-darwin-amd64.tar.gz` |
@@ -705,7 +705,6 @@ Top 66은 약 9초이며, 소요 시간은 범위에 비례해 늘고 코어가 
 | `cannot create the data directory` | 이 사용자에게 프로그램 폴더 쓰기 권한이 없음: `-data` 지정 |
 | macOS: "cannot be opened" 또는 "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
 | Windows: "Windows의 PC 보호" | **추가 정보** → **실행**. 프로그램이 아직 서명되지 않음 |
-| Linux: `GLIBC_2.xx not found` | 배포판이 RHEL 8 / Ubuntu 18.04 / Debian 10보다 오래됨 |
 | Windows 캡처: Npcap을 찾을 수 없음 | [Npcap](https://npcap.com) 설치 |
 | `address already in use` | 다른 프로그램이 포트를 사용 중: `-addr` 또는 `-listen`으로 다른 포트 지정 |
 

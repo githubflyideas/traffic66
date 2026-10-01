@@ -41,7 +41,7 @@ sFlow・NetFlow・IPFIX のフロー分析を 1 つのプログラムで行い�
 | システム | アーカイブ |
 |---|---|
 | Windows 10/11、Server 2016 以降（x64） | `traffic66-windows-amd64.zip` |
-| Linux x86-64：RHEL/Rocky/Alma 8+、Ubuntu 18.04+、Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux x86-64：カーネル 3.2 以降の任意のディストリビューション（CentOS 7、Alpine を含む） | `traffic66-linux-amd64.tar.gz` |
 | Linux ARM64：同じディストリビューション | `traffic66-linux-arm64.tar.gz` |
 | macOS 11 以降、Apple シリコン | `traffic66-darwin-arm64.tar.gz` |
 | macOS 11 以降、Intel | `traffic66-darwin-amd64.tar.gz` |
@@ -607,7 +607,6 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `cannot create the data directory` | このユーザーはプログラムのフォルダーに書き込めません：`-data` を指定してください |
 | macOS："cannot be opened" または "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
 | Windows："Windows によって PC が保護されました" | **詳細情報** → **実行**。プログラムはまだ署名されていません |
-| Linux：`GLIBC_2.xx not found` | ディストリビューションが RHEL 8 / Ubuntu 18.04 / Debian 10 より古い |
 | Windows でのキャプチャ：Npcap が見つからない | [Npcap](https://npcap.com) をインストール |
 | `address already in use` | 別のプログラムがポートを使用中：`-addr` または `-listen` で別のポートを指定 |
 

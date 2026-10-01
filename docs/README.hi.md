@@ -50,7 +50,7 @@ counters से मेल खाते हैं — web UI में भी औ
 | सिस्टम | Archive |
 |---|---|
 | Windows 10/11, Server 2016 या नया (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux x86-64: kernel 3.2 या उसके बाद वाला कोई भी distribution, जिसमें CentOS 7 और Alpine शामिल हैं | `traffic66-linux-amd64.tar.gz` |
 | Linux ARM64: वही distributions | `traffic66-linux-arm64.tar.gz` |
 | macOS 11 या नया, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
 | macOS 11 या नया, Intel | `traffic66-darwin-amd64.tar.gz` |
@@ -736,7 +736,6 @@ conversations का 1 घंटे का Top 66 लगभग 9 s; समय ra
 | `cannot create the data directory` | इस यूज़र के लिए प्रोग्राम फ़ोल्डर writable नहीं है: `-data` दें |
 | macOS: "cannot be opened" या "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
 | Windows: "Windows protected your PC" (Windows ने आपके PC को सुरक्षित किया) | **More info** (अधिक जानकारी) → **Run anyway** (फिर भी चलाएँ); प्रोग्राम अभी signed नहीं है |
-| Linux: `GLIBC_2.xx not found` | distribution RHEL 8 / Ubuntu 18.04 / Debian 10 से पुराना है |
 | Windows capture: Npcap नहीं मिला | [Npcap](https://npcap.com) इंस्टॉल करें |
 | `address already in use` | कोई दूसरा प्रोग्राम वह port इस्तेमाल कर रहा है: `-addr` या `-listen` से दूसरे ports चुनें |
 

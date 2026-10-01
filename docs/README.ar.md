@@ -52,7 +52,7 @@
 | النظام | الأرشيف |
 |---|---|
 | Windows 10/11 وServer 2016 أو أحدث (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64: RHEL/Rocky/Alma 8+ وUbuntu 18.04+ وDebian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux x86-64: أي توزيعة بنواة 3.2 أو أحدث، بما فيها CentOS 7 وAlpine | `traffic66-linux-amd64.tar.gz` |
 | Linux ARM64: التوزيعات نفسها | `traffic66-linux-arm64.tar.gz` |
 | macOS 11 أو أحدث بمعالج Apple silicon | `traffic66-darwin-arm64.tar.gz` |
 | macOS 11 أو أحدث بمعالج Intel | `traffic66-darwin-amd64.tar.gz` |
@@ -730,7 +730,6 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `cannot create the data directory` | مجلد البرنامج غير قابل للكتابة لهذا المستخدم: مرّر `-data` |
 | macOS: "cannot be opened" أو "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
 | Windows: "Windows protected your PC" (حمى Windows جهازك) | **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال)؛ البرنامج غير موقّع بعد |
-| Linux: `GLIBC_2.xx not found` | التوزيعة أقدم من RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | الالتقاط في Windows: لم يُعثر على Npcap | ثبّت [Npcap](https://npcap.com) |
 | `address already in use` | برنامج آخر يستخدم المنفذ: اختر منافذ أخرى بـ `-addr` أو `-listen` |
 

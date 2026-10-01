@@ -41,7 +41,7 @@
 | 系统 | 压缩包 |
 |---|---|
 | Windows 10/11、Server 2016 及以上（x64） | `traffic66-windows-amd64.zip` |
-| Linux x86-64：RHEL/Rocky/Alma 8+、Ubuntu 18.04+、Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux x86-64：内核 3.2 及以上的任意发行版，包括 CentOS 7 和 Alpine | `traffic66-linux-amd64.tar.gz` |
 | Linux ARM64：相同的发行版 | `traffic66-linux-arm64.tar.gz` |
 | macOS 11 及以上，Apple 芯片 | `traffic66-darwin-arm64.tar.gz` |
 | macOS 11 及以上，Intel | `traffic66-darwin-amd64.tar.gz` |
@@ -607,7 +607,6 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `cannot create the data directory` | 当前用户对程序目录没有写权限：请指定 `-data` |
 | macOS："cannot be opened" 或 "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
 | Windows："Windows 已保护你的电脑" | **更多信息** → **仍要运行**；程序目前尚未签名 |
-| Linux：`GLIBC_2.xx not found` | 发行版早于 RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Windows 抓包：找不到 Npcap | 安装 [Npcap](https://npcap.com) |
 | `address already in use` | 端口被其他程序占用：用 `-addr` 或 `-listen` 换用其他端口 |
 

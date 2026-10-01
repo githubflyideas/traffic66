@@ -50,7 +50,7 @@ database-এ রাখে, এবং দেখায় কে bandwidth ব্�
 | সিস্টেম | Archive |
 |---|---|
 | Windows 10/11, Server 2016 বা নতুন (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux x86-64: kernel 3.2 বা তার পরের যেকোনো distribution, CentOS 7 ও Alpine সহ | `traffic66-linux-amd64.tar.gz` |
 | Linux ARM64: একই distribution | `traffic66-linux-arm64.tar.gz` |
 | macOS 11 বা নতুন, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
 | macOS 11 বা নতুন, Intel | `traffic66-darwin-amd64.tar.gz` |
@@ -731,7 +731,6 @@ summary থেকে এবং 0.2 s-এর কম সময় নেয়। 
 | `cannot create the data directory` | এই ইউজারের জন্য প্রোগ্রাম ফোল্ডার writable নয়: `-data` দিন |
 | macOS: "cannot be opened" বা "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
 | Windows: "Windows protected your PC" (Windows আপনার PC সুরক্ষিত করেছে) | **More info** (আরও তথ্য) → **Run anyway** (তবুও চালান); প্রোগ্রামটি এখনও signed নয় |
-| Linux: `GLIBC_2.xx not found` | distribution-টি RHEL 8 / Ubuntu 18.04 / Debian 10-এর চেয়ে পুরোনো |
 | Windows capture: Npcap পাওয়া যায়নি | [Npcap](https://npcap.com) ইনস্টল করুন |
 | `address already in use` | অন্য কোনো প্রোগ্রাম port-টি ব্যবহার করছে: `-addr` বা `-listen` দিয়ে অন্য port বেছে নিন |
 

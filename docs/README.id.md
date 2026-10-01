@@ -51,7 +51,7 @@ Unduh arsip untuk sistem Anda dari
 | Sistem | Arsip |
 |---|---|
 | Windows 10/11, Server 2016 atau lebih baru (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux x86-64: distribusi apa pun dengan kernel 3.2 atau lebih baru, termasuk CentOS 7 dan Alpine | `traffic66-linux-amd64.tar.gz` |
 | Linux ARM64: distribusi yang sama | `traffic66-linux-arm64.tar.gz` |
 | macOS 11 atau lebih baru, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
 | macOS 11 atau lebih baru, Intel | `traffic66-darwin-amd64.tar.gz` |
@@ -752,7 +752,6 @@ sesuaikan dengan laju flow Anda (terlihat di **Sumber**) dan
 | `cannot create the data directory` | Folder program tidak bisa ditulis oleh user ini: beri `-data` |
 | macOS: "cannot be opened" atau "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
 | Windows: "Windows protected your PC" (Windows melindungi PC Anda) | **More info** (info selengkapnya) → **Run anyway** (tetap jalankan); program ini belum ditandatangani |
-| Linux: `GLIBC_2.xx not found` | Distribusinya lebih lama dari RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Capture di Windows: Npcap tidak ditemukan | Pasang [Npcap](https://npcap.com) |
 | `address already in use` | Port dipakai program lain: pilih port lain dengan `-addr` atau `-listen` |
 

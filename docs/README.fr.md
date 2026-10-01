@@ -53,7 +53,7 @@ Téléchargez l'archive correspondant à votre système sur la
 | Système | Archive |
 |---|---|
 | Windows 10/11, Server 2016 ou plus récent (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 : RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux x86-64 : toute distribution avec un noyau 3.2 ou ultérieur, y compris CentOS 7 et Alpine | `traffic66-linux-amd64.tar.gz` |
 | Linux ARM64 : mêmes distributions | `traffic66-linux-arm64.tar.gz` |
 | macOS 11 ou plus récent, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
 | macOS 11 ou plus récent, Intel | `traffic66-darwin-amd64.tar.gz` |
@@ -770,7 +770,6 @@ ajustez selon votre débit de flux (affiché dans **Sources**) et
 | `cannot create the data directory` | Le dossier du programme n'est pas accessible en écriture pour cet utilisateur : indiquez `-data` |
 | macOS : "cannot be opened" ou "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
 | Windows : "Windows a protégé votre ordinateur" | **Informations complémentaires** → **Exécuter quand même** ; le programme n'est pas encore signé |
-| Linux : `GLIBC_2.xx not found` | La distribution est antérieure à RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Capture sous Windows : Npcap introuvable | Installez [Npcap](https://npcap.com) |
 | `address already in use` | Un autre programme utilise le port : choisissez-en d'autres avec `-addr` ou `-listen` |
 
