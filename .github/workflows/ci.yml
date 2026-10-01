@@ -43,14 +43,11 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
-          install: mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-lld
+          install: mingw-w64-ucrt-x86_64-gcc
           path-type: inherit
       - name: Put MinGW on PATH (Windows)
         if: runner.os == 'Windows'
-        run: |
-          echo "${RUNNER_TEMP}/msys64/ucrt64/bin" >> "$GITHUB_PATH"
-          # GNU ld crashes on the DuckDB static libraries; lld links them
-          echo "CGO_LDFLAGS=-fuse-ld=lld" >> "$GITHUB_ENV"
+        run: echo "${RUNNER_TEMP}/msys64/ucrt64/bin" >> "$GITHUB_PATH"
       - name: Resolve modules
         run: go mod tidy
       - name: Vet
