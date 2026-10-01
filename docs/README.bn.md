@@ -730,7 +730,7 @@ port-এ) দুবার গোনা হয়।
 | `-user` | `admin` | প্রথম চালুতে তৈরি হওয়া ইউজারের নাম, এবং যে ইউজারের ক্ষেত্রে `-password` প্রযোজ্য |
 | `-password` | সেট করা নেই | এই run-এ শুধু এই পাসওয়ার্ডসহ `-user`-কে গ্রহণ করে, `password` ফাইল উপেক্ষা করে (`TRAFFIC66_PASSWORD`-ও) |
 | `-retention-days` | `30` | কত দিনের flow detail রাখা হবে; summary 400 দিন রাখা হয় |
-| `-memory` | `0.10` | physical memory-র কত অংশ database ব্যবহার করতে পারবে |
+| `-memory` | `0.10` | physical memory-র কত অংশ database cache-এর জন্য, আর বাকি প্রোগ্রামের জন্য সমপরিমাণ soft limit (প্রতিটি অন্তত 256 MB) |
 | `-l2-overhead` | `18` | NetFlow/IPFIX byte count-এ প্রতি packet-এ যোগ করা byte |
 | `-sampling-wait` | `5m` | record কতক্ষণ sampling rate-এর জন্য অপেক্ষা করবে |
 | `-capture` | | local interface-এ capture (একাধিকবার দেওয়া যায়) |
@@ -803,14 +803,22 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 ## 15. সক্ষমতার হিসাব
 
 2-core মেশিনে প্রতি সেকেন্ডে 5,000 flow-এ মাপা হয়েছে: detail প্রতিদিন প্রায়
-12 GB disk নেয়, সাথে চলতি ঘণ্টার জন্য প্রায় 1.5 GB; প্রোগ্রাম নেয় প্রায় 0.5 GB
-memory আর একটি core-এর ছয় ভাগের এক ভাগ। লম্বা time range-এর overview আসে
+12 GB disk নেয়, সাথে চলতি ঘণ্টার জন্য প্রায় 1.5 GB; প্রোগ্রাম নেয় একটি
+core-এর ছয় ভাগের এক ভাগ। লম্বা time range-এর overview আসে
 summary থেকে এবং 0.2 s-এর কম সময় নেয়। detail-এর ওপর query প্রতি ঘণ্টায় প্রায়
 2 কোটি 20 লাখ row scan করে: 1 ঘণ্টায় একটি host 1 s-এর কম, সব conversation-এর
 1 ঘণ্টার Top 66 প্রায় 9 s; সময় range-এর সাথে বাড়ে আর বেশি core-এ কমে।
 
 তাই 5,000 flows/s-এ 30 দিনের জন্য disk প্রায় 360 GB; আপনার flow rate
 (**উৎস**-এ দেখা যায়) ও `-retention-days` অনুযায়ী আনুপাতিক হিসাব করুন।
+
+Memory: `-memory` (ডিফল্ট RAM-এর 10%, অন্তত 256 MB) database cache সীমিত
+করে, আর বাকি প্রোগ্রাম একই আকারের soft limit পায়। প্রতি সেকেন্ডে 5,000
+flow-এ প্রোগ্রামের নিজস্ব data (decoding, duplicate detection, batch) নেয়
+প্রায় 90 MB; মোট 0.6–0.8 GB ধরে নিন, তাই 2 GB RAM-এর মেশিনই যথেষ্ট। টানা
+10 মিনিট collection চলাকালে (8 GB মেশিনে peak 0.58 GB) এবং 2 GB মেশিনের
+limit নিয়ে এর এগারো গুণ rate-এ এক ঘণ্টার flow load করার সময় (peak 0.74 GB)
+মাপা হয়েছে।
 
 <a id="16-troubleshooting"></a>
 

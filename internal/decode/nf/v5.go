@@ -45,6 +45,9 @@ func (d *Decoder) decodeV5(b []byte, addr netip.Addr, now time.Time) (Result, er
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	s := d.session(key{addr, uint32(engType)<<8 | uint32(engID), flow.SrcNetFlow5})
+	if s == nil {
+		return Result{}, ErrTooManyExporters
+	}
 	s.touch(now, time.Unix(int64(secs), int64(nsecs)))
 	s.seq(seq, uint32(count), uint32(count), now)
 	s.def = rate

@@ -768,7 +768,7 @@ Options de `traffic66` et `traffic66 demo` :
 | `-user` | `admin` | nom de l'utilisateur créé au premier démarrage, et de l'utilisateur auquel s'applique `-password` |
 | `-password` | non défini | n'accepte que `-user` avec ce mot de passe pour cette exécution, en ignorant le fichier `password` (aussi `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | jours de détail des flux conservés ; les agrégats sont gardés 400 jours |
-| `-memory` | `0.10` | part de la mémoire physique utilisable par la base de données |
+| `-memory` | `0.10` | part de la mémoire physique pour le cache de la base de données, et autant en limite souple pour le reste du programme (chacun au moins 256 Mo) |
 | `-l2-overhead` | `18` | octets par paquet ajoutés aux octets NetFlow/IPFIX |
 | `-sampling-wait` | `5m` | durée pendant laquelle les enregistrements attendent un taux d'échantillonnage |
 | `-capture` | | capture sur une interface locale (répétable) |
@@ -844,7 +844,7 @@ Le répertoire de données contient tout :
 
 Mesuré à 5 000 flux par seconde sur une machine à 2 cœurs : le détail
 occupe environ 12 Go de disque par jour plus environ 1,5 Go pour l'heure en
-cours ; le programme utilise environ 0,5 Go de mémoire et un sixième d'un
+cours ; le programme utilise un sixième d'un
 cœur. Les vues d'ensemble sur de longues plages proviennent des agrégats et
 prennent moins de 0,2 s. Les requêtes sur le détail parcourent environ
 22 millions de lignes par heure : un hôte sur 1 heure prend moins de 1 s,
@@ -854,6 +854,15 @@ augmente avec la plage et diminue avec le nombre de cœurs.
 Il faut donc environ 360 Go de disque pour 30 jours à 5 000 flux/s ;
 ajustez selon votre débit de flux (affiché dans **Sources**) et
 `-retention-days`.
+
+Mémoire : `-memory` (par défaut 10 % de la RAM, au moins 256 Mo) limite le
+cache de la base de données, et le reste du programme reçoit une limite
+souple de même taille. À 5 000 flux par seconde, les données propres du
+programme (décodage, détection des doublons, lots) occupent environ 90 Mo ;
+au total, comptez 0,6–0,8 Go, une machine avec 2 Go de RAM suffit donc.
+Mesuré sur 10 minutes de collecte continue (pic de 0,58 Go sur une machine
+de 8 Go) et pendant le chargement d'une heure de flux à onze fois ce débit
+avec les limites d'une machine de 2 Go (pic de 0,74 Go).
 
 <a id="16-troubleshooting"></a>
 

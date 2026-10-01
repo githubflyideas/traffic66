@@ -749,7 +749,7 @@ Opsi untuk `traffic66` dan `traffic66 demo`:
 | `-user` | `admin` | nama user yang dibuat pada start pertama, dan user yang dikenai `-password` |
 | `-password` | tidak diatur | hanya menerima `-user` dengan kata sandi ini untuk run ini, mengabaikan file `password` (juga `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | berapa hari detail flow disimpan; ringkasan disimpan 400 hari |
-| `-memory` | `0.10` | porsi memori fisik yang boleh dipakai database |
+| `-memory` | `0.10` | porsi memori fisik untuk cache database, dan sebesar itu lagi sebagai batas lunak untuk bagian program lainnya (masing-masing minimal 256 MB) |
 | `-l2-overhead` | `18` | byte per paket yang ditambahkan ke hitungan byte NetFlow/IPFIX |
 | `-sampling-wait` | `5m` | berapa lama record menunggu sampling rate |
 | `-capture` | | capture di interface lokal (bisa diulang) |
@@ -822,7 +822,7 @@ Semua tersimpan di direktori data:
 
 Diukur pada 5.000 flow per detik di mesin 2 core: detail memakai sekitar
 12 GB disk per hari ditambah sekitar 1,5 GB untuk jam berjalan, programnya
-sekitar 0,5 GB memori dan seperenam satu core. Ringkasan untuk rentang
+seperenam satu core. Ringkasan untuk rentang
 waktu panjang diambil dari data ringkasan dan selesai di bawah 0,2 detik.
 Query pada detail memindai sekitar 22 juta baris per jam: satu host selama
 1 jam butuh di bawah 1 detik, Top 66 semua percakapan selama 1 jam sekitar
@@ -832,6 +832,15 @@ banyak core.
 Jadi, disk untuk 30 hari pada 5.000 flow/detik sekitar 360 GB;
 sesuaikan dengan laju flow Anda (terlihat di **Sumber**) dan
 `-retention-days`.
+
+Memori: `-memory` (default 10% RAM, minimal 256 MB) membatasi cache
+database, dan bagian program lainnya mendapat batas lunak sebesar yang
+sama. Pada 5.000 flow per detik, data milik program sendiri (decoding,
+deteksi duplikat, batch) memakai sekitar 90 MB; secara total perkirakan
+0,6–0,8 GB, jadi mesin dengan RAM 2 GB sudah cukup. Diukur selama 10 menit
+pengumpulan terus-menerus (puncak 0,58 GB di mesin 8 GB) dan saat memuat
+flow satu jam dengan laju sebelas kali lipat dengan batas mesin 2 GB
+(puncak 0,74 GB).
 
 <a id="16-troubleshooting"></a>
 

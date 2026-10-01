@@ -26,6 +26,9 @@ func (d *Decoder) decodeV9(b []byte, addr netip.Addr, now time.Time) (Result, er
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	s := d.session(key{addr, srcID, flow.SrcNetFlow9})
+	if s == nil {
+		return Result{}, ErrTooManyExporters
+	}
 	s.touch(now, time.Unix(int64(secs), 0))
 
 	var res Result

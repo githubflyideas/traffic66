@@ -149,7 +149,26 @@ func (c *Collector) Handle(b []byte, from netip.Addr, now time.Time) bool {
 }
 
 // Tick releases records held for a sampling rate; call periodically.
+// maxAgents caps tracked sFlow agents; agentIdle is how long a silent
+// agent is remembered.
+const (
+	maxAgents = 10000
+	agentIdle = 24 * time.Hour
+)
+
 func (c *Collector) Tick(now time.Time) {
+	c.mu.Lock()
+	for a, ag := range c.sfAgents {
+		if now.Sub(ag.lastSeen) > agentIdle {
+			delete(c.sfAgents, a)
+		}
+	}
+	for k := range c.sf {
+		if c.sfAgents[k.agent] == nil {
+			delete(c.sf, k)
+		}
+	}
+	c.mu.Unlock()
 	res := c.NF.Flush(now)
 	c.fixTimes(res.Records, now)
 	c.sink.Submit(res.Records)
@@ -182,6 +201,9 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 	}
 	ag := c.sfAgents[agentAddr]
 	if ag == nil {
+		if len(c.sfAgents) >= maxAgents {
+			return false // too many agents (spoofed sources?); counted as undecoded
+		}
 		ag = &sfAgent{addr: agentAddr, lastSeq: map[uint32]uint32{}}
 		c.sfAgents[agentAddr] = ag
 	}

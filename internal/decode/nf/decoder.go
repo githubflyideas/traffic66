@@ -122,20 +122,31 @@ type Decoder struct {
 	HoldFor time.Duration
 	// MaxPending caps held records per session.
 	MaxPending int
+	// MaxSessions caps the number of exporter sessions, so that datagrams
+	// from many (spoofed) source addresses cannot grow memory without bound.
+	MaxSessions int
 	// Unsampled lists exporters known to export every packet.
 	Unsampled map[netip.Addr]bool
 }
 
 func NewDecoder() *Decoder {
 	return &Decoder{
-		sessions:   map[key]*session{},
-		HoldFor:    5 * time.Minute,
-		MaxPending: 200000,
-		Unsampled:  map[netip.Addr]bool{},
+		sessions:    map[key]*session{},
+		HoldFor:     5 * time.Minute,
+		MaxPending:  200000,
+		MaxSessions: 10000,
+		Unsampled:   map[netip.Addr]bool{},
 	}
 }
 
 var ErrUnknownVersion = errors.New("nf: unknown version")
+
+// ErrTooManyExporters is returned when MaxSessions exporters are tracked
+// already and a datagram arrives from a new one.
+var ErrTooManyExporters = errors.New("nf: too many exporters")
+
+// sessionIdle is how long a silent exporter's session is kept.
+const sessionIdle = 24 * time.Hour
 
 // Result is the output of one Decode or Flush call.
 type Result struct {
@@ -161,6 +172,9 @@ func (d *Decoder) Decode(b []byte, addr netip.Addr, now time.Time) (Result, erro
 func (d *Decoder) session(k key) *session {
 	s := d.sessions[k]
 	if s == nil {
+		if d.MaxSessions > 0 && len(d.sessions) >= d.MaxSessions {
+			return nil
+		}
 		s = newSession(k)
 		d.sessions[k] = s
 	}
@@ -206,28 +220,15 @@ func (d *Decoder) Stats() []Stats {
 	return out
 }
 
-// Flush releases held records older than HoldFor. After the first timeout
-// an exporter that never declared a rate is treated as unsampled.
+// Flush releases held records older than HoldFor, drops held data sets
+// whose template never arrived, and forgets exporters silent for a day.
+// After the first timeout an exporter that never declared a rate is treated
+// as unsampled.
 func (d *Decoder) Flush(now time.Time) Result {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	var res Result
-	for _, s := range d.sessions {
-		if len(s.pending) == 0 {
-			continue
-		}
-		if now.Sub(s.pending[0].at) < d.HoldFor {
-			continue
-		}
-		s.assumed = true
-		for _, p := range s.pending {
-			r := p.rec
-			r.Sampling = 1
-			r.Mult = s.comp
-			r.SamplingKnown = false
-			res.Records = append(res.Records, r)
-		}
-		s.pending = s.pending[:0]
+	for k, s := range d.sessions {
 		// Held data sets whose template never arrived are dropped.
 		for id, hs := range s.held {
 			keep := hs[:0]
@@ -244,6 +245,20 @@ func (d *Decoder) Flush(now time.Time) Result {
 			} else {
 				s.held[id] = keep
 			}
+		}
+		if len(s.pending) > 0 && now.Sub(s.pending[0].at) >= d.HoldFor {
+			s.assumed = true
+			for _, p := range s.pending {
+				r := p.rec
+				r.Sampling = 1
+				r.Mult = s.comp
+				r.SamplingKnown = false
+				res.Records = append(res.Records, r)
+			}
+			s.pending = s.pending[:0]
+		}
+		if len(s.pending) == 0 && len(s.held) == 0 && now.Sub(s.stats.LastSeen) > sessionIdle {
+			delete(d.sessions, k)
 		}
 	}
 	return res
