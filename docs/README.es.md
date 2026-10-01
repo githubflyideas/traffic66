@@ -51,10 +51,10 @@ Descargue el archivo para su sistema desde la
 | Sistema | Archivo |
 |---|---|
 | Windows 10/11, Server 2016 o posterior (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS con Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64: las mismas distribuciones | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 o posterior, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 o posterior, Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux:
 
@@ -93,6 +93,13 @@ desde cero.
 La demo usa los mismos puertos que una instalación real (8066 y UDP 6343,
 2055, 4739). Para ejecutarla junto a una real, asígnele otros puertos:
 `traffic66 demo -password try66 -addr :8067 -listen ""`.
+
+En Windows también puede simplemente hacer doble clic en `traffic66.exe`.
+Eso inicia traffic66 de verdad (no la demo) y abre la interfaz web en su
+navegador; la contraseña del primer arranque aparece en la ventana negra, y
+al cerrar la ventana se detiene traffic66. Si Windows muestra
+"Windows protegió su PC", haga clic en **Más información** →
+**Ejecutar de todas formas**.
 
 <a id="2-install"></a>
 
@@ -745,6 +752,8 @@ según su tasa de flujos (visible en **Fuentes**) y `-retention-days`.
 | `receive buffer is only … KB` | Linux limita los búferes UDP: fije `net.core.rmem_max=16777216` (vea [Linux](#linux)) |
 | `cannot create the data directory` | Este usuario no puede escribir en la carpeta del programa: indique `-data` |
 | macOS: "cannot be opened" o "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows: "Windows protegió su PC" | **Más información** → **Ejecutar de todas formas**; el programa aún no está firmado |
+| Linux: `GLIBC_2.xx not found` | La distribución es anterior a RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Captura en Windows: no se encuentra Npcap | Instale [Npcap](https://npcap.com) |
 | `address already in use` | Otro programa usa el puerto: elija otros con `-addr` o `-listen` |
 

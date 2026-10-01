@@ -51,10 +51,10 @@ Unduh arsip untuk sistem Anda dari
 | Sistem | Arsip |
 |---|---|
 | Windows 10/11, Server 2016 atau lebih baru (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64: distribusi yang sama | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 atau lebih baru, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 atau lebih baru, Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux:
 
@@ -94,6 +94,13 @@ Demo memakai port yang sama dengan instalasi sungguhan (8066, serta UDP
 6343, 2055, 4739). Untuk menjalankannya berdampingan dengan instalasi
 sungguhan, beri port lain:
 `traffic66 demo -password try66 -addr :8067 -listen ""`.
+
+Di Windows, Anda juga bisa cukup mengklik dua kali `traffic66.exe`. Itu
+menjalankan traffic66 sungguhan (bukan demo) dan membuka antarmuka web di
+browser Anda; kata sandi start pertama ditampilkan di jendela hitam, dan
+menutup jendela itu menghentikan traffic66. Jika Windows menampilkan
+"Windows protected your PC" (Windows melindungi PC Anda), klik
+**More info** (info selengkapnya) → **Run anyway** (tetap jalankan).
 
 <a id="2-install"></a>
 
@@ -744,6 +751,8 @@ sesuaikan dengan laju flow Anda (terlihat di **Sumber**) dan
 | `receive buffer is only … KB` | Linux membatasi buffer UDP: atur `net.core.rmem_max=16777216` (lihat [Linux](#linux)) |
 | `cannot create the data directory` | Folder program tidak bisa ditulis oleh user ini: beri `-data` |
 | macOS: "cannot be opened" atau "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows: "Windows protected your PC" (Windows melindungi PC Anda) | **More info** (info selengkapnya) → **Run anyway** (tetap jalankan); program ini belum ditandatangani |
+| Linux: `GLIBC_2.xx not found` | Distribusinya lebih lama dari RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Capture di Windows: Npcap tidak ditemukan | Pasang [Npcap](https://npcap.com) |
 | `address already in use` | Port dipakai program lain: pilih port lain dengan `-addr` atau `-listen` |
 

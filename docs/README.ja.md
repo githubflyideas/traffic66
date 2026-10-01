@@ -41,10 +41,10 @@ sFlow・NetFlow・IPFIX のフロー分析を 1 つのプログラムで行い�
 | システム | アーカイブ |
 |---|---|
 | Windows 10/11、Server 2016 以降（x64） | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS Apple シリコン | `traffic66-darwin-arm64.tar.gz` |
-| macOS Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64：RHEL/Rocky/Alma 8+、Ubuntu 18.04+、Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64：同じディストリビューション | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 以降、Apple シリコン | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 以降、Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux：
 
@@ -74,6 +74,8 @@ cd traffic66-windows-amd64
 http://127.0.0.1:8066 を開き、`admin` / `try66` でサインインします。デモでは小さな社内ネットワークが構築され、1 日分の履歴と、シミュレートした 4 台の機器からのライブトラフィックが流れます。中には見つけてほしいインシデントが 2 件仕込まれています。**概要** から始めて**いつもより増えたホスト** を確認し、あとはクリックでたどってください。Ctrl+C で停止します。デモデータはプログラムと同じ場所の `traffic66-demo` に保存されます。このフォルダーを削除するとデモを最初からやり直せます。
 
 デモは本番インストールと同じポート（8066 と UDP 6343、2055、4739）を使います。本番環境と並べて動かす場合は、別のポートを指定してください：`traffic66 demo -password try66 -addr :8067 -listen ""`。
+
+Windows では `traffic66.exe` をダブルクリックするだけでも起動できます。この場合はデモではなく本番として traffic66 が起動し、ブラウザーで Web UI が開きます。初回起動時のパスワードは黒いウィンドウに表示され、ウィンドウを閉じると traffic66 は停止します。"Windows によって PC が保護されました" と表示された場合は、**詳細情報** → **実行** をクリックしてください。
 
 <a id="2-install"></a>
 
@@ -604,6 +606,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `receive buffer is only … KB` | Linux が UDP バッファを制限しています：`net.core.rmem_max=16777216` を設定（[Linux](#linux) を参照） |
 | `cannot create the data directory` | このユーザーはプログラムのフォルダーに書き込めません：`-data` を指定してください |
 | macOS："cannot be opened" または "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows："Windows によって PC が保護されました" | **詳細情報** → **実行**。プログラムはまだ署名されていません |
+| Linux：`GLIBC_2.xx not found` | ディストリビューションが RHEL 8 / Ubuntu 18.04 / Debian 10 より古い |
 | Windows でのキャプチャ：Npcap が見つからない | [Npcap](https://npcap.com) をインストール |
 | `address already in use` | 別のプログラムがポートを使用中：`-addr` または `-listen` で別のポートを指定 |
 

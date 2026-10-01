@@ -53,10 +53,10 @@ Téléchargez l'archive correspondant à votre système sur la
 | Système | Archive |
 |---|---|
 | Windows 10/11, Server 2016 ou plus récent (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64 : RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64 : mêmes distributions | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 ou plus récent, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 ou plus récent, Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux :
 
@@ -97,6 +97,13 @@ La démo utilise les mêmes ports qu'une vraie installation (8066, et UDP
 6343, 2055, 4739). Pour la lancer à côté d'une installation réelle,
 donnez-lui d'autres ports :
 `traffic66 demo -password try66 -addr :8067 -listen ""`.
+
+Sous Windows, vous pouvez aussi simplement double-cliquer sur
+`traffic66.exe`. traffic66 démarre alors pour de bon (pas la démo) et ouvre
+l'interface web dans votre navigateur ; le mot de passe du premier démarrage
+s'affiche dans la fenêtre noire, et fermer la fenêtre arrête traffic66. Si
+Windows affiche "Windows a protégé votre ordinateur", cliquez sur
+**Informations complémentaires** → **Exécuter quand même**.
 
 <a id="2-install"></a>
 
@@ -762,6 +769,8 @@ ajustez selon votre débit de flux (affiché dans **Sources**) et
 | `receive buffer is only … KB` | Linux limite les tampons UDP : définissez `net.core.rmem_max=16777216` (voir [Linux](#linux)) |
 | `cannot create the data directory` | Le dossier du programme n'est pas accessible en écriture pour cet utilisateur : indiquez `-data` |
 | macOS : "cannot be opened" ou "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows : "Windows a protégé votre ordinateur" | **Informations complémentaires** → **Exécuter quand même** ; le programme n'est pas encore signé |
+| Linux : `GLIBC_2.xx not found` | La distribution est antérieure à RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Capture sous Windows : Npcap introuvable | Installez [Npcap](https://npcap.com) |
 | `address already in use` | Un autre programme utilise le port : choisissez-en d'autres avec `-addr` ou `-listen` |
 

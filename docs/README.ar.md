@@ -52,10 +52,10 @@
 | النظام | الأرشيف |
 |---|---|
 | Windows 10/11 وServer 2016 أو أحدث (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS بمعالج Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS بمعالج Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64: RHEL/Rocky/Alma 8+ وUbuntu 18.04+ وDebian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64: التوزيعات نفسها | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 أو أحدث بمعالج Apple silicon | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 أو أحدث بمعالج Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux:
 
@@ -92,6 +92,12 @@ cd traffic66-windows-amd64
 يستخدم العرض التوضيحي المنافذ نفسها التي يستخدمها التثبيت الفعلي (8066،
 وUDP 6343 و2055 و4739). لتشغيله بجانب تثبيت فعلي، امنحه منافذ أخرى:
 `traffic66 demo -password try66 -addr :8067 -listen ""`.
+
+على Windows يمكنك أيضًا ببساطة النقر المزدوج على `traffic66.exe`. يؤدي ذلك
+إلى تشغيل traffic66 فعليًا (وليس العرض التوضيحي) وفتح واجهة الويب في متصفحك؛
+تظهر كلمة مرور التشغيل الأول في النافذة السوداء، وإغلاق النافذة يوقف traffic66.
+إذا عرض Windows الرسالة "Windows protected your PC" (حمى Windows جهازك)،
+فانقر **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال).
 
 <a id="2-install"></a>
 
@@ -723,6 +729,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `receive buffer is only … KB` | يحدّ Linux من مخازن UDP المؤقتة: اضبط `net.core.rmem_max=16777216` (انظر [Linux](#linux)) |
 | `cannot create the data directory` | مجلد البرنامج غير قابل للكتابة لهذا المستخدم: مرّر `-data` |
 | macOS: "cannot be opened" أو "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows: "Windows protected your PC" (حمى Windows جهازك) | **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال)؛ البرنامج غير موقّع بعد |
+| Linux: `GLIBC_2.xx not found` | التوزيعة أقدم من RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | الالتقاط في Windows: لم يُعثر على Npcap | ثبّت [Npcap](https://npcap.com) |
 | `address already in use` | برنامج آخر يستخدم المنفذ: اختر منافذ أخرى بـ `-addr` أو `-listen` |
 

@@ -46,10 +46,10 @@ Download the archive for your system from the
 | System | Archive |
 |---|---|
 | Windows 10/11, Server 2016 or later (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64: same distributions | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 or later, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 or later, Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux:
 
@@ -87,6 +87,12 @@ folder to start the demo afresh.
 The demo uses the same ports as a real installation (8066, and UDP 6343,
 2055, 4739). To run it next to a real one, give it other ports:
 `traffic66 demo -password try66 -addr :8067 -listen ""`.
+
+On Windows you can also simply double-click `traffic66.exe`. That starts
+traffic66 for real (not the demo) and opens the web UI in your browser; the
+first-start password is shown in the black window, and closing the window
+stops traffic66. If Windows says "Windows protected your PC", click
+**More info** → **Run anyway**.
 
 ## 2. Install
 
@@ -689,6 +695,8 @@ your flow rate (shown on **Sources**) and `-retention-days`.
 | `receive buffer is only … KB` | Linux limits UDP buffers: set `net.core.rmem_max=16777216` (see [Linux](#linux)) |
 | `cannot create the data directory` | The program folder is not writable for this user: give `-data` |
 | macOS: "cannot be opened" or "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows: "Windows protected your PC" | **More info** → **Run anyway**; the program is not signed yet |
+| Linux: `GLIBC_2.xx not found` | The distribution is older than RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Windows capture: Npcap not found | Install [Npcap](https://npcap.com) |
 | `address already in use` | Another program uses the port: choose others with `-addr` or `-listen` |
 

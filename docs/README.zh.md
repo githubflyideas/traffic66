@@ -41,10 +41,10 @@
 | 系统 | 压缩包 |
 |---|---|
 | Windows 10/11、Server 2016 及以上（x64） | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS Apple 芯片 | `traffic66-darwin-arm64.tar.gz` |
-| macOS Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64：RHEL/Rocky/Alma 8+、Ubuntu 18.04+、Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64：相同的发行版 | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 及以上，Apple 芯片 | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 及以上，Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux：
 
@@ -74,6 +74,8 @@ cd traffic66-windows-amd64
 打开 http://127.0.0.1:8066，用 `admin` / `try66` 登录。演示模式会搭建一个小型公司网络，带一天的历史数据，外加四台模拟设备的实时流量，其中埋了两起异常事件等你去找：从 **概览** 开始，看 **比平时多了谁**，然后一路点下去即可。按 Ctrl+C 停止。演示数据保存在程序旁边的 `traffic66-demo` 目录中，删除该目录即可从头开始。
 
 演示模式使用与正式安装相同的端口（8066，以及 UDP 6343、2055、4739）。如果要和正式实例同时运行，请换用其他端口：`traffic66 demo -password try66 -addr :8067 -listen ""`。
+
+在 Windows 上也可以直接双击 `traffic66.exe`。这会以正式模式（而非演示模式）启动 traffic66，并在浏览器中打开 Web 界面；首次启动的密码显示在黑色窗口中，关闭该窗口即停止 traffic66。如果 Windows 提示 "Windows 已保护你的电脑"，请点击 **更多信息** → **仍要运行**。
 
 <a id="2-install"></a>
 
@@ -604,6 +606,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `receive buffer is only … KB` | Linux 限制了 UDP 缓冲区：设置 `net.core.rmem_max=16777216`（见 [Linux](#linux)） |
 | `cannot create the data directory` | 当前用户对程序目录没有写权限：请指定 `-data` |
 | macOS："cannot be opened" 或 "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows："Windows 已保护你的电脑" | **更多信息** → **仍要运行**；程序目前尚未签名 |
+| Linux：`GLIBC_2.xx not found` | 发行版早于 RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Windows 抓包：找不到 Npcap | 安装 [Npcap](https://npcap.com) |
 | `address already in use` | 端口被其他程序占用：用 `-addr` 或 `-listen` 换用其他端口 |
 

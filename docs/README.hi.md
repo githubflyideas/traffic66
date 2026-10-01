@@ -50,10 +50,10 @@ counters से मेल खाते हैं — web UI में भी औ
 | सिस्टम | Archive |
 |---|---|
 | Windows 10/11, Server 2016 या नया (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64: वही distributions | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 या नया, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 या नया, Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux:
 
@@ -92,6 +92,13 @@ http://127.0.0.1:8066 खोलें और `admin` / `try66` से साइ�
 डेमो वही ports इस्तेमाल करता है जो असली installation करता है (8066, और UDP
 6343, 2055, 4739)। असली installation के साथ-साथ चलाने के लिए उसे दूसरे ports
 दें: `traffic66 demo -password try66 -addr :8067 -listen ""`।
+
+Windows पर आप सीधे `traffic66.exe` पर double-click भी कर सकते हैं। इससे
+traffic66 असली रूप में (डेमो नहीं) शुरू होता है और आपके browser में web UI
+खुल जाता है; पहली बार शुरू होने का पासवर्ड काली window में दिखता है, और
+window बंद करने से traffic66 रुक जाता है। अगर Windows
+"Windows protected your PC" (Windows ने आपके PC को सुरक्षित किया) दिखाए, तो
+**More info** (अधिक जानकारी) → **Run anyway** (फिर भी चलाएँ) पर क्लिक करें।
 
 <a id="2-install"></a>
 
@@ -728,6 +735,8 @@ conversations का 1 घंटे का Top 66 लगभग 9 s; समय ra
 | `receive buffer is only … KB` | Linux UDP buffers सीमित रखता है: `net.core.rmem_max=16777216` सेट करें ([Linux](#linux) देखें) |
 | `cannot create the data directory` | इस यूज़र के लिए प्रोग्राम फ़ोल्डर writable नहीं है: `-data` दें |
 | macOS: "cannot be opened" या "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows: "Windows protected your PC" (Windows ने आपके PC को सुरक्षित किया) | **More info** (अधिक जानकारी) → **Run anyway** (फिर भी चलाएँ); प्रोग्राम अभी signed नहीं है |
+| Linux: `GLIBC_2.xx not found` | distribution RHEL 8 / Ubuntu 18.04 / Debian 10 से पुराना है |
 | Windows capture: Npcap नहीं मिला | [Npcap](https://npcap.com) इंस्टॉल करें |
 | `address already in use` | कोई दूसरा प्रोग्राम वह port इस्तेमाल कर रहा है: `-addr` या `-listen` से दूसरे ports चुनें |
 

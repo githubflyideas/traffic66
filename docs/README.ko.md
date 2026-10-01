@@ -48,10 +48,10 @@ sFlow, NetFlow, IPFIX 플로 분석을 하나의 프로그램으로 처리합니
 | 시스템 | 압축 파일 |
 |---|---|
 | Windows 10/11, Server 2016 이상(x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS Apple 실리콘 | `traffic66-darwin-arm64.tar.gz` |
-| macOS Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64: 동일한 배포판 | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 이상, Apple 실리콘 | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 이상, Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux:
 
@@ -87,6 +87,11 @@ http://127.0.0.1:8066 을 열고 `admin` / `try66`으로 로그인합니다. 데
 데모는 실제 설치와 같은 포트(8066, UDP 6343, 2055, 4739)를 사용합니다. 실제 인스턴스와
 함께 실행하려면 다른 포트를 지정합니다:
 `traffic66 demo -password try66 -addr :8067 -listen ""`.
+
+Windows에서는 `traffic66.exe`를 더블클릭해도 됩니다. 이렇게 하면 데모가 아닌
+실제 traffic66이 시작되고 브라우저에서 웹 UI가 열립니다. 첫 시작 비밀번호는 검은
+창에 표시되며, 창을 닫으면 traffic66이 중지됩니다. Windows가 "Windows의 PC 보호"
+메시지를 표시하면 **추가 정보** → **실행**을 클릭합니다.
 
 <a id="2-install"></a>
 
@@ -699,6 +704,8 @@ Top 66은 약 9초이며, 소요 시간은 범위에 비례해 늘고 코어가 
 | `receive buffer is only … KB` | Linux가 UDP 버퍼를 제한함: `net.core.rmem_max=16777216` 설정([Linux](#linux) 참조) |
 | `cannot create the data directory` | 이 사용자에게 프로그램 폴더 쓰기 권한이 없음: `-data` 지정 |
 | macOS: "cannot be opened" 또는 "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows: "Windows의 PC 보호" | **추가 정보** → **실행**. 프로그램이 아직 서명되지 않음 |
+| Linux: `GLIBC_2.xx not found` | 배포판이 RHEL 8 / Ubuntu 18.04 / Debian 10보다 오래됨 |
 | Windows 캡처: Npcap을 찾을 수 없음 | [Npcap](https://npcap.com) 설치 |
 | `address already in use` | 다른 프로그램이 포트를 사용 중: `-addr` 또는 `-listen`으로 다른 포트 지정 |
 

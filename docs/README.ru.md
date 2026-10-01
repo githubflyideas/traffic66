@@ -50,10 +50,10 @@
 | Система | Архив |
 |---|---|
 | Windows 10/11, Server 2016 и новее (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64 | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64 | `traffic66-linux-arm64.tar.gz` |
-| macOS на Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS на Intel | `traffic66-darwin-amd64.tar.gz` |
+| Linux x86-64: RHEL/Rocky/Alma 8+, Ubuntu 18.04+, Debian 10+ | `traffic66-linux-amd64.tar.gz` |
+| Linux ARM64: те же дистрибутивы | `traffic66-linux-arm64.tar.gz` |
+| macOS 11 и новее, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
+| macOS 11 и новее, Intel | `traffic66-darwin-amd64.tar.gz` |
 
 Linux:
 
@@ -91,6 +91,13 @@ cd traffic66-windows-amd64
 Демо использует те же порты, что и рабочая установка (8066 и UDP 6343,
 2055, 4739). Чтобы запустить его рядом с рабочей, задайте другие порты:
 `traffic66 demo -password try66 -addr :8067 -listen ""`.
+
+В Windows можно также просто дважды щёлкнуть `traffic66.exe`. Так traffic66
+запускается по-настоящему (не демо) и открывает веб-интерфейс в браузере;
+пароль первого запуска показывается в чёрном окне, а закрытие окна
+останавливает traffic66. Если Windows сообщает
+"Система Windows защитила ваш компьютер", нажмите **Подробнее** →
+**Выполнить в любом случае**.
 
 <a id="2-install"></a>
 
@@ -740,6 +747,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `receive buffer is only … KB` | Linux ограничивает размер UDP-буферов: задайте `net.core.rmem_max=16777216` (см. [Linux](#linux)) |
 | `cannot create the data directory` | У этого пользователя нет прав на запись в папку программы: укажите `-data` |
 | macOS: "cannot be opened" или "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
+| Windows: "Система Windows защитила ваш компьютер" | **Подробнее** → **Выполнить в любом случае**; программа пока не подписана |
+| Linux: `GLIBC_2.xx not found` | Дистрибутив старше RHEL 8 / Ubuntu 18.04 / Debian 10 |
 | Захват в Windows: Npcap не найден | Установите [Npcap](https://npcap.com) |
 | `address already in use` | Порт занят другой программой: выберите другие через `-addr` или `-listen` |
 
