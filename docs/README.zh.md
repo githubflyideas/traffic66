@@ -16,7 +16,7 @@
 
 1. [试用演示](#1-try-the-demo)
 2. [安装](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [登录与密码](#3-sign-in-and-passwords)
+3. [用户与密码](#3-users-and-passwords)
 4. [在设备上配置流导出](#4-send-flows-from-your-devices)
 5. [确认流数据已到达](#5-check-that-flows-arrive)
 6. [让统计结果与接口计数器对上](#6-make-the-numbers-match-the-interface-counters)
@@ -228,23 +228,91 @@ sudo launchctl bootout system/traffic66
 
 如果开启了 macOS 防火墙，请在“系统设置 → 网络 → 防火墙 → 选项”中允许 traffic66 的传入连接。
 
-<a id="3-sign-in-and-passwords"></a>
+<a id="3-users-and-passwords"></a>
 
-## 3. 登录与密码
+## 3. 用户与密码
 
-打开 `http://<traffic66 machine>:8066` 并登录。除非你另行指定，用户名是 `admin`。
+**简而言之**：用户和密码都保存在数据目录下的一个文件 `password` 中。你不需要手动编辑它：用 `traffic66 passwd` 命令即可添加、修改、列出和删除用户。打开 `http://<traffic66 machine>:8066`，用其中任一用户登录。
 
-- 如果首次启动前没有设置密码，traffic66 会自动生成一个，并在日志中只打印一次：`first start: sign in as user "admin" with password "…"`。在 Linux 上可以用 `journalctl -u traffic66 | grep "first start"` 找到它。
-- 密码以哈希形式保存在数据目录下的 `password` 文件中，重启后保持不变。
-- 修改密码，或忘记密码后重新设置，在 traffic66 主机上执行：
+<a id="the-first-sign-in"></a>
+
+### 首次登录
+
+traffic66 首次启动时会创建用户 `admin`，设置一个随机密码，并只显示一次：
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- 在 Windows 上双击启动：显示在黑色窗口中。
+- 在终端中启动：显示在该终端中。
+- Linux 服务：`journalctl -u traffic66 | grep "first start"`
+- macOS 服务：`grep "first start" /Library/Logs/traffic66.log`
+
+错过了？用 `traffic66 passwd`（见下文）设置一个新密码即可。如果像上面的安装步骤那样，在首次启动前已用 `traffic66 passwd` 设置了密码，则不会生成随机密码。
+
+<a id="where-the-users-are-stored"></a>
+
+### 用户保存在哪里
+
+保存在数据目录下的 `password` 文件中：
+
+| traffic66 的运行方式 | 文件 |
+|---|---|
+| 解压后从所在文件夹启动（默认） | 程序旁边的 `traffic66-data/password` |
+| Linux 服务（第 2 节） | `/var/lib/traffic66/password` |
+| Windows 开机启动任务（第 2 节） | `C:\traffic66\traffic66-data\password` |
+| macOS 服务（第 2 节） | `/Library/Application Support/traffic66/password` |
+| 演示 | 程序旁边的 `traffic66-demo/password` |
+
+每个用户占一行。密码以加盐哈希的形式保存，任何人都无法从文件中读回密码，包括你自己；忘记密码时，重新设置一个即可。该文件只有其所有者可读。
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+<a id="managing-users"></a>
+
+### 管理用户
+
+在 traffic66 主机上执行以下命令：
+
+| 操作 | 命令 |
+|---|---|
+| 修改 `admin` 的密码 | `traffic66 passwd` |
+| 添加用户 `alice`，或修改她的密码 | `traffic66 passwd -user alice` |
+| 删除用户 `alice` | `traffic66 passwd -user alice -delete` |
+| 列出所有用户 | `traffic66 passwd -list` |
+| 设置随机密码并打印出来 | `traffic66 passwd -generate`（其他用户加上 `-user`） |
+
+- 命令会要求输入两次新密码，输入内容不会显示。密码至少 8 个字符。
+- 如果 traffic66 运行时使用了 `-data`，命令中也要加上相同的 `-data`。以第 2 节中的 Linux 服务为例：
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  `traffic66 passwd -generate` 会生成一个随机密码并打印出来。正在运行的 traffic66在下次登录时即接受新密码，无需重启。
-- 添加更多用户：`traffic66 passwd -data <data directory> -user alice`。所有用户看到的内容完全相同。
-- 用于脚本和容器时，可通过环境变量 `TRAFFIC66_PASSWORD=…` 或命令行参数`-password …` 为本次运行指定密码，替代已保存的密码。建议用环境变量：命令行对本机其他用户是可见的。
+  在 Windows 上（以管理员身份运行 PowerShell）：
+
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- 更改立即生效，无需重启：新密码在下次登录时即可使用，被删除的用户会在已打开的浏览器中被登出。
+- 最后一个用户无法删除；请先添加另一个用户。
+- 所有用户看到和能修改的内容完全相同，没有角色之分。
+
+<a id="passwords-for-scripts-and-containers"></a>
+
+### 用于脚本和容器的密码
+
+在环境变量中设置 `TRAFFIC66_PASSWORD=…`，或在命令行中使用 `-password …`，traffic66 在本次运行中就只接受一个用户：由 `-user` 指定的用户（默认 `admin`），密码为该值。此时 `password` 文件会被忽略，也不会被修改。建议使用环境变量：命令行对本机其他用户是可见的。
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
 
 同一地址在一分钟内输错五次密码，会被封禁一分钟。
 
@@ -514,7 +582,7 @@ traffic66 -capture eth1               # repeat -capture for more interfaces
 | `traffic66` | 采集流数据并提供 Web 界面 |
 | `traffic66 demo` | 同上，但使用模拟网络 |
 | `traffic66 tui` | 连接正在运行的 traffic66 的终端界面 |
-| `traffic66 passwd` | 设置登录密码 |
+| `traffic66 passwd` | 添加、修改、列出或删除用户（见 [用户与密码](#3-users-and-passwords)） |
 | `traffic66 simulate -to HOST` | 向采集器发送模拟的导出数据 |
 | `traffic66 interfaces` | 列出可用于本地抓包的网卡 |
 | `traffic66 version` | 显示版本号 |
@@ -526,8 +594,8 @@ traffic66 -capture eth1               # repeat -capture for more interfaces
 | `-addr` | `:8066` | Web 界面监听地址；`127.0.0.1:8066` 表示仅本机可访问 |
 | `-data` | 程序旁边的 `traffic66-data` | 数据目录 |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP 采集器，格式为 `name=address`，逗号分隔；留空则禁用 |
-| `-user` | `admin` | 首次自动生成密码时所用的用户，以及 `-password` 对应的用户 |
-| `-password` | 已保存的密码 | 仅本次运行使用的密码（也可用 `TRAFFIC66_PASSWORD`） |
+| `-user` | `admin` | 首次启动时创建的用户名，也是 `-password` 所对应的用户 |
+| `-password` | 未设置 | 本次运行只接受 `-user` 和此密码，忽略 `password` 文件（也可用 `TRAFFIC66_PASSWORD`） |
 | `-retention-days` | `30` | 流明细保留天数；汇总数据保留 400 天 |
 | `-memory` | `0.10` | 数据库可使用的物理内存比例 |
 | `-l2-overhead` | `18` | NetFlow/IPFIX 字节数中每包追加的字节数 |
@@ -601,7 +669,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | 统计值低于接口计数器 | 查看 **接口对账**：途中丢包、有接口未采样，或流仍在设备缓存中（活动超时超过 60 秒） |
 | 统计值高于接口计数器 | 同一流量在两个接口或两台设备上被采样 |
 | 没有国家或网络信息 | 缺少 IP 到 ASN 映射表：见 [国家](#8-countries-networks-and-threat-lists) |
-| 忘记密码 | 在 traffic66 主机上执行 `traffic66 passwd -data <data directory>` |
+| 忘记密码 | 在 traffic66 主机上执行 `traffic66 passwd`（如果 traffic66 运行时使用了 `-data`，也加上它） |
 | `Conflicting lock is held` | 另一个 traffic66 正在使用该数据目录 |
 | `receive buffer is only … KB` | Linux 限制了 UDP 缓冲区：设置 `net.core.rmem_max=16777216`（见 [Linux](#linux)） |
 | `cannot create the data directory` | 当前用户对程序目录没有写权限：请指定 `-data` |

@@ -22,7 +22,7 @@ in a web UI and in a terminal UI.
 
 1. [Try the demo](#1-try-the-demo)
 2. [Install](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [Sign in and passwords](#3-sign-in-and-passwords)
+3. [Users and passwords](#3-users-and-passwords)
 4. [Send flows from your devices](#4-send-flows-from-your-devices)
 5. [Check that flows arrive](#5-check-that-flows-arrive)
 6. [Make the numbers match the interface counters](#6-make-the-numbers-match-the-interface-counters)
@@ -246,34 +246,98 @@ sudo launchctl bootout system/traffic66
 If the macOS firewall is on, allow incoming connections for traffic66 in
 System Settings → Network → Firewall → Options.
 
-## 3. Sign in and passwords
+## 3. Users and passwords
 
-Open `http://<traffic66 machine>:8066` and sign in. The user is `admin`
-unless you chose another.
+**In short:** users and passwords live in one file, `password`, in the data
+directory. You never edit it by hand: the `traffic66 passwd` command adds,
+changes, lists and deletes users. Open `http://<traffic66 machine>:8066`
+and sign in with one of them.
 
-- If you did not set a password before the first start, traffic66 makes one
-  and prints it once in its log:
-  `first start: sign in as user "admin" with password "…"`.
-  On Linux find it with `journalctl -u traffic66 | grep "first start"`.
-- The password is kept, hashed, in the file `password` in the data
-  directory. It stays the same across restarts.
-- Change it, or after forgetting it set a new one, on the traffic66 machine:
+### The first sign-in
+
+On its first start traffic66 creates the user `admin` with a random
+password and shows it once:
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- Started by double-click on Windows: in the black window.
+- In a terminal: in the terminal.
+- Linux service: `journalctl -u traffic66 | grep "first start"`
+- macOS service: `grep "first start" /Library/Logs/traffic66.log`
+
+Missed it? Set a new one with `traffic66 passwd` (below). If you set a
+password with `traffic66 passwd` before the first start, as the install
+steps above do, nothing is generated.
+
+### Where the users are stored
+
+The file `password` in the data directory:
+
+| How traffic66 runs | File |
+|---|---|
+| Unpacked and started from its folder (default) | `traffic66-data/password` next to the program |
+| Linux service (section 2) | `/var/lib/traffic66/password` |
+| Windows startup task (section 2) | `C:\traffic66\traffic66-data\password` |
+| macOS service (section 2) | `/Library/Application Support/traffic66/password` |
+| Demo | `traffic66-demo/password` next to the program |
+
+One line per user. Passwords are stored as salted hashes, so nobody can
+read them back from the file, not even you; if a password is forgotten, set
+a new one. The file is readable by its owner only.
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+### Managing users
+
+Run these on the traffic66 machine:
+
+| To | Command |
+|---|---|
+| Change the password of `admin` | `traffic66 passwd` |
+| Add the user `alice`, or change her password | `traffic66 passwd -user alice` |
+| Delete the user `alice` | `traffic66 passwd -user alice -delete` |
+| List the users | `traffic66 passwd -list` |
+| Set a random password and print it | `traffic66 passwd -generate` (with `-user` for other users) |
+
+- The command asks for the new password twice and does not show what you
+  type. Use at least 8 characters.
+- When traffic66 runs with `-data`, add the same `-data` to the command.
+  For the Linux service from section 2:
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  `traffic66 passwd -generate` makes a random one and prints it. A running
-  traffic66 accepts the new password at the next sign-in; no restart is
-  needed.
-- More users: `traffic66 passwd -data <data directory> -user alice`. All
-  users see the same thing.
-- For scripts and containers, `TRAFFIC66_PASSWORD=…` in the environment or
-  `-password …` on the command line sets the password for that run instead
-  of the stored one. Prefer the environment: command lines are visible to
-  other users of the machine.
+  On Windows (PowerShell as Administrator):
 
-After five wrong passwords within a minute an address is blocked for a
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- Changes apply immediately, without a restart: a new password works at the
+  next sign-in, and a deleted user is signed out of open browsers.
+- The last remaining user cannot be deleted; add another one first.
+- All users see and can change the same things; there are no roles.
+
+### Passwords for scripts and containers
+
+`TRAFFIC66_PASSWORD=…` in the environment, or `-password …` on the command
+line, makes traffic66 accept exactly one user for that run: the one named by
+`-user` (default `admin`) with that password. The `password` file is then
+ignored and not changed. Prefer the environment variable: command lines are
+visible to other users of the machine.
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
+
+After five wrong passwords within a minute, an address is blocked for a
 minute.
 
 ## 4. Send flows from your devices
@@ -589,7 +653,7 @@ Commands:
 | `traffic66` | collect flows and serve the web UI |
 | `traffic66 demo` | the same, with a simulated network |
 | `traffic66 tui` | terminal UI for a running traffic66 |
-| `traffic66 passwd` | set a login password |
+| `traffic66 passwd` | add, change, list or delete users (see [Users and passwords](#3-users-and-passwords)) |
 | `traffic66 simulate -to HOST` | send simulated exports to a collector |
 | `traffic66 interfaces` | list interfaces for local capture |
 | `traffic66 version` | print the version |
@@ -601,8 +665,8 @@ Options of `traffic66` and `traffic66 demo`:
 | `-addr` | `:8066` | web UI address; `127.0.0.1:8066` for this machine only |
 | `-data` | `traffic66-data` next to the program | data directory |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP collectors as `name=address`, comma separated; empty disables |
-| `-user` | `admin` | user for the first generated password and for `-password` |
-| `-password` | stored password | password for this run only (also `TRAFFIC66_PASSWORD`) |
+| `-user` | `admin` | name of the user created on first start, and of the user `-password` applies to |
+| `-password` | not set | accept only `-user` with this password for this run, ignoring the `password` file (also `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | days of flow detail kept; summaries are kept 400 days |
 | `-memory` | `0.10` | share of physical memory the database may use |
 | `-l2-overhead` | `18` | bytes per packet added to NetFlow/IPFIX byte counts |
@@ -690,7 +754,7 @@ your flow rate (shown on **Sources**) and `-retention-days`.
 | Numbers lower than the interface counters | See **Interface check**: loss on the way, interfaces not sampled, or flows still in the device cache (active timeout longer than 60 s) |
 | Numbers higher than the interface counters | The same traffic sampled on two interfaces or two devices |
 | No countries or networks | No IP-to-ASN table: see [Countries](#8-countries-networks-and-threat-lists) |
-| Forgot the password | `traffic66 passwd -data <data directory>` on the traffic66 machine |
+| Forgot the password | `traffic66 passwd` on the traffic66 machine (add `-data` if traffic66 runs with it) |
 | `Conflicting lock is held` | Another traffic66 already uses this data directory |
 | `receive buffer is only … KB` | Linux limits UDP buffers: set `net.core.rmem_max=16777216` (see [Linux](#linux)) |
 | `cannot create the data directory` | The program folder is not writable for this user: give `-data` |

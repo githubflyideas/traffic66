@@ -25,7 +25,7 @@ antarmuka terminal.
 
 1. [Coba demo](#1-try-the-demo)
 2. [Instalasi](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [Login dan kata sandi](#3-sign-in-and-passwords)
+3. [User dan kata sandi](#3-users-and-passwords)
 4. [Kirim flow dari perangkat Anda](#4-send-flows-from-your-devices)
 5. [Pastikan flow masuk](#5-check-that-flows-arrive)
 6. [Menyamakan angka dengan counter interface](#6-make-the-numbers-match-the-interface-counters)
@@ -264,35 +264,108 @@ sudo launchctl bootout system/traffic66
 Jika firewall macOS aktif, izinkan koneksi masuk untuk traffic66 di
 System Settings → Network → Firewall → Options.
 
-<a id="3-sign-in-and-passwords"></a>
+<a id="3-users-and-passwords"></a>
 
-## 3. Login dan kata sandi
+## 3. User dan kata sandi
 
-Buka `http://<traffic66 machine>:8066` dan login. Usernya `admin`, kecuali
-Anda memilih yang lain.
+**Singkatnya:** user dan kata sandi disimpan di satu file, `password`, di
+direktori data. Jangan pernah mengeditnya secara manual: perintah
+`traffic66 passwd` menambah, mengubah, menampilkan daftar, dan menghapus user.
+Buka `http://<traffic66 machine>:8066` dan login dengan salah satunya.
 
-- Jika Anda belum mengatur kata sandi sebelum start pertama, traffic66
-  membuatnya sendiri dan mencetaknya sekali di log:
-  `first start: sign in as user "admin" with password "…"`.
-  Di Linux, cari dengan `journalctl -u traffic66 | grep "first start"`.
-- Kata sandi disimpan dalam bentuk hash di file `password` di direktori
-  data. Kata sandi tetap sama setelah restart.
-- Untuk menggantinya, atau mengatur yang baru karena lupa, jalankan di
-  mesin traffic66:
+<a id="the-first-sign-in"></a>
+
+### Login pertama
+
+Pada start pertama, traffic66 membuat user `admin` dengan kata sandi acak
+dan menampilkannya sekali:
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- Dijalankan dengan klik dua kali di Windows: di jendela hitam.
+- Dijalankan di terminal: di terminal itu.
+- Service Linux: `journalctl -u traffic66 | grep "first start"`
+- Service macOS: `grep "first start" /Library/Logs/traffic66.log`
+
+Terlewat? Atur yang baru dengan `traffic66 passwd` (lihat di bawah). Jika
+Anda sudah mengatur kata sandi dengan `traffic66 passwd` sebelum start
+pertama, seperti pada langkah instalasi di atas, tidak ada yang dibuat
+otomatis.
+
+<a id="where-the-users-are-stored"></a>
+
+### Tempat user disimpan
+
+Di file `password` di direktori data:
+
+| Cara traffic66 berjalan | File |
+|---|---|
+| Diekstrak dan dijalankan dari foldernya (default) | `traffic66-data/password` di samping program |
+| Service Linux (bagian 2) | `/var/lib/traffic66/password` |
+| Startup task Windows (bagian 2) | `C:\traffic66\traffic66-data\password` |
+| Service macOS (bagian 2) | `/Library/Application Support/traffic66/password` |
+| Demo | `traffic66-demo/password` di samping program |
+
+Satu baris per user. Kata sandi disimpan sebagai salted hash, jadi tidak ada
+yang bisa membacanya kembali dari file, termasuk Anda; jika lupa kata sandi,
+atur yang baru. File ini hanya bisa dibaca oleh pemiliknya.
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+<a id="managing-users"></a>
+
+### Mengelola user
+
+Jalankan perintah berikut di mesin traffic66:
+
+| Untuk | Perintah |
+|---|---|
+| Mengganti kata sandi `admin` | `traffic66 passwd` |
+| Menambah user `alice`, atau mengganti kata sandinya | `traffic66 passwd -user alice` |
+| Menghapus user `alice` | `traffic66 passwd -user alice -delete` |
+| Menampilkan daftar user | `traffic66 passwd -list` |
+| Mengatur kata sandi acak dan mencetaknya | `traffic66 passwd -generate` (dengan `-user` untuk user lain) |
+
+- Perintah ini meminta kata sandi baru dua kali dan tidak menampilkan apa
+  yang Anda ketik. Gunakan minimal 8 karakter.
+- Jika traffic66 berjalan dengan `-data`, tambahkan `-data` yang sama ke
+  perintah. Untuk service Linux dari bagian 2:
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  `traffic66 passwd -generate` membuat kata sandi acak dan mencetaknya.
-  traffic66 yang sedang berjalan langsung menerima kata sandi baru pada
-  login berikutnya; tidak perlu restart.
-- User tambahan: `traffic66 passwd -data <data directory> -user alice`.
-  Semua user melihat hal yang sama.
-- Untuk skrip dan container, `TRAFFIC66_PASSWORD=…` di environment atau
-  `-password …` di command line mengatur kata sandi untuk run itu saja,
-  menggantikan yang tersimpan. Utamakan environment: command line bisa
-  dilihat user lain di mesin yang sama.
+  Di Windows (PowerShell sebagai Administrator):
+
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- Perubahan langsung berlaku tanpa restart: kata sandi baru berlaku pada
+  login berikutnya, dan user yang dihapus otomatis logout dari browser yang
+  sedang terbuka.
+- User terakhir yang tersisa tidak bisa dihapus; tambahkan user lain dulu.
+- Semua user melihat dan bisa mengubah hal yang sama; tidak ada role.
+
+<a id="passwords-for-scripts-and-containers"></a>
+
+### Kata sandi untuk skrip dan container
+
+`TRAFFIC66_PASSWORD=…` di environment, atau `-password …` di command line,
+membuat traffic66 hanya menerima satu user untuk run itu: user yang disebut
+di `-user` (default `admin`) dengan kata sandi tersebut. File `password`
+lalu diabaikan dan tidak diubah. Utamakan environment variable: command line
+bisa dilihat user lain di mesin yang sama.
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
 
 Setelah lima kali salah kata sandi dalam satu menit, alamat tersebut
 diblokir selama satu menit.
@@ -636,7 +709,7 @@ Perintah:
 | `traffic66` | mengumpulkan flow dan menyajikan antarmuka web |
 | `traffic66 demo` | sama, dengan jaringan simulasi |
 | `traffic66 tui` | antarmuka terminal untuk traffic66 yang sedang berjalan |
-| `traffic66 passwd` | mengatur kata sandi login |
+| `traffic66 passwd` | menambah, mengubah, menampilkan daftar, atau menghapus user (lihat [User dan kata sandi](#3-users-and-passwords)) |
 | `traffic66 simulate -to HOST` | mengirim ekspor simulasi ke collector |
 | `traffic66 interfaces` | menampilkan interface untuk capture lokal |
 | `traffic66 version` | mencetak versi |
@@ -648,8 +721,8 @@ Opsi untuk `traffic66` dan `traffic66 demo`:
 | `-addr` | `:8066` | alamat antarmuka web; `127.0.0.1:8066` agar hanya bisa diakses dari mesin ini |
 | `-data` | `traffic66-data` di sebelah program | direktori data |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | collector UDP dalam format `name=address`, dipisah koma; kosong berarti nonaktif |
-| `-user` | `admin` | user untuk kata sandi pertama yang dibuat otomatis dan untuk `-password` |
-| `-password` | kata sandi tersimpan | kata sandi hanya untuk run ini (juga `TRAFFIC66_PASSWORD`) |
+| `-user` | `admin` | nama user yang dibuat pada start pertama, dan user yang dikenai `-password` |
+| `-password` | tidak diatur | hanya menerima `-user` dengan kata sandi ini untuk run ini, mengabaikan file `password` (juga `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | berapa hari detail flow disimpan; ringkasan disimpan 400 hari |
 | `-memory` | `0.10` | porsi memori fisik yang boleh dipakai database |
 | `-l2-overhead` | `18` | byte per paket yang ditambahkan ke hitungan byte NetFlow/IPFIX |
@@ -746,7 +819,7 @@ sesuaikan dengan laju flow Anda (terlihat di **Sumber**) dan
 | Angka lebih rendah dari counter interface | Lihat **Pencocokan antarmuka**: loss di jalan, interface tidak di-sampling, atau flow masih di cache perangkat (active timeout lebih dari 60 detik) |
 | Angka lebih tinggi dari counter interface | Trafik yang sama di-sampling di dua interface atau dua perangkat |
 | Tidak ada negara atau jaringan | Tidak ada tabel IP-to-ASN: lihat [Negara](#8-countries-networks-and-threat-lists) |
-| Lupa kata sandi | `traffic66 passwd -data <data directory>` di mesin traffic66 |
+| Lupa kata sandi | `traffic66 passwd` di mesin traffic66 (tambahkan `-data` jika traffic66 berjalan dengannya) |
 | `Conflicting lock is held` | traffic66 lain sudah memakai direktori data ini |
 | `receive buffer is only … KB` | Linux membatasi buffer UDP: atur `net.core.rmem_max=16777216` (lihat [Linux](#linux)) |
 | `cannot create the data directory` | Folder program tidak bisa ditulis oleh user ini: beri `-data` |

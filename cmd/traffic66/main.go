@@ -295,7 +295,7 @@ func serve(args []string, demo bool) {
 		dns = dnsres.New(dnsres.Options{Upstream: f.dnsUpstream, PerSecond: f.dnsRate, TTL: f.dnsTTL})
 	}
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Static: web.FS(), Version: version,
-		Demo: demo, Check: checker.Check, LocalTok: tok, DataDir: f.data, Started: time.Now()}
+		Demo: demo, Check: checker.Check, Exists: checker.Exists, LocalTok: tok, DataDir: f.data, Started: time.Now()}
 	srv.SNMP = poller.Status
 	srv.Capture = func() []api.CaptureInfo {
 		var out []api.CaptureInfo
@@ -550,7 +550,48 @@ func passwd(args []string) {
 	data := fs.String("data", defaultDir("traffic66-data"), "data directory")
 	user := fs.String("user", "admin", "login user")
 	gen := fs.Bool("generate", false, "generate a random password and print it")
+	list := fs.Bool("list", false, "list the users")
+	del := fs.Bool("delete", false, "delete the user given with -user")
+	fs.Usage = func() {
+		fmt.Fprint(os.Stderr, `Set, add, list or delete login users. Passwords are stored hashed in
+<data directory>/password; a running traffic66 uses changes at the next login.
+
+  traffic66 passwd                      set the password of admin
+  traffic66 passwd -user alice          add alice, or change her password
+  traffic66 passwd -user alice -delete  delete alice
+  traffic66 passwd -list                list the users
+  traffic66 passwd -generate            set a random password and print it
+
+Add -data <directory> when traffic66 runs with -data.
+
+`)
+		fs.PrintDefaults()
+	}
 	fs.Parse(args)
+	file := filepath.Join(*data, auth.FileName)
+	if *list {
+		es, err := auth.Load(*data)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if len(es) == 0 {
+			fmt.Printf("no users in %s yet; the first start creates admin\n", file)
+			return
+		}
+		for _, e := range es {
+			fmt.Println(e.User)
+		}
+		return
+	}
+	if *del {
+		if err := auth.Delete(*data, *user); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Printf("deleted %s from %s\n", *user, file)
+		return
+	}
 	if err := os.MkdirAll(*data, 0o755); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

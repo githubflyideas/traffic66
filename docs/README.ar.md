@@ -26,7 +26,7 @@
 
 1. [جرّب العرض التوضيحي](#1-try-the-demo)
 2. [التثبيت](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [تسجيل الدخول وكلمات المرور](#3-sign-in-and-passwords)
+3. [المستخدمون وكلمات المرور](#3-users-and-passwords)
 4. [إرسال التدفقات من أجهزتك](#4-send-flows-from-your-devices)
 5. [التحقق من وصول التدفقات](#5-check-that-flows-arrive)
 6. [مطابقة الأرقام مع عدّادات الواجهات](#6-make-the-numbers-match-the-interface-counters)
@@ -258,33 +258,105 @@ sudo launchctl bootout system/traffic66
 إذا كان الجدار الناري في macOS مفعّلًا، فاسمح بالاتصالات الواردة لـ
 traffic66 من إعدادات النظام ← الشبكة ← جدار الحماية ← الخيارات.
 
-<a id="3-sign-in-and-passwords"></a>
+<a id="3-users-and-passwords"></a>
 
-## 3. تسجيل الدخول وكلمات المرور
+## 3. المستخدمون وكلمات المرور
 
-افتح `http://<traffic66 machine>:8066` وسجّل الدخول. اسم المستخدم هو
-`admin` ما لم تختر غيره.
+**باختصار:** يُحفظ المستخدمون وكلمات مرورهم في ملف واحد، `password`، داخل دليل
+البيانات. لا تعدّله يدويًا أبدًا: الأمر `traffic66 passwd` يضيف المستخدمين
+ويغيّرهم ويعرض قائمتهم ويحذفهم. افتح `http://<traffic66 machine>:8066` وسجّل
+الدخول بأحدهم.
 
-- إذا لم تعيّن كلمة مرور قبل التشغيل الأول، يُنشئ traffic66 واحدة ويطبعها
-  مرة واحدة في سجلّه:
-  `first start: sign in as user "admin" with password "…"`.
-  في Linux تجدها بالأمر `journalctl -u traffic66 | grep "first start"`.
-- تُحفظ كلمة المرور مُجزّأة (hashed) في الملف `password` داخل دليل
-  البيانات، وتبقى كما هي بعد إعادة التشغيل.
-- لتغييرها، أو لتعيين كلمة جديدة بعد نسيانها، نفّذ على جهاز traffic66:
+<a id="the-first-sign-in"></a>
+
+### تسجيل الدخول الأول
+
+عند التشغيل الأول يُنشئ traffic66 المستخدم `admin` بكلمة مرور عشوائية ويعرضها
+مرة واحدة:
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- عند التشغيل بالنقر المزدوج على Windows: في النافذة السوداء.
+- عند التشغيل من الطرفية: في الطرفية نفسها.
+- خدمة Linux: `journalctl -u traffic66 | grep "first start"`
+- خدمة macOS: `grep "first start" /Library/Logs/traffic66.log`
+
+فاتتك؟ عيّن كلمة جديدة بالأمر `traffic66 passwd` (أدناه). إذا عيّنت كلمة مرور
+بالأمر `traffic66 passwd` قبل التشغيل الأول، كما تفعل خطوات التثبيت أعلاه، فلا
+تُولَّد أي كلمة.
+
+<a id="where-the-users-are-stored"></a>
+
+### أين يُخزَّن المستخدمون
+
+في الملف `password` داخل دليل البيانات:
+
+| طريقة تشغيل traffic66 | الملف |
+|---|---|
+| فُكّ ضغطه وشُغّل من مجلده (الافتراضي) | `traffic66-data/password` بجوار البرنامج |
+| خدمة Linux (القسم 2) | `/var/lib/traffic66/password` |
+| مهمة بدء التشغيل في Windows (القسم 2) | `C:\traffic66\traffic66-data\password` |
+| خدمة macOS (القسم 2) | `/Library/Application Support/traffic66/password` |
+| العرض التوضيحي | `traffic66-demo/password` بجوار البرنامج |
+
+سطر واحد لكل مستخدم. تُخزَّن كلمات المرور تجزئاتٍ مُملَّحة (salted hashes)، فلا
+يستطيع أحد استرجاعها من الملف، ولا حتى أنت؛ وإذا نُسيت كلمة مرور فعيّن كلمة
+جديدة. لا يقرأ الملف إلا مالكه.
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+<a id="managing-users"></a>
+
+### إدارة المستخدمين
+
+نفّذ هذه الأوامر على جهاز traffic66:
+
+| المطلوب | الأمر |
+|---|---|
+| تغيير كلمة مرور `admin` | `traffic66 passwd` |
+| إضافة المستخدم `alice` أو تغيير كلمة مرورها | `traffic66 passwd -user alice` |
+| حذف المستخدم `alice` | `traffic66 passwd -user alice -delete` |
+| عرض قائمة المستخدمين | `traffic66 passwd -list` |
+| تعيين كلمة مرور عشوائية وطباعتها | `traffic66 passwd -generate` (مع `-user` لمستخدمين آخرين) |
+
+- يطلب الأمر كلمة المرور الجديدة مرتين ولا يعرض ما تكتبه. استخدم 8 أحرف على
+  الأقل.
+- إذا كان traffic66 يعمل مع `-data`، فأضف `-data` نفسه إلى الأمر. لخدمة Linux
+  من القسم 2:
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  الأمر `traffic66 passwd -generate` يُنشئ كلمة عشوائية ويطبعها. يقبل
-  traffic66 العامل كلمة المرور الجديدة عند تسجيل الدخول التالي؛ لا حاجة
-  إلى إعادة التشغيل.
-- مستخدمون إضافيون: `traffic66 passwd -data <data directory> -user alice`.
-  يرى جميع المستخدمين الشيء نفسه.
-- في السكربتات والحاويات، يعيّن `TRAFFIC66_PASSWORD=…` في متغيرات البيئة أو
-  `-password …` في سطر الأوامر كلمةَ المرور لهذا التشغيل بدلًا من المخزّنة.
-  فضّل متغيرات البيئة: فأسطر الأوامر مرئية لبقية مستخدمي الجهاز.
+  على Windows (PowerShell بصلاحيات المسؤول):
+
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- تسري التغييرات فورًا دون إعادة تشغيل: تعمل كلمة المرور الجديدة عند تسجيل
+  الدخول التالي، ويُسجَّل خروج المستخدم المحذوف من المتصفحات المفتوحة.
+- لا يمكن حذف آخر مستخدم متبقٍّ؛ أضف مستخدمًا آخر أولًا.
+- يرى جميع المستخدمين الأشياء نفسها ويمكنهم تغييرها؛ لا توجد أدوار.
+
+<a id="passwords-for-scripts-and-containers"></a>
+
+### كلمات المرور في السكربتات والحاويات
+
+يجعل `TRAFFIC66_PASSWORD=…` في متغيرات البيئة، أو `-password …` في سطر الأوامر،
+traffic66 يقبل مستخدمًا واحدًا فقط في هذا التشغيل: المستخدم المحدد بـ `-user`
+(الافتراضي `admin`) بكلمة المرور تلك. ويُتجاهَل الملف `password` حينها ولا
+يُغيَّر. فضّل متغير البيئة: فأسطر الأوامر مرئية لبقية مستخدمي الجهاز.
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
 
 بعد خمس محاولات خاطئة خلال دقيقة يُحظر العنوان لمدة دقيقة.
 
@@ -616,7 +688,7 @@ traffic66 -capture eth1               # repeat -capture for more interfaces
 | `traffic66` | جمع التدفقات وتقديم واجهة الويب |
 | `traffic66 demo` | الشيء نفسه مع شبكة محاكاة |
 | `traffic66 tui` | واجهة طرفية لنسخة traffic66 عاملة |
-| `traffic66 passwd` | تعيين كلمة مرور لتسجيل الدخول |
+| `traffic66 passwd` | إضافة المستخدمين أو تغييرهم أو عرض قائمتهم أو حذفهم (انظر [المستخدمون وكلمات المرور](#3-users-and-passwords)) |
 | `traffic66 simulate -to HOST` | إرسال تدفقات محاكاة إلى مستقبِل |
 | `traffic66 interfaces` | سرد الواجهات المتاحة للالتقاط المحلي |
 | `traffic66 version` | طباعة الإصدار |
@@ -628,8 +700,8 @@ traffic66 -capture eth1               # repeat -capture for more interfaces
 | `-addr` | `:8066` | عنوان واجهة الويب؛ `127.0.0.1:8066` لهذا الجهاز فقط |
 | `-data` | `traffic66-data` بجوار البرنامج | دليل البيانات |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | مستقبِلات UDP بصيغة `name=address` مفصولة بفواصل؛ القيمة الفارغة تعطّلها |
-| `-user` | `admin` | المستخدم لأول كلمة مرور مولَّدة ولـ `-password` |
-| `-password` | كلمة المرور المخزّنة | كلمة مرور لهذا التشغيل فقط (أو `TRAFFIC66_PASSWORD`) |
+| `-user` | `admin` | اسم المستخدم الذي يُنشأ عند التشغيل الأول، والمستخدم الذي ينطبق عليه `-password` |
+| `-password` | غير معيّن | قبول `-user` وحده بكلمة المرور هذه في هذا التشغيل، مع تجاهل الملف `password` (أو `TRAFFIC66_PASSWORD`) |
 | `-retention-days` | `30` | عدد أيام الاحتفاظ بتفاصيل التدفقات؛ تُحفظ الملخّصات 400 يوم |
 | `-memory` | `0.10` | حصة الذاكرة الفعلية التي يمكن لقاعدة البيانات استخدامها |
 | `-l2-overhead` | `18` | بايتات تُضاف لكل حزمة إلى عدد بايتات NetFlow/IPFIX |
@@ -724,7 +796,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | الأرقام أقل من عدّادات الواجهات | انظر **مطابقة الواجهات**: فقد في الطريق، أو واجهات لا تؤخذ منها عينات، أو تدفقات ما زالت في ذاكرة الجهاز المؤقتة (مهلة التدفق النشط أطول من 60 ثانية) |
 | الأرقام أعلى من عدّادات الواجهات | تؤخذ عينات الحركة نفسها على واجهتين أو جهازين |
 | لا توجد دول أو شبكات | لا يوجد جدول IP-to-ASN: انظر [الدول](#8-countries-networks-and-threat-lists) |
-| نسيت كلمة المرور | `traffic66 passwd -data <data directory>` على جهاز traffic66 |
+| نسيت كلمة المرور | `traffic66 passwd` على جهاز traffic66 (أضف `-data` إذا كان traffic66 يعمل به) |
 | `Conflicting lock is held` | نسخة أخرى من traffic66 تستخدم دليل البيانات هذا |
 | `receive buffer is only … KB` | يحدّ Linux من مخازن UDP المؤقتة: اضبط `net.core.rmem_max=16777216` (انظر [Linux](#linux)) |
 | `cannot create the data directory` | مجلد البرنامج غير قابل للكتابة لهذا المستخدم: مرّر `-data` |

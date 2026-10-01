@@ -26,7 +26,7 @@ embedded database میں رکھتا ہے، اور دکھاتا ہے کہ bandwid
 
 1. [ڈیمو چلا کر دیکھیں](#1-try-the-demo)
 2. [انسٹال کریں](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
-3. [سائن اِن اور پاس ورڈ](#3-sign-in-and-passwords)
+3. [یوزرز اور پاس ورڈ](#3-users-and-passwords)
 4. [اپنی ڈیوائسز سے flows بھیجیں](#4-send-flows-from-your-devices)
 5. [جانچیں کہ flows پہنچ رہے ہیں](#5-check-that-flows-arrive)
 6. [اعداد کو interface counters سے ملائیں](#6-make-the-numbers-match-the-interface-counters)
@@ -261,33 +261,106 @@ sudo launchctl bootout system/traffic66
 اگر macOS firewall آن ہے تو System Settings → Network → Firewall → Options میں
 traffic66 کے لیے incoming connections کی اجازت دیں۔
 
-<a id="3-sign-in-and-passwords"></a>
+<a id="3-users-and-passwords"></a>
 
-## 3. سائن اِن اور پاس ورڈ
+## 3. یوزرز اور پاس ورڈ
 
-`http://<traffic66 machine>:8066` کھولیں اور سائن اِن کریں۔ یوزر `admin` ہے،
-جب تک آپ نے کوئی اور نہ چنا ہو۔
+**مختصراً:** یوزرز اور پاس ورڈ data directory کی ایک ہی فائل، `password`، میں
+رہتے ہیں۔ اسے کبھی ہاتھ سے edit نہ کریں: `traffic66 passwd` command یوزرز کو
+شامل کرتا، بدلتا، ان کی فہرست دکھاتا اور انہیں حذف کرتا ہے۔
+`http://<traffic66 machine>:8066` کھولیں اور ان میں سے کسی ایک سے سائن اِن کریں۔
 
-- اگر پہلی بار چلانے سے پہلے آپ نے پاس ورڈ سیٹ نہیں کیا تو traffic66 خود ایک
-  بناتا ہے اور اسے ایک بار اپنے log میں لکھتا ہے:
-  `first start: sign in as user "admin" with password "…"`۔
-  Linux پر اسے `journalctl -u traffic66 | grep "first start"` سے ڈھونڈیں۔
-- پاس ورڈ hash کر کے data directory کی فائل `password` میں رکھا جاتا ہے۔
-  restart کے بعد بھی وہی رہتا ہے۔
-- اسے بدلنے کے لیے، یا بھول جانے پر نیا سیٹ کرنے کے لیے، traffic66 مشین پر:
+<a id="the-first-sign-in"></a>
+
+### پہلا سائن اِن
+
+پہلی بار شروع ہونے پر traffic66 ایک random پاس ورڈ کے ساتھ یوزر `admin` بناتا ہے
+اور اسے ایک بار دکھاتا ہے:
+
+```
+first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
+```
+
+- Windows پر double-click سے شروع کیا: کالی window میں۔
+- terminal میں شروع کیا: اسی terminal میں۔
+- Linux service: `journalctl -u traffic66 | grep "first start"`
+- macOS service: `grep "first start" /Library/Logs/traffic66.log`
+
+نظر سے رہ گیا؟ `traffic66 passwd` (نیچے دیکھیں) سے نیا سیٹ کریں۔ اگر آپ نے پہلی
+بار شروع کرنے سے پہلے `traffic66 passwd` سے پاس ورڈ سیٹ کر دیا ہے، جیسا کہ اوپر
+کے install steps کرتے ہیں، تو کچھ بھی generate نہیں ہوتا۔
+
+<a id="where-the-users-are-stored"></a>
+
+### یوزرز کہاں رکھے جاتے ہیں
+
+data directory کی فائل `password` میں:
+
+| traffic66 کیسے چلتا ہے | فائل |
+|---|---|
+| unpack کر کے اس کے folder سے شروع کیا گیا (default) | پروگرام کے ساتھ `traffic66-data/password` |
+| Linux service (حصہ 2) | `/var/lib/traffic66/password` |
+| Windows startup task (حصہ 2) | `C:\traffic66\traffic66-data\password` |
+| macOS service (حصہ 2) | `/Library/Application Support/traffic66/password` |
+| ڈیمو | پروگرام کے ساتھ `traffic66-demo/password` |
+
+ہر یوزر کی ایک line۔ پاس ورڈ salted hashes کی صورت میں رکھے جاتے ہیں، اس لیے کوئی
+انہیں فائل سے واپس نہیں پڑھ سکتا، آپ بھی نہیں؛ پاس ورڈ بھول جائیں تو نیا سیٹ کریں۔
+فائل صرف اس کا owner پڑھ سکتا ہے۔
+
+```
+# traffic66 login, one user per line; change with: traffic66 passwd
+admin:pbkdf2-sha256$210000$…
+alice:pbkdf2-sha256$210000$…
+```
+
+<a id="managing-users"></a>
+
+### یوزرز کا انتظام
+
+یہ commands traffic66 مشین پر چلائیں:
+
+| کام | Command |
+|---|---|
+| `admin` کا پاس ورڈ بدلنا | `traffic66 passwd` |
+| یوزر `alice` شامل کرنا، یا اس کا پاس ورڈ بدلنا | `traffic66 passwd -user alice` |
+| یوزر `alice` کو حذف کرنا | `traffic66 passwd -user alice -delete` |
+| یوزرز کی فہرست دیکھنا | `traffic66 passwd -list` |
+| random پاس ورڈ سیٹ کر کے دکھانا | `traffic66 passwd -generate` (دوسرے یوزرز کے لیے `-user` کے ساتھ) |
+
+- command نیا پاس ورڈ دو بار پوچھتا ہے اور جو آپ ٹائپ کرتے ہیں اسے نہیں دکھاتا۔
+  کم از کم 8 حروف استعمال کریں۔
+- جب traffic66 `-data` کے ساتھ چلتا ہے تو command میں بھی وہی `-data` شامل کریں۔
+  حصہ 2 والی Linux service کے لیے:
 
   ```
-  traffic66 passwd -data <data directory>
+  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
   ```
 
-  `traffic66 passwd -generate` ایک random پاس ورڈ بنا کر دکھاتا ہے۔ چلتا ہوا
-  traffic66 اگلے سائن اِن پر نیا پاس ورڈ قبول کر لیتا ہے؛ restart کی ضرورت نہیں۔
-- مزید یوزرز: `traffic66 passwd -data <data directory> -user alice`۔ سب
-  یوزرز ایک جیسا ہی دیکھتے ہیں۔
-- scripts اور containers کے لیے، environment میں `TRAFFIC66_PASSWORD=…` یا
-  command line پر `-password …` اس run کے لیے محفوظ شدہ پاس ورڈ کی جگہ پاس ورڈ
-  سیٹ کرتا ہے۔ environment کو ترجیح دیں: command lines مشین کے دوسرے یوزرز کو
-  نظر آتی ہیں۔
+  Windows پر (PowerShell، بطور Administrator):
+
+  ```
+  C:\traffic66\traffic66.exe passwd -user alice
+  ```
+
+- تبدیلیاں فوراً لاگو ہوتی ہیں، restart کی ضرورت نہیں: نیا پاس ورڈ اگلے سائن اِن
+  پر کام کرتا ہے، اور حذف شدہ یوزر کھلے browsers سے sign out ہو جاتا ہے۔
+- آخری بچا ہوا یوزر حذف نہیں کیا جا سکتا؛ پہلے کوئی دوسرا یوزر شامل کریں۔
+- سب یوزرز ایک جیسی چیزیں دیکھتے اور بدل سکتے ہیں؛ کوئی roles نہیں ہیں۔
+
+<a id="passwords-for-scripts-and-containers"></a>
+
+### scripts اور containers کے لیے پاس ورڈ
+
+environment میں `TRAFFIC66_PASSWORD=…`، یا command line پر `-password …`، سے
+traffic66 اس run کے لیے صرف ایک یوزر قبول کرتا ہے: وہ جس کا نام `-user` میں ہو
+(default `admin`)، اسی پاس ورڈ کے ساتھ۔ اس صورت میں `password` فائل نظرانداز کی
+جاتی ہے اور بدلی نہیں جاتی۔ environment variable کو ترجیح دیں: command lines
+مشین کے دوسرے یوزرز کو نظر آتی ہیں۔
+
+```
+TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
+```
 
 ایک منٹ کے اندر پانچ غلط پاس ورڈز کے بعد اس address کو ایک منٹ کے لیے block کر
 دیا جاتا ہے۔
@@ -621,7 +694,7 @@ Capture ہونے والے interfaces **ذرائع** پر نظر آتے ہیں۔ 
 | `traffic66` | flows جمع کرتا ہے اور web UI چلاتا ہے |
 | `traffic66 demo` | یہی، ایک simulated نیٹ ورک کے ساتھ |
 | `traffic66 tui` | چلتے ہوئے traffic66 کے لیے terminal UI |
-| `traffic66 passwd` | login پاس ورڈ سیٹ کرتا ہے |
+| `traffic66 passwd` | یوزرز شامل کرتا، بدلتا، ان کی فہرست دکھاتا یا انہیں حذف کرتا ہے (دیکھیں [یوزرز اور پاس ورڈ](#3-users-and-passwords)) |
 | `traffic66 simulate -to HOST` | کسی collector کو simulated exports بھیجتا ہے |
 | `traffic66 interfaces` | local capture کے لیے interfaces کی فہرست |
 | `traffic66 version` | version دکھاتا ہے |
@@ -633,8 +706,8 @@ Capture ہونے والے interfaces **ذرائع** پر نظر آتے ہیں۔ 
 | `-addr` | `:8066` | web UI کا address؛ صرف اسی مشین کے لیے `127.0.0.1:8066` |
 | `-data` | پروگرام کے ساتھ `traffic66-data` | data directory |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP collectors، `name=address` کی شکل میں، comma سے الگ؛ خالی ہو تو بند |
-| `-user` | `admin` | پہلے generated پاس ورڈ اور `-password` کے لیے یوزر |
-| `-password` | محفوظ شدہ پاس ورڈ | صرف اس run کے لیے پاس ورڈ (`TRAFFIC66_PASSWORD` بھی) |
+| `-user` | `admin` | پہلی بار شروع ہونے پر بننے والے یوزر کا نام، اور اس یوزر کا جس پر `-password` لاگو ہوتا ہے |
+| `-password` | سیٹ نہیں | اس run میں صرف اسی پاس ورڈ کے ساتھ `-user` کو قبول کرتا ہے، `password` فائل کو نظرانداز کر کے (`TRAFFIC66_PASSWORD` بھی) |
 | `-retention-days` | `30` | flow detail کتنے دن رکھی جائے؛ summaries 400 دن رکھی جاتی ہیں |
 | `-memory` | `0.10` | physical memory کا کتنا حصہ database استعمال کر سکتا ہے |
 | `-l2-overhead` | `18` | NetFlow/IPFIX byte counts میں ہر packet پر جوڑے جانے والے bytes |
@@ -729,7 +802,7 @@ summaries سے آتے ہیں اور 0.2 s سے کم لیتے ہیں۔ detail پ�
 | اعداد interface counters سے کم | **انٹرفیس جانچ** دیکھیں: راستے میں loss، interfaces sample نہیں ہو رہے، یا flows ابھی ڈیوائس کی cache میں ہیں (active timeout 60 s سے لمبا) |
 | اعداد interface counters سے زیادہ | ایک ہی ٹریفک دو interfaces یا دو ڈیوائسز پر sample ہو رہی ہے |
 | کوئی ملک یا نیٹ ورک نہیں | IP-to-ASN table نہیں ہے: [ممالک](#8-countries-networks-and-threat-lists) دیکھیں |
-| پاس ورڈ بھول گئے | traffic66 مشین پر `traffic66 passwd -data <data directory>` |
+| پاس ورڈ بھول گئے | traffic66 مشین پر `traffic66 passwd` (اگر traffic66 `-data` کے ساتھ چلتا ہے تو `-data` شامل کریں) |
 | `Conflicting lock is held` | کوئی دوسرا traffic66 پہلے سے یہی data directory استعمال کر رہا ہے |
 | `receive buffer is only … KB` | Linux UDP buffers کو محدود رکھتا ہے: `net.core.rmem_max=16777216` سیٹ کریں ([Linux](#linux) دیکھیں) |
 | `cannot create the data directory` | اس یوزر کے لیے پروگرام فولڈر writable نہیں: `-data` دیں |
