@@ -428,21 +428,27 @@ views.overview = async (el) => {
 
 const DIMS = ['conv', 'client', 'server', 'app', 'port', 'country', 'asn', 'segment', 'exporter', 'encap', 'vlan'];
 // Top-N is one table. It starts with conversations (client, server,
-// service, country); clicking one of those column headings groups the
-// table by it, clicking a number heading sorts. The select switches to the
-// less common groupings.
-const GROUP_OF = {'col.client': 'client', 'col.server': 'server', 'col.service': 'port', 'col.port': 'port', 'col.country': 'country', 'col.app': 'app', 'col.asn': 'asn', 'col.segment': 'segment', 'col.device': 'exporter'};
+// service, country); the select switches the grouping. Every column heading
+// sorts: number columns rank on the server, so "by packets" is the real top
+// by packets and not the top by traffic re-ordered; text columns sort the
+// rows shown.
+const NUMK = ['wire', 'pkts', 'avg', 'flows', 'peers'];
+const TEXT_OF = {client: ['key'], server: ['key', 'extra'], conv: ['key', 'key2', 'key3', 'extra'], app: ['key'], port: ['key', 'extra'],
+  country: ['key', ''], asn: ['key', 'extra'], segment: ['key'], exporter: ['key'], encap: ['key'], vlan: ['key']};
 views.topn = el => {
   if (!DIMS.includes(state.dim)) state.dim = 'conv';
   return topTable(el, state.dim);
 };
 async function topTable(el, dim) {
-  const d = await api('topn', {dim, limit: 66});
+  const sk = state.sort.k, asc = state.sort.asc, num = NUMK.includes(sk);
+  const d = await api('topn', num ? {dim, limit: 66, by: sk, asc: asc ? 1 : 0} : {dim, limit: 66});
   let rows = d.rows || [];
   const max = Math.max(1, ...rows.map(r => r.wire)), total = rows.reduce((s, r) => s + r.wire, 0);
-  const sk = state.sort.k, dirm = state.sort.asc ? 1 : -1;
-  if (sk !== 'wire') rows.sort((a, b) => dirm * ((a[sk] || 0) - (b[sk] || 0)) || b.wire - a.wire);
-  else if (state.sort.asc) rows.reverse();
+  if (!num) {
+    const f = TEXT_OF[dim][+sk.slice(1)] || 'key';
+    rows.sort((a, b) => (asc ? 1 : -1) * String(a[f] || '').localeCompare(String(b[f] || ''), undefined, {numeric: true}));
+  }
+  const avg = r => r.pkts ? r.wire / r.pkts : 0;
   const cell = r => {
     switch (dim) {
       case 'client': return [ipCell(r.key)];
@@ -461,28 +467,27 @@ async function topTable(el, dim) {
   };
   const heads = {client: ['col.client'], server: ['col.server', 'col.country'], conv: ['col.client', 'col.server', 'col.service', 'col.country'],
     app: ['col.app'], port: ['col.port', 'col.app'], country: ['col.country', ''], asn: ['col.asn', 'col.org'], segment: ['col.segment'], exporter: ['col.device'], encap: ['col.encap'], vlan: ['col.vlan']}[dim];
-  const showPeers = ['client', 'server'].includes(dim) && rows.some(r => r.peers);
-  const groupTh = h => {
-    const g = GROUP_OF[h];
-    if (!h) return '<th></th>';
-    if (g && g !== dim) return `<th class="gk" data-g="${g}" title="${esc(t('topn.by_col'))}">${t(h)}</th>`;
-    return `<th>${t(h)}</th>`;
-  };
+  // peer counts exist only for clients and servers over the detail data
+  const showPeers = ['client', 'server'].includes(dim) && (rows.some(r => r.peers) || sk === 'peers');
   const sortTh = (k, label, cls = 'num') => {
-    const on = sk === k, ar = on ? (state.sort.asc ? '▲' : '▼') : '';
-    return `<th class="${cls} sk" data-s="${k}" ${on ? `aria-sort="${state.sort.asc ? 'ascending' : 'descending'}"` : ''}>${label}<span class="ar">${ar}</span></th>`;
+    if (!label) return '<th></th>';
+    const on = sk === k, ar = on ? (asc ? '▲' : '▼') : '';
+    return `<th class="${cls} sk" data-s="${k}" ${on ? `aria-sort="${asc ? 'ascending' : 'descending'}"` : ''}>${label}<span class="ar">${ar}</span></th>`;
   };
   const slow = dim === 'conv' && spanMs() > 216e5 ? ` · ${esc(t('conv.slow'))}` : '';
   el.innerHTML = `<div class="panel">
     <div class="ph"><h2>${t('topn.title', {n: 66})}</h2><span class="sub">${esc(t('topn.hint'))}${slow}</span>
       <div class="tools"><label>${t('topn.group')} <select class="dimsel" id="dimSel">${DIMS.map(k => `<option value="${k}" ${k === dim ? 'selected' : ''}>${t('dim.' + k)}</option>`).join('')}</select></label></div></div>
-    <table><tr><th></th>${heads.map(groupTh).join('')}${sortTh('wire', t('col.traffic'))}<th class="num">%</th><th style="width:18%">${t('col.share')}</th>${showPeers ? sortTh('peers', t('col.peers')) : ''}${sortTh('flows', t('col.flows'))}</tr>
-    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="9" class="empty">${t('empty.nodata')}</td></tr>`}
+    <table><tr><th></th>${heads.map((h, i) => sortTh('t' + i, h && t(h), '')).join('')}${sortTh('wire', t('col.traffic'))}<th class="num">%</th><th style="width:16%">${t('col.share')}</th>${sortTh('pkts', t('col.pkts'))}${sortTh('avg', t('col.avg'))}${showPeers ? sortTh('peers', t('col.peers')) : ''}${sortTh('flows', t('col.flows'))}</tr>
+    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(avg(r))}&nbsp;B</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${t('empty.nodata')}</td></tr>`}
     </table></div>`;
   $('#dimSel').onchange = e => { state.dim = e.target.value; state.sort = {k: 'wire', asc: false}; render(); };
-  el.querySelectorAll('th[data-g]').forEach(h => h.onclick = () => { state.dim = h.dataset.g; state.sort = {k: 'wire', asc: false}; render(); });
   el.querySelectorAll('th[data-s]').forEach(h => h.onclick = () => {
-    const k = h.dataset.s; state.sort = {k, asc: state.sort.k === k ? !state.sort.asc : false}; render();
+    const k = h.dataset.s;
+    // a new column starts at its interesting end: largest first, except the
+    // average packet size (small packets: scans, floods) and text (A to Z)
+    state.sort = state.sort.k === k ? {k, asc: !state.sort.asc} : {k, asc: k === 'avg' || !NUMK.includes(k)};
+    render();
   });
 }
 

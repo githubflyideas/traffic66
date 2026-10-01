@@ -673,7 +673,7 @@ Páginas:
 | Página | O que responde |
 |---|---|
 | Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; principais clientes e serviços |
-| Top-N | Uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Clique em um cabeçalho de coluna azul para agrupar por ele, em um cabeçalho numérico para ordenar; **Agrupar por** oferece aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
+| Top-N | Uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
 | Caminhos do tráfego | Qual segmento fala com qual aplicação em qual país |
 | Geografia e redes | Tráfego por país e por rede (AS) |
 | Ameaças | Hosts que se comunicaram com endereços das suas listas de ameaças, e quanto enviaram |

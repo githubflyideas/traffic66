@@ -691,7 +691,7 @@ Pages :
 | Page | À quoi elle répond |
 |---|---|
 | Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; principaux clients et services |
-| Top-N | Un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Cliquez sur un en-tête de colonne bleu pour regrouper par cette colonne, sur un en-tête numérique pour trier ; **Regrouper par** propose applications, réseaux, segments, équipements, encapsulation et VLAN |
+| Top-N | Un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
 | Chemins du trafic | Quel segment parle à quelle application dans quel pays |
 | Géographie et réseaux | Trafic par pays et par réseau (AS) |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |

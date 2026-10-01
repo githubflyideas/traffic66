@@ -670,7 +670,7 @@ Halaman:
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
 | Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; klien dan layanan teratas |
-| Top-N | Satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Klik judul kolom biru untuk mengelompokkan menurut kolom itu, judul kolom angka untuk mengurutkan; **Kelompokkan menurut** menawarkan aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
+| Top-N | Satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
 | Jalur trafik | Segmen mana berbicara dengan aplikasi apa di negara mana |
 | Geografi & jaringan | Trafik per negara dan per jaringan (AS) |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
