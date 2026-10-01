@@ -636,6 +636,7 @@ application, देश, डिवाइस — पर क्लिक किय�
 |---|---|
 | सारांश | अभी कितना ट्रैफ़िक है और पिछले हफ़्ते की तुलना में कितना, application के हिसाब से; क्या बढ़ा; top clients और services |
 | Top-N | clients, servers, conversations, applications, ports, देशों, नेटवर्कों, segments, डिवाइसों, encapsulation या VLAN के top 66 |
+| बातचीत | कौन किससे बात करता है: top 66 client–server जोड़े, उनकी service के साथ |
 | ट्रैफ़िक के रास्ते | कौन-सा segment किस देश में किस application से बात करता है |
 | भूगोल और नेटवर्क | देश के हिसाब से और नेटवर्क (AS) के हिसाब से ट्रैफ़िक |
 | ख़तरे की जानकारी | वे hosts जिन्होंने आपकी threat lists के addresses से बात की, और उन्होंने कितना भेजा |
@@ -651,9 +652,12 @@ time range और filters) का link कॉपी करता है ता�
 6 घंटे से लंबी ranges पूरे घंटे से शुरू होती हैं, ताकि पेज का हर आँकड़ा ठीक
 एक जैसा समय गिने: "24 घंटे" में पिछले 24 पूरे घंटे और मौजूदा घंटा शामिल हैं।
 इन ranges पर Top-N घंटेवार summaries से आता है; वहाँ filters उपलब्ध नहीं
-हैं, और पेज यह बता देता है। filter करने के लिए छोटी range चुनें।
+हैं, और पेज यह बता देता है। filter करने के लिए छोटी range चुनें। **बातचीत** हमेशा flow detail पढ़ता है, इसलिए
+ऊँची flow दरों पर लंबी ranges में इसमें कुछ समय लग सकता है; एक घंटा सबसे तेज़ है।
 
-![Top-N: पिछले घंटे की top 66 conversations](images/topn.png)
+![Top-N: पिछले घंटे के top 66 clients](images/topn.png)
+
+![बातचीत: कौन किससे बात करता है, service के साथ](images/conv.png)
 
 ![ट्रैफ़िक के रास्ते: कौन-सा segment किस देश की ओर किस application का इस्तेमाल करता है](images/paths.png)
 
@@ -677,7 +681,7 @@ directory पढ़ सकता है (डिफ़ॉल्ट न हो त
 `-password` इस्तेमाल करें। `-lang` भाषा चुनता है (`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`)।
 
-Keys: 1–8 पेज, ↑↓ चुनें, Enter चुनी गई value पर actions, f केवल यही दिखाएँ,
+Keys: 1–9 पेज, ↑↓ चुनें, Enter चुनी गई value पर actions, f केवल यही दिखाएँ,
 x हटाएँ, / search, t time range, c filters साफ़ करें, w यही view browser में
 खोलें, q बाहर निकलें।
 
@@ -689,22 +693,87 @@ x हटाएँ, / search, t time range, c filters साफ़ करें, 
 
 ## 11. Local capture
 
-Flow exports के अलावा, traffic66 किसी local network interface, जैसे mirror
-(SPAN) port, के packets से ख़ुद भी flows बना सकता है:
+Flow exports पाने के अलावा, traffic66 जिस मशीन पर चलता है उसके किसी network
+interface के packets से ख़ुद भी flows बना सकता है। उसे क्या दिखता है, यह
+interface पर निर्भर करता है:
+
+| Interface | traffic66 को क्या दिखता है |
+|---|---|
+| switch के mirror (SPAN) port से जुड़ा एक ख़ाली network port | वह सारा ट्रैफ़िक जो switch mirror करता है: पूरा नेटवर्क या uplink |
+| मशीन का अपना Ethernet या Wi-Fi | केवल इसी मशीन का अपना ट्रैफ़िक |
+
+Wi-Fi adapters दूसरे डिवाइसों का ट्रैफ़िक नहीं देख सकते। पूरे Wi-Fi नेटवर्क को
+देखने के लिए router या access point से flows export करवाएँ (अनुभाग 4), या उस
+switch port को mirror करें जिससे access point जुड़ा है।
+
+<a id="windows-1"></a>
+
+### Windows
+
+1. [Npcap](https://npcap.com) को उसके default options के साथ इंस्टॉल करें। अगर
+   आप "Restrict Npcap driver's access to Administrators only" पर tick लगाते
+   हैं, तो traffic66 को Administrator के रूप में चलाएँ।
+2. Interfaces की सूची देखें (PowerShell):
+
+   ```
+   C:\traffic66\traffic66.exe interfaces
+   ```
+
+   ```
+   #   Name      Address          Adapter / device
+   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
+   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
+   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
+   ```
+
+   Name column में Windows की network settings वाला connection का नाम होता है;
+   जो interface इस्तेमाल में है, उसका एक address होता है।
+3. Wi-Fi पर capture करें, नाम से या नंबर से:
+
+   ```
+   C:\traffic66\traffic66.exe -capture Wi-Fi
+   C:\traffic66\traffic66.exe -capture 2
+   ```
+
+   जिन नामों में spaces हों, उन्हें quotes में रखें: `-capture "Ethernet 2"`।
+   कई interfaces पर capture करने के लिए `-capture` दोहराएँ। अगर आपको केवल
+   capture चाहिए और कोई flow collector नहीं, तो `-listen=` जोड़ें। अनुभाग 2 के
+   startup task के लिए option को `-Argument` में जोड़ें:
+   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`।
+
+<a id="linux-1"></a>
+
+### Linux
 
 ```
-traffic66 interfaces                  # list interfaces
-traffic66 -capture eth1               # repeat -capture for more interfaces
+traffic66 interfaces
+sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
+traffic66 -capture eth1
 ```
 
-- Linux: root चाहिए, या capabilities `CAP_NET_RAW` और `CAP_NET_ADMIN`
-  (`sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66`, या
-  ऊपर दी गई systemd unit में `AmbientCapabilities` वाली लाइन)।
-- macOS: root चाहिए (BPF devices); कुछ इंस्टॉल नहीं करना।
-- Windows: पहले [Npcap](https://npcap.com) इंस्टॉल करें।
+Capture के लिए root चाहिए, या capabilities `CAP_NET_RAW` और `CAP_NET_ADMIN`:
+ऊपर वाली `setcap` लाइन, या अनुभाग 2 की systemd unit में `AmbientCapabilities`
+वाली लाइन। Wi-Fi interfaces के नाम आमतौर पर `wlan0` या `wlp…` होते हैं।
 
-Capture किए जा रहे interfaces **स्रोत** पर दिखते हैं। दो बार दिखे packets
-(जैसे दो mirror ports पर) दो बार गिने जाते हैं।
+<a id="macos-1"></a>
+
+### macOS
+
+```
+traffic66 interfaces
+sudo traffic66 -capture en0
+```
+
+Capture के लिए root चाहिए; कुछ इंस्टॉल नहीं करना। MacBooks पर `en0` Wi-Fi है।
+
+<a id="checking-that-it-works"></a>
+
+### जाँचें कि यह काम कर रहा है
+
+**स्रोत** हर capture किए जा रहे interface को capture method और देखे गए packets
+की संख्या के साथ दिखाता है। Flows डिवाइस `127.0.0.1` (यह मशीन) से आते हुए
+दिखते हैं, हर पेज पर, किसी भी दूसरे डिवाइस के flows की तरह। दो बार दिखे
+packets (जैसे दो mirror ports पर) दो बार गिने जाते हैं।
 
 <a id="12-options"></a>
 

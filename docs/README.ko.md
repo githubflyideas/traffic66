@@ -616,6 +616,7 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 |---|---|
 | 개요 | 현재 트래픽 양과 지난주 대비 변화(애플리케이션별), 늘어난 항목, 상위 클라이언트와 서비스 |
 | Top-N | 클라이언트, 서버, 대화, 애플리케이션, 포트, 국가, 네트워크, 세그먼트, 장비, 캡슐화 또는 VLAN의 상위 66개 |
+| 대화 | 누가 누구와 통신하는지: 상위 66개 클라이언트–서버 쌍과 그 서비스 |
 | 트래픽 경로 | 어느 세그먼트가 어느 국가의 어느 애플리케이션과 통신하는지 |
 | 지역 및 네트워크 | 국가별, 네트워크(AS)별 트래픽 |
 | 위협 정보 | 위협 목록에 있는 주소와 통신한 호스트와 그 전송량 |
@@ -631,9 +632,12 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 6시간보다 긴 범위는 정시에 시작하므로 페이지의 모든 수치가 정확히 같은 시간을 집계합니다.
 "24시간"은 지난 24개의 온전한 시간에 현재 시간을 더한 범위입니다. 이런 범위의 Top-N은
 시간 단위 요약에서 가져오므로 필터를 쓸 수 없으며, 페이지에도 그렇게 표시됩니다. 필터를
-쓰려면 더 짧은 범위를 선택하십시오.
+쓰려면 더 짧은 범위를 선택하십시오. **대화**는 항상 플로 상세를 읽으므로 플로가 많은 환경에서
+긴 범위를 고르면 시간이 걸릴 수 있습니다. 1시간이 가장 빠릅니다.
 
-![Top-N: 최근 1시간의 상위 66개 대화](images/topn.png)
+![Top-N: 최근 1시간의 상위 66개 클라이언트](images/topn.png)
+
+![대화: 누가 누구와 어떤 서비스로 통신하는지](images/conv.png)
 
 ![트래픽 경로: 어느 세그먼트가 어느 국가로 어느 애플리케이션을 쓰는지](images/paths.png)
 
@@ -656,7 +660,7 @@ traffic66 서버에서는 데이터 디렉터리를 읽을 수 있으면 `traffi
 대신 `-user`와 `-password`를 사용합니다. `-lang`으로 언어를 고릅니다(`en`, `zh`, `hi`,
 `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`).
 
-키: 1–8 페이지, ↑↓ 선택, Enter 선택한 값에 대한 동작, f 이것만 보기, x 제외, / 검색,
+키: 1–9 페이지, ↑↓ 선택, Enter 선택한 값에 대한 동작, f 이것만 보기, x 제외, / 검색,
 t 시간 범위, c 필터 해제, w 같은 화면을 브라우저에서 열기, q 종료.
 
 ![터미널 UI: 개요](images/tui-overview.png)
@@ -667,22 +671,84 @@ t 시간 범위, c 필터 해제, w 같은 화면을 브라우저에서 열기, 
 
 ## 11. 로컬 캡처
 
-traffic66은 플로 익스포트 외에도, 미러(SPAN) 포트 같은 로컬 네트워크 인터페이스의 패킷으로
-직접 플로를 만들 수 있습니다:
+traffic66은 플로 익스포트를 받는 것 외에도, 자신이 실행 중인 머신의 네트워크 인터페이스에서
+패킷을 받아 직접 플로를 만들 수 있습니다. 무엇이 보이는지는 인터페이스에 따라 다릅니다:
+
+| 인터페이스 | traffic66에 보이는 것 |
+|---|---|
+| 스위치의 미러(SPAN) 포트에 연결한 남는 네트워크 포트 | 스위치가 미러링하는 모든 트래픽: 네트워크 전체 또는 업링크 |
+| 머신 자체의 이더넷 또는 Wi-Fi | 이 머신 자신의 트래픽만 |
+
+Wi-Fi 어댑터로는 다른 장비의 트래픽을 볼 수 없습니다. Wi-Fi 네트워크 전체를 보려면 라우터나
+액세스 포인트가 플로를 익스포트하게 하거나(섹션 4), 액세스 포인트가 연결된 스위치 포트를
+미러링하십시오.
+
+<a id="windows-1"></a>
+
+### Windows
+
+1. [Npcap](https://npcap.com)을 기본 옵션으로 설치합니다.
+   "Restrict Npcap driver's access to Administrators only"를 선택했다면 traffic66을
+   관리자 권한으로 실행하십시오.
+2. 인터페이스 목록을 봅니다(PowerShell):
+
+   ```
+   C:\traffic66\traffic66.exe interfaces
+   ```
+
+   ```
+   #   Name      Address          Adapter / device
+   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
+   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
+   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
+   ```
+
+   Name 열은 Windows 네트워크 설정의 연결 이름이며, 사용 중인 인터페이스에는 주소가
+   있습니다.
+3. Wi-Fi에서 이름이나 번호로 캡처합니다:
+
+   ```
+   C:\traffic66\traffic66.exe -capture Wi-Fi
+   C:\traffic66\traffic66.exe -capture 2
+   ```
+
+   공백이 들어간 이름은 따옴표로 감쌉니다: `-capture "Ethernet 2"`. 여러 인터페이스에서
+   캡처하려면 `-capture`를 반복합니다. 플로 수집기 없이 캡처만 하려면 `-listen=`을
+   추가합니다. 섹션 2의 시작 작업이라면 `-Argument`에 옵션을 추가합니다:
+   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`.
+
+<a id="linux-1"></a>
+
+### Linux
 
 ```
-traffic66 interfaces                  # list interfaces
-traffic66 -capture eth1               # repeat -capture for more interfaces
+traffic66 interfaces
+sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
+traffic66 -capture eth1
 ```
 
-- Linux: root 권한 또는 `CAP_NET_RAW`, `CAP_NET_ADMIN` 케이퍼빌리티가 필요합니다
-  (`sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66`, 또는 위
-  systemd 유닛의 `AmbientCapabilities` 줄).
-- macOS: root 권한이 필요합니다(BPF 장치). 따로 설치할 것은 없습니다.
-- Windows: 먼저 [Npcap](https://npcap.com)을 설치하십시오.
+캡처에는 root 권한 또는 `CAP_NET_RAW`, `CAP_NET_ADMIN` 케이퍼빌리티가 필요합니다. 위의
+`setcap` 줄이나 섹션 2 systemd 유닛의 `AmbientCapabilities` 줄을 쓰면 됩니다. Wi-Fi
+인터페이스 이름은 보통 `wlan0` 또는 `wlp…`입니다.
 
-캡처 중인 인터페이스는 **수집 상태**에 표시됩니다. 같은 패킷이 두 번 보이면(예: 미러 포트 두
-곳에서) 두 번 집계됩니다.
+<a id="macos-1"></a>
+
+### macOS
+
+```
+traffic66 interfaces
+sudo traffic66 -capture en0
+```
+
+캡처에는 root 권한이 필요하며, 따로 설치할 것은 없습니다. MacBook에서는 `en0`이 Wi-Fi입니다.
+
+<a id="checking-that-it-works"></a>
+
+### 동작 확인
+
+**수집 상태**에 캡처 중인 인터페이스마다 캡처 방식과 지금까지 본 패킷 수가 표시됩니다. 플로는
+모든 페이지에서 다른 장비의 플로와 마찬가지로 장비 `127.0.0.1`(이 머신)에서 온 것으로
+나타납니다. 같은 패킷이 두 번 보이면(예: 미러 포트 두 곳에서) 두 번 집계됩니다.
 
 <a id="12-options"></a>
 

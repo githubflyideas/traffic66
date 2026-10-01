@@ -539,6 +539,7 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 |---|---|
 | 概要 | 現在のトラフィック量と先週との比較（アプリケーション別）、増えたもの、上位のクライアントとサービス |
 | Top-N | クライアント、サーバー、通信ペア、アプリケーション、ポート、国、ネットワーク、セグメント、機器、カプセル化、VLAN の上位 66 件 |
+| 会話 | 誰が誰と通信しているか：クライアントとサーバーの組み合わせ上位 66 件とそのサービス |
 | フローの流れ | どのセグメントがどの国のどのアプリケーションと通信しているか |
 | 地域とネットワーク | 国別・ネットワーク（AS）別のトラフィック |
 | 脅威インテル | 脅威リスト上のアドレスと通信したホストと、その送信量 |
@@ -548,9 +549,11 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 ページの上部には、時間範囲（15 分〜30 日）、検索ボックス（任意）、30 秒ごとの自動更新、そして **リンクをコピー** があります。**リンクをコピー** は、現在の表示（ページ、時間範囲、フィルター）そのものへのリンクをコピーするので、同僚に送るのに便利です。言語はブラウザーの設定に従い、メニューの一番下で変更できます。
 
-6 時間より長い時間範囲は正時から始まるため、ページ上のすべての数値がまったく同じ時間を集計します。「24 時間」は、直近の区切りのよい 24 時間に現在の 1 時間を加えた範囲です。これらの範囲の Top-N は 1 時間ごとの集計から作られるため、フィルターは使えません（ページにもその旨が表示されます）。フィルターを使うには短い範囲を選んでください。
+6 時間より長い時間範囲は正時から始まるため、ページ上のすべての数値がまったく同じ時間を集計します。「24 時間」は、直近の区切りのよい 24 時間に現在の 1 時間を加えた範囲です。これらの範囲の Top-N は 1 時間ごとの集計から作られるため、フィルターは使えません（ページにもその旨が表示されます）。フィルターを使うには短い範囲を選んでください。**会話** は常にフローの明細を読むため、フローの多い環境で長い範囲を選ぶと時間がかかることがあります。1 時間が最速です。
 
-![Top-N：直近 1 時間の通信ペア上位 66 件](images/topn.png)
+![Top-N：直近 1 時間のクライアント上位 66 件](images/topn.png)
+
+![会話：誰が誰とどのサービスで通信しているか](images/conv.png)
 
 ![フローの流れ：どのセグメントがどの国に向けてどのアプリケーションを使っているか](images/paths.png)
 
@@ -570,7 +573,7 @@ traffic66 -tui                                    # collect and show the termina
 
 traffic66 のマシン上では、データディレクトリを読み取れれば `traffic66 tui` は自動でサインインします（デフォルト以外の場所なら `-data` を指定）。サービスとして動かす場合のようにtraffic66 が別のユーザーで動いているときは、代わりに `-user` と `-password` を使います。`-lang` で言語を選びます（`en`、`zh`、`hi`、`es`、`ar`、`fr`、`bn`、`pt`、`ru`、`id`、`ur`、`ja`、`ko`）。
 
-キー操作：1–8 ページ切り替え、↑↓ 選択、Enter 選択した値に対する操作、f これだけ表示、x 除外、/ 検索、t 時間範囲、c フィルター解除、w 同じ表示をブラウザーで開く、q 終了。
+キー操作：1–9 ページ切り替え、↑↓ 選択、Enter 選択した値に対する操作、f これだけ表示、x 除外、/ 検索、t 時間範囲、c フィルター解除、w 同じ表示をブラウザーで開く、q 終了。
 
 ![ターミナル UI：概要](images/tui-overview.png)
 
@@ -580,18 +583,71 @@ traffic66 のマシン上では、データディレクトリを読み取れれ�
 
 ## 11. ローカルキャプチャ
 
-traffic66 はフローのエクスポートを受信するだけでなく、ミラー（SPAN）ポートなどローカルのネットワークインターフェース上のパケットから自分でフローを生成することもできます：
+traffic66 はフローのエクスポートを受信するだけでなく、自身が動いているマシンのネットワークインターフェース上のパケットから自分でフローを生成することもできます。何が見えるかはインターフェースによって変わります：
+
+| インターフェース | traffic66 から見えるもの |
+|---|---|
+| スイッチのミラー（SPAN）ポートにつないだ空きのネットワークポート | スイッチがミラーするすべてのトラフィック：ネットワーク全体やアップリンク |
+| そのマシン自身の Ethernet または Wi-Fi | そのマシン自身のトラフィックのみ |
+
+Wi-Fi アダプターでは他の機器のトラフィックは見えません。Wi-Fi ネットワーク全体を見るには、ルーターやアクセスポイントからフローをエクスポートする（セクション 4）か、アクセスポイントがつながっているスイッチポートをミラーしてください。
+
+<a id="windows-1"></a>
+
+### Windows
+
+1. [Npcap](https://npcap.com) をデフォルトのオプションでインストールします。"Restrict Npcap driver's access to Administrators only" にチェックを入れた場合は、traffic66 を管理者として実行してください。
+2. インターフェースを一覧表示します（PowerShell）：
+
+   ```
+   C:\traffic66\traffic66.exe interfaces
+   ```
+
+   ```
+   #   Name      Address          Adapter / device
+   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
+   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
+   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
+   ```
+
+   Name 列は Windows のネットワーク設定にある接続名です。使用中のインターフェースにはアドレスが付いています。
+3. Wi-Fi で、名前または番号を指定してキャプチャします：
+
+   ```
+   C:\traffic66\traffic66.exe -capture Wi-Fi
+   C:\traffic66\traffic66.exe -capture 2
+   ```
+
+   スペースを含む名前は引用符で囲みます：`-capture "Ethernet 2"`。複数のインターフェースでキャプチャするには `-capture` を繰り返します。キャプチャだけを行い、フローコレクターが不要なら `-listen=` を付けます。セクション 2 のスタートアップタスクでは、このオプションを `-Argument` に追加します：`-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`。
+
+<a id="linux-1"></a>
+
+### Linux
 
 ```
-traffic66 interfaces                  # list interfaces
-traffic66 -capture eth1               # repeat -capture for more interfaces
+traffic66 interfaces
+sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
+traffic66 -capture eth1
 ```
 
-- Linux：root 権限、またはケーパビリティ `CAP_NET_RAW` と `CAP_NET_ADMIN` が必要です（`sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66`、または上記systemd ユニットの `AmbientCapabilities` 行）。
-- macOS：root 権限が必要です（BPF デバイス）。追加のインストールは不要です。
-- Windows：先に [Npcap](https://npcap.com) をインストールしてください。
+キャプチャには root 権限、またはケーパビリティ `CAP_NET_RAW` と `CAP_NET_ADMIN` が必要です。上記の `setcap` の行、またはセクション 2 の systemd ユニットにある `AmbientCapabilities` 行を使います。Wi-Fi インターフェースの名前は通常 `wlan0` か `wlp…` です。
 
-キャプチャ中のインターフェースは **受信状況** に表示されます。同じパケットが 2 回見えた場合（例えば 2 つのミラーポートで）は 2 回カウントされます。
+<a id="macos-1"></a>
+
+### macOS
+
+```
+traffic66 interfaces
+sudo traffic66 -capture en0
+```
+
+キャプチャには root 権限が必要です。追加のインストールは不要です。MacBook では `en0` が Wi-Fi です。
+
+<a id="checking-that-it-works"></a>
+
+### 動作の確認
+
+**受信状況** に、キャプチャ中の各インターフェースが、キャプチャ方式と受信したパケット数とともに表示されます。フローはすべてのページで、他の機器のフローと同じように機器 `127.0.0.1`（このマシン）からのものとして表示されます。同じパケットが 2 回見えた場合（例えば 2 つのミラーポートで）は 2 回カウントされます。
 
 <a id="12-options"></a>
 

@@ -223,7 +223,15 @@ func (a *app) load(pg, rng, di int, filters []filter, ifc string) page {
 		}
 		p.sections = []section{mv, tc}
 
-	case "topn":
+	case "topn", "conv":
+		conv := pageKeys[pg] == "conv"
+		if conv { // Conversations page: the Top-N of conversations, no tabs
+			for i, k := range dims {
+				if k == "conv" {
+					di = i
+				}
+			}
+		}
 		var d struct{ Rows []topRow }
 		if err := a.get("topn", q(map[string]string{"dim": dims[di], "limit": "66"}), &d); err != nil {
 			return fail(err)
@@ -236,7 +244,11 @@ func (a *app) load(pg, rng, di int, filters []filter, ifc string) page {
 				tabs = append(tabs, seg{"", " " + a.t("dim."+k) + " "})
 			}
 		}
-		p.top = append(p.top, tabs, txt(""))
+		if conv {
+			p.top = append(p.top, txt(a.t("conv.sub")), txt(""))
+		} else {
+			p.top = append(p.top, tabs, txt(""))
+		}
 		sec := section{title: a.t("topn.title", "n", "66"), cols: []column{{head: "#", width: 3, right: true}, {head: a.t("dim." + dims[di])}, {head: a.t("col.traffic"), width: 10, right: true}, {head: "%", width: 6, right: true}, {head: "", width: 24}, {head: a.t("col.flows"), width: 9, right: true}}}
 		tot, maxw := 0.0, 1.0
 		for _, r := range d.Rows {

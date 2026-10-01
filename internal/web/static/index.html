@@ -13,16 +13,15 @@
 <aside>
   <div class="brand"><span>traffic<b>66</b></span><span class="demo" id="demo" hidden></span></div>
   <nav class="dash" id="nav" aria-label="Dashboards">
-    <div class="grp" data-i="grp.traffic"></div>
     <button data-v="overview" data-i="nav.overview"></button>
     <button data-v="topn" data-i="nav.topn"></button>
+    <button data-v="conv" data-i="nav.conv"></button>
     <button data-v="sankey" data-i="nav.sankey"></button>
     <button data-v="geo" data-i="nav.geo"></button>
-    <div class="grp" data-i="grp.security"></div>
+    <hr>
     <button data-v="threats" data-i="nav.threats"></button>
-    <div class="grp" data-i="grp.detail"></div>
     <button data-v="records" data-i="nav.records"></button>
-    <div class="grp" data-i="grp.quality"></div>
+    <hr>
     <button data-v="ifaces" data-i="nav.ifaces"></button>
     <button data-v="sources"><span data-i="nav.sources"></span><span class="badge" id="srcBadge" hidden></span></button>
   </nav>
@@ -48,6 +47,7 @@
   <main id="main">
     <section class="view" id="v-overview"></section>
     <section class="view" id="v-topn"></section>
+    <section class="view" id="v-conv"></section>
     <section class="view" id="v-sankey"></section>
     <section class="view" id="v-geo"></section>
     <section class="view" id="v-threats"></section>

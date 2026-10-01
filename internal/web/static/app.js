@@ -132,7 +132,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['overview', 'topn', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources'];
+const VIEWS = ['overview', 'topn', 'conv', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 const state = {v: 'overview', r: '24h', f: [], dim: 'client', ifc: null, ifdir: 'in'};
 function readHash() {
@@ -395,12 +395,18 @@ views.overview = async (el) => {
 };
 
 const DIMS = ['client', 'server', 'conv', 'app', 'port', 'country', 'asn', 'segment', 'exporter', 'encap', 'vlan'];
-views.topn = async (el) => {
+// Conversations: who talks to whom, as its own page (the Top-N table for
+// client, server and service, without the dimension tabs).
+views.conv = el => topTable(el, 'conv', true);
+views.topn = el => {
   if (!DIMS.includes(state.dim)) state.dim = 'client';
-  const d = await api('topn', {dim: state.dim, limit: 66});
+  return topTable(el, state.dim, false);
+};
+async function topTable(el, dim, standalone) {
+  const d = await api('topn', {dim, limit: 66});
   const rows = d.rows || [], max = Math.max(1, ...rows.map(r => r.wire)), total = rows.reduce((s, r) => s + r.wire, 0);
   const cell = r => {
-    switch (state.dim) {
+    switch (dim) {
       case 'client': return [ipCell(r.key)];
       case 'server': return [ipCell(r.key), r.extra ? esc(country(r.extra)) : ''];
       case 'conv': return [ipCell(r.key), ipCell(r.key2), V('port', r.key3, r.key3), esc(country(r.extra))];
@@ -416,15 +422,17 @@ views.topn = async (el) => {
     return [esc(r.key)];
   };
   const heads = {client: ['col.client'], server: ['col.server', 'col.country'], conv: ['col.client', 'col.server', 'col.service', 'col.country'],
-    app: ['col.app'], port: ['col.port', 'col.app'], country: ['col.country', ''], asn: ['col.asn', 'col.org'], segment: ['col.segment'], exporter: ['col.device'], encap: ['col.encap'], vlan: ['col.vlan']}[state.dim];
-  const showPeers = ['client', 'server'].includes(state.dim) && rows.some(r => r.peers);
+    app: ['col.app'], port: ['col.port', 'col.app'], country: ['col.country', ''], asn: ['col.asn', 'col.org'], segment: ['col.segment'], exporter: ['col.device'], encap: ['col.encap'], vlan: ['col.vlan']}[dim];
+  const showPeers = ['client', 'server'].includes(dim) && rows.some(r => r.peers);
   el.innerHTML = `<div class="panel">
-    <div class="ph"><h2>${t('topn.title', {n: 66})}</h2><div class="seg" role="group">${DIMS.map(k => `<button data-dim="${k}" aria-pressed="${k === state.dim}">${t('dim.' + k)}</button>`).join('')}</div></div>
+    <div class="ph">${standalone
+      ? `<h2>${t('topn.title', {n: 66})}</h2><span class="sub">${esc(t('conv.sub'))}${spanMs() > 216e5 ? ' · ' + esc(t('conv.slow')) : ''}</span>`
+      : `<h2>${t('topn.title', {n: 66})}</h2><div class="seg" role="group">${DIMS.map(k => `<button data-dim="${k}" aria-pressed="${k === dim}">${t('dim.' + k)}</button>`).join('')}</div>`}</div>
     <table><tr><th></th>${heads.map(h => `<th>${h ? t(h) : ''}</th>`).join('')}<th class="num">${t('col.traffic')}</th><th class="num">%</th><th style="width:18%">${t('col.share')}</th>${showPeers ? `<th class="num">${t('col.peers')}</th>` : ''}<th class="num">${t('col.flows')}</th></tr>
     ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="9" class="empty">${t('empty.nodata')}</td></tr>`}
     </table></div>`;
   el.querySelectorAll('[data-dim]').forEach(b => b.onclick = () => { state.dim = b.dataset.dim; render(); });
-};
+}
 
 views.sankey = async (el) => {
   const d = await api('sankey');

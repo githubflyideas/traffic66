@@ -1,7 +1,6 @@
 {
 "lang.name": "한국어",
-"grp.traffic": "트래픽", "grp.security": "보안", "grp.detail": "상세", "grp.quality": "데이터 품질",
-"nav.overview": "개요", "nav.topn": "Top-N", "nav.sankey": "트래픽 경로", "nav.geo": "지역 및 네트워크",
+"nav.overview": "개요", "nav.conv": "대화", "nav.topn": "Top-N", "nav.sankey": "트래픽 경로", "nav.geo": "지역 및 네트워크",
 "nav.threats": "위협 정보", "nav.records": "플로 레코드", "nav.ifaces": "인터페이스 대조", "nav.sources": "수집 상태",
 "self.receiving": "수신 중", "self.idle": "들어오는 데이터 없음", "self.ingest": "수집", "self.per_sec": "초당 {n}개 플로",
 "self.dropped": "누락", "self.disk": "디스크", "self.days": "{n}일 남음",
@@ -33,6 +32,7 @@
 "col.flows": "플로 수", "col.country": "국가", "col.asn": "AS", "col.org": "네트워크", "col.segment": "세그먼트",
 "col.device": "장비", "col.encap": "캡슐화", "col.vlan": "VLAN", "col.proto": "프로토콜", "col.rate": "초당 플로",
 "col.sampling": "샘플링", "col.lost": "손실", "col.last": "마지막 수신", "col.status": "상태", "col.list": "목록", "col.direction": "방향",
+"conv.sub": "누가 누구와 통신하는지: 트래픽 순 클라이언트, 서버, 서비스", "conv.slow": "긴 기간은 모든 플로 상세를 읽어 시간이 걸릴 수 있습니다. 1시간이 가장 빠릅니다",
 "topn.title": "Top {n}", "topn.rollup_note": "기간이 길어 시간별 요약에서 가져오므로 여기서는 필터를 쓸 수 없습니다.",
 "dim.client": "클라이언트", "dim.server": "서버", "dim.conv": "대화", "dim.app": "애플리케이션", "dim.port": "포트",
 "dim.country": "국가", "dim.asn": "네트워크(AS)", "dim.segment": "세그먼트", "dim.exporter": "장비", "dim.encap": "캡슐화", "dim.vlan": "VLAN",
@@ -74,7 +74,7 @@
 "err.db_memory": "데이터베이스가 메모리 한도에 도달해 응답하지 못했습니다. 기간을 줄이거나 더 큰 -memory로 traffic66을 시작하세요.", "err.db_busy": "데이터베이스가 지금은 응답하지 못했습니다. 원인은 traffic66 로그에 있습니다. 30초 후에 다시 시도합니다.",
 "login.title": "로그인", "login.user": "사용자", "login.password": "비밀번호", "login.go": "로그인", "login.bad": "사용자 또는 비밀번호가 틀립니다",
 "demo.badge": "데모",
-"tui.help": "↑↓ 선택  Enter 동작  f 만 보기  x 제외  / 검색  t 시간  1-8 페이지  c 지우기  w 브라우저  q 종료",
+"tui.help": "↑↓ 선택  Enter 동작  f 만 보기  x 제외  / 검색  t 시간  1-9 페이지  c 지우기  w 브라우저  q 종료",
 "tui.connecting": "{url}에 연결 중…", "tui.error": "{url}의 traffic66에 연결할 수 없습니다: {e}", "tui.search": "검색",
 "tui.updated": "{t} 갱신", "tui.nothing": "표시할 항목 없음", "tui.opened": "브라우저에서 열었습니다", "tui.open_failed": "이 주소를 여세요: {url}",
 "tui.login": "로그인이 필요합니다: -user와 -password를 지정하거나 traffic66이 실행 중인 머신에서 실행하세요", "tui.close": "Esc 닫기"
