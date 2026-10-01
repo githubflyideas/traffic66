@@ -166,6 +166,49 @@ func TestTopNIPv6Groups(t *testing.T) {
 	}
 }
 
+// Ranking by another measure picks a different top, in both the detail
+// query and the rollup.
+func TestTopNBy(t *testing.T) {
+	p, st := setup(t)
+	now := time.Now().UTC().Truncate(time.Hour)
+	exp := netip.MustParseAddr("10.0.0.1")
+	srv := netip.MustParseAddr("198.51.100.9")
+	big, small := netip.MustParseAddr("10.1.1.1"), netip.MustParseAddr("10.1.1.2")
+	var recs []flow.Record
+	for i := 0; i < 8*60; i++ {
+		ts := now.Add(-8*time.Hour + time.Duration(i)*time.Minute)
+		// big: one flow of 100 full-size packets; small: 5 flows of 100 tiny packets
+		recs = append(recs, flow.Record{Start: ts, End: ts, Src: big, Dst: srv, SrcPort: 50000, DstPort: 443, Proto: 6,
+			Bytes: 100 * 1500, Packets: 100, Mult: 1, SamplingKnown: true, Exporter: exp, Source: flow.SrcIPFIX})
+		for f := 0; f < 5; f++ {
+			recs = append(recs, flow.Record{Start: ts, End: ts, Src: small, Dst: srv, SrcPort: uint16(40000 + f), DstPort: 80, Proto: 6,
+				Bytes: 100 * 40, Packets: 100, Mult: 1, SamplingKnown: true, Exporter: exp, Source: flow.SrcIPFIX})
+		}
+	}
+	p.Ingest(recs)
+	p.FlushRows()
+	p.FlushRollups()
+	for _, span := range []time.Duration{time.Hour, 8 * time.Hour} { // detail, rollup
+		q := store.Query{From: now.Add(-span), To: now}
+		for _, tc := range []struct {
+			by   string
+			asc  bool
+			want string
+		}{{"wire", false, "10.1.1.1"}, {"pkts", false, "10.1.1.2"}, {"flows", false, "10.1.1.2"}, {"avg", true, "10.1.1.2"}, {"avg", false, "10.1.1.1"}, {"wire", true, "10.1.1.2"}} {
+			top, err := st.TopNBy(q, "client", 1, tc.by, tc.asc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(top) != 1 || top[0].Key != tc.want {
+				t.Errorf("%v by %s asc=%v: %+v want %s", span, tc.by, tc.asc, top, tc.want)
+			}
+		}
+	}
+	if _, err := st.TopNBy(store.Query{From: now.Add(-time.Hour), To: now}, "client", 1, "nope"); err == nil {
+		t.Error("unknown ranking accepted")
+	}
+}
+
 // Detail older than the retention is removed from disk and queries.
 func TestRetention(t *testing.T) {
 	st, err := store.Open(store.Options{Dir: t.TempDir(), RawDays: 1})

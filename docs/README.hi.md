@@ -657,7 +657,7 @@ application, देश, डिवाइस — पर क्लिक किय�
 | पेज | किस सवाल का जवाब देता है |
 |---|---|
 | सारांश | अभी कितना ट्रैफ़िक है और पिछले हफ़्ते की तुलना में कितना, application के हिसाब से; top clients और services |
-| Top-N | top 66 की एक table: डिफ़ॉल्ट रूप से conversations (client, server, service, देश)। किसी नीले column heading पर क्लिक करके उसके हिसाब से group करें, किसी संख्या वाले heading पर क्लिक करके sort करें; **इसके अनुसार समूह** में applications, नेटवर्क, segments, डिवाइस, encapsulation और VLAN मिलते हैं |
+| Top-N | top 66 की एक table: डिफ़ॉल्ट रूप से conversations (client, server, service, देश)। हर column heading से sort होता है; संख्या वाले columns (ट्रैफ़िक, पैकेट, औसत पैकेट, flows) समय-सीमा के पूरे ट्रैफ़िक से top 66 फिर से चुनते हैं, इसलिए सबसे छोटे औसत पैकेट से scan और flood पकड़े जाते हैं। **इसके अनुसार समूह** से applications, नेटवर्क, segments, डिवाइस, encapsulation और VLAN पर जाएँ |
 | ट्रैफ़िक के रास्ते | कौन-सा segment किस देश में किस application से बात करता है |
 | भूगोल और नेटवर्क | देश के हिसाब से और नेटवर्क (AS) के हिसाब से ट्रैफ़िक |
 | ख़तरे की जानकारी | वे hosts जिन्होंने आपकी threat lists के addresses से बात की, और उन्होंने कितना भेजा |

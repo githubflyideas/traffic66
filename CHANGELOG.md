@@ -22,9 +22,11 @@ Countries and networks database
 
 Simpler pages
 - Top-N is one table: conversations (client, server, service, country) by
-  default; click a column heading to group by it, a number heading to
-  sort. The row of eleven tabs is gone; the less common groupings are in
-  **Group by**.
+  default; **Group by** switches the grouping. Every column sorts, and
+  the number columns (traffic, packets, average packet size, flows) rank
+  all traffic in the range rather than re-ordering the rows shown: the
+  smallest average packet size finds scanners and floods. The row of
+  eleven tabs is gone.
 - "Who grew" is gone from the overview (web and terminal UI).
 - Flow paths: labels, bars and flows can all be clicked; before, only the
   thin bars could.

@@ -654,7 +654,7 @@ application, দেশ, ডিভাইস — ক্লিক করা যা�
 | পেজ | কোন প্রশ্নের উত্তর দেয় |
 |---|---|
 | সারসংক্ষেপ | এখন কত ট্রাফিক আর গত সপ্তাহের তুলনায় কত, application অনুযায়ী; শীর্ষ client ও service |
-| Top-N | শীর্ষ 66-এর একটি table: ডিফল্টভাবে conversation (client, server, service, দেশ)। কোনো নীল column heading-এ ক্লিক করলে সেটি অনুযায়ী group হয়, সংখ্যার heading-এ ক্লিক করলে sort হয়; **গ্রুপের ভিত্তি**-তে application, নেটওয়ার্ক, segment, ডিভাইস, encapsulation ও VLAN পাওয়া যায় |
+| Top-N | শীর্ষ 66-এর একটি table: ডিফল্টভাবে conversation (client, server, service, দেশ)। যেকোনো column heading-এ sort হয়; সংখ্যার column (ট্রাফিক, প্যাকেট, গড় প্যাকেট, flow) সময়সীমার সব ট্রাফিক থেকে শীর্ষ 66 আবার বাছে, তাই সবচেয়ে ছোট গড় প্যাকেট দিয়ে scan ও flood ধরা পড়ে। **গ্রুপের ভিত্তি**-তে application, নেটওয়ার্ক, segment, ডিভাইস, encapsulation ও VLAN-এ যাওয়া যায় |
 | ট্রাফিকের পথ | কোন segment কোন দেশের কোন application-এর সাথে কথা বলে |
 | ভূগোল ও নেটওয়ার্ক | দেশ ও নেটওয়ার্ক (AS) অনুযায়ী ট্রাফিক |
 | হুমকির তথ্য | যেসব host আপনার threat list-এর address-এর সাথে কথা বলেছে, এবং কতটা পাঠিয়েছে |

@@ -623,7 +623,7 @@ Pages:
 | Page | What it answers |
 |---|---|
 | Overview | How much traffic now and compared with last week, by application; top clients and services |
-| Top-N | One table of the top 66: by default conversations (client, server, service, country). Click a blue column heading to group by it, a number heading to sort; **Group by** offers applications, networks, segments, devices, encapsulation and VLAN |
+| Top-N | One table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
 | Flow paths | Which segment talks to which application in which country |
 | Geo & networks | Traffic by country and by network (AS) |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |

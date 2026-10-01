@@ -277,6 +277,34 @@ func keyPartFor(expr string, i int) keyPart {
 
 // TopN returns the largest groups by wire bytes.
 func (s *Store) TopN(q Query, dim string, limit int) ([]TopRow, error) {
+	return s.TopNBy(q, dim, limit, "wire")
+}
+
+// topOrder maps a ranking measure to the aggregate it orders by, for the
+// detail query and the rollup query.
+var topOrder = map[string][2]string{
+	"wire":  {"x_w", "sum(wire)"},
+	"bytes": {"x_b", "sum(bytes)"},
+	"pkts":  {"x_p", "sum(pkts)"},
+	"flows": {"x_f", "sum(flows)"},
+	"peers": {"x_peers", "sum(wire)"}, // rollups hold no peer counts
+	// average packet size; smallest first is the interesting end (scans,
+	// floods), so callers ask for it ascending
+	"avg": {"x_w / greatest(x_p, 1)", "sum(wire) / greatest(sum(pkts), 1)"},
+}
+
+// TopNBy returns the groups ranked by one measure: wire, bytes, pkts,
+// flows, peers or avg (average wire bytes per packet). asc ranks the
+// smallest first.
+func (s *Store) TopNBy(q Query, dim string, limit int, by string, asc ...bool) ([]TopRow, error) {
+	ord, ok := topOrder[by]
+	if !ok {
+		return nil, fmt.Errorf("unknown ranking %q", by)
+	}
+	dir := "DESC"
+	if len(asc) > 0 && asc[0] {
+		dir = "ASC"
+	}
 	d, ok := dims[dim]
 	if !ok {
 		return nil, fmt.Errorf("unknown dimension %q", dim)
@@ -285,7 +313,7 @@ func (s *Store) TopN(q Query, dim string, limit int) ([]TopRow, error) {
 		limit = 66
 	}
 	if q.usesRollup() && d.rollup != "" {
-		return s.topRollup(q, d.rollup, limit)
+		return s.topRollup(q, d.rollup, limit, ord[1]+" "+dir)
 	}
 	where, args, err := q.where()
 	if err != nil {
@@ -330,8 +358,8 @@ func (s *Store) TopN(q Query, dim string, limit int) ([]TopRow, error) {
 	src := s.Source(q.From, q.To)
 	aggs := fmt.Sprintf(`%s AS x_extra, sum(bytes) AS x_b, sum(wire) AS x_w, sum(pkts) AS x_p, sum(flows) AS x_f, %s AS x_peers, %s AS x_int`, extra, peers, intc)
 	part := func(sel, grp []string, c string) string {
-		return fmt.Sprintf(`(SELECT %s, %s FROM %s WHERE %s GROUP BY %s ORDER BY x_w DESC LIMIT %d)`,
-			strings.Join(sel, ", "), aggs, src, c, strings.Join(grp, ", "), limit)
+		return fmt.Sprintf(`(SELECT %s, %s FROM %s WHERE %s GROUP BY %s ORDER BY %s %s, x_w DESC LIMIT %d)`,
+			strings.Join(sel, ", "), aggs, src, c, strings.Join(grp, ", "), ord[0], dir, limit)
 	}
 	body := part(inner, groups, cond)
 	qargs := args
@@ -340,8 +368,8 @@ func (s *Store) TopN(q Query, dim string, limit int) ([]TopRow, error) {
 		body = part(inner, groups, "("+cond+") AND "+v4) + " UNION ALL " + part(inner6, groups6, "("+cond+") AND NOT ("+v4+")")
 		qargs = append(append([]any{}, args...), args...)
 	}
-	sqlq := fmt.Sprintf(`SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM (%s) ORDER BY x_w DESC LIMIT %d`,
-		strings.Join(outer, ", "), body, limit)
+	sqlq := fmt.Sprintf(`SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM (%s) ORDER BY %s %s, x_w DESC LIMIT %d`,
+		strings.Join(outer, ", "), body, ord[0], dir, limit)
 	rows, err := s.DB.Query(sqlq, qargs...)
 	if err != nil {
 		return nil, err
@@ -360,16 +388,16 @@ func (s *Store) TopN(q Query, dim string, limit int) ([]TopRow, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) topRollup(q Query, rollup string, limit int) ([]TopRow, error) {
+func (s *Store) topRollup(q Query, rollup string, limit int, order string) ([]TopRow, error) {
 	var sqlq string
 	args := []any{q.From.UTC(), q.To.UTC()}
 	if strings.HasPrefix(rollup, "host:") {
 		role, _ := strconv.Atoi(rollup[5:])
 		sqlq = fmt.Sprintf(`SELECT ip, sum(bytes), sum(wire), sum(pkts), sum(flows), bool_or(internal) FROM r_host
-			WHERE ts >= ? AND ts < ? AND role = %d GROUP BY 1 ORDER BY sum(wire) DESC LIMIT %d`, role, limit)
+			WHERE ts >= ? AND ts < ? AND role = %d GROUP BY 1 ORDER BY %s LIMIT %d`, role, order, limit)
 	} else {
 		sqlq = fmt.Sprintf(`SELECT val, sum(bytes), sum(wire), sum(pkts), sum(flows), false FROM r_dim
-			WHERE ts >= ? AND ts < ? AND dim = ? GROUP BY 1 ORDER BY sum(wire) DESC LIMIT %d`, limit)
+			WHERE ts >= ? AND ts < ? AND dim = ? GROUP BY 1 ORDER BY %s LIMIT %d`, order, limit)
 		args = append(args, rollup)
 	}
 	rows, err := s.DB.Query(sqlq, args...)

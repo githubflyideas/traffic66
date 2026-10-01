@@ -220,8 +220,11 @@ func (s *Server) topn(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	dim := r.URL.Query().Get("dim")
-	rows, err := s.Store.TopN(q, dim, limitParam(r, 66))
+	dim, by := r.URL.Query().Get("dim"), r.URL.Query().Get("by")
+	if by == "" {
+		by = "wire"
+	}
+	rows, err := s.Store.TopNBy(q, dim, limitParam(r, 66), by, r.URL.Query().Get("asc") == "1")
 	if err != nil {
 		fail(w, err)
 		return

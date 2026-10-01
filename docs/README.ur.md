@@ -657,7 +657,7 @@ application، ملک، ڈیوائس — پر کلک کیا جا سکتا ہے:
 | صفحہ | کس سوال کا جواب دیتا ہے |
 |---|---|
 | جائزہ | ابھی کتنی ٹریفک ہے اور پچھلے ہفتے کے مقابلے میں کتنی، application کے حساب سے؛ سرفہرست clients اور services |
-| ٹاپ N | سرفہرست 66 کی ایک table: ڈیفالٹ طور پر conversations (client، server، service، ملک)۔ کسی نیلے column heading پر کلک کر کے اس کے حساب سے group کریں، کسی عددی heading پر کلک کر کے sort کریں؛ **گروپ بندی بلحاظ** میں applications، نیٹ ورکس، segments، ڈیوائسز، encapsulation اور VLAN ملتے ہیں |
+| ٹاپ N | سرفہرست 66 کی ایک table: ڈیفالٹ طور پر conversations (client، server، service، ملک)۔ ہر column heading سے sort ہوتا ہے؛ عددی columns (ٹریفک، پیکٹ، اوسط پیکٹ، flows) وقت کی حد کے پورے ٹریفک سے سرفہرست 66 دوبارہ چنتے ہیں، اس لیے سب سے چھوٹے اوسط پیکٹ سے scan اور flood پکڑے جاتے ہیں۔ **گروپ بندی بلحاظ** سے applications، نیٹ ورکس، segments، ڈیوائسز، encapsulation اور VLAN پر جائیں |
 | ٹریفک کے راستے | کون سا segment کس ملک میں کس application سے بات کرتا ہے |
 | مقامات اور نیٹ ورک | ملک کے حساب سے اور نیٹ ورک (AS) کے حساب سے ٹریفک |
 | خطرے کی معلومات | وہ hosts جنہوں نے آپ کی threat lists کے addresses سے بات کی، اور کتنا بھیجا |

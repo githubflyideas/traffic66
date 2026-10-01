@@ -674,7 +674,7 @@ Páginas:
 | Página | Qué responde |
 |---|---|
 | Resumen | Cuánto tráfico hay ahora y frente a la semana pasada, por aplicación; principales clientes y servicios |
-| Top-N | Una sola tabla de los 66 primeros: por defecto, conversaciones (cliente, servidor, servicio, país). Haga clic en un encabezado de columna azul para agrupar por él, o en un encabezado numérico para ordenar; **Agrupar por** ofrece aplicaciones, redes, segmentos, equipos, encapsulación y VLAN |
+| Top-N | Una sola tabla de los 66 primeros: por defecto, conversaciones (cliente, servidor, servicio, país). Cualquier encabezado ordena; las columnas numéricas (tráfico, paquetes, paquete medio, flujos) clasifican todo el tráfico del periodo, así el menor paquete medio revela escaneos e inundaciones. **Agrupar por** cambia a aplicaciones, redes, segmentos, equipos, encapsulación y VLAN |
 | Rutas de tráfico | Qué segmento habla con qué aplicación en qué país |
 | Geografía y redes | Tráfico por país y por red (AS) |
 | Inteligencia de amenazas | Hosts que hablaron con direcciones de sus listas de amenazas y cuánto enviaron |
