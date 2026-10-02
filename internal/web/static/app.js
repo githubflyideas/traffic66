@@ -150,6 +150,7 @@ function readHash() {
   if (p.get('dim')) state.dim = p.get('dim');
   state.tm = p.get('tm') === 'table' || (p.get('v') === 'topn' && p.get('dim')) ? 'table' : 'talkers';
   state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
+  state.side = ['client', 'both', 'service'].includes(p.get('side')) ? p.get('side') : 'server';
   const dd = p.get('d'); if (dd && dd.includes(':')) state.det = {f: dd.slice(0, dd.indexOf(':')), v: dd.slice(dd.indexOf(':') + 1)};
   state.f = (p.get('f') || '').split(',').filter(Boolean).map(s => {
     const neg = s[0] === '!'; if (neg) s = s.slice(1);
@@ -161,6 +162,7 @@ function writeHash(push) {
   const p = new URLSearchParams({v: state.v, r: state.r});
   if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
+  if (state.v === 'traffic' && state.side !== 'server') p.set('side', state.side);
   if (state.v === 'detail' && state.det) p.set('d', state.det.f + ':' + state.det.v);
   if (state.f.length) p.set('f', state.f.map(x => (x.neg ? '!' : '') + encodeURIComponent(x.f) + ':' + encodeURIComponent(x.v)).join(','));
   const h = '#' + p.toString();
@@ -650,14 +652,22 @@ function barChart(el, times, values, fmtV) {
 
 // Traffic details: clients, servers and services over time, in bits and
 // packets per second.
+// Traffic details: servers by default; tabs switch to clients, both ends
+// side by side, or services. Each shows bits/s and packets/s.
+const TD = {client: ['td.clients', 'td.n_clients'], server: ['td.servers', 'td.n_servers'], service: ['td.services', 'td.n_services']};
 views.traffic = async (el) => {
-  const groups = [['client', 'td.clients', 'td.n_clients'], ['server', 'td.servers', 'td.n_servers'], ['service', 'td.services', 'td.n_services']];
-  const data = await Promise.all(groups.flatMap(([by]) => [seriesData(by, 'wire'), seriesData(by, 'pkts')]));
-  el.innerHTML = `<div class="grid">${groups.map(([by, title, cnt], gi) => {
-    const n = data[gi * 2].distinct || 0;
-    return seriesPanel('td-' + by + '-w', 'c6', `${t(title)} · ${t('ch.bps')}`, esc(t(cnt, {n: nf(n)}))) + seriesPanel('td-' + by + '-p', 'c6', `${t(title)} · ${t('ch.pps')}`);
-  }).join('')}</div>`;
-  groups.forEach(([by], gi) => { fillSeries('td-' + by + '-w', data[gi * 2], by, 'wire'); fillSeries('td-' + by + '-p', data[gi * 2 + 1], by, 'pkts'); });
+  const side = state.side || 'server';
+  const groups = side === 'both' ? ['server', 'client'] : [side];
+  const data = await Promise.all(groups.flatMap(by => [seriesData(by, 'wire'), seriesData(by, 'pkts')]));
+  const tab = k => `<button data-side="${k}" aria-pressed="${side === k}">${t(k === 'both' ? 'td.both' : TD[k][0])}</button>`;
+  // both ends: servers and clients next to each other, bits/s over packets/s
+  const cls = side === 'both' ? 'c6' : 'c12';
+  const panels = side === 'both'
+    ? ['w', 'p'].flatMap(m => groups.map((by, gi) => seriesPanel(`td-${by}-${m}`, cls, `${t(TD[by][0])} · ${t(m === 'w' ? 'ch.bps' : 'ch.pps')}`, m === 'w' ? esc(t(TD[by][1], {n: nf(data[gi * 2].distinct || 0)})) : '')))
+    : groups.flatMap((by, gi) => [seriesPanel(`td-${by}-w`, cls, `${t(TD[by][0])} · ${t('ch.bps')}`, esc(t(TD[by][1], {n: nf(data[gi * 2].distinct || 0)}))), seriesPanel(`td-${by}-p`, cls, `${t(TD[by][0])} · ${t('ch.pps')}`)]);
+  el.innerHTML = `<div class="seg" role="group" style="margin-bottom:14px;display:inline-flex">${['server', 'client', 'both', 'service'].map(tab).join('')}</div><div class="grid">${panels.join('')}</div>`;
+  el.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { state.side = b.dataset.side; render(); });
+  groups.forEach((by, gi) => { fillSeries('td-' + by + '-w', data[gi * 2], by, 'wire'); fillSeries('td-' + by + '-p', data[gi * 2 + 1], by, 'pkts'); });
 };
 
 const DIMS = ['conv', 'client', 'server', 'app', 'port', 'country', 'asn', 'segment', 'exporter', 'encap', 'vlan'];

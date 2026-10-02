@@ -677,7 +677,7 @@ Halaman:
 |---|---|
 | Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; temuan terbuka; arah dan protokol; klien dan layanan teratas |
 | Top 66 | Terbuka di **Pihak teratas**: trafik per layanan dari waktu ke waktu, dan 30 klien dan server teratas berdampingan dengan trafik, paket, dan catatan flow, di atas satu baris untuk semua trafik. **Tabel** adalah satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
-| Detail trafik | Klien, server, dan layanan dari waktu ke waktu, dalam bit/s dan paket/s: 8 teratas dari masing-masing, dan berapa jumlahnya |
+| Detail trafik | Klien, server, dan layanan dari waktu ke waktu, dalam bit/s dan paket/s: 8 teratas dari masing-masing, dan berapa jumlahnya. Dibuka pada **Server**; tab beralih ke **Klien**, **Kedua sisi** (berdampingan), dan **Layanan** |
 | Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
 | Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 8 host tersibuk, sisanya sebagai Lainnya. **Klien → server** menampilkan klien → layanan → server; **Per segmen** menampilkan jaringan, bukan host |
 | Geografi & jaringan | Peta dunia trafik per negara; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |

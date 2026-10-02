@@ -375,5 +375,6 @@
 "geo.map_more": "plus",
 "geo.map_none": "aucun trafic",
 "geo.data_from": "Pays et réseaux :",
-"geo.map_from": "Carte :"
+"geo.map_from": "Carte :",
+"td.both": "Les deux côtés"
 }

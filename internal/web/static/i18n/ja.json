@@ -375,5 +375,6 @@
 "geo.map_more": "多",
 "geo.map_none": "通信なし",
 "geo.data_from": "国・ネットワークのデータ：",
-"geo.map_from": "地図："
+"geo.map_from": "地図：",
+"td.both": "両端"
 }

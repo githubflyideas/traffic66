@@ -375,5 +375,6 @@
 "geo.map_more": "more",
 "geo.map_none": "no traffic",
 "geo.data_from": "Countries and networks:",
-"geo.map_from": "Map:"
+"geo.map_from": "Map:",
+"td.both": "Both ends"
 }

@@ -375,5 +375,6 @@
 "geo.map_more": "أكثر",
 "geo.map_none": "لا حركة",
 "geo.data_from": "بيانات الدول والشبكات:",
-"geo.map_from": "الخريطة:"
+"geo.map_from": "الخريطة:",
+"td.both": "الطرفان"
 }

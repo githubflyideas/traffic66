@@ -646,7 +646,7 @@ Pages:
 |---|---|
 | Overview | How much traffic now and compared with last week, by application; open findings; direction and protocol; top clients and services |
 | Top 66 | Opens on **Talkers**: traffic by service over time, and the top 30 clients and servers side by side with traffic, packets and flow records, above a row for all traffic. **Table** is one table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
-| Traffic details | Clients, servers and services over time, in bits/s and in packets/s: the top 8 of each, and how many there were |
+| Traffic details | Clients, servers and services over time, in bits/s and in packets/s: the top 8 of each, and how many there were. Opens on **Servers**; tabs switch to **Clients**, **Both ends** (side by side) and **Services** |
 | Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
 | Flow paths | Which host uses which application towards which country: the 8 busiest hosts, the rest as Other. **Client → server** shows client → service → server; **By network** shows networks instead of hosts |
 | Geo & networks | A world map of traffic by country; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |

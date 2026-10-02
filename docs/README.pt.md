@@ -680,7 +680,7 @@ Páginas:
 |---|---|
 | Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; detecções abertas; direção e protocolo; principais clientes e serviços |
 | Top 66 | Abre em **Principais interlocutores**: tráfego por serviço ao longo do tempo, e os 30 maiores clientes e servidores lado a lado com tráfego, pacotes e registros de fluxo, acima de uma linha para todo o tráfego. **Tabela** é uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
-| Detalhes do tráfego | Clientes, servidores e serviços ao longo do tempo, em bits/s e em pacotes/s: os 8 maiores de cada, e quantos havia |
+| Detalhes do tráfego | Clientes, servidores e serviços ao longo do tempo, em bits/s e em pacotes/s: os 8 maiores de cada, e quantos havia. Abre em **Servidores**; as abas trocam para **Clientes**, **Ambas as pontas** (lado a lado) e **Serviços** |
 | Detecções | O que precisa de atenção: varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças ([mais](#findings)) |
 | Caminhos do tráfego | Qual host usa qual aplicação para qual país: os 8 hosts com mais tráfego, o resto como Outros. **Cliente → servidor** mostra cliente → serviço → servidor; **Por segmento** mostra segmentos em vez de hosts |
 | Geografia e redes | Um mapa-múndi do tráfego por país; as redes (AS) de onde o tráfego veio e para onde foi, ao longo do tempo em bits/s e pacotes/s; tráfego por país e por rede |
