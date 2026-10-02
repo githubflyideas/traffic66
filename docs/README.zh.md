@@ -562,6 +562,7 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 | 地理与运营商 | 世界地图上按国家显示的流量；流量来自和去往哪些网络（AS），以 bits/s 和 packets/s 显示随时间的变化；按国家和按网络统计的流量 |
 | 威胁情报 | 与威胁情报列表中地址有通信的主机，以及它们发送了多少流量 |
 | 流记录 | 有多少条流记录、出现在什么时候（每个间隔一根柱），以及流记录本身，最新的在前，分页显示，可选择显示列 |
+| 离线分析 | 在实时数据之外分析抓包文件（pcap、pcapng） ([详情](#离线分析)) |
 | 接口对账 | 每个接口的流量随时间变化（入向和出向，bits/s 和 packets/s），以及流统计与接口计数器并列对比，差异最大的在前，附原因 |
 | 接入 | 设备、采样、丢包、采集器、SNMP、国家和运营商数据库、Logo，以及 **名称** |
 
@@ -612,6 +613,19 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 ![中文界面的概览](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
+
+### 离线分析
+
+**离线分析** 用和实时数据相同的页面查看 Wireshark 或 tcpdump 的抓包文件，但不混进实时数据：
+
+1. **上传抓包文件…**：`.pcap` 或 `.pcapng`，不支持压缩包。最多 3 个文件，每个不超过 50 MB。文件被转换成流，存进单独的数据库（`<data>/sandbox/`），实时数据、统计和发现都不受影响。
+2. **分析**：所有页面（概览、Top 66、流量明细、发现、流向、地图、流记录）都改为显示抓包文件的整个时间段。橙色横条列出文件名，点 **返回实时数据** 返回。每个文件显示为一台设备，用 **设备** 筛选框可以只看一个文件。
+3. 检测规则会在抓包上运行：扫描、端口扫描和密码爆破会列在 **发现** 里。需要一天历史的规则（横向移动、异常上传）不适用于抓包。
+4. **删除** 删除一个文件及其数据；**全部删除** 删除全部。
+
+demo 自带一个包含攻击过程的示例抓包。
+
+![离线分析：抓包文件及其包数、流数和时间](images/sandbox.png)
 
 ## 10. 终端界面
 
@@ -759,7 +773,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `password` | 登录密码（哈希） |
 | `inventory.txt` | 名称（**接入 → 名称**） |
 | `logo.png`（或 `.svg`、`.jpg`、`.webp`、`.gif`） | 你的 Logo（**接入 → Logo**），如果上传过 |
-| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | 你添加的国家和运营商数据库以及威胁情报列表 |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | 你添加的国家和运营商数据库以及威胁情报列表 |
 
 **数据保留多久**：流明细 30 天，汇总（总览和长时间范围）400 天。更早的数据自动删除，每 5 分钟检查一次；除此之外不删任何数据，也没有其他限制。用 `-retention-days` 修改明细保留天数，任意天数都可以，例如 `-retention-days 365`。占用的磁盘随之增长：保留天数放不下时，侧边栏的 **可用** 会变红。磁盘写满后，新的流无法保存，直到腾出空间。
 

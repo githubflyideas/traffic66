@@ -21,6 +21,7 @@ import (
 	"github.com/githubflyideas/traffic66/internal/dnsres"
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/pipeline"
+	"github.com/githubflyideas/traffic66/internal/sandbox"
 	"github.com/githubflyideas/traffic66/internal/store"
 )
 
@@ -34,6 +35,7 @@ type Server struct {
 	Thr      *enrich.Threats
 	DNS      *dnsres.Resolver
 	Det      *detect.Detector
+	SB       *sandbox.Sandbox // offline analysis of capture files
 	Static   fs.FS
 	Version  string
 	Demo     bool
@@ -82,20 +84,23 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /logo", s.logo)
 	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
 	api("GET /api/status", s.status)
-	api("GET /api/overview", s.overview)
-	api("GET /api/topn", s.topn)
-	api("GET /api/sankey", s.sankey)
-	api("GET /api/series", s.series)
-	api("GET /api/records", s.records)
-	api("GET /api/threats", s.threats)
+	api("GET /api/overview", s.data((*Server).overview))
+	api("GET /api/topn", s.data((*Server).topn))
+	api("GET /api/sankey", s.data((*Server).sankey))
+	api("GET /api/series", s.data((*Server).series))
+	api("GET /api/records", s.data((*Server).records))
+	api("GET /api/threats", s.data((*Server).threats))
 	api("GET /api/ifaces", s.ifaces)
 	api("GET /api/recon", s.recon)
 	api("GET /api/sources", s.sources)
 	api("POST /api/resolve", s.resolve)
 	api("GET /api/inventory", s.getInventory)
 	api("POST /api/inventory", s.putInventory)
-	api("GET /api/findings", s.findings)
-	api("POST /api/findings", s.setFindings)
+	api("GET /api/findings", s.data((*Server).findings))
+	api("POST /api/findings", s.data((*Server).setFindings))
+	api("GET /api/sandbox", s.getSandbox)
+	api("POST /api/sandbox/files", s.putSandboxFile)
+	api("DELETE /api/sandbox/files", s.deleteSandbox)
 	api("POST /api/logo", s.putLogo)
 	api("DELETE /api/logo", s.deleteLogo)
 	api("GET /api/geo", s.getGeo)

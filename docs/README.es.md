@@ -686,6 +686,7 @@ Páginas:
 | Geografía y redes | Un mapa del mundo del tráfico por país; las redes (AS) de las que vino y a las que fue el tráfico, en el tiempo en bits/s y paquetes/s; tráfico por país y por red |
 | Inteligencia de amenazas | Hosts que hablaron con direcciones de sus listas de amenazas y cuánto enviaron |
 | Registros de flujo | Cuántos registros de flujo hubo y cuándo (una barra por intervalo), y los registros mismos, del más reciente al más antiguo, página a página, con columnas seleccionables |
+| Análisis offline | Capturas de paquetes (pcap, pcapng) analizadas aparte de los datos en vivo ([más](#análisis-offline)) |
 | Verificación de interfaces | Tráfico de cada interfaz en el tiempo (entrada y salida, bits/s y paquetes/s), y cifras de flujo junto a los contadores de interfaz, de peor a mejor, con motivos |
 | Fuentes | Equipos, muestreo, pérdidas, colectores, SNMP, la base de datos de países y redes, el logotipo y **Nombres** |
 
@@ -774,6 +775,19 @@ El mismo resumen en chino; todas las páginas están disponibles en 13 idiomas:
 ![Resumen en chino](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
+
+### Análisis offline
+
+**Análisis offline** muestra capturas de Wireshark o tcpdump con las mismas páginas que los datos en vivo, sin mezclarlas:
+
+1. **Subir archivos de captura…**: `.pcap` o `.pcapng`, sin comprimir. Hasta 3 archivos, cada uno de 50 MB como máximo. Los archivos se convierten en flujos en una base de datos propia (`<data>/sandbox/`); los datos en vivo, sus cifras y hallazgos no se tocan.
+2. **Analizar**: todas las páginas (resumen, Top 66, detalles del tráfico, hallazgos, rutas, mapa, registros de flujo) muestran los archivos durante todo su tiempo. Una barra naranja nombra los archivos; **Volver a los datos en vivo** vuelve. Cada archivo aparece como un dispositivo, así que el cuadro **Dispositivo** muestra un archivo cada vez.
+3. Las reglas de detección se aplican a la captura: barridos, escaneos de puertos y adivinación de contraseñas aparecen en **Hallazgos**. Las reglas que necesitan un día de historial (movimiento lateral, subidas inusuales) no se aplican a una captura.
+4. **Eliminar** borra un archivo y sus datos; **Eliminar todo** lo borra todo.
+
+La demo incluye una captura de ejemplo con un ataque.
+
+![Análisis offline: archivos de captura con sus paquetes, flujos y tiempo](images/sandbox.png)
 
 ## 10. Interfaz de terminal
 
@@ -948,7 +962,7 @@ El directorio de datos lo contiene todo:
 | `password` | contraseñas de acceso (con hash) |
 | `inventory.txt` | nombres (**Fuentes → Nombres**) |
 | `logo.png` (o `.svg`, `.jpg`, `.webp`, `.gif`) | su logotipo (**Fuentes → Logotipo**), si subió uno |
-| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | bases de datos de países y redes y listas de amenazas que haya añadido |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | bases de datos de países y redes y listas de amenazas que haya añadido |
 
 **Cuánto tiempo se guardan los datos**: el detalle de flujos 30 días; los resúmenes (vista general y periodos largos)
 400 días. Lo más antiguo se borra automáticamente, con una comprobación cada 5 minutos; no se borra nada más ni hay

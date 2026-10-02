@@ -683,6 +683,7 @@ Halaman:
 | Geografi & jaringan | Peta dunia trafik per negara; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
 | Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih |
+| Analisis offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-offline)) |
 | Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu (masuk dan keluar, bit/s dan paket/s), dan angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
 | Sumber | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
 
@@ -776,6 +777,19 @@ Ringkasan yang sama dalam bahasa Tionghoa; setiap halaman tersedia dalam 13 baha
 ![Ringkasan dalam bahasa Tionghoa](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
+
+### Analisis offline
+
+**Analisis offline** menampilkan tangkapan Wireshark atau tcpdump dengan halaman yang sama seperti data langsung, tanpa mencampurnya:
+
+1. **Unggah file tangkapan…**: `.pcap` atau `.pcapng`, tidak dikompresi. Maksimal 3 file, masing-masing paling besar 50 MB. File diubah menjadi flow di basis data tersendiri (`<data>/sandbox/`); data langsung, angka, dan temuannya tidak tersentuh.
+2. **Analisis**: semua halaman (ringkasan, Top 66, detail trafik, temuan, jalur, peta, catatan flow) menampilkan file untuk seluruh waktunya. Bilah oranye menyebut nama file; **Kembali ke data langsung** kembali. Tiap file tampil sebagai perangkat, jadi kotak **Perangkat** menampilkan satu file sekaligus.
+3. Aturan deteksi dijalankan pada tangkapan: pemindaian, pemindaian port, dan tebakan kata sandi muncul di **Temuan**. Aturan yang perlu riwayat sehari (pergerakan lateral, unggahan tak biasa) tidak berlaku untuk tangkapan.
+4. **Hapus** menghapus satu file dan datanya; **Hapus semua** menghapus semuanya.
+
+Demo menyertakan contoh tangkapan berisi serangan.
+
+![Analisis offline: file tangkapan beserta paket, flow, dan waktunya](images/sandbox.png)
 
 ## 10. Antarmuka terminal
 
@@ -948,7 +962,7 @@ Semua tersimpan di direktori data:
 | `password` | kata sandi login (dalam bentuk hash) |
 | `inventory.txt` | nama (**Sumber → Nama**) |
 | `logo.png` (atau `.svg`, `.jpg`, `.webp`, `.gif`) | logo Anda (**Sumber → Logo**), jika Anda mengunggahnya |
-| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
 
 **Berapa lama data disimpan**: detail flow 30 hari, ringkasan (ikhtisar dan rentang waktu panjang) 400 hari. Data
 yang lebih lama dihapus otomatis, diperiksa setiap 5 menit; tidak ada yang lain dihapus dan tidak ada batas lain.

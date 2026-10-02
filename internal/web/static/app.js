@@ -140,7 +140,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources', 'detail'];
+const VIEWS = ['overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'sandbox', 'ifaces', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'in', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
@@ -151,6 +151,7 @@ function readHash() {
   state.tm = p.get('tm') === 'table' || (p.get('v') === 'topn' && p.get('dim')) ? 'table' : 'talkers';
   state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
   state.side = ['client', 'both', 'service'].includes(p.get('side')) ? p.get('side') : 'server';
+  state.ds = p.get('ds') === 'sb' ? 'sb' : '';
   const dd = p.get('d'); if (dd && dd.includes(':')) state.det = {f: dd.slice(0, dd.indexOf(':')), v: dd.slice(dd.indexOf(':') + 1)};
   state.f = (p.get('f') || '').split(',').filter(Boolean).map(s => {
     const neg = s[0] === '!'; if (neg) s = s.slice(1);
@@ -160,6 +161,7 @@ function readHash() {
 }
 function writeHash(push) {
   const p = new URLSearchParams({v: state.v, r: state.r});
+  if (state.ds) p.set('ds', state.ds);
   if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
   if (state.v === 'traffic' && state.side !== 'server') p.set('side', state.side);
@@ -168,8 +170,13 @@ function writeHash(push) {
   const h = '#' + p.toString();
   if (push && h !== location.hash) history.pushState(null, '', h); else history.replaceState(null, '', h);
 }
+// pages whose data can come from the sandbox (uploaded capture files)
+const SB_DATA = new Set(['overview', 'topn', 'sankey', 'series', 'records', 'threats', 'findings']);
+const inSB = () => state.ds === 'sb' && sbInfo.ready;
+let sbInfo = {files: [], ready: false};
 async function api(path, extra = {}, filters = state.f) {
-  const p = new URLSearchParams({range: state.r, ...extra});
+  if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
+  const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : {range: state.r, ...extra});
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
   const res = await fetch('/api/' + path + '?' + p);
   if (res.status === 401) { showLogin(); throw new Error('login'); }
@@ -177,7 +184,13 @@ async function api(path, extra = {}, filters = state.f) {
   if (!res.ok) { const e = new Error(j.error || res.statusText); e.kind = j.kind; throw e; }
   return j;
 }
-const spanMs = () => ({'15m': 9e5, '1h': 36e5, '6h': 216e5, '24h': 864e5, '7d': 6048e5, '30d': 2592e6})[state.r];
+// the sandbox's time range: the whole capture, on whole minutes
+function sbRange() {
+  const a = Math.floor(Date.parse(sbInfo.first) / 6e4) * 6e4, b = Math.ceil((Date.parse(sbInfo.last) + 1) / 6e4) * 6e4;
+  return {from: a, to: Math.max(b, a + 6e4)};
+}
+const spanMs = () => { if (inSB()) { const r = sbRange(); return r.to - r.from; } return ({'15m': 9e5, '1h': 36e5, '6h': 216e5, '24h': 864e5, '7d': 6048e5, '30d': 2592e6})[state.r]; };
+const rangeLabel = () => inSB() ? t('sb.range') : t('range.' + state.r);
 
 // ------------------------------------------------------------ tooltip & charts
 const tip = $('#tip');
@@ -372,7 +385,7 @@ function renderFilters() {
 // values; choosing one replaces any filter on that field, emptying it
 // removes the filter.
 const FBAR = [['exporter', 'field.exporter'], ['client', 'field.client'], ['server', 'field.server'], ['port', 'col.service']];
-const FBAR_HIDDEN = new Set(['findings', 'sources']);
+const FBAR_HIDDEN = new Set(['findings', 'sources', 'sandbox']);
 function renderFbar() {
   const bar = $('#fbar');
   bar.hidden = FBAR_HIDDEN.has(state.v);
@@ -456,7 +469,7 @@ views.overview = async (el) => {
   el.innerHTML = `<div class="grid">
     <div class="panel c12"><div class="kpis">
       <div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(t(basis === 'week' ? 'kpi.vs_week' : 'kpi.vs_prev', {p: fmtPct(change, 0)}))}</div></div>
-      <div class="kpi"><div class="lab">${t('kpi.total', {r: t('range.' + state.r)})}</div><div class="n">${fmtBytes(tot.wire)}</div><div class="d muted">${esc(peakTxt)}</div></div>
+      <div class="kpi"><div class="lab">${t('kpi.total', {r: rangeLabel()})}</div><div class="n">${fmtBytes(tot.wire)}</div><div class="d muted">${esc(peakTxt)}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.hosts')}</div><div class="n">${nf(tot.hosts)}</div><div class="d muted">&nbsp;</div></div>
       <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.accuracy')}</div><div class="n">${acc.n}</div><div class="d">${acc.kind ? status(acc.kind, acc.d) : `<span class="muted">${esc(acc.d)}</span>`}</div></div>
@@ -559,7 +572,7 @@ function bindFindings(el) {
   el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
   el.querySelectorAll('[data-fd-view]').forEach(b => b.onclick = () => showDetail('ip', b.dataset.fdView));
   el.querySelectorAll('[data-fd-set]').forEach(b => b.onclick = async () => {
-    const res = await fetch('/api/findings', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ids: [+b.dataset.id], status: b.dataset.fdSet})});
+    const res = await fetch('/api/findings' + (inSB() ? '?ds=sb' : ''), {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ids: [+b.dataset.id], status: b.dataset.fdSet})});
     if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || res.statusText); return; }
     loadStatus(); render();
   });
@@ -888,6 +901,67 @@ views.geo = async (el) => {
   asCharts.forEach(([by, m], i) => fillSeries('asr' + i, ad[i], by, m));
 };
 
+// ------------------------------------------------------------ offline analysis
+// Capture files are imported into a database of their own; "Analyse" shows
+// them on all the other pages, apart from the live data.
+let sbMsg = '';
+views.sandbox = async (el) => {
+  await loadSB();
+  const fs = sbInfo.files || [], own = fs.filter(f => !f.sample).length, mb = Math.round(sbInfo.max_file_size / 1048576);
+  const df = new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'medium'});
+  const pending = fs.some(f => f.status !== 'done' && f.status !== 'error') || sbInfo.busy;
+  const rows = fs.map(f => `<tr><td>${esc(f.name)}${f.sample ? ` <span class="tag">${t('sb.sample')}</span>` : ''}</td><td class="num">${fmtBytes(f.size)}</td>
+      <td class="num">${f.packets ? nf(f.packets) : '—'}</td><td class="num">${f.flows ? nf(f.flows) : '—'}</td>
+      <td class="nw muted">${f.flows ? esc(df.format(new Date(f.first))) + ' – ' + esc(df.format(new Date(f.last))) : ''}</td>
+      <td>${f.status === 'error' ? status('bad', f.error || t('sb.st_error')) : f.status === 'done' ? status('ok', t('sb.st_done')) : `<span class="muted">${t('sb.st_' + f.status)}…</span>`}</td>
+      <td><button class="btn" data-sbdel="${esc(f.name)}">${t('sb.delete')}</button></td></tr>`).join('');
+  el.innerHTML = `<div class="grid">${panel('c12', t('sb.title'), t('sb.sub'), `<p class="sbexplain">${esc(t('sb.explain'))}</p>
+    <table><tr><th>${t('sb.col_file')}</th><th class="num">${t('sb.col_size')}</th><th class="num">${t('sb.col_packets')}</th><th class="num">${t('sb.col_flows')}</th><th>${t('sb.col_span')}</th><th>${t('sb.col_status')}</th><th></th></tr>
+    ${rows || `<tr><td colspan="7" class="empty">${t('sb.empty')}</td></tr>`}</table>
+    <div class="sbactions"><button class="primary" id="sbGo" ${sbInfo.ready && !pending ? '' : 'disabled'}>${t('sb.analyze')}</button>
+      <label class="btn ${own >= sbInfo.max_files ? 'disabled' : ''}" style="cursor:pointer">${t('sb.upload')}<input type="file" id="sbFile" accept=".pcap,.pcapng,.cap" multiple hidden ${own >= sbInfo.max_files ? 'disabled' : ''}></label>
+      ${fs.length ? `<button class="btn" id="sbAll">${t('sb.delete_all')}</button>` : ''}<span id="sbMsg" style="font-size:13px"></span></div>
+    <p class="muted" style="font-size:12.5px;margin:10px 0 0">${esc(t('sb.limits', {n: sbInfo.max_files, mb}))} ${esc(t('sb.formats'))}</p>`)}</div>`;
+  // the last upload problem stays shown after the page refreshes
+  const msg = (ok, text) => { sbMsg = ok === false ? text : ''; const m = $('#sbMsg'); m.style.color = ok === null ? 'var(--ink-3)' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
+  if (sbMsg) msg(false, sbMsg);
+  $('#sbGo').onclick = () => { state.ds = 'sb'; go('overview'); };
+  el.querySelectorAll('[data-sbdel]').forEach(b => b.onclick = async () => {
+    if (!confirm(t('sb.confirm', {f: b.dataset.sbdel}))) return;
+    await fetch('/api/sandbox/files?name=' + encodeURIComponent(b.dataset.sbdel), {method: 'DELETE'});
+    render();
+  });
+  if ($('#sbAll')) $('#sbAll').onclick = async () => {
+    if (!confirm(t('sb.confirm_all'))) return;
+    await fetch('/api/sandbox/files', {method: 'DELETE'});
+    state.ds = ''; render();
+  };
+  $('#sbFile').onchange = async e => {
+    const files = [...e.target.files];
+    msg(null, '');
+    let left = sbInfo.max_files - own;
+    for (const f of files) {
+      if (left <= 0) { msg(false, t('sb.too_many', {n: sbInfo.max_files})); break; }
+      if (f.size > sbInfo.max_file_size) { msg(false, t('sb.too_big', {f: f.name, mb})); continue; }
+      const ok = await new Promise(done => {
+        const x = new XMLHttpRequest();
+        x.open('POST', '/api/sandbox/files?name=' + encodeURIComponent(f.name));
+        x.upload.onprogress = ev => ev.lengthComputable && msg(null, t('sb.uploading', {f: f.name, p: Math.round(100 * ev.loaded / ev.total)}));
+        x.onload = () => {
+          if (x.status === 200) return done(true);
+          let j = {}; try { j = JSON.parse(x.responseText); } catch (err) {}
+          msg(false, x.status === 413 ? (j.max_files && !/MB/.test(j.error) ? t('sb.too_many', {n: sbInfo.max_files}) : t('sb.too_big', {f: f.name, mb})) : j.code === 'not_capture' ? t('sb.not_capture', {f: f.name}) : (j.error || x.statusText)); done(false);
+        };
+        x.onerror = () => { msg(false, t('sb.failed')); done(false); };
+        x.send(f);
+      });
+      if (ok) left--;
+    }
+    render();
+  };
+  if (pending) setTimeout(() => { if (state.v === 'sandbox') render(); }, 1500);
+};
+
 views.threats = async (el) => {
   const d = await api('threats', {limit: 66});
   const rows = d.rows || [], lists = d.lists || {};
@@ -935,7 +1009,7 @@ views.records = async (el) => {
   const pager = `<div class="pager"><label>${t('rec.per_page')} <select id="recPer">${[50, 100, 200].map(n => `<option ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <span>${esc(t('rec.range', {a: nf(total ? page * per + 1 : 0), b: nf(Math.min(total, page * per + rows.length)), n: nf(total)}))}</span>
       <button class="btn" id="recPrev" ${page ? '' : 'disabled'}>‹ ${t('rec.prev')}</button><button class="btn" id="recNext" ${page + 1 < pages ? '' : 'disabled'}>${t('rec.next')} ›</button></div>`;
-  el.innerHTML = `<div class="panel" style="margin-bottom:16px"><div class="rechead"><div class="kpi"><div class="lab">${t('rec.title')}</div><div class="n big">${nf(total)}</div><div class="d muted">${esc(t('rec.in', {r: t('range.' + state.r)}))}</div></div>
+  el.innerHTML = `<div class="panel" style="margin-bottom:16px"><div class="rechead"><div class="kpi"><div class="lab">${t('rec.title')}</div><div class="n big">${nf(total)}</div><div class="d muted">${esc(t('rec.in', {r: rangeLabel()}))}</div></div>
       <div class="chart" id="chRec" style="height:150px" aria-label="${esc(t('rec.title'))}"></div></div></div>
     <div class="panel"><div class="ph"><h2>${t('rec.title')}</h2><span class="sub">${esc(t('rec.sorted'))}</span>
       <div class="cols"><button class="btn" id="colBtn">${t('rec.columns')}</button><div class="menu" id="colMenu" hidden>${REC_COLS.map(c => `<label><input type="checkbox" value="${c[0]}" ${on.has(c[0]) ? 'checked' : ''}>${t('rc.' + c[0])}</label>`).join('')}</div></div></div>
@@ -1126,7 +1200,7 @@ views.detail = async (el) => {
     <div class="panel c12"><div class="dhead"><h2>${title}</h2>
       <button class="v btn" data-k="${isIP ? 'ip' : 'port'}" data-val="${esc(det.v)}" data-label="${esc(isIP ? (names.get(det.v) || det.v) : det.v)}" aria-haspopup="menu">${esc(t('pop.actions'))} ▾</button></div>
       <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-top:10px">
-        <div class="kpi"><div class="lab">${t('kpi.total', {r: t('range.' + state.r)})}</div><div class="n">${fmtBytes(tot.wire)}</div><div class="d muted">${d.peak_at ? esc(t('kpi.peak', {v: fmtBps(d.peak_bps), t: fmtTime(d.peak_at, spanMs())})) : '&nbsp;'}</div></div>
+        <div class="kpi"><div class="lab">${t('kpi.total', {r: rangeLabel()})}</div><div class="n">${fmtBytes(tot.wire)}</div><div class="d muted">${d.peak_at ? esc(t('kpi.peak', {v: fmtBps(d.peak_bps), t: fmtTime(d.peak_at, spanMs())})) : '&nbsp;'}</div></div>
         <div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d">&nbsp;</div></div>
         <div class="kpi"><div class="lab">${t(isIP ? 'det.peers' : 'det.clients')}</div><div class="n">${nf(isIP ? tot.peers + tot.hosts - 1 : tot.hosts)}</div><div class="d">&nbsp;</div></div>
         <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
@@ -1147,7 +1221,34 @@ views.detail = async (el) => {
 };
 
 // ------------------------------------------------------------ shell
+// The sandbox bar replaces the time range while capture files are shown.
+function renderSB() {
+  const on = inSB() && !['ifaces', 'sources'].includes(state.v);
+  $('#sbbar').hidden = !on;
+  $('#range').hidden = on;
+  $('#refresh').hidden = on;
+  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources]').forEach(b => b.hidden = inSB());
+  if (!on) return;
+  const r = sbRange(), span = r.to - r.from;
+  const df = new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}), tf = new Intl.DateTimeFormat(LANG, {timeStyle: 'short'});
+  const sameDay = new Date(r.from).toDateString() === new Date(r.to).toDateString();
+  const names = sbInfo.files.filter(f => f.status === 'done').map(f => f.name);
+  $('#sbbar').innerHTML = `<span class="sbtag">${t('sb.banner')}</span><span class="sbfiles">${names.map(esc).join(' · ')}</span>
+    <span class="muted nw">${esc(df.format(r.from))} – ${esc(sameDay ? tf.format(r.to) : df.format(r.to))} (${esc(fmtDur(span))})</span>
+    <button class="btn" id="sbBack">${t('sb.back')}</button>`;
+  $('#sbBack').onclick = () => { state.ds = ''; render(); };
+}
+function fmtDur(ms) {
+  const m = Math.round(ms / 6e4);
+  return m < 120 ? t('sb.min', {n: nf(m)}) : t('sb.hours', {n: nf(m / 60, 1)});
+}
+async function loadSB() {
+  try { const res = await fetch('/api/sandbox'); if (res.ok) sbInfo = await res.json(); } catch (e) {}
+  if (state.ds && !sbInfo.ready) state.ds = '';
+}
+
 async function render(push) {
+  renderSB();
   renderFilters();
   renderFbar();
   writeHash(push);
@@ -1221,7 +1322,7 @@ async function init() {
   const res = await fetch('/api/status');
   if (res.status === 401) { showLogin(); return; }
   $('#app').hidden = false;
-  await loadStatus();
+  await Promise.all([loadStatus(), loadSB()]);
   render();
   setInterval(loadStatus, 10000);
   setInterval(() => {

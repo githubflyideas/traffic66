@@ -704,6 +704,7 @@ Pages :
 | Géographie et réseaux | Une carte du monde du trafic par pays ; les réseaux (AS) d'où venait et où allait le trafic, dans le temps en bits/s et paquets/s ; trafic par pays et par réseau |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
 | Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix |
+| Analyse hors ligne | Captures de paquets (pcap, pcapng) analysées à part des données en direct ([plus](#analyse-hors-ligne)) |
 | Contrôle des interfaces | Trafic de chaque interface dans le temps (entrée et sortie, bits/s et paquets/s), et chiffres de flux à côté des compteurs d'interface, les pires en premier, avec les causes |
 | Sources | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
 
@@ -799,6 +800,19 @@ La même vue d'ensemble en chinois ; toutes les pages sont disponibles en 13 lan
 ![Vue d'ensemble en chinois](images/overview-zh.png)
 
 <a id="10-terminal-ui"></a>
+
+### Analyse hors ligne
+
+**Analyse hors ligne** affiche des captures Wireshark ou tcpdump avec les mêmes pages que les données en direct, sans les mélanger :
+
+1. **Importer des fichiers de capture…** : `.pcap` ou `.pcapng`, non compressés. Jusqu'à 3 fichiers de 50 Mo au plus chacun. Les fichiers sont transformés en flux dans une base à part (`<data>/sandbox/`) ; les données en direct, leurs chiffres et détections ne sont pas touchés.
+2. **Analyser** : toutes les pages (vue d'ensemble, Top 66, détails du trafic, détections, chemins, carte, enregistrements de flux) montrent les fichiers sur toute leur durée. Une barre orange nomme les fichiers ; **Retour aux données en direct** revient. Chaque fichier apparaît comme un équipement : le champ **Équipement** montre un fichier à la fois.
+3. Les règles de détection s'appliquent à la capture : balayages, scans de ports et essais de mots de passe apparaissent dans **Détections**. Les règles qui demandent un jour d'historique (mouvement latéral, envois inhabituels) ne s'appliquent pas à une capture.
+4. **Supprimer** efface un fichier et ses données ; **Tout supprimer** efface tout.
+
+La démo contient une capture d'exemple avec une attaque.
+
+![Analyse hors ligne : fichiers de capture avec leurs paquets, flux et période](images/sandbox.png)
 
 ## 10. Interface terminal
 
@@ -976,7 +990,7 @@ Le répertoire de données contient tout :
 | `password` | mots de passe de connexion (hachés) |
 | `inventory.txt` | noms (**Sources → Noms**) |
 | `logo.png` (ou `.svg`, `.jpg`, `.webp`, `.gif`) | votre logo (**Sources → Logo**), si vous en avez importé un |
-| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | bases de données pays et réseaux et listes de menaces que vous avez ajoutées |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | bases de données pays et réseaux et listes de menaces que vous avez ajoutées |
 
 **Durée de conservation** : le détail des flux 30 jours, les résumés (vue d'ensemble et longues périodes) 400 jours.
 Les données plus anciennes sont supprimées automatiquement, vérifiées toutes les 5 minutes ; rien d'autre n'est
