@@ -375,5 +375,6 @@
 "geo.map_more": "más",
 "geo.map_none": "sin tráfico",
 "geo.data_from": "Países y redes:",
-"geo.map_from": "Mapa:"
+"geo.map_from": "Mapa:",
+"td.both": "Ambos extremos"
 }

@@ -375,5 +375,6 @@
 "geo.map_more": "多",
 "geo.map_none": "无流量",
 "geo.data_from": "国家和运营商数据：",
-"geo.map_from": "地图："
+"geo.map_from": "地图：",
+"td.both": "两端"
 }

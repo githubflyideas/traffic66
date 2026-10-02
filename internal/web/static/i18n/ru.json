@@ -375,5 +375,6 @@
 "geo.map_more": "больше",
 "geo.map_none": "нет трафика",
 "geo.data_from": "Страны и сети:",
-"geo.map_from": "Карта:"
+"geo.map_from": "Карта:",
+"td.both": "Обе стороны"
 }

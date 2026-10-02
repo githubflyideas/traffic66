@@ -375,5 +375,6 @@
 "geo.map_more": "mais",
 "geo.map_none": "sem tráfego",
 "geo.data_from": "Países e redes:",
-"geo.map_from": "Mapa:"
+"geo.map_from": "Mapa:",
+"td.both": "Ambas as pontas"
 }

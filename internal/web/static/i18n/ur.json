@@ -375,5 +375,6 @@
 "geo.map_more": "زیادہ",
 "geo.map_none": "ٹریفک نہیں",
 "geo.data_from": "ممالک اور نیٹ ورکس کا ڈیٹا:",
-"geo.map_from": "نقشہ:"
+"geo.map_from": "نقشہ:",
+"td.both": "دونوں سرے"
 }

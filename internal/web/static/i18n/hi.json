@@ -375,5 +375,6 @@
 "geo.map_more": "ज़्यादा",
 "geo.map_none": "कोई ट्रैफ़िक नहीं",
 "geo.data_from": "देश और नेटवर्क डेटा:",
-"geo.map_from": "नक़्शा:"
+"geo.map_from": "नक़्शा:",
+"td.both": "दोनों छोर"
 }

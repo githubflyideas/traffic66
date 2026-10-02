@@ -3,7 +3,12 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 0.2.0
+## 0.3.1
+
+- Traffic details opens on servers only; tabs switch to clients, both ends
+  side by side, and services (13 languages).
+
+## 0.3.0
 
 Findings
 - traffic66 now looks through the flows every 5 minutes and lists what

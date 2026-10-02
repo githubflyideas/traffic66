@@ -375,5 +375,6 @@
 "geo.map_more": "বেশি",
 "geo.map_none": "ট্রাফিক নেই",
 "geo.data_from": "দেশ ও নেটওয়ার্ক ডেটা:",
-"geo.map_from": "মানচিত্র:"
+"geo.map_from": "মানচিত্র:",
+"td.both": "দুই প্রান্ত"
 }

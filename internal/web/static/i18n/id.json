@@ -375,5 +375,6 @@
 "geo.map_more": "banyak",
 "geo.map_none": "tanpa lalu lintas",
 "geo.data_from": "Negara dan jaringan:",
-"geo.map_from": "Peta:"
+"geo.map_from": "Peta:",
+"td.both": "Kedua sisi"
 }

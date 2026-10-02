@@ -375,5 +375,6 @@
 "geo.map_more": "많음",
 "geo.map_none": "트래픽 없음",
 "geo.data_from": "국가·네트워크 데이터:",
-"geo.map_from": "지도:"
+"geo.map_from": "지도:",
+"td.both": "양쪽"
 }
