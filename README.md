@@ -14,11 +14,14 @@ in a web UI and in a terminal UI.
   capture from a network interface or mirror port.
 - Checks its own numbers against interface counters (sFlow counters or
   SNMP) and says why they differ when they do.
+- Finds scans, password guessing, lateral movement, unusual uploads, floods
+  and threat list traffic in the flows, also through sampling, and lists
+  them as findings to deal with.
 - Top 66 lists, flow paths, countries and networks, threat list matches,
   flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - 13 languages in the web UI and the terminal UI.
 
-![Overview: bandwidth by application compared with last week, top clients and services](docs/images/overview.png)
+![Overview: open findings, bandwidth by application compared with last week, top clients and services](docs/images/overview.png)
 
 <sub>All screenshots come from `traffic66 demo`, a simulated company network that you can run yourself (see [Try the demo](#1-try-the-demo)).</sub>
 
@@ -83,9 +86,11 @@ cd traffic66-windows-amd64
 
 Open http://127.0.0.1:8066 and sign in as `admin` / `try66`. The demo builds
 a small company network with a day of history and live traffic from four
-simulated devices, including two incidents to find: start on **Overview**,
-click a host in **Top clients**, choose **Show details**, and keep clicking
-from there. Stop it with Ctrl+C.
+simulated devices, including an attack: **Findings** shows each step of it
+(a scan, a port scan, password guessing, lateral movement, an upload to a
+control server) and a flood on the public website. Click **Details** on a
+finding, or start on **Overview**, click a host in **Top clients**, choose
+**Show details**, and keep clicking from there. Stop it with Ctrl+C.
 Demo data is kept in `traffic66-demo` next to the program; delete that
 folder to start the demo afresh.
 
@@ -622,7 +627,8 @@ Pages:
 
 | Page | What it answers |
 |---|---|
-| Overview | How much traffic now and compared with last week, by application; top clients and services |
+| Overview | How much traffic now and compared with last week, by application; open findings; top clients and services |
+| Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
 | Top-N | One table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
 | Flow paths | Which segment talks to which application in which country |
 | Geo & networks | Traffic by country and by network (AS) |
@@ -648,9 +654,46 @@ The side menu shows how much disk the data uses and how much is free;
 hover over the free space to see how much the kept days of detail need at
 the current rate (estimated once there is a day of data).
 
+### Findings
+
+**Findings** lists what traffic66 found in the flows, most serious first. It
+checks the last 10 minutes every 5 minutes; something that goes on for an
+hour is one finding that grows, not a new one at every check.
+
+| Finding | What it means | Severity |
+|---|---|---|
+| Scan | One address sent small probes to many addresses on one port (TCP or ping) | High from inside your network, low from the internet |
+| Port scan | One address sent small probes to many ports of one host | High from inside, low from the internet |
+| Password guessing | Many short connections to a login service (SSH, RDP, SMB, databases and others) | High from inside, low from the internet |
+| Lateral movement | Inside your network, file sharing or remote administration sessions (SMB, RDP, SSH, WinRM, VNC) to hosts that never offered that service before | High |
+| Unusual upload | An internal host sent much more than it received (100 MB in 10 minutes, three times what it received) to an address it had not exchanged data with before | High |
+| Flood | 20,000 or more small packets per second to one address, ten times its usual rate | Medium |
+| Threat list | Traffic with an address on one of your threat lists | High when your host connected to it, low when the listed address knocked from outside |
+
+Each finding says who did what to whom, when and for how long, with the
+numbers behind it and how the data was sampled. **Details** opens the
+host's page, which also lists the findings about it. **Dealt with** closes
+a finding; if it happens again, a new one opens. **Not a problem** closes it
+for good: it is never reported again. The red number next to **Findings** in
+the side menu counts the open high and medium findings of the last 24 hours.
+
+Lateral movement and unusual uploads need to know what is normal, so they
+are reported once there is a day of history. On first start traffic66
+learns from the history it already has.
+
+With sampled data (sFlow, sampled NetFlow) the rules count what the samples
+show and ask for fewer of them, but then each must look like one short
+probe, so busy normal hosts do not trigger them. What sampling hides cannot
+be found: behind 1:4096 sampling, a scan of a few dozen hosts sends too few
+packets to be seen. The demo's attack goes through a switch that samples
+1:4096 and is found completely; a day of the demo's normal traffic produces
+no findings except the internet scanner knocking on the website.
+
+![Findings: every step of an attack, found through 1:4096 sFlow sampling](docs/images/findings.png)
+
 ![Top-N: the top 66 conversations of the last hour](docs/images/topn.png)
 
-![Details of one host: its traffic, who it talks to, services, countries and latest flows](docs/images/detail.png)
+![Details of one host: the findings about it, its traffic, who it talks to, services, countries and latest flows](docs/images/detail.png)
 
 ![Flow paths: which segment uses which application towards which country](docs/images/paths.png)
 

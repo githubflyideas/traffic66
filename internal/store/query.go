@@ -562,12 +562,19 @@ func (s *Store) Totals(q Query) (Totals, error) {
 	if err != nil {
 		return t, err
 	}
+	src := s.Source(q.From, q.To)
 	err = s.DB.QueryRow(fmt.Sprintf(`SELECT coalesce(sum(bytes),0), coalesce(sum(wire),0), coalesce(sum(pkts),0), coalesce(sum(flows),0),
-		count(DISTINCT CASE WHEN cli_int THEN client END) + count(DISTINCT CASE WHEN srv_int AND NOT cli_int THEN server END),
 		count(DISTINCT CASE WHEN NOT srv_int THEN server WHEN NOT cli_int THEN client END),
 		count(DISTINCT nullif(peer_cc, ''))
-		FROM %s WHERE %s`, s.Source(q.From, q.To), where), args...).
-		Scan(&t.Bytes, &t.Wire, &t.Pkts, &t.Flows, &t.Hosts, &t.Peers, &t.Countries)
+		FROM %s WHERE %s`, src, where), args...).
+		Scan(&t.Bytes, &t.Wire, &t.Pkts, &t.Flows, &t.Peers, &t.Countries)
+	if err != nil {
+		return t, err
+	}
+	// internal addresses on either side, each counted once (a host is often
+	// a client in one conversation and a server in another)
+	err = s.DB.QueryRow(fmt.Sprintf(`SELECT count(*) FROM (SELECT client FROM %s WHERE %s AND cli_int UNION SELECT server FROM %s WHERE %s AND srv_int)`,
+		src, where, src, where), append(append([]any{}, args...), args...)...).Scan(&t.Hosts)
 	return t, err
 }
 

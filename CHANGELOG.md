@@ -3,7 +3,29 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 0.1.2
+## 0.2.0
+
+Findings
+- traffic66 now looks through the flows every 5 minutes and lists what
+  needs attention on a new **Findings** page: scans, port scans, password
+  guessing, lateral movement inside the network, unusual uploads to new
+  destinations, floods and traffic with addresses on threat lists. Each
+  finding is a sentence (who did what to whom, when, for how long) with the
+  numbers behind it and how the data was sampled.
+- The rules work on sampled sFlow and NetFlow. Tested with the demo's
+  attack sent through a switch sampling 1:4096: every step is found, each
+  as one finding; a day of normal traffic gives no findings apart from the
+  internet scanner.
+- **Dealt with** and **Not a problem** close a finding; "not a problem" is
+  never reported again. The overview shows the open findings first, a
+  host's details page lists the findings about it, and the side menu shows
+  how many high and medium findings are open.
+
+Fixes
+- A host's details page counted only part of the internal hosts it talked
+  to (the servers of internal conversations were missed).
+- Arabic and Urdu: ports read backwards ("tcp/445") and names ran into
+  their addresses.
 
 Drill-down and naming
 - **Show details** on any host, device or service opens a page about it:

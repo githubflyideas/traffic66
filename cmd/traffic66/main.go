@@ -27,6 +27,7 @@ import (
 	"github.com/githubflyideas/traffic66/internal/auth"
 	"github.com/githubflyideas/traffic66/internal/capture"
 	"github.com/githubflyideas/traffic66/internal/collector"
+	"github.com/githubflyideas/traffic66/internal/detect"
 	"github.com/githubflyideas/traffic66/internal/dnsres"
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/flow"
@@ -299,10 +300,12 @@ func serve(args []string, demo bool) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	det := detect.New(st, inv, detect.Config{})
 	if demo {
 		backfillDemo(pipe, st)
 	}
 	go pipe.Run(ctx)
+	go det.Loop(ctx)
 
 	for _, part := range strings.Split(f.listen, ",") {
 		part = strings.TrimSpace(part)
@@ -380,7 +383,7 @@ func serve(args []string, demo bool) {
 	} else {
 		dns = dnsres.New(dnsres.Options{Upstream: f.dnsUpstream, PerSecond: f.dnsRate, TTL: f.dnsTTL})
 	}
-	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Static: web.FS(), Version: version,
+	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Det: det, Static: web.FS(), Version: version,
 		Demo: demo, Check: checker.Check, Exists: checker.Exists, LocalTok: tok, DataDir: f.data, Started: time.Now()}
 	srv.SNMP = poller.Status
 	srv.Capture = func() []api.CaptureInfo {

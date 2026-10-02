@@ -108,7 +108,7 @@ const asked = new Set();
 function ipCell(ip, field = 'ip') {
   if (!ip) return '—';
   const n = names.get(ip);
-  return `<button class="v" data-k="${field}" data-val="${esc(ip)}" data-ip="${esc(ip)}" aria-haspopup="menu">${n ? esc(n) + `<span class="ip">${esc(ip)}</span>` : esc(ip)}</button>`;
+  return `<button class="v" data-k="${field}" data-val="${esc(ip)}" data-ip="${esc(ip)}" aria-haspopup="menu">${n ? esc(n) + ` <span class="ip">${esc(ip)}</span>` : esc(ip)}</button>`;
 }
 function V(field, val, label) {
   return `<button class="v" data-k="${field}" data-val="${esc(val)}" data-label="${esc(label)}" aria-haspopup="menu">${esc(label)}</button>`;
@@ -126,13 +126,13 @@ async function resolveNames() {
     setTimeout(() => ips.forEach(ip => { if (!names.has(ip)) asked.delete(ip); }), 60000);
     document.querySelectorAll('[data-ip]').forEach(el => {
       const n = names.get(el.dataset.ip);
-      if (n && !el.querySelector('.ip')) el.innerHTML = esc(n) + `<span class="ip">${esc(el.dataset.ip)}</span>`;
+      if (n && !el.querySelector('.ip')) el.innerHTML = esc(n) + ` <span class="ip">${esc(el.dataset.ip)}</span>`;
     });
   } catch (e) {}
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['overview', 'topn', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources', 'detail'];
+const VIEWS = ['overview', 'findings', 'topn', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'in', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
@@ -381,7 +381,7 @@ function errMsg(err) {
 function errorBox(err) { return `<div class="panel"><div class="empty">${esc(errMsg(err))}</div></div>`; }
 
 views.overview = async (el) => {
-  const [d, ifs] = await Promise.all([api('overview'), api('ifaces').catch(() => null)]);
+  const [d, ifs, fd] = await Promise.all([api('overview'), api('ifaces').catch(() => null), api('findings', {limit: 3}).catch(() => null)]);
   const tot = d.totals, base = d.base_totals, basis = d.basis;
   const change = base.wire > 0 ? (tot.wire - base.wire) / base.wire : null;
   // accuracy: worst interface deviation relative to its statistical error
@@ -409,6 +409,7 @@ views.overview = async (el) => {
       <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.accuracy')}</div><div class="n">${acc.n}</div><div class="d">${acc.kind ? status(acc.kind, acc.d) : `<span class="muted">${esc(acc.d)}</span>`}</div></div>
     </div></div>
+    ${fd ? findingsPanel(fd) : ''}
     <div class="panel c12"><div class="ph"><h2>${t('ov.bw_title')}</h2><span class="sub">${lines.length ? t(basis === 'week' ? 'ov.bw_sub_week' : 'ov.bw_sub_prev') : ''}</span></div>
       <div class="chart" id="chStack" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}${lines.length ? `<span><i class="dash"></i>${esc(lines[0].name)}</span>` : ''}</div></div>
@@ -421,9 +422,112 @@ views.overview = async (el) => {
       ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
   </div>`;
   tsChart($('#chStack'), {times: series.times, areas, lines});
+  bindFindings(el);
   donut($('#dDir'), dirParts, 'dir');
   donut($('#dProto'), protoParts, 'proto');
   donut($('#dCC'), ccParts, 'country');
+};
+
+
+// ------------------------------------------------------------ findings
+// What the detection rules found, as sentences a person can act on.
+const SEV = {3: 'high', 2: 'medium', 1: 'low'};
+// t() with values that are HTML (buttons for addresses): the text is escaped
+// first, then the placeholders are filled.
+function tHtml(k, p) {
+  let s = esc(t(k));
+  for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(b);
+  // keep punctuation next to a value on the same line: "203.0.113.200," must
+  // not break before the comma
+  const B = '<button[^>]*>(?:[^<]|<span[^>]*>[^<]*</span>)*</button>';
+  return s.replace(new RegExp(`((?:[(（「“«])*${B}(?:[,，、。.:;)）」”»])+|(?:[(（「“«])+${B})`, 'g'), '<span class="nw">$1</span>');
+}
+function fmtSpan(f) {
+  const a = Date.parse(f.first), b = Date.parse(f.last), min = Math.max(1, Math.round((b - a) / 60000));
+  const day = new Date(a).toDateString() !== new Date().toDateString();
+  const tf = new Intl.DateTimeFormat(LANG, day ? {month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'} : {hour: '2-digit', minute: '2-digit'});
+  const tt = new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit'});
+  const dur = min < 60 ? t('fd.min', {n: nf(min)}) : t('fd.hm', {h: nf(Math.floor(min / 60)), m: nf(min % 60)});
+  return `${tf.format(new Date(a))}–${tt.format(new Date(b))} · ${dur}`;
+}
+const portV = p => p && p !== 'icmp' ? V('port', p, p) : esc(p === 'icmp' ? 'ICMP' : p || '');
+function findingText(f) {
+  const e = f.ev || {}, src = ipCell(f.src), dst = ipCell(f.dst), port = portV(f.port);
+  switch (f.kind) {
+    case 'scan': return tHtml('fd.k.scan', {src, port, n: nf(e.targets)});
+    case 'portscan': return tHtml('fd.k.portscan', {src, dst, n: nf(e.ports)});
+    case 'brute': return tHtml('fd.k.brute', {src, dst, port});
+    case 'lateral': return tHtml('fd.k.lateral', {src, port, n: nf(e.hosts)});
+    case 'exfil': return tHtml('fd.k.exfil', {src, dst, bytes: esc(fmtBytes(e.up))});
+    case 'flood': return tHtml('fd.k.flood', {dst, port, pps: esc(nf(e.pps))});
+    case 'threat': return tHtml(e.dir === 2 ? 'fd.k.threat_in' : 'fd.k.threat_out', {src, dst, list: esc(f.port)});
+  }
+  return esc(f.kind);
+}
+// The numbers behind a finding, and how the data was sampled.
+function findingEvidence(f) {
+  const e = f.ev || {}, parts = [];
+  const list = xs => (xs || []).slice(0, 4).map(x => f.kind === 'portscan' ? esc(x) : ipCell(x)).join(', ') + ((xs || []).length > 4 ? ' …' : '');
+  switch (f.kind) {
+    case 'scan': case 'portscan':
+      parts.push(esc(t('fd.e.pkts', {n: nf(e.pkts)})), esc(t('fd.e.avg', {n: nf(e.avg)})));
+      if ((e.examples || []).length) parts.push(tHtml('fd.e.examples', {list: list(e.examples)}));
+      break;
+    case 'brute': parts.push(esc(t('fd.e.conns', {n: nf(e.conns)})), esc(t('fd.e.pkts', {n: nf(e.pkts)})), esc(t('fd.e.avg', {n: nf(e.avg)}))); break;
+    case 'lateral': parts.push(tHtml('fd.e.targets', {list: list(e.targets)}), esc(t('fd.e.bytes', {n: fmtBytes(e.bytes)}))); break;
+    case 'exfil': parts.push(esc(t('fd.e.down', {n: fmtBytes(e.down)}))); if (e.cc || e.org) parts.push(esc([e.cc ? country(e.cc) : '', e.org].filter(Boolean).join(', '))); break;
+    case 'flood': parts.push(esc(t('fd.e.sources', {n: nf(e.sources)})), esc(t('fd.e.avg', {n: nf(e.avg)})), esc(t('fd.e.usual', {n: nf(e.usual)}))); break;
+    case 'threat': parts.push(esc(t('fd.e.up', {n: fmtBytes(e.up)})), esc(t('fd.e.down', {n: fmtBytes(e.down)}))); break;
+  }
+  parts.push(esc(e.sampling > 1 ? t('fd.e.sampling', {n: nf(e.sampling)}) : t('fd.e.unsampled')));
+  return parts.join(' · ');
+}
+function findingRows(list, actions, here) {
+  return list.map(f => {
+    const open = f.status === 'open', who = f.src || f.dst;
+    const acts = !actions ? '' : `<td class="acts">${who !== here ? `<button class="btn" data-fd-view="${esc(who)}">${t('fd.view')}</button>` : ''}${open
+      ? `<button class="btn" data-fd-set="done" data-id="${f.id}">${t('fd.done')}</button><button class="btn" data-fd-set="false" data-id="${f.id}" title="${esc(t('fd.false_tip'))}">${t('fd.false')}</button>`
+      : `<button class="btn" data-fd-set="open" data-id="${f.id}">${t('fd.reopen')}</button>`}</td>`;
+    return `<tr class="${open ? '' : 'closed'}"><td><span class="sev s${f.sev}">${t('sev.' + SEV[f.sev])}</span></td>
+      <td><div class="kind">${t('fd.kind.' + f.kind)}${open ? '' : `<span class="stl">${t('fd.st_' + f.status)}</span>`}</div><div class="what">${findingText(f)}</div><div class="ev">${findingEvidence(f)}</div></td>
+      <td class="when">${esc(fmtSpan(f))}</td>${acts}</tr>`;
+  }).join('');
+}
+function findingCounts(d) {
+  const o = d.open || {};
+  return ['high', 'medium', 'low'].map(k => `<span class="cnt"><span class="sev s${{high: 3, medium: 2, low: 1}[k]}">${t('sev.' + k)}</span><b>${nf(o[k] || 0)}</b></span>`).join('');
+}
+// The overview's panel: open findings first, or a line saying there are none.
+function findingsPanel(d) {
+  const fs = d.findings || [], o = d.open || {}, n = (o.high || 0) + (o.medium || 0) + (o.low || 0);
+  const body = fs.length
+    ? `<table class="fd">${findingRows(fs, false)}</table>${n > fs.length ? `<p class="fdnote"><button class="btn" data-go="findings">${t('ov.findings_all', {n: nf(n)})}</button></p>` : ''}`
+    : `<div style="padding:4px 0">${status('ok', t('fd.none_open'))}</div>`;
+  return `<div class="panel c12"><div class="ph"><h2>${t('nav.findings')}</h2><div class="fdhead" style="margin-inline-start:auto">${findingCounts(d)}</div></div>${body}</div>`;
+}
+function bindFindings(el) {
+  el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+  el.querySelectorAll('[data-fd-view]').forEach(b => b.onclick = () => showDetail('ip', b.dataset.fdView));
+  el.querySelectorAll('[data-fd-set]').forEach(b => b.onclick = async () => {
+    const res = await fetch('/api/findings', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ids: [+b.dataset.id], status: b.dataset.fdSet})});
+    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || res.statusText); return; }
+    loadStatus(); render();
+  });
+}
+views.findings = async (el) => {
+  const all = state.fd === 'all';
+  const d = await api('findings', {status: all ? 'all' : 'open'});
+  const fs = d.findings || [], det = d.detector || {};
+  const learning = det.learning_until && !det.learning_until.startsWith('0001') ? Date.parse(det.learning_until) : 0;
+  el.innerHTML = `<div class="grid"><div class="panel c12">
+    <div class="ph"><div class="fdhead">${findingCounts(d)}</div>
+      <div class="tools" style="margin-inline-start:auto;display:flex;gap:12px;align-items:center">${det.last_run && !det.last_run.startsWith('0001') ? `<span class="muted" style="font-size:12.5px">${esc(t('fd.last_run', {t: ago(Date.parse(det.last_run))}))}</span>` : ''}
+      <div class="seg" role="group"><button data-fd="open" aria-pressed="${!all}">${t('fd.open')}</button><button data-fd="all" aria-pressed="${all}">${t('fd.all')}</button></div></div></div>
+    ${learning > Date.now() ? `<div class="verdict warn" style="margin:0 0 10px">${esc(t('fd.learning', {t: new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(learning))}))}</div>` : ''}
+    ${fs.length ? `<table class="fd">${findingRows(fs, true)}</table>` : `<div class="empty">${all ? t('fd.none') : status('ok', t('fd.none_open'))}</div>`}
+    <p class="fdnote">${esc(t('fd.note'))}</p></div></div>`;
+  el.querySelectorAll('[data-fd]').forEach(b => b.onclick = () => { state.fd = b.dataset.fd; render(); });
+  bindFindings(el);
 };
 
 const DIMS = ['conv', 'client', 'server', 'app', 'port', 'country', 'asn', 'segment', 'exporter', 'encap', 'vlan'];
@@ -715,10 +819,10 @@ views.detail = async (el) => {
   if (!det) { go('overview'); return; }
   const fs = [...state.f.filter(x => !(x.f === det.f && x.v === det.v)), {f: det.f, v: det.v, neg: false}];
   const isIP = det.f === 'ip';
-  const [d, conv, side1, side2, rec] = await Promise.all([
+  const [d, conv, side1, side2, rec, fd] = await Promise.all([
     api('overview', {}, fs), api('topn', {dim: 'conv', limit: 30}, fs),
     api('topn', {dim: isIP ? 'port' : 'client', limit: 15}, fs), api('topn', {dim: isIP ? 'country' : 'server', limit: 15}, fs),
-    api('records', {limit: 50}, fs)]);
+    api('records', {limit: 50}, fs), isIP ? api('findings', {status: 'all', ip: det.v}, []).catch(() => null) : null]);
   const title = isIP ? (names.get(det.v) ? `${esc(names.get(det.v))} <span class="sub">${esc(det.v)}</span>` : esc(det.v)) : esc(det.v);
   $('#title').textContent = t('nav.detail') + ': ' + (isIP ? (names.get(det.v) || det.v) : det.v);
   const tot = d.totals, series = d.series || {times: [], names: [], values: []};
@@ -736,6 +840,7 @@ views.detail = async (el) => {
         <div class="kpi"><div class="lab">${t(isIP ? 'det.peers' : 'det.clients')}</div><div class="n">${nf(isIP ? tot.peers + tot.hosts - 1 : tot.hosts)}</div><div class="d">&nbsp;</div></div>
         <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       </div></div>
+    ${fd && (fd.findings || []).length ? panel('c12', t('det.findings'), '', `<table class="fd">${findingRows(fd.findings, true, det.v)}</table>`) : ''}
     <div class="panel c12"><div class="ph"><h2>${t('ov.bw_title')}</h2><span class="sub">${lines.length ? t(d.basis === 'week' ? 'ov.bw_sub_week' : 'ov.bw_sub_prev') : ''}</span></div>
       <div class="chart" id="chDet" style="height:220px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}</div></div>
@@ -747,6 +852,7 @@ views.detail = async (el) => {
       ${rr.map(r => `<tr><td class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</td><td>${ipCell(r.client)}</td><td>${ipCell(r.server)}</td><td class="num">${r.port ? V('port', r.port + '/' + (r.proto === 17 ? 'udp' : 'tcp'), r.port) : '—'}</td><td>${V('app', r.app, r.app)}</td><td>${r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—')}</td><td class="num">${fmtBytes(r.wire)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">${t('empty.nodata')}</td></tr>`}</table></div>`)}
   </div>`;
   tsChart($('#chDet'), {times: series.times, areas, lines});
+  bindFindings(el);
 };
 
 // ------------------------------------------------------------ shell
@@ -783,6 +889,7 @@ async function loadStatus() {
       <span class="k">${t('self.free')}</span><span class="val" ${s.disk_need > s.disk_free ? 'style="color:var(--crit)"' : ''} title="${esc(s.disk_need >= 0 ? t('self.need', {d: nf(s.retention_days), n: fmtBytes(s.disk_need)}) : t('self.need_later', {d: nf(s.retention_days)}))}">${fmtBytes(s.disk_free)}</span>
       ${s.write_errors ? `<span class="k" style="color:var(--crit)">!</span><span class="val" style="color:var(--crit)" title="${esc(s.last_error)}">${nf(s.write_errors)}</span>` : ''}`;
     $('#srcBadge').hidden = !s.source_warnings; $('#srcBadge').textContent = s.source_warnings;
+    $('#findBadge').hidden = !s.findings_open; $('#findBadge').textContent = s.findings_open;
   } catch (e) {}
 }
 
@@ -827,7 +934,7 @@ async function init() {
   setInterval(loadStatus, 10000);
   setInterval(() => {
     if (document.hidden || pop.style.display === 'block' || document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.id === 'q') return;
-    if (state.v === 'sources' || state.v === 'records' || state.v === 'overview' || state.r === '15m' || state.r === '1h') render();
+    if (state.v === 'sources' || state.v === 'records' || state.v === 'overview' || state.v === 'findings' || state.r === '15m' || state.r === '1h') render();
   }, 30000);
 }
 init();

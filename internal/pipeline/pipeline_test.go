@@ -345,3 +345,26 @@ func TestDedupCap(t *testing.T) {
 		t.Fatalf("DedupFull %d, want 50", p.DedupFull.Load())
 	}
 }
+
+// Internal hosts are counted on both sides of a conversation, once each.
+func TestTotalsInternalHosts(t *testing.T) {
+	p, st := setup(t)
+	now := time.Now().UTC().Truncate(time.Minute)
+	a, b, c := netip.MustParseAddr("10.1.1.1"), netip.MustParseAddr("10.1.1.2"), netip.MustParseAddr("10.1.1.3")
+	exp := netip.MustParseAddr("10.0.0.1")
+	var recs []flow.Record
+	for _, pr := range [][2]netip.Addr{{a, b}, {a, c}, {b, c}} { // a and b are clients and servers
+		recs = append(recs, flow.Record{Start: now.Add(-5 * time.Minute), End: now.Add(-5 * time.Minute), Src: pr[0], Dst: pr[1], SrcPort: 50000, DstPort: 445,
+			Proto: 6, Bytes: 1000, Packets: 2, Mult: 1, SamplingKnown: true, Exporter: exp, Source: flow.SrcIPFIX})
+	}
+	p.Ingest(recs)
+	p.FlushRows()
+	tot, err := st.Totals(store.Query{From: now.Add(-time.Hour), To: now})
+	if err != nil || tot.Hosts != 3 || tot.Peers != 0 {
+		t.Fatalf("totals %+v %v, want 3 hosts", tot, err)
+	}
+	tot, err = st.Totals(store.Query{From: now.Add(-time.Hour), To: now, Filters: []store.Filter{{Field: "ip", Value: "10.1.1.1"}}})
+	if err != nil || tot.Hosts != 3 {
+		t.Fatalf("one host's totals %+v %v, want itself and the 2 it talked to", tot, err)
+	}
+}

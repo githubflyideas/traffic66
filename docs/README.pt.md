@@ -14,12 +14,15 @@ equipamentos, em uma interface web e em uma interface de terminal.
   local opcional a partir de uma interface de rede ou porta espelho.
 - Confere os próprios números com os contadores de interface (contadores
   sFlow ou SNMP) e explica por que diferem quando há diferença.
+- Encontra nos fluxos varreduras, tentativas de senhas, movimento lateral,
+  envios incomuns, inundações e tráfego de listas de ameaças, inclusive
+  através da amostragem, e os lista como detecções a tratar.
 - Listas Top 66, caminhos do tráfego, países e redes, ocorrências em listas
   de ameaças, registros de fluxo, encapsulamento (GRE, IPIP, VXLAN, GENEVE,
   MPLS).
 - 13 idiomas na interface web e na interface de terminal.
 
-![Visão geral: banda por aplicação em comparação com a semana passada, principais clientes e serviços](images/overview.png)
+![Visão geral: detecções abertas, banda por aplicação em comparação com a semana passada, principais clientes e serviços](images/overview.png)
 
 <sub>Todas as capturas de tela vêm do `traffic66 demo`, uma rede corporativa simulada que você mesmo pode executar (veja [Testar a demo](#1-try-the-demo)).</sub>
 
@@ -88,7 +91,10 @@ cd traffic66-windows-amd64
 
 Abra http://127.0.0.1:8066 e entre como `admin` / `try66`. A demo monta a
 rede de uma pequena empresa com um dia de histórico e tráfego ao vivo de
-quatro equipamentos simulados, incluindo dois incidentes para encontrar:
+quatro equipamentos simulados, incluindo um ataque: **Detecções** mostra
+cada etapa dele (uma varredura, uma varredura de portas, tentativas de
+senhas, movimento lateral, um envio para um servidor de controle) e uma
+inundação contra o site público. Clique em **Detalhes** em uma detecção, ou
 comece em **Visão geral**, clique em um host em **Principais clientes**,
 escolha **Ver detalhes** e vá clicando a partir daí. Pare com Ctrl+C. Os dados da demo ficam em `traffic66-demo`, ao lado
 do programa; apague essa pasta para recomeçar a demo do zero.
@@ -672,7 +678,8 @@ Páginas:
 
 | Página | O que responde |
 |---|---|
-| Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; principais clientes e serviços |
+| Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; detecções abertas; principais clientes e serviços |
+| Detecções | O que precisa de atenção: varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças ([mais](#findings)) |
 | Top-N | Uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
 | Caminhos do tráfego | Qual segmento fala com qual aplicação em qual país |
 | Geografia e redes | Tráfego por país e por rede (AS) |
@@ -698,9 +705,51 @@ O menu lateral mostra quanto disco os dados usam e quanto está livre; passe
 o mouse sobre o espaço livre para ver quanto os dias de detalhe mantidos
 precisam no ritmo atual (estimado assim que houver um dia de dados).
 
+<a id="findings"></a>
+
+### Detecções
+
+**Detecções** lista o que o traffic66 encontrou nos fluxos, as mais graves
+primeiro. Ele verifica os últimos 10 minutos a cada 5 minutos; algo que
+dura uma hora é uma única detecção que cresce, não uma nova a cada
+verificação.
+
+| Detecção | O que significa | Gravidade |
+|---|---|---|
+| Varredura | Um endereço enviou pequenas sondas a muitos endereços em uma mesma porta (TCP ou ping) | Alta de dentro da sua rede, baixa da internet |
+| Varredura de portas | Um endereço enviou pequenas sondas a muitas portas de um mesmo host | Alta de dentro, baixa da internet |
+| Tentativa de senhas | Muitas conexões curtas a um serviço de login (SSH, RDP, SMB, bancos de dados e outros) | Alta de dentro, baixa da internet |
+| Movimento lateral | Dentro da sua rede, sessões de compartilhamento de arquivos ou de administração remota (SMB, RDP, SSH, WinRM, VNC) para hosts que nunca ofereceram esse serviço antes | Alta |
+| Envio incomum | Um host interno enviou muito mais do que recebeu (100 MB em 10 minutos, três vezes o que recebeu) para um endereço com o qual não havia trocado dados antes | Alta |
+| Inundação | 20.000 ou mais pacotes pequenos por segundo para um endereço, dez vezes a taxa habitual dele | Média |
+| Lista de ameaças | Tráfego com um endereço de uma das suas listas de ameaças | Alta quando o seu host se conectou a ele, baixa quando o endereço listado bateu de fora |
+
+Cada detecção diz quem fez o quê a quem, quando e por quanto tempo, com os
+números por trás e como os dados foram amostrados. **Detalhes** abre a
+página do host, que também lista as detecções sobre ele. **Resolvido**
+fecha uma detecção; se acontecer de novo, uma nova é aberta.
+**Não é problema** a fecha de vez: ela nunca mais é relatada. O número
+vermelho ao lado de **Detecções** no menu lateral conta as detecções
+abertas de gravidade alta e média das últimas 24 horas.
+
+Movimento lateral e envios incomuns precisam saber o que é normal, então
+são relatados quando já houver um dia de histórico. Na primeira
+inicialização, o traffic66 aprende com o histórico que já tem.
+
+Com dados amostrados (sFlow, NetFlow amostrado), as regras contam o que as
+amostras mostram e pedem menos delas, mas então cada uma precisa parecer
+uma sonda curta, de modo que hosts normais movimentados não as disparam. O
+que a amostragem esconde não pode ser encontrado: com amostragem 1:4096,
+uma varredura de algumas dezenas de hosts envia pacotes de menos para ser
+vista. O ataque da demo passa por um switch que amostra a 1:4096 e é
+encontrado por completo; um dia de tráfego normal da demo não produz
+nenhuma detecção, exceto o scanner da internet batendo no site.
+
+![Detecções: cada etapa de um ataque, encontrada através de amostragem sFlow 1:4096](images/findings.png)
+
 ![Top-N: as 66 maiores conversas da última hora](images/topn.png)
 
-![Detalhes de um host: o tráfego, com quem fala, serviços, países e fluxos mais recentes](images/detail.png)
+![Detalhes de um host: as detecções sobre ele, o tráfego, com quem fala, serviços, países e fluxos mais recentes](images/detail.png)
 
 ![Caminhos do tráfego: qual segmento usa qual aplicação para qual país](images/paths.png)
 

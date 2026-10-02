@@ -14,12 +14,15 @@ propios equipos, tanto en una interfaz web como en una interfaz de terminal.
   local opcional desde una interfaz de red o un puerto espejo.
 - Contrasta sus cifras con los contadores de interfaz (contadores sFlow o
   SNMP) y explica por qué difieren cuando no coinciden.
+- Detecta en los flujos escaneos, adivinación de contraseñas, movimiento
+  lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas,
+  también a través del muestreo, y los muestra como hallazgos que atender.
 - Listas Top 66, rutas de tráfico, países y redes, coincidencias con listas
   de amenazas, registros de flujo, encapsulación (GRE, IPIP, VXLAN, GENEVE,
   MPLS).
 - 13 idiomas en la interfaz web y en la de terminal.
 
-![Resumen: ancho de banda por aplicación frente a la semana pasada, principales clientes y servicios](images/overview.png)
+![Resumen: hallazgos abiertos, ancho de banda por aplicación frente a la semana pasada, principales clientes y servicios](images/overview.png)
 
 <sub>Todas las capturas de pantalla proceden de `traffic66 demo`, una red de empresa simulada que puede ejecutar usted mismo (vea [Probar la demo](#1-try-the-demo)).</sub>
 
@@ -88,10 +91,13 @@ cd traffic66-windows-amd64
 
 Abra http://127.0.0.1:8066 e inicie sesión como `admin` / `try66`. La demo
 monta la red de una pequeña empresa con un día de historial y tráfico en
-vivo de cuatro equipos simulados, e incluye dos incidentes por descubrir:
-empiece en **Resumen**, haga clic en un host de **Principales clientes**,
-elija **Ver detalles** y siga haciendo clic a partir de ahí. Deténgala con
-Ctrl+C. Los datos de la demo se guardan en
+vivo de cuatro equipos simulados, e incluye un ataque: **Hallazgos**
+muestra cada uno de sus pasos (un escaneo, un escaneo de puertos,
+adivinación de contraseñas, movimiento lateral, una subida a un servidor de
+control) y una inundación contra el sitio web público. Haga clic en
+**Detalles** en un hallazgo, o empiece en **Resumen**, haga clic en un host
+de **Principales clientes**, elija **Ver detalles** y siga haciendo clic a
+partir de ahí. Deténgala con Ctrl+C. Los datos de la demo se guardan en
 `traffic66-demo`, junto al programa; borre esa carpeta para empezar la demo
 desde cero.
 
@@ -673,7 +679,8 @@ Páginas:
 
 | Página | Qué responde |
 |---|---|
-| Resumen | Cuánto tráfico hay ahora y frente a la semana pasada, por aplicación; principales clientes y servicios |
+| Resumen | Cuánto tráfico hay ahora y frente a la semana pasada, por aplicación; hallazgos abiertos; principales clientes y servicios |
+| Hallazgos | Qué requiere atención: escaneos, adivinación de contraseñas, movimiento lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas ([más](#findings)) |
 | Top-N | Una sola tabla de los 66 primeros: por defecto, conversaciones (cliente, servidor, servicio, país). Cualquier encabezado ordena; las columnas numéricas (tráfico, paquetes, paquete medio, flujos) clasifican todo el tráfico del periodo, así el menor paquete medio revela escaneos e inundaciones. **Agrupar por** cambia a aplicaciones, redes, segmentos, equipos, encapsulación y VLAN |
 | Rutas de tráfico | Qué segmento habla con qué aplicación en qué país |
 | Geografía y redes | Tráfico por país y por red (AS) |
@@ -699,9 +706,50 @@ pase el ratón por el espacio libre para ver cuánto necesitan, al ritmo
 actual, los días de detalle que se conservan (se estima en cuanto hay un
 día de datos).
 
+<a id="findings"></a>
+
+### Hallazgos
+
+**Hallazgos** enumera lo que traffic66 encontró en los flujos, empezando por
+lo más grave. Revisa los últimos 10 minutos cada 5 minutos; algo que dura
+una hora es un solo hallazgo que crece, no uno nuevo en cada revisión.
+
+| Hallazgo | Qué significa | Gravedad |
+|---|---|---|
+| Escaneo | Una dirección envió pequeñas sondas a muchas direcciones en un mismo puerto (TCP o ping) | Alta desde dentro de su red, baja desde internet |
+| Escaneo de puertos | Una dirección envió pequeñas sondas a muchos puertos de un mismo host | Alta desde dentro, baja desde internet |
+| Adivinación de contraseñas | Muchas conexiones cortas a un servicio de inicio de sesión (SSH, RDP, SMB, bases de datos y otros) | Alta desde dentro, baja desde internet |
+| Movimiento lateral | Dentro de su red, sesiones de compartición de archivos o de administración remota (SMB, RDP, SSH, WinRM, VNC) hacia hosts que nunca antes ofrecieron ese servicio | Alta |
+| Subida inusual | Un host interno envió mucho más de lo que recibió (100 MB en 10 minutos, el triple de lo recibido) a una dirección con la que no había intercambiado datos antes | Alta |
+| Inundación | 20.000 o más paquetes pequeños por segundo hacia una dirección, diez veces su ritmo habitual | Media |
+| Lista de amenazas | Tráfico con una dirección de una de sus listas de amenazas | Alta cuando su host se conectó a ella, baja cuando la dirección listada llamó desde fuera |
+
+Cada hallazgo dice quién hizo qué a quién, cuándo y durante cuánto tiempo,
+con las cifras que lo respaldan y cómo se muestrearon los datos.
+**Detalles** abre la página del host, que también enumera los hallazgos
+sobre él. **Resuelto** cierra un hallazgo; si vuelve a ocurrir, se abre uno
+nuevo. **No es un problema** lo cierra para siempre: no se vuelve a
+notificar. El número rojo junto a **Hallazgos** en el menú lateral cuenta
+los hallazgos abiertos de gravedad alta y media de las últimas 24 horas.
+
+El movimiento lateral y las subidas inusuales necesitan saber qué es
+normal, así que se notifican en cuanto hay un día de historial. En el
+primer arranque, traffic66 aprende del historial que ya tiene.
+
+Con datos muestreados (sFlow, NetFlow muestreado), las reglas cuentan lo que
+muestran las muestras y piden menos, pero entonces cada una debe parecer una
+sonda corta, de modo que los hosts normales con mucha actividad no las
+disparan. Lo que el muestreo oculta no se puede encontrar: tras un muestreo
+1:4096, un escaneo de unas decenas de hosts envía demasiado pocos paquetes
+para verse. El ataque de la demo pasa por un switch que muestrea a 1:4096 y
+se encuentra entero; un día de tráfico normal de la demo no produce ningún
+hallazgo salvo el escáner de internet que llama a la puerta del sitio web.
+
+![Hallazgos: cada paso de un ataque, encontrado a través de un muestreo sFlow 1:4096](images/findings.png)
+
 ![Top-N: las 66 primeras conversaciones de la última hora](images/topn.png)
 
-![Detalles de un host: su tráfico, con quién habla, servicios, países y últimos flujos](images/detail.png)
+![Detalles de un host: los hallazgos sobre él, su tráfico, con quién habla, servicios, países y últimos flujos](images/detail.png)
 
 ![Rutas de tráfico: qué segmento usa qué aplicación hacia qué país](images/paths.png)
 

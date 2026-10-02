@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/githubflyideas/traffic66/internal/collector"
+	"github.com/githubflyideas/traffic66/internal/detect"
 	"github.com/githubflyideas/traffic66/internal/dnsres"
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/pipeline"
@@ -32,6 +33,7 @@ type Server struct {
 	ASN      *enrich.ASNDB
 	Thr      *enrich.Threats
 	DNS      *dnsres.Resolver
+	Det      *detect.Detector
 	Static   fs.FS
 	Version  string
 	Demo     bool
@@ -90,6 +92,8 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/resolve", s.resolve)
 	api("GET /api/inventory", s.getInventory)
 	api("POST /api/inventory", s.putInventory)
+	api("GET /api/findings", s.findings)
+	api("POST /api/findings", s.setFindings)
 	api("GET /api/geo", s.getGeo)
 	api("POST /api/geo", s.putGeo)
 	static := http.FileServer(http.FS(s.Static))
