@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,13 +29,16 @@ func TestCheckCaptures(t *testing.T) {
 		{[]string{a, b}, ""},
 		{[]string{a, b, c, d}, "at most 3 files"},
 		{[]string{txt}, "not a capture file"},
-		{[]string{filepath.Join(dir, "missing.pcap")}, "no such file"},
 		{[]string{a, b, c}, "in all"},
 	} {
 		err := checkCaptures(tc.files, lim)
 		if (tc.err == "") != (err == nil) || err != nil && !strings.Contains(err.Error(), tc.err) {
 			t.Errorf("%v: %v, want %q", tc.files, err, tc.err)
 		}
+	}
+	// the message differs between systems
+	if err := checkCaptures([]string{filepath.Join(dir, "missing.pcap")}, lim); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("missing file: %v", err)
 	}
 	if !looksLikeCapture("x.PCAPNG") || looksLikeCapture("serv") || !looksLikeCapture(txt) {
 		t.Error("looksLikeCapture")
