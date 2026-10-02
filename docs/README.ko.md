@@ -17,6 +17,7 @@ sFlow, NetFlow, IPFIX 플로 분석을 하나의 프로그램으로 처리합니
 - Top 66 목록, 클라이언트, 서버, 서비스, 인터페이스, 네트워크(AS)별 시간에 따른
   트래픽, 트래픽 경로, 국가, 위협 목록 일치 항목, 플로 레코드,
   캡슐화(GRE, IPIP, VXLAN, GENEVE, MPLS).
+- `traffic66 capture.pcap`로 최대 3개(합계 3 GB)의 캡처를 웹 UI에서 열어 캡처 전체의 플로, 탐지, 국가, 플로 레코드를 봅니다. 설정할 것이 없습니다.
 - 웹 UI와 터미널 UI 모두 13개 언어를 지원합니다.
 
 ![개요: 미처리 탐지, 지난주와 비교한 애플리케이션별 대역폭, 상위 클라이언트와 서비스](images/overview.png)
@@ -729,7 +730,30 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 ### 오프라인 분석
 
-**오프라인 분석**는 Wireshark나 tcpdump 캡처를 실시간 데이터와 섞지 않고 같은 페이지로 보여 줍니다:
+**오프라인 분석**는 Wireshark나 tcpdump 캡처를 실시간 데이터와 섞지 않고 같은 페이지로 보여 줍니다.
+
+모든 패킷을 플로로 요약합니다: 누가 누구와, 얼마나, 언제 통신했고 무엇이 공격처럼 보이는지. 프로토콜을 해석하거나 패킷 내용을 보여 주지는 않습니다. 패킷 하나나 TCP 스트림 하나를 보려면 Wireshark를 쓰세요.
+
+명령줄에서 설정 없이 바로 엽니다:
+
+```
+traffic66 office.pcap
+traffic66 a.pcap b.pcapng c.pcap
+```
+
+traffic66은 이 컴퓨터에서만(127.0.0.1, 빈 포트) 실행되며, 주소와 비밀번호, 한 번만 쓰는 로그인 링크를 출력하고 브라우저에서 캡처를 엽니다. 최대 3개 파일, 합계 3 GB. 파일은 그 자리에서 읽으며 바꾸지 않습니다. 아무것도 수집하거나 보내지 않고, 호스트 이름도 조회하지 않습니다(`-dns`로 켬). Ctrl+C로 멈추면 가져온 데이터를 지웁니다. 2코어 컴퓨터에서 1 GB 캡처는 약 5초(최대 크기 패킷 120만 개)에서 30초(작은 패킷 1,400만 개)면 준비됩니다.
+
+```
+$ traffic66 office.pcap
+
+traffic66 0.3.1: analysing 1 capture file(s); nothing is collected or sent
+  Web UI    http://127.0.0.1:38217  (port 38217, this computer only)
+  Sign in   user admin, password gfhfhbuutz2e
+  Open      http://127.0.0.1:38217/auto?t=b9388f…  (signs in once)
+  Stop      Ctrl+C; the imported data is deleted, your files are kept
+```
+
+실행 중인 traffic66의 웹 UI에서는:
 
 1. **캡처 파일 업로드…**: `.pcap` 또는 `.pcapng`(압축 불가). 최대 3개 파일, 각각 50 MB 이하. 파일은 플로로 바뀌어 별도 데이터베이스(`<data>/sandbox/`)에 들어가며, 실시간 데이터와 집계, 탐지 결과에는 영향이 없습니다.
 2. **분석**: 모든 페이지(개요, Top 66, 트래픽 상세, 탐지, 플로 경로, 지도, 플로 레코드)가 캡처의 전체 기간을 보여 줍니다. 주황색 막대에 파일 이름이 나오고, **실시간 데이터로 돌아가기**로 돌아갑니다. 각 파일은 장비 하나로 나타나므로 **장비** 칸으로 파일을 하나씩 볼 수 있습니다.

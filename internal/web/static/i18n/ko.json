@@ -411,5 +411,7 @@
 "sb.range": "캡처 전체",
 "sb.min": "{n}분",
 "sb.hours": "{n}시간",
-"sb.not_capture": "{f}은(는) 캡처 파일이 아닙니다. Wireshark나 tcpdump로 저장한 .pcap 또는 .pcapng를 쓰세요."
+"sb.not_capture": "{f}은(는) 캡처 파일이 아닙니다. Wireshark나 tcpdump로 저장한 .pcap 또는 .pcapng를 쓰세요.",
+"sb.avg": "평균 속도",
+"sb.limits_total": "최대 {n}개 파일, 합계 {gb} 이하."
 }

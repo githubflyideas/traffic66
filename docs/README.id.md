@@ -21,6 +21,7 @@ antarmuka terminal.
 - Daftar Top 66, trafik dari waktu ke waktu per klien, server, layanan,
   interface, dan jaringan (AS), jalur trafik, negara, kecocokan dengan daftar
   ancaman, catatan flow, enkapsulasi (GRE, IPIP, VXLAN, GENEVE, MPLS).
+- `traffic66 capture.pcap` membuka hingga 3 tangkapan paket (total 3 GB) di UI web: flow, temuan, negara, dan catatan flow untuk seluruh tangkapan, tanpa pengaturan.
 - 13 bahasa di antarmuka web dan antarmuka terminal.
 
 ![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding minggu lalu, klien dan layanan teratas](images/overview.png)
@@ -780,7 +781,30 @@ Ringkasan yang sama dalam bahasa Tionghoa; setiap halaman tersedia dalam 13 baha
 
 ### Analisis offline
 
-**Analisis offline** menampilkan tangkapan Wireshark atau tcpdump dengan halaman yang sama seperti data langsung, tanpa mencampurnya:
+**Analisis offline** menampilkan tangkapan Wireshark atau tcpdump dengan halaman yang sama seperti data langsung, tanpa mencampurnya.
+
+traffic66 merangkum semua paket menjadi flow: siapa bicara dengan siapa, berapa banyak, kapan, dan apa yang tampak seperti serangan. Ia tidak mendekode protokol atau menampilkan isi paket; untuk satu paket atau satu aliran TCP, gunakan Wireshark.
+
+Dari baris perintah, tanpa pengaturan apa pun:
+
+```
+traffic66 office.pcap
+traffic66 a.pcap b.pcapng c.pcap
+```
+
+traffic66 berjalan hanya di komputer ini (127.0.0.1, port kosong), mencetak alamat, kata sandi, dan tautan masuk sekali pakai, lalu membuka tangkapan di browser. Maksimal 3 file, total 3 GB; file dibaca di tempatnya dan tidak pernah diubah. Tidak ada yang dikumpulkan atau dikirim, dan nama host tidak dicari (`-dns` menyalakannya). Ctrl+C menghentikan dan menghapus data yang diimpor. Di mesin 2 inti, tangkapan 1 GB siap dalam sekitar 5 detik (1,2 juta paket ukuran penuh) hingga 30 detik (14 juta paket kecil).
+
+```
+$ traffic66 office.pcap
+
+traffic66 0.3.1: analysing 1 capture file(s); nothing is collected or sent
+  Web UI    http://127.0.0.1:38217  (port 38217, this computer only)
+  Sign in   user admin, password gfhfhbuutz2e
+  Open      http://127.0.0.1:38217/auto?t=b9388f…  (signs in once)
+  Stop      Ctrl+C; the imported data is deleted, your files are kept
+```
+
+Di UI web traffic66 yang sedang berjalan:
 
 1. **Unggah file tangkapan…**: `.pcap` atau `.pcapng`, tidak dikompresi. Maksimal 3 file, masing-masing paling besar 50 MB. File diubah menjadi flow di basis data tersendiri (`<data>/sandbox/`); data langsung, angka, dan temuannya tidak tersentuh.
 2. **Analisis**: semua halaman (ringkasan, Top 66, detail trafik, temuan, jalur, peta, catatan flow) menampilkan file untuk seluruh waktunya. Bilah oranye menyebut nama file; **Kembali ke data langsung** kembali. Tiap file tampil sebagai perangkat, jadi kotak **Perangkat** menampilkan satu file sekaligus.

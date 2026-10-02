@@ -411,5 +411,7 @@
 "sb.range": "পুরো ক্যাপচার",
 "sb.min": "{n} মিনিট",
 "sb.hours": "{n} ঘণ্টা",
-"sb.not_capture": "{f} ক্যাপচার ফাইল নয়। Wireshark বা tcpdump-এ সংরক্ষিত .pcap বা .pcapng ব্যবহার করুন।"
+"sb.not_capture": "{f} ক্যাপচার ফাইল নয়। Wireshark বা tcpdump-এ সংরক্ষিত .pcap বা .pcapng ব্যবহার করুন।",
+"sb.avg": "গড় হার",
+"sb.limits_total": "সর্বোচ্চ {n}টি ফাইল, মোট {gb} পর্যন্ত।"
 }

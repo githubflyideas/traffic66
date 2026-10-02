@@ -9,6 +9,7 @@
 - 用接口计数器（sFlow 计数器或 SNMP）校验自己的统计结果，对不上时会说明原因。
 - 从流数据中找出扫描、暴力破解、横向移动、异常上传、泛洪和威胁情报流量（采样数据同样适用），并列为待处理的发现。
 - Top 66 排行、按客户端、服务器、服务、接口和网络（AS）划分的流量随时间变化、流向、国家、威胁情报命中、流记录、封装（GRE、IPIP、VXLAN、GENEVE、MPLS）。
+- `traffic66 capture.pcap` 直接打开最多 3 个抓包文件（总共 3 GB），在 Web 界面里看整个抓包的流、发现、国家和流记录，无需任何配置。
 - Web 界面和终端界面均支持 13 种语言。
 
 ![概览：未处理的发现、按应用划分的带宽与上周对比、主要客户端和服务](images/overview.png)
@@ -616,7 +617,30 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 ### 离线分析
 
-**离线分析** 用和实时数据相同的页面查看 Wireshark 或 tcpdump 的抓包文件，但不混进实时数据：
+**离线分析** 用和实时数据相同的页面查看 Wireshark 或 tcpdump 的抓包文件，但不混进实时数据。
+
+它把所有包汇总成流：谁和谁通信、多少、什么时候，以及哪些像是攻击。它不解码协议，也不显示包内容；要看单个包或单条 TCP 流，请用 Wireshark。
+
+在命令行里直接打开，不需要任何配置：
+
+```
+traffic66 office.pcap
+traffic66 a.pcap b.pcapng c.pcap
+```
+
+traffic66 只在本机启动（127.0.0.1，随机空闲端口），打印地址、密码和一次性登录链接，并自动在浏览器里打开抓包。最多 3 个文件，总共 3 GB；文件在原处读取，不会被修改。不采集也不发送任何数据，也不做主机名反查（加 `-dns` 开启）。按 Ctrl+C 停止并删除导入的数据。在 2 核机器上，1 GB 的抓包约 5 秒（120 万个满长包）到 30 秒（1400 万个小包）可以看结果。
+
+```
+$ traffic66 office.pcap
+
+traffic66 0.3.1: analysing 1 capture file(s); nothing is collected or sent
+  Web UI    http://127.0.0.1:38217  (port 38217, this computer only)
+  Sign in   user admin, password gfhfhbuutz2e
+  Open      http://127.0.0.1:38217/auto?t=b9388f…  (signs in once)
+  Stop      Ctrl+C; the imported data is deleted, your files are kept
+```
+
+在运行中的 traffic66 的 Web 界面里：
 
 1. **上传抓包文件…**：`.pcap` 或 `.pcapng`，不支持压缩包。最多 3 个文件，每个不超过 50 MB。文件被转换成流，存进单独的数据库（`<data>/sandbox/`），实时数据、统计和发现都不受影响。
 2. **分析**：所有页面（概览、Top 66、流量明细、发现、流向、地图、流记录）都改为显示抓包文件的整个时间段。橙色横条列出文件名，点 **返回实时数据** 返回。每个文件显示为一台设备，用 **设备** 筛选框可以只看一个文件。

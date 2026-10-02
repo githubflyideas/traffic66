@@ -411,5 +411,7 @@
 "sb.range": "seluruh tangkapan",
 "sb.min": "{n} mnt",
 "sb.hours": "{n} jam",
-"sb.not_capture": "{f} bukan file tangkapan. Gunakan .pcap atau .pcapng yang disimpan Wireshark atau tcpdump."
+"sb.not_capture": "{f} bukan file tangkapan. Gunakan .pcap atau .pcapng yang disimpan Wireshark atau tcpdump.",
+"sb.avg": "Laju rata-rata",
+"sb.limits_total": "Maksimal {n} file, total {gb}."
 }

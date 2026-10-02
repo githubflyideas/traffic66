@@ -27,26 +27,29 @@ import (
 
 // Server wires the API together.
 type Server struct {
-	Store    *store.Store
-	Pipe     *pipeline.Pipeline
-	Col      *collector.Collector
-	Inv      *enrich.Inventory
-	ASN      *enrich.ASNDB
-	Thr      *enrich.Threats
-	DNS      *dnsres.Resolver
-	Det      *detect.Detector
-	SB       *sandbox.Sandbox // offline analysis of capture files
-	Static   fs.FS
-	Version  string
-	Demo     bool
-	Users    map[string]string          // fixed passwords (tests)
-	Check    func(user, pw string) bool // login check; replaces Users when set
-	Exists   func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
-	LocalTok string                     // token for the TUI on this machine
-	Capture  func() []CaptureInfo
-	SNMP     func() []snmp.Status
-	Started  time.Time
-	DataDir  string
+	Store   *store.Store
+	Pipe    *pipeline.Pipeline
+	Col     *collector.Collector
+	Inv     *enrich.Inventory
+	ASN     *enrich.ASNDB
+	Thr     *enrich.Threats
+	DNS     *dnsres.Resolver
+	Det     *detect.Detector
+	SB      *sandbox.Sandbox // offline analysis of capture files
+	Offline bool             // started on capture files (traffic66 file.pcap): no live data
+	// AutoLogin is a one-time token: /auto?t=<it> signs the browser in once.
+	AutoLogin string
+	Static    fs.FS
+	Version   string
+	Demo      bool
+	Users     map[string]string          // fixed passwords (tests)
+	Check     func(user, pw string) bool // login check; replaces Users when set
+	Exists    func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
+	LocalTok  string                     // token for the TUI on this machine
+	Capture   func() []CaptureInfo
+	SNMP      func() []snmp.Status
+	Started   time.Time
+	DataDir   string
 
 	mu       sync.Mutex
 	sessions map[string]session
@@ -81,6 +84,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", s.logout)
+	mux.HandleFunc("GET /auto", s.autoLogin)
 	mux.HandleFunc("GET /logo", s.logo)
 	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
 	api("GET /api/status", s.status)
@@ -280,6 +284,24 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})
 	writeJSON(w, http.StatusOK, map[string]string{"user": in.User})
+}
+
+// autoLogin signs in with the one-time token printed for traffic66 file.pcap
+// and opens the offline analysis.
+func (s *Server) autoLogin(w http.ResponseWriter, r *http.Request) {
+	t := r.URL.Query().Get("t")
+	s.mu.Lock()
+	ok := s.AutoLogin != "" && subtle.ConstantTimeCompare([]byte(t), []byte(s.AutoLogin)) == 1
+	if ok {
+		s.AutoLogin = "" // once
+		b := make([]byte, 24)
+		rand.Read(b)
+		tok := hex.EncodeToString(b)
+		s.sessions[tok] = session{"admin", time.Now().Add(12 * time.Hour)}
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	}
+	s.mu.Unlock()
+	http.Redirect(w, r, "/#v=sandbox", http.StatusSeeOther)
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {

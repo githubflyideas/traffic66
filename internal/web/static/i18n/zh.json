@@ -411,5 +411,7 @@
 "sb.range": "整个抓包",
 "sb.min": "{n} 分钟",
 "sb.hours": "{n} 小时",
-"sb.not_capture": "{f} 不是抓包文件。请使用 Wireshark 或 tcpdump 保存的 .pcap 或 .pcapng。"
+"sb.not_capture": "{f} 不是抓包文件。请使用 Wireshark 或 tcpdump 保存的 .pcap 或 .pcapng。",
+"sb.avg": "平均带宽",
+"sb.limits_total": "最多 {n} 个文件，总共不超过 {gb}。"
 }

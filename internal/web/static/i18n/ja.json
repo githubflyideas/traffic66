@@ -411,5 +411,7 @@
 "sb.range": "キャプチャ全体",
 "sb.min": "{n} 分",
 "sb.hours": "{n} 時間",
-"sb.not_capture": "{f} はキャプチャファイルではありません。Wireshark や tcpdump で保存した .pcap か .pcapng を使ってください。"
+"sb.not_capture": "{f} はキャプチャファイルではありません。Wireshark や tcpdump で保存した .pcap か .pcapng を使ってください。",
+"sb.avg": "平均レート",
+"sb.limits_total": "最大 {n} ファイル、合計 {gb} まで。"
 }

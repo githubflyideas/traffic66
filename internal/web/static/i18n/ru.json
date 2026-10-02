@@ -411,5 +411,7 @@
 "sb.range": "весь захват",
 "sb.min": "{n} мин",
 "sb.hours": "{n} ч",
-"sb.not_capture": "{f} — не файл захвата. Используйте .pcap или .pcapng, сохранённый Wireshark или tcpdump."
+"sb.not_capture": "{f} — не файл захвата. Используйте .pcap или .pcapng, сохранённый Wireshark или tcpdump.",
+"sb.avg": "Средняя скорость",
+"sb.limits_total": "До {n} файлов, всего не больше {gb}."
 }

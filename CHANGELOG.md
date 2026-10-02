@@ -16,6 +16,13 @@ Offline analysis
 - The detection rules run over the capture: scans, port scans and password
   guessing are found in it.
 - The demo includes an example capture with an attack.
+- `traffic66 capture.pcap` (up to 3 files, 3 GB in all) starts a private
+  traffic66 on 127.0.0.1 with a free port, prints the address, a password
+  and a one-time sign-in link, opens the browser on the capture, and
+  deletes the imported data on Ctrl+C. Files are read in place; nothing is
+  collected or sent and host names are not looked up unless `-dns` is
+  given. A 1 GB capture takes about 5 s (1.2 million full-size packets) to
+  30 s (14 million small packets) on 2 cores.
 
 Pages
 - Traffic details opens on servers only; tabs switch to clients, both ends

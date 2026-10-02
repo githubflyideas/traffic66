@@ -411,5 +411,7 @@
 "sb.range": "الالتقاط كاملاً",
 "sb.min": "{n} دقيقة",
 "sb.hours": "{n} ساعة",
-"sb.not_capture": "{f} ليس ملف التقاط. استخدم ‎.pcap أو ‎.pcapng محفوظاً من Wireshark أو tcpdump."
+"sb.not_capture": "{f} ليس ملف التقاط. استخدم ‎.pcap أو ‎.pcapng محفوظاً من Wireshark أو tcpdump.",
+"sb.avg": "المعدل المتوسط",
+"sb.limits_total": "حتى {n} ملفات، {gb} إجمالاً."
 }

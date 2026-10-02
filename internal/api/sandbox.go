@@ -46,13 +46,13 @@ func (s *Server) putSandboxFile(w http.ResponseWriter, r *http.Request) {
 		fail(w, errors.New("offline analysis is not available"))
 		return
 	}
-	if r.ContentLength > sandbox.MaxFileSize {
-		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": "too_big", "max": sandbox.MaxFileSize})
+	if r.ContentLength > s.SB.Lim.FileSize {
+		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": "too_big", "max": s.SB.Lim.FileSize})
 		return
 	}
 	f, err := s.SB.Add(r.URL.Query().Get("name"), r.Body, false)
 	if errors.Is(err, sandbox.ErrLimit) {
-		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": err.Error(), "max": sandbox.MaxFileSize, "max_files": sandbox.MaxFiles})
+		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": err.Error(), "max": s.SB.Lim.FileSize, "max_files": s.SB.Lim.Files})
 		return
 	}
 	if errors.Is(err, sandbox.ErrNotCapture) {

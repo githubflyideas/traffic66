@@ -411,5 +411,7 @@
 "sb.range": "toute la capture",
 "sb.min": "{n} min",
 "sb.hours": "{n} h",
-"sb.not_capture": "{f} n'est pas un fichier de capture. Utilisez un .pcap ou .pcapng enregistré par Wireshark ou tcpdump."
+"sb.not_capture": "{f} n'est pas un fichier de capture. Utilisez un .pcap ou .pcapng enregistré par Wireshark ou tcpdump.",
+"sb.avg": "Débit moyen",
+"sb.limits_total": "Jusqu'à {n} fichiers, {gb} au total."
 }
