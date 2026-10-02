@@ -100,6 +100,8 @@ func (s *Server) Handler() http.Handler {
 	api("DELETE /api/logo", s.deleteLogo)
 	api("GET /api/geo", s.getGeo)
 	api("POST /api/geo", s.putGeo)
+	api("DELETE /api/geo", s.deleteGeo)
+	api("POST /api/geo/dbip", s.updateDBIP)
 	static := http.FileServer(http.FS(s.Static))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")

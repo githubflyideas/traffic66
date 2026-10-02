@@ -505,19 +505,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. 国、ネットワーク、脅威リスト
 
-国とネットワーク（AS）名の表示には、アドレスからそれらを引くデータベースが必要です。Web UI でアップロードしてください：**受信状況 → 国・ネットワークデータベース → データベースファイルをアップロード…**。ファイルは検証されてデータディレクトリに保存され、新しいトラフィックにすぐ使われます。再起動は不要です。保存済みのトラフィックは、保存時の国のままです。
+国とネットワーク（AS）は最初から表示されます。traffic66 には DB-IP の無料データベース **IP to Country Lite** と **IP to ASN Lite** が内蔵されています（ライセンス [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)、"IP Geolocation by DB-IP"、[db-ip.com](https://db-ip.com)）。国とネットワークを表示するページにはデータの出典を表示します。
 
-使えるファイル：
+内蔵データは、使っているリリース時点のものです。DB-IP は毎月新版を公開します。**受信状況 → 国・ネットワークデータベース → DB-IP Lite を今すぐ更新** で db-ip.com から最新版をダウンロードできます（traffic66 を動かしているサーバーからインターネットに出られる必要があります。失敗した場合は画面に表示されます）。
 
-| ファイル | 得られる情報 | 入手先 |
-|---|---|---|
-| DB-IP Lite country または ASN、`.mmdb` | 国、または AS 番号と名前 | 無料、アカウント不要：[db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country または ASN、`.mmdb` | 国、または AS 番号と名前 | MaxMind アカウントがあれば無料：[maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IP-ASN 対応表、`.tsv` または `.tsv.gz` | AS 番号、AS 名、国 | 無料：[iptoasn.com](https://iptoasn.com)（`ip2asn-combined.tsv.gz`） |
+ほかの無料データベースも使えます。ダウンロードして、同じページの **データベースファイルをアップロード…** でアップロードします。ファイルは検査されてデータディレクトリに保存され、すぐに新しいトラフィックに使われます。再起動は不要です。保存済みのトラフィックは保存時の国のままです。
 
-国データベースと ASN データベースを両方アップロードすれば両方が得られます。複数読み込まれている場合、`.mmdb` ファイルに含まれる情報はそちらが優先されます。新しい版は毎月出ます。同じ方法で新しいファイルをアップロードすれば古いものと置き換わります。
+| データベース | 内容 | ライセンス | 入手先 |
+|---|---|---|---|
+| DB-IP Lite（内蔵） | 国、ネットワーク | CC BY 4.0、登録不要 | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country と ASN、`.mmdb` | 国、ネットワーク | GeoLite2 EULA、無料アカウントが必要 | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite、`ipinfo_lite.mmdb` | 国とネットワークを 1 ファイルで | CC BY-SA 4.0、無料アカウントが必要 | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN、`ip2asn-combined.tsv.gz` | ネットワークとその国 | PDDL 1.0、登録不要 | [iptoasn.com](https://iptoasn.com) |
 
-Web UI を使わない場合は、ファイルを `country.mmdb`、`asn.mmdb`、`asn.tsv.gz` のいずれかの名前でデータディレクトリにコピーし、traffic66 を再起動してください。
+アップロードしたファイルが優先され、そこにない分は内蔵の DB-IP Lite が答えます。ファイルの横の **削除** で残りの構成に戻ります。ページには使用中のデータベースとそれぞれの日付が表示されます。
+
+Web UI を使わない場合は、ファイルを `country.mmdb`、`asn.mmdb`、`both.mmdb`（IPinfo Lite のように国とネットワークが 1 ファイルのもの）または `asn.tsv.gz` という名前でデータディレクトリに置き、traffic66 を再起動します。
+
+**地域とネットワーク** には他の国とのトラフィックが世界地図で表示されます。色が濃いほどトラフィックが多い国です。国にポインタを合わせるとトラフィック量が、クリックすると絞り込みやフローレコードの表示ができます。国境は [Natural Earth](https://www.naturalearthdata.com)（パブリックドメイン）のものです。
+
+![地域とネットワーク：国別の外部トラフィックを示す世界地図](images/geo.png)
 
 脅威リストは 1 行に 1 つのアドレスまたはネットワークを書いたプレーンテキストファイルで（`#` または `;` 以降は無視されます）、`<data directory>/threats/<name>.txt` として保存します。例：
 
@@ -552,7 +559,7 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 | トラフィック詳細 | クライアント、サーバー、サービスの推移（bits/s と packets/s）：それぞれの上位 8 件と、その総数 |
 | 検知 | 対応が必要なもの：スキャン、パスワード総当たり、横展開、不審なアップロード、フラッド、脅威リストとの通信（[詳しく](#findings)） |
 | フローの流れ | どのホストがどの国に向けてどのアプリケーションを使っているか。通信量の多い 8 ホストを表示し、残りは「その他」にまとめます。**クライアント → サーバー** でクライアント → サービス → サーバーを表示し、**ネットワーク別** でホストの代わりにネットワークを表示します |
-| 地域とネットワーク | トラフィックの送信元・送信先のネットワーク（AS）の推移（bits/s と packets/s）、国別・ネットワーク別のトラフィック |
+| 地域とネットワーク | 国別トラフィックの世界地図、トラフィックの送信元・送信先のネットワーク（AS）の推移（bits/s と packets/s）、国別・ネットワーク別のトラフィック |
 | 脅威インテル | 脅威リスト上のアドレスと通信したホストと、その送信量 |
 | フローレコード | フローレコードの数とその時期（間隔ごとの棒グラフ）と、レコードそのもの（新しい順、ページ送り、表示列は選択可能） |
 | インターフェース照合 | 全インターフェースのトラフィックの推移（受信と送信、bits/s と packets/s）と、フローの数値とインターフェースカウンターの対比（差の大きい順、理由付き） |
@@ -725,7 +732,7 @@ sudo traffic66 -capture en0
 | `-sampling-wait` | `5m` | レコードがサンプリングレートを待つ時間 |
 | `-capture` | | ローカルインターフェースでキャプチャ（複数指定可） |
 | `-inventory` | `<data>/inventory.txt` | 名前ファイル |
-| `-asn` | `<data>/asn.tsv.gz` | IP-ASN 対応表（`.mmdb` ファイルはアップロードするか、`<data>/country.mmdb` と `<data>/asn.mmdb` に置く） |
+| `-asn` | `<data>/asn.tsv.gz` | IP-ASN 対応表（`.mmdb` ファイルはアップロードするか、`<data>/country.mmdb` と `<data>/asn.mmdb`, `<data>/both.mmdb` に置く） |
 | `-threat` | `<data>/threats/*.txt` | 追加の脅威リストを `name=path` で指定（複数指定可） |
 | `-dns-upstream` | システムのリゾルバー | ホスト名表示に使う DNS サーバー |
 | `-dns-rate` | `20` | 1 秒あたりの逆引き回数の上限 |
@@ -752,7 +759,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `password` | ログインパスワード（ハッシュ化） |
 | `inventory.txt` | 名前（**受信状況 → 名前**） |
 | `logo.png`（または `.svg`、`.jpg`、`.webp`、`.gif`） | アップロードしたロゴ（**受信状況 → ロゴ**）。アップロードした場合のみ |
-| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | 追加した国・ネットワークデータベースと脅威リスト |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | 追加した国・ネットワークデータベースと脅威リスト |
 
 **データの保存期間**：フロー明細は 30 日、集計（概要と長い期間）は 400 日です。それより古いデータは自動で削除され、5 分ごとに確認します。それ以外は何も削除せず、ほかの制限もありません。明細の保存日数は `-retention-days` で変更でき、何日でも指定できます（例：`-retention-days 365`）。ディスク使用量もそれに応じて増えます。保存日数分が入りきらないときは、サイドメニューの **空き** が赤くなります。ディスクが満杯になると、空きができるまで新しいフローは保存できません。
 

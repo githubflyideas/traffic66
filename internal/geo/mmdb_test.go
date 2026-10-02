@@ -79,3 +79,33 @@ func TestRejectsGarbage(t *testing.T) {
 		t.Fatal("metadata without record size accepted")
 	}
 }
+
+// IPinfo Lite keeps country and ASN in one database, the ASN as "AS15169".
+func TestCombined(t *testing.T) {
+	r, err := Open("testdata/ipinfo.mmdb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k := r.Kind(); k != "both" {
+		t.Fatalf("kind %q", k)
+	}
+	if in, ok := r.Lookup(netip.MustParseAddr("8.8.8.8")); !ok || in != (Info{Country: "US", ASN: 15169, Org: "Google LLC"}) {
+		t.Fatalf("%+v %v", in, ok)
+	}
+}
+
+func TestBuiltin(t *testing.T) {
+	c, a, err := Builtin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Kind() != "country" || a.Kind() != "asn" {
+		t.Fatalf("kinds %q %q", c.Kind(), a.Kind())
+	}
+	if in, _ := c.Lookup(netip.MustParseAddr("8.8.8.8")); in.Country != "US" {
+		t.Errorf("8.8.8.8 country %+v", in)
+	}
+	if in, _ := a.Lookup(netip.MustParseAddr("2606:4700:4700::1111")); in.ASN != 13335 {
+		t.Errorf("Cloudflare ASN %+v", in)
+	}
+}

@@ -31,7 +31,6 @@ import (
 	"github.com/githubflyideas/traffic66/internal/dnsres"
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/flow"
-	"github.com/githubflyideas/traffic66/internal/geo"
 	"github.com/githubflyideas/traffic66/internal/pipeline"
 	"github.com/githubflyideas/traffic66/internal/sim"
 	"github.com/githubflyideas/traffic66/internal/snmp"
@@ -247,21 +246,14 @@ func serve(args []string, demo bool) {
 			log.Printf("ASN table: %d ranges from %s", asn.Size(), asnPath)
 		}
 	}
-	for _, name := range []string{"country.mmdb", "asn.mmdb"} {
-		p := filepath.Join(f.data, name)
-		if _, err := os.Stat(p); err != nil {
-			continue
-		}
-		r, err := geo.Open(p)
-		if err != nil {
-			log.Printf("%s: %v", p, err)
-			continue
-		}
-		asn.SetMMDB(r, name)
-		log.Printf("geo database %s: %s", name, r.Type)
+	for _, err := range asn.LoadMMDBs(f.data) {
+		log.Printf("geo database %v", err)
 	}
-	if !asn.Loaded() {
-		log.Printf("no country/ASN database; upload one on the Sources page to see countries and networks")
+	if err := asn.LoadDBIP(f.data); err != nil {
+		log.Printf("%v", err)
+	}
+	for _, src := range asn.Sources() {
+		log.Printf("geo database: %s %s (%s, built %s)", src.Kind, src.File, src.Type, src.Built.Format("2006-01-02"))
 	}
 	thr := enrich.NewThreats()
 	threatFiles := map[string]string{}

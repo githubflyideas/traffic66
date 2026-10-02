@@ -614,27 +614,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. Negara, jaringan, dan daftar ancaman
 
-Negara dan nama jaringan (AS) membutuhkan basis data yang memetakan alamat ke
-keduanya. Unggah di antarmuka web: **Sumber → Basis data negara dan jaringan → Unggah file basis data…**.
-File diperiksa, disimpan di direktori data, dan langsung dipakai untuk trafik
-baru; tidak perlu restart. Trafik yang sudah tersimpan tetap memakai negara
-saat ia disimpan.
+Negara dan jaringan (AS) langsung berfungsi: traffic66 sudah membawa basis data gratis **IP to Country Lite** dan **IP to ASN Lite** dari DB-IP (lisensi [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com)). Halaman yang menampilkan negara dan jaringan menyebutkan sumber datanya.
 
-File yang diterima:
+Salinan bawaan berasal dari rilis yang Anda jalankan. DB-IP menerbitkan versi baru tiap bulan; **Sumber → Basis data negara dan jaringan → Perbarui DB-IP Lite sekarang** mengunduh yang terbaru dari db-ip.com (server yang menjalankan traffic66 perlu akses internet; jika gagal, antarmuka akan memberi tahu).
 
-| File | Memberikan | Tempat mendapatkannya |
-|---|---|---|
-| DB-IP Lite country atau ASN, `.mmdb` | negara, atau nomor dan nama AS | gratis, tanpa akun: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country atau ASN, `.mmdb` | negara, atau nomor dan nama AS | gratis dengan akun MaxMind: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| Tabel IP-to-ASN, `.tsv` atau `.tsv.gz` | nomor AS, nama AS, dan negara | gratis: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+Anda juga bisa memakai basis data gratis lain. Unduh, lalu unggah di halaman yang sama dengan **Unggah file basis data…**. File diperiksa, disimpan di direktori data, dan langsung dipakai untuk trafik baru tanpa restart. Trafik yang sudah tersimpan tetap memakai negara saat disimpan.
 
-Unggah basis data negara dan basis data ASN untuk mendapatkan keduanya; bila
-beberapa dimuat, file `.mmdb` didahulukan untuk isi yang dimilikinya. Versi
-baru terbit setiap bulan: unggah file baru dengan cara yang sama untuk
-mengganti yang lama.
+| Basis data | Isi | Lisensi | Tempat mendapatkan |
+|---|---|---|---|
+| DB-IP Lite (bawaan) | negara; jaringan | CC BY 4.0, tanpa akun | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country dan ASN, `.mmdb` | negara; jaringan | GeoLite2 EULA, akun gratis | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite, `ipinfo_lite.mmdb` | negara dan jaringan dalam satu file | CC BY-SA 4.0, akun gratis | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN, `ip2asn-combined.tsv.gz` | jaringan beserta negaranya | PDDL 1.0, tanpa akun | [iptoasn.com](https://iptoasn.com) |
 
-Tanpa antarmuka web, salin file ke direktori data sebagai `country.mmdb`,
-`asn.mmdb`, atau `asn.tsv.gz` lalu restart traffic66.
+File Anda dipakai lebih dulu; yang tidak tercakup dijawab DB-IP Lite bawaan. **Hapus** di samping file kembali ke yang lain. Halaman menampilkan apa yang sedang dipakai dan tanggal tiap basis data.
+
+Tanpa antarmuka web, salin file ke direktori data sebagai `country.mmdb`, `asn.mmdb`, `both.mmdb` (file berisi negara dan jaringan, seperti IPinfo Lite) atau `asn.tsv.gz`, lalu restart traffic66.
+
+**Geografi & jaringan** menampilkan trafik dengan negara lain di peta dunia: makin gelap, makin banyak trafiknya. Arahkan kursor ke negara untuk melihat trafiknya; klik untuk memfilter atau membuka catatan flow-nya. Batas negara berasal dari [Natural Earth](https://www.naturalearthdata.com) (domain publik).
+
+![Geografi & jaringan: trafik luar per negara di peta dunia](images/geo.png)
 
 Daftar ancaman adalah file teks biasa berisi satu alamat atau jaringan per
 baris (teks setelah `#` atau `;` diabaikan), disimpan sebagai
@@ -681,7 +680,7 @@ Halaman:
 | Detail trafik | Klien, server, dan layanan dari waktu ke waktu, dalam bit/s dan paket/s: 8 teratas dari masing-masing, dan berapa jumlahnya |
 | Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
 | Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 8 host tersibuk, sisanya sebagai Lainnya. **Klien → server** menampilkan klien → layanan → server; **Per segmen** menampilkan jaringan, bukan host |
-| Geografi & jaringan | Jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
+| Geografi & jaringan | Peta dunia trafik per negara; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
 | Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih |
 | Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu (masuk dan keluar, bit/s dan paket/s), dan angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
@@ -921,7 +920,7 @@ Opsi untuk `traffic66` dan `traffic66 demo`:
 | `-sampling-wait` | `5m` | berapa lama record menunggu sampling rate |
 | `-capture` | | capture di interface lokal (bisa diulang) |
 | `-inventory` | `<data>/inventory.txt` | file nama |
-| `-asn` | `<data>/asn.tsv.gz` | tabel IP-to-ASN (file `.mmdb`: unggah, atau `<data>/country.mmdb` dan `<data>/asn.mmdb`) |
+| `-asn` | `<data>/asn.tsv.gz` | tabel IP-to-ASN (file `.mmdb`: unggah, atau `<data>/country.mmdb` dan `<data>/asn.mmdb`, `<data>/both.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | daftar ancaman tambahan dalam format `name=path` (bisa diulang) |
 | `-dns-upstream` | resolver sistem | server DNS untuk menampilkan nama host |
 | `-dns-rate` | `20` | maksimum reverse lookup per detik |
@@ -949,7 +948,7 @@ Semua tersimpan di direktori data:
 | `password` | kata sandi login (dalam bentuk hash) |
 | `inventory.txt` | nama (**Sumber → Nama**) |
 | `logo.png` (atau `.svg`, `.jpg`, `.webp`, `.gif`) | logo Anda (**Sumber → Logo**), jika Anda mengunggahnya |
-| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
 
 **Berapa lama data disimpan**: detail flow 30 hari, ringkasan (ikhtisar dan rentang waktu panjang) 400 hari. Data
 yang lebih lama dihapus otomatis, diperiksa setiap 5 menit; tidak ada yang lain dihapus dan tidak ada batas lain.

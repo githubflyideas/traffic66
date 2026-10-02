@@ -61,12 +61,20 @@ Drill-down and naming
 - **Name it…** on any host or device names it on the spot; the name is
   saved and shown everywhere. The Names box on Sources now shows examples.
 
-Countries and networks database
-- Upload a database on the Sources page: MaxMind GeoLite2 or DB-IP Lite
-  `.mmdb` files (country or ASN) or an IP-to-ASN table (`.tsv`, `.tsv.gz`).
-  It is checked, saved and used for new traffic at once, without a
-  restart. The `.mmdb` reader was checked against MaxMind's own reader on
-  60,000 lookups in six DB-IP databases with no difference.
+Countries and networks
+- Works out of the box: DB-IP's free country and ASN databases (CC BY 4.0)
+  are built in, so countries and networks show without uploading anything.
+  **Update DB-IP Lite now** on the Sources page downloads this month's
+  version.
+- Sources lists the free databases (DB-IP Lite, MaxMind GeoLite2, IPinfo
+  Lite, IPtoASN) with their licences and where to get them. Uploaded files
+  are used first and the built-in DB-IP Lite answers the rest; **Remove**
+  goes back. IPinfo Lite, which holds countries and networks in one file,
+  is now understood.
+- The `.mmdb` reader was checked against MaxMind's own reader on 60,000
+  lookups in six DB-IP databases with no difference.
+- **Geo & networks** shows remote traffic on a world map; point at a country
+  for its traffic, click it to filter.
 
 Simpler pages
 - Top-N is one table: conversations (client, server, service, country) by
@@ -76,6 +84,9 @@ Simpler pages
   smallest average packet size finds scanners and floods. The row of
   eleven tabs is gone.
 - "Who grew" is gone from the overview (web and terminal UI).
+- Narrow windows: the menu, time range and tables no longer push the page
+  wider than the window, and "Log out" stays inside the menu in every
+  language.
 - Flow paths: labels, bars and flows can all be clicked; before, only the
   thin bars could.
 - The side menu no longer shows group headings that looked like buttons;

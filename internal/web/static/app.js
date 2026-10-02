@@ -818,18 +818,63 @@ views.sankey = async (el) => {
   if (!sEl._ro) { sEl._ro = new ResizeObserver(draw); sEl._ro.observe(sEl); }
 };
 
+// ------------------------------------------------------------ world map
+let WORLD;
+const worldMap = () => WORLD || (WORLD = fetch('world.json').then(r => r.json()).catch(e => { WORLD = null; throw e; }));
+// five steps of the sequential blue, light to dark; no traffic is grey
+const MAP_STEPS = ['#cde2fb', '#86b6ef', '#3987e5', '#1c5cab', '#0d366b'];
+function mapBins(vals) {
+  const v = vals.filter(x => x > 0).sort((a, b) => a - b);
+  if (!v.length) return [];
+  // log-spaced edges between the smallest and largest country
+  const lo = Math.log10(v[0]), hi = Math.log10(v[v.length - 1]);
+  return MAP_STEPS.slice(1).map((_, i) => Math.pow(10, lo + (hi - lo) * (i + 1) / MAP_STEPS.length));
+}
+const mapStep = (v, edges) => { let i = 0; while (i < edges.length && v >= edges[i]) i++; return i; };
+function drawMap(el, w, rows) {
+  const by = new Map(rows.map(r => [r.key, r.wire]));
+  const edges = mapBins(rows.map(r => r.wire));
+  const fill = cc => by.get(cc) > 0 ? MAP_STEPS[mapStep(by.get(cc), edges)] : 'var(--map-none)';
+  const dots = Object.entries(w.s).filter(([cc]) => by.get(cc) > 0);
+  el.innerHTML = `<svg viewBox="0 0 ${w.w} ${w.h}" class="wmap" role="img" aria-label="${esc(t('geo.map'))}">
+    ${Object.entries(w.c).map(([cc, d]) => `<path d="${d}" data-cc="${cc}" fill="${fill(cc)}"/>`).join('')}
+    ${dots.map(([cc, [x, y]]) => `<circle cx="${x}" cy="${y}" r="4" data-cc="${cc}" fill="${fill(cc)}"/>`).join('')}</svg>
+    <div class="maplegend">${edges.length ? `<span class="muted">${t('geo.map_less')}</span>${MAP_STEPS.map((c, i) => `<i style="background:${c}" title="${esc(i ? '≥ ' + fmtBytes(edges[i - 1]) : '< ' + fmtBytes(edges[0]))}"></i>`).join('')}<span class="muted">${t('geo.map_more')}</span>
+      <span class="muted" style="margin-inline-start:12px">${esc(fmtBytes(Math.min(...rows.map(r => r.wire).filter(x => x > 0))))} – ${esc(fmtBytes(Math.max(...rows.map(r => r.wire))))}</span>` : ''}
+      <span style="margin-inline-start:12px"><i style="background:var(--map-none)"></i> <span class="muted">${t('geo.map_none')}</span></span></div>`;
+  const total = rows.reduce((a, r) => a + r.wire, 0) || 1;
+  el.querySelectorAll('[data-cc]').forEach(p => {
+    const cc = p.dataset.cc, v = by.get(cc) || 0;
+    p.onmousemove = e => showTip(e, `<div class="t">${esc(country(cc))}</div><b>${v ? fmtBytes(v) : t('geo.map_none')}</b>${v ? ` <span class="muted">${nf(100 * v / total, 1)}%</span>` : ''}`);
+    p.onmouseleave = hideTip;
+    if (v) p.onclick = e => { e.stopPropagation(); hideTip(); openPop({k: 'country', v: cc, label: country(cc)}, {left: e.clientX, right: e.clientX, top: e.clientY, bottom: e.clientY}); };
+    else p.style.cursor = 'default';
+  });
+}
+const ATTRIB = {
+  dbip: '<a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>',
+  maxmind: 'This product includes GeoLite2 data created by MaxMind, available from <a href="https://www.maxmind.com" target="_blank" rel="noopener">https://www.maxmind.com</a>',
+  ipinfo: '<a href="https://ipinfo.io" target="_blank" rel="noopener">IP address data powered by IPinfo</a>',
+  iptoasn: '<a href="https://iptoasn.com" target="_blank" rel="noopener">IPtoASN</a>'
+};
+const attribution = srcs => [...new Set((srcs || []).map(g => g.vendor).filter(v => ATTRIB[v]))].map(v => ATTRIB[v]).join(' · ');
+
 views.geo = async (el) => {
   const asCharts = [['asn_src', 'wire'], ['asn_dst', 'wire'], ['asn_src', 'pkts'], ['asn_dst', 'pkts']];
-  const [c, a, ...ad] = await Promise.all([api('topn', {dim: 'country', limit: 66}), api('topn', {dim: 'asn', limit: 66}), ...asCharts.map(([by, m]) => seriesData(by, m))]);
-  const cr = (c.rows || []).filter(r => r.key !== '__internal__'), ar = a.rows || [];
+  const [c, a, gd, w, ...ad] = await Promise.all([api('topn', {dim: 'country', limit: 300}), api('topn', {dim: 'asn', limit: 66}), api('geo').catch(() => ({})), worldMap().catch(() => null), ...asCharts.map(([by, m]) => seriesData(by, m))]);
+  const all = (c.rows || []).filter(r => r.key !== '__internal__' && r.key), cr = all.slice(0, 66), ar = a.rows || [];
   const cm = Math.max(1, ...cr.map(r => r.wire)), am = Math.max(1, ...ar.map(r => r.wire));
-  el.innerHTML = `<div class="grid" style="margin-bottom:16px">${asCharts.map(([by, m], i) => seriesPanel('asr' + i, 'c6', `${t(by === 'asn_src' ? 'geo.as_src' : 'geo.as_dst')} · ${t(m === 'wire' ? 'ch.bps' : 'ch.pps')}`, i < 2 ? esc(t(by === 'asn_src' ? 'geo.as_src_sub' : 'geo.as_dst_sub')) : '')).join('')}</div>
+  const attr = attribution(gd.sources);
+  el.innerHTML = `<div class="grid" style="margin-bottom:16px">${panel('c12', t('geo.map'), t('geo.map_sub', {n: nf(all.length)}), `<div id="wmap"></div>
+      <p class="muted attrib">${attr ? `${t('geo.data_from')} ${attr} · ` : ''}${t('geo.map_from')} <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a></p>`)}</div>
+    <div class="grid" style="margin-bottom:16px">${asCharts.map(([by, m], i) => seriesPanel('asr' + i, 'c6', `${t(by === 'asn_src' ? 'geo.as_src' : 'geo.as_dst')} · ${t(m === 'wire' ? 'ch.bps' : 'ch.pps')}`, i < 2 ? esc(t(by === 'asn_src' ? 'geo.as_src_sub' : 'geo.as_dst_sub')) : '')).join('')}</div>
     <div class="grid">
     ${panel('c6', t('geo.countries'), t('geo.countries_sub'), `<table><tr><th></th><th>${t('col.country')}</th><th class="num">${t('col.traffic')}</th><th style="width:40%">${t('col.share')}</th></tr>
       ${cr.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${V('country', r.key, country(r.key))} <span class="muted">${esc(r.key)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cm)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
     ${panel('c6', t('geo.as'), '', `<table><tr><th></th><th>${t('col.asn')}</th><th>${t('col.org')}</th><th class="num">${t('col.traffic')}</th><th style="width:32%">${t('col.share')}</th></tr>
       ${ar.map((r, i) => `<tr><td class="rank">${i + 1}</td><td class="nw">${r.key === '0' ? `<span class="muted">${t('unknown')}</span>` : V('asn', r.key, 'AS' + r.key)}</td><td>${esc(r.extra)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, am)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
   </div>`;
+  if (w) drawMap($('#wmap'), w, all); else $('#wmap').innerHTML = `<div class="empty">${t('empty.nodata')}</div>`;
   asCharts.forEach(([by, m], i) => fillSeries('asr' + i, ad[i], by, m));
 };
 
@@ -950,7 +995,18 @@ views.ifaces = async (el) => {
 
 views.sources = async (el) => {
   const [d, inv, gd] = await Promise.all([api('sources'), api('inventory').catch(() => ({text: ''})), api('geo').catch(() => ({sources: []}))]);
-  const geoRows = (gd.sources || []).map(g => `<li>${status('ok', t('geo.kind_' + g.kind))} <span class="muted">${esc(g.file)}${g.kind !== 'table' ? ' · ' + esc(g.type) : ''}${g.entries ? ' · ' + esc(t('geo.entries', {n: nf(g.entries)})) : ''}${g.built && !g.built.startsWith('0001') ? ' · ' + esc(t('geo.built', {d: new Intl.DateTimeFormat(LANG, {dateStyle: 'medium'}).format(new Date(g.built))})) : ''}</span></li>`).join('');
+  const dfmt = d => d && !d.startsWith('0001') ? new Intl.DateTimeFormat(LANG, {dateStyle: 'medium'}).format(new Date(d)) : '';
+  const VENDOR = {dbip: 'DB-IP Lite', maxmind: 'MaxMind GeoLite2', ipinfo: 'IPinfo Lite', iptoasn: 'IPtoASN'};
+  const geoRows = (gd.sources || []).map(g => `<tr><td>${status('ok', t('geo.kind_' + g.kind))}</td>
+      <td>${esc(VENDOR[g.vendor] || g.type)} <span class="muted">${esc(g.file === 'built-in' ? t('geo.builtin') : g.file)}${g.entries ? ' · ' + esc(t('geo.entries', {n: nf(g.entries)})) : ''}</span></td>
+      <td class="nw">${esc(dfmt(g.built))}</td><td class="muted">${t(g.fallback ? 'geo.role_fallback' : 'geo.role_main')}</td>
+      <td>${g.file !== 'built-in' ? `<button class="btn" data-geodel="${esc(g.file)}">${t('geo.remove')}</button>` : ''}</td></tr>`).join('');
+  const FREE = [
+    ['DB-IP Lite', 'geo.f_dbip', 'CC BY 4.0', 'https://db-ip.com/db/lite.php'],
+    ['MaxMind GeoLite2', 'geo.f_maxmind', 'GeoLite2 EULA', 'https://www.maxmind.com/en/geolite2/signup'],
+    ['IPinfo Lite', 'geo.f_ipinfo', 'CC BY-SA 4.0', 'https://ipinfo.io/lite'],
+    ['IPtoASN', 'geo.f_iptoasn', 'PDDL 1.0', 'https://iptoasn.com']];
+  const freeRows = FREE.map(([n, k, lic, url]) => `<tr><td class="nw"><a href="${url}" target="_blank" rel="noopener">${n}</a></td><td>${esc(t(k))}</td><td class="nw muted">${lic}</td></tr>`).join('');
   const srcs = d.sources || [];
   const issueText = (code, s) => t('issue.' + code, {n: nf(s.pending), p: nf(s.lost_pct, 1) + '%', s: Math.round(Math.abs(s.clock_skew_ns) / 1e9) + ' s'});
   const rows = srcs.map(s => {
@@ -972,8 +1028,10 @@ views.sources = async (el) => {
       ${rows || `<tr><td colspan="7" class="empty">${t('empty.first')}</td></tr>`}</table>
       <p style="margin:12px 0 0;font-size:12.5px"><span class="muted">${t('src.listeners')}</span> ${lis || '—'} ${caps}</p>
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
-    ${panel('c12', t('geo.title'), t('geo.sub'), `<ul class="geo" style="list-style:none;padding:0;margin:0 0 10px">${geoRows || `<li class="muted">${esc(t('geo.none'))}</li>`}</ul>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent);color:#fff;font-weight:600">${t('geo.upload')}<input type="file" id="geoFile" accept=".mmdb,.tsv,.gz,.txt,.csv" hidden></label><span id="geoMsg" class="muted" style="font-size:13px"></span></div>
+    ${panel('c12', t('geo.title'), t('geo.sub'), `<table><tr><th>${t('geo.col_holds')}</th><th>${t('geo.col_db')}</th><th>${t('geo.col_built')}</th><th>${t('geo.col_use')}</th><th></th></tr>${geoRows}</table>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="primary" id="geoDbip">${t('geo.update')}</button><label class="btn" style="cursor:pointer">${t('geo.upload')}<input type="file" id="geoFile" accept=".mmdb,.tsv,.gz,.txt,.csv" hidden></label><span id="geoMsg" class="muted" style="font-size:13px"></span></div>
+      <h3 class="subhead">${t('geo.free')}</h3><p class="muted" style="font-size:12.5px;margin:0 0 6px">${t('geo.free_sub')}</p>
+      <table><tr><th>${t('geo.col_db')}</th><th>${t('geo.col_holds')}</th><th>${t('geo.col_lic')}</th></tr>${freeRows}</table>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0">${t('geo.where')}</p>`)}
     ${panel('c12', t('logo.title'), t('logo.sub'), `<div class="logoprev"><img id="logoPrev" src="/logo?v=${Date.now()}" alt="logo">
       <div style="display:grid;gap:8px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent);color:#fff;font-weight:600">${t('logo.upload')}<input type="file" id="logoFile" accept=".png,.svg,.jpg,.jpeg,.webp,.gif,image/*" hidden></label><button class="btn" id="logoReset">${t('logo.reset')}</button></div>
@@ -985,6 +1043,22 @@ iface  192.168.1.1 3   ${esc(t('src.ex_iface'))}
 snmp   192.168.1.1     public</pre></div><textarea class="inv" id="inv" spellcheck="false">${esc(inv.text || '')}</textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="primary" id="invSave">${t('src.save')}</button><span id="invMsg" class="muted" style="font-size:13px"></span></div>`)}
   </div>`;
+  const geoMsg = (ok, text) => { const m = $('#geoMsg'); m.style.color = ok === null ? '' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
+  $('#geoDbip').onclick = async e => {
+    e.target.disabled = true; geoMsg(null, t('geo.updating'));
+    try {
+      const res = await fetch('/api/geo/dbip', {method: 'POST'});
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { geoMsg(false, t('geo.update_failed', {e: j.error || res.statusText})); e.target.disabled = false; return; }
+      geoMsg(true, t('geo.updated')); setTimeout(render, 1500);
+    } catch (err) { geoMsg(false, String(err.message || err)); e.target.disabled = false; }
+  };
+  el.querySelectorAll('[data-geodel]').forEach(b => b.onclick = async () => {
+    if (!confirm(t('geo.remove_confirm', {f: b.dataset.geodel}))) return;
+    const res = await fetch('/api/geo?file=' + encodeURIComponent(b.dataset.geodel), {method: 'DELETE'});
+    if (!res.ok) { const j = await res.json().catch(() => ({})); geoMsg(false, j.error || res.statusText); return; }
+    render();
+  });
   $('#geoFile').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
     const msg = $('#geoMsg'); msg.style.color = ''; msg.textContent = t('geo.uploading');

@@ -616,28 +616,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. Países, redes y listas de amenazas
 
-Los países y los nombres de red (AS) necesitan una base de datos que asocie
-las direcciones con ellos. Súbala en la interfaz web: **Fuentes → Base de
-datos de países y redes → Subir un archivo de base de datos…**. Se
-comprueba, se guarda en el directorio de datos y se usa al momento para el
-tráfico nuevo; no hace falta reiniciar. El tráfico ya almacenado conserva el
-país con el que se guardó.
+Los países y las redes (AS) funcionan desde el primer momento: traffic66 incluye las bases de datos gratuitas **IP to Country Lite** e **IP to ASN Lite** de DB-IP (licencia [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com)). Las páginas que muestran países y redes indican de dónde vienen los datos.
 
-Archivos admitidos:
+La copia incluida es la de la versión que usa. DB-IP publica una nueva cada mes; **Fuentes → Base de datos de países y redes → Actualizar DB-IP Lite ahora** descarga la última de db-ip.com (el servidor donde corre traffic66 necesita acceso a internet; si falla, la interfaz lo indica).
 
-| Archivo | Aporta | Dónde conseguirlo |
-|---|---|---|
-| DB-IP Lite country o ASN, `.mmdb` | país, o número y nombre de AS | gratis, sin cuenta: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country o ASN, `.mmdb` | país, o número y nombre de AS | gratis con una cuenta de MaxMind: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| Tabla IP-a-ASN, `.tsv` o `.tsv.gz` | número de AS, nombre de AS y país | gratis: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+También puede usar otra base de datos gratuita. Descárguela y súbala en la misma página con **Subir un archivo de base de datos…**. Se comprueba, se guarda en el directorio de datos y se usa para el tráfico nuevo al instante, sin reiniciar. El tráfico ya guardado conserva el país con el que se guardó.
 
-Suba una base de datos de países y otra de ASN para tener ambas cosas; si
-hay varias cargadas, los archivos `.mmdb` tienen prioridad en lo que
-contienen. Cada mes salen versiones nuevas: suba el archivo nuevo de la
-misma manera para sustituir al anterior.
+| Base de datos | Da | Licencia | Dónde obtenerla |
+|---|---|---|---|
+| DB-IP Lite (incluida) | países; redes | CC BY 4.0, sin cuenta | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country y ASN, `.mmdb` | países; redes | GeoLite2 EULA, cuenta gratuita | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite, `ipinfo_lite.mmdb` | países y redes en un solo archivo | CC BY-SA 4.0, cuenta gratuita | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN, `ip2asn-combined.tsv.gz` | redes con su país | PDDL 1.0, sin cuenta | [iptoasn.com](https://iptoasn.com) |
 
-Sin la interfaz web, copie el archivo en el directorio de datos como
-`country.mmdb`, `asn.mmdb` o `asn.tsv.gz` y reinicie traffic66.
+Primero se usan sus archivos; lo que no cubren lo responde la DB-IP Lite incluida. **Quitar** junto a un archivo vuelve al resto. La página muestra lo que está en uso y la fecha de cada base de datos.
+
+Sin la interfaz web, copie el archivo al directorio de datos como `country.mmdb`, `asn.mmdb`, `both.mmdb` (un archivo con países y redes, como IPinfo Lite) o `asn.tsv.gz` y reinicie traffic66.
+
+**Geografía y redes** muestra en un mapa del mundo el tráfico con otros países: cuanto más oscuro, más tráfico. Al pasar el ratón sobre un país se ve su tráfico; al hacer clic se puede filtrar o abrir sus registros de flujo. Los contornos de los países son de [Natural Earth](https://www.naturalearthdata.com) (dominio público).
+
+![Geografía y redes: tráfico remoto por país en un mapa del mundo](images/geo.png)
 
 Las listas de amenazas son archivos de texto plano con una dirección o red
 por línea (se ignora lo que va tras `#` o `;`), guardados como
@@ -685,7 +683,7 @@ Páginas:
 | Detalles del tráfico | Clientes, servidores y servicios en el tiempo, en bits/s y en paquetes/s: los 8 primeros de cada uno, y cuántos hubo |
 | Hallazgos | Qué requiere atención: escaneos, adivinación de contraseñas, movimiento lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas ([más](#findings)) |
 | Rutas de tráfico | Qué host usa qué aplicación hacia qué país: los 8 hosts con más tráfico, el resto como Otros. **Cliente → servidor** muestra cliente → servicio → servidor; **Por segmento** muestra segmentos en lugar de hosts |
-| Geografía y redes | Las redes (AS) de las que vino y a las que fue el tráfico, en el tiempo en bits/s y paquetes/s; tráfico por país y por red |
+| Geografía y redes | Un mapa del mundo del tráfico por país; las redes (AS) de las que vino y a las que fue el tráfico, en el tiempo en bits/s y paquetes/s; tráfico por país y por red |
 | Inteligencia de amenazas | Hosts que hablaron con direcciones de sus listas de amenazas y cuánto enviaron |
 | Registros de flujo | Cuántos registros de flujo hubo y cuándo (una barra por intervalo), y los registros mismos, del más reciente al más antiguo, página a página, con columnas seleccionables |
 | Verificación de interfaces | Tráfico de cada interfaz en el tiempo (entrada y salida, bits/s y paquetes/s), y cifras de flujo junto a los contadores de interfaz, de peor a mejor, con motivos |
@@ -922,7 +920,7 @@ Opciones de `traffic66` y `traffic66 demo`:
 | `-sampling-wait` | `5m` | cuánto esperan los registros a una tasa de muestreo |
 | `-capture` | | captura en una interfaz local (repetible) |
 | `-inventory` | `<data>/inventory.txt` | archivo de nombres |
-| `-asn` | `<data>/asn.tsv.gz` | tabla IP-a-ASN (archivos `.mmdb`: súbalos, o `<data>/country.mmdb` y `<data>/asn.mmdb`) |
+| `-asn` | `<data>/asn.tsv.gz` | tabla IP-a-ASN (archivos `.mmdb`: súbalos, o `<data>/country.mmdb` y `<data>/asn.mmdb`, `<data>/both.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | lista de amenazas adicional como `name=path` (repetible) |
 | `-dns-upstream` | resolver del sistema | servidor DNS para mostrar nombres de host |
 | `-dns-rate` | `20` | máximo de resoluciones inversas por segundo |
@@ -950,7 +948,7 @@ El directorio de datos lo contiene todo:
 | `password` | contraseñas de acceso (con hash) |
 | `inventory.txt` | nombres (**Fuentes → Nombres**) |
 | `logo.png` (o `.svg`, `.jpg`, `.webp`, `.gif`) | su logotipo (**Fuentes → Logotipo**), si subió uno |
-| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | bases de datos de países y redes y listas de amenazas que haya añadido |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | bases de datos de países y redes y listas de amenazas que haya añadido |
 
 **Cuánto tiempo se guardan los datos**: el detalle de flujos 30 días; los resúmenes (vista general y periodos largos)
 400 días. Lo más antiguo se borra automáticamente, con una comprobación cada 5 minutos; no se borra nada más ni hay

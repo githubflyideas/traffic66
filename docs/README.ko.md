@@ -582,25 +582,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. 국가, 네트워크, 위협 목록
 
-국가와 네트워크(AS) 이름을 표시하려면 주소를 국가와 네트워크로 매핑하는 데이터베이스가
-필요합니다. 웹 UI에서 업로드하십시오: **수집 상태 → 국가 및 네트워크 데이터베이스 →
-데이터베이스 파일 업로드…**. 파일은 검사를 거쳐 데이터 디렉터리에 저장되고 새 트래픽에 바로
-사용되며, 재시작할 필요는 없습니다. 이미 저장된 트래픽은 저장될 때의 국가를 유지합니다.
+국가와 네트워크(AS)는 처음부터 표시됩니다. traffic66에는 DB-IP의 무료 데이터베이스 **IP to Country Lite**와 **IP to ASN Lite**가 내장되어 있습니다(라이선스 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com)). 국가와 네트워크를 보여 주는 페이지에는 데이터 출처가 표시됩니다.
 
-사용할 수 있는 파일:
+내장 데이터는 사용 중인 릴리스 시점의 것입니다. DB-IP는 매월 새 버전을 냅니다. **수집 상태 → 국가 및 네트워크 데이터베이스 → DB-IP Lite 지금 업데이트**를 누르면 db-ip.com에서 최신판을 내려받습니다(traffic66이 실행되는 서버가 인터넷에 연결되어 있어야 하며, 실패하면 화면에 알려 줍니다).
 
-| 파일 | 제공 정보 | 구하는 곳 |
-|---|---|---|
-| DB-IP Lite country 또는 ASN, `.mmdb` | 국가, 또는 AS 번호와 이름 | 무료, 계정 불필요: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country 또는 ASN, `.mmdb` | 국가, 또는 AS 번호와 이름 | MaxMind 계정이 있으면 무료: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IP-ASN 매핑 테이블, `.tsv` 또는 `.tsv.gz` | AS 번호, AS 이름, 국가 | 무료: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+다른 무료 데이터베이스도 쓸 수 있습니다. 내려받은 뒤 같은 페이지의 **데이터베이스 파일 업로드…**로 올리면 됩니다. 파일은 검사 후 데이터 디렉터리에 저장되고 새 트래픽에 바로 적용됩니다. 재시작은 필요 없습니다. 이미 저장된 트래픽은 저장할 때의 국가를 유지합니다.
 
-국가 데이터베이스와 ASN 데이터베이스를 함께 업로드하면 둘 다 얻을 수 있습니다. 여러 개가
-로드되어 있으면 `.mmdb` 파일에 담긴 정보는 그 파일이 우선합니다. 새 버전은 매달 나옵니다.
-같은 방법으로 새 파일을 업로드하면 이전 파일을 대체합니다.
+| 데이터베이스 | 내용 | 라이선스 | 받는 곳 |
+|---|---|---|---|
+| DB-IP Lite(내장) | 국가, 네트워크 | CC BY 4.0, 가입 불필요 | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country 및 ASN, `.mmdb` | 국가, 네트워크 | GeoLite2 EULA, 무료 계정 필요 | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite, `ipinfo_lite.mmdb` | 국가와 네트워크를 한 파일에 | CC BY-SA 4.0, 무료 계정 필요 | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN, `ip2asn-combined.tsv.gz` | 네트워크와 그 국가 | PDDL 1.0, 가입 불필요 | [iptoasn.com](https://iptoasn.com) |
 
-웹 UI 없이 하려면 파일을 데이터 디렉터리에 `country.mmdb`, `asn.mmdb` 또는 `asn.tsv.gz`로
-복사하고 traffic66을 재시작하십시오.
+직접 올린 파일을 먼저 쓰고, 거기에 없는 주소는 내장 DB-IP Lite가 답합니다. 파일 옆의 **삭제**를 누르면 나머지 구성으로 돌아갑니다. 페이지에는 사용 중인 데이터베이스와 각각의 날짜가 나옵니다.
+
+웹 UI 없이 하려면 파일을 `country.mmdb`, `asn.mmdb`, `both.mmdb`(IPinfo Lite처럼 국가와 네트워크가 한 파일인 경우) 또는 `asn.tsv.gz`라는 이름으로 데이터 디렉터리에 복사하고 traffic66을 재시작합니다.
+
+**지역 및 네트워크**는 다른 국가와 주고받은 트래픽을 세계 지도로 보여 줍니다. 색이 진할수록 트래픽이 많습니다. 국가에 마우스를 올리면 트래픽 양이, 클릭하면 필터나 플로 레코드를 볼 수 있습니다. 국경선은 [Natural Earth](https://www.naturalearthdata.com)(퍼블릭 도메인)의 것입니다.
+
+![지역 및 네트워크: 세계 지도에 표시한 국가별 외부 트래픽](images/geo.png)
 
 위협 목록은 한 줄에 주소나 네트워크 하나씩 적은 일반 텍스트 파일이며(`#` 또는 `;` 뒤는
 무시됨), `<data directory>/threats/<name>.txt`로 저장합니다. 예:
@@ -643,7 +644,7 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 | 트래픽 상세 | 시간에 따른 클라이언트, 서버, 서비스(bits/s와 packets/s): 각각의 상위 8개와 전체 개수 |
 | 탐지 | 살펴봐야 할 것: 스캔, 비밀번호 대입, 내부 확산, 비정상 업로드, 플러드, 위협 목록 트래픽([자세히](#findings)) |
 | 트래픽 경로 | 어느 호스트가 어느 국가로 어느 애플리케이션을 쓰는지: 트래픽이 가장 많은 호스트 8개, 나머지는 기타로 묶음. **클라이언트 → 서버**는 클라이언트 → 서비스 → 서버를 보여 주고, **세그먼트별**은 호스트 대신 세그먼트를 보여 줍니다 |
-| 지역 및 네트워크 | 트래픽이 오간 네트워크(AS)의 시간에 따른 변화(bits/s와 packets/s), 국가별, 네트워크별 트래픽 |
+| 지역 및 네트워크 | 국가별 트래픽 세계 지도, 트래픽이 오간 네트워크(AS)의 시간에 따른 변화(bits/s와 packets/s), 국가별, 네트워크별 트래픽 |
 | 위협 정보 | 위협 목록에 있는 주소와 통신한 호스트와 그 전송량 |
 | 플로 레코드 | 플로 레코드가 얼마나, 언제 있었는지(간격마다 막대 하나), 그리고 레코드 자체, 최신순, 페이지 단위, 표시할 열 선택 가능 |
 | 인터페이스 대조 | 모든 인터페이스의 시간에 따른 트래픽(수신과 송신, bits/s와 packets/s), 그리고 플로 수치와 인터페이스 카운터 비교, 차이가 큰 순, 원인 포함 |
@@ -861,7 +862,7 @@ sudo traffic66 -capture en0
 | `-sampling-wait` | `5m` | 레코드가 샘플링 레이트를 기다리는 시간 |
 | `-capture` | | 로컬 인터페이스에서 캡처(반복 지정 가능) |
 | `-inventory` | `<data>/inventory.txt` | 이름 파일 |
-| `-asn` | `<data>/asn.tsv.gz` | IP-ASN 매핑 테이블(`.mmdb` 파일은 업로드하거나 `<data>/country.mmdb`와 `<data>/asn.mmdb`에 둠) |
+| `-asn` | `<data>/asn.tsv.gz` | IP-ASN 매핑 테이블(`.mmdb` 파일은 업로드하거나 `<data>/country.mmdb`와 `<data>/asn.mmdb`, `<data>/both.mmdb`에 둠) |
 | `-threat` | `<data>/threats/*.txt` | 추가 위협 목록, `name=path` 형식(반복 지정 가능) |
 | `-dns-upstream` | 시스템 리졸버 | 호스트 이름 표시에 쓰는 DNS 서버 |
 | `-dns-rate` | `20` | 초당 최대 역방향 조회 횟수 |
@@ -888,7 +889,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `password` | 로그인 비밀번호(해시) |
 | `inventory.txt` | 이름(**수집 상태 → 이름**) |
 | `logo.png`(또는 `.svg`, `.jpg`, `.webp`, `.gif`) | 업로드한 경우 내 로고(**수집 상태 → 로고**) |
-| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | 추가한 국가 및 네트워크 데이터베이스와 위협 목록 |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | 추가한 국가 및 네트워크 데이터베이스와 위협 목록 |
 
 **데이터 보존 기간**: 플로 상세는 30일, 요약(개요와 긴 기간)은 400일입니다. 그보다 오래된 데이터는 자동으로 삭제되며 5분마다 확인합니다.
 그 밖에는 아무것도 삭제하지 않고 다른 제한도 없습니다. 상세 보존 일수는 `-retention-days`로 바꿀 수 있고

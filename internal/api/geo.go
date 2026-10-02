@@ -49,7 +49,13 @@ func (s *Server) putGeo(w http.ResponseWriter, r *http.Request) {
 			fail(w, err)
 			return
 		}
-		s.ASN.SetMMDB(rd, name)
+		if name == "both.mmdb" { // replaces the separate ones
+			os.Remove(filepath.Join(s.DataDir, "country.mmdb"))
+			os.Remove(filepath.Join(s.DataDir, "asn.mmdb"))
+		}
+		for _, err := range s.ASN.LoadMMDBs(s.DataDir) {
+			log.Printf("geo: %v", err)
+		}
 	default:
 		plain := b
 		if len(b) > 2 && b[0] == 0x1f && b[1] == 0x8b {

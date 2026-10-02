@@ -617,27 +617,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. Países, redes e listas de ameaças
 
-Países e nomes de rede (AS) exigem um banco de dados que associe os
-endereços a eles. Envie um pela interface web: **Fontes → Banco de dados
-de países e redes → Enviar arquivo de banco de dados…**. Ele é verificado,
-salvo no diretório de dados e usado na hora para o tráfego novo; não é
-preciso reiniciar. O tráfego já armazenado mantém o país com que foi salvo.
+Países e redes (AS) funcionam desde o início: o traffic66 traz embutidas as bases gratuitas **IP to Country Lite** e **IP to ASN Lite** da DB-IP (licença [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com)). As páginas que mostram países e redes indicam a origem dos dados.
 
-Arquivos aceitos:
+A cópia embutida é da versão que você usa. A DB-IP publica uma nova a cada mês; **Fontes → Banco de dados de países e redes → Atualizar DB-IP Lite agora** baixa a mais recente de db-ip.com (o servidor que roda o traffic66 precisa de acesso à internet; se falhar, a interface avisa).
 
-| Arquivo | Fornece | Onde obter |
-|---|---|---|
-| DB-IP Lite country ou ASN, `.mmdb` | país, ou número e nome do AS | grátis, sem conta: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country ou ASN, `.mmdb` | país, ou número e nome do AS | grátis com uma conta MaxMind: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| Tabela IP-para-ASN, `.tsv` ou `.tsv.gz` | número do AS, nome do AS e país | grátis: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+Você também pode usar outro banco gratuito. Baixe-o e envie-o na mesma página com **Enviar arquivo de banco de dados…**. Ele é verificado, salvo no diretório de dados e usado para o tráfego novo na hora, sem reiniciar. O tráfego já guardado mantém o país com que foi salvo.
 
-Envie um banco de países e um banco de ASN para ter os dois; quando há
-vários carregados, os arquivos `.mmdb` têm precedência no que contêm. Novas
-versões saem todo mês: envie o arquivo novo da mesma forma para substituir
-o antigo.
+| Banco | Fornece | Licença | Onde obter |
+|---|---|---|---|
+| DB-IP Lite (embutida) | países; redes | CC BY 4.0, sem conta | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country e ASN, `.mmdb` | países; redes | GeoLite2 EULA, conta gratuita | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite, `ipinfo_lite.mmdb` | países e redes em um só arquivo | CC BY-SA 4.0, conta gratuita | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN, `ip2asn-combined.tsv.gz` | redes com seu país | PDDL 1.0, sem conta | [iptoasn.com](https://iptoasn.com) |
 
-Sem a interface web, copie o arquivo para o diretório de dados como
-`country.mmdb`, `asn.mmdb` ou `asn.tsv.gz` e reinicie o traffic66.
+Seus arquivos são usados primeiro; o que eles não cobrem vem da DB-IP Lite embutida. **Remover** ao lado de um arquivo volta ao restante. A página lista o que está em uso e a data de cada banco.
+
+Sem a interface web, copie o arquivo para o diretório de dados como `country.mmdb`, `asn.mmdb`, `both.mmdb` (um arquivo com países e redes, como o IPinfo Lite) ou `asn.tsv.gz` e reinicie o traffic66.
+
+**Geografia e redes** mostra num mapa-múndi o tráfego com outros países: quanto mais escuro, mais tráfego. Passe o mouse sobre um país para ver o tráfego; clique para filtrar ou abrir os registros de fluxo. Os contornos dos países vêm do [Natural Earth](https://www.naturalearthdata.com) (domínio público).
+
+![Geografia e redes: tráfego remoto por país num mapa-múndi](images/geo.png)
 
 Listas de ameaças são arquivos de texto puro com um endereço ou rede por
 linha (o texto depois de `#` ou `;` é ignorado), salvos como
@@ -684,7 +683,7 @@ Páginas:
 | Detalhes do tráfego | Clientes, servidores e serviços ao longo do tempo, em bits/s e em pacotes/s: os 8 maiores de cada, e quantos havia |
 | Detecções | O que precisa de atenção: varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças ([mais](#findings)) |
 | Caminhos do tráfego | Qual host usa qual aplicação para qual país: os 8 hosts com mais tráfego, o resto como Outros. **Cliente → servidor** mostra cliente → serviço → servidor; **Por segmento** mostra segmentos em vez de hosts |
-| Geografia e redes | As redes (AS) de onde o tráfego veio e para onde foi, ao longo do tempo em bits/s e pacotes/s; tráfego por país e por rede |
+| Geografia e redes | Um mapa-múndi do tráfego por país; as redes (AS) de onde o tráfego veio e para onde foi, ao longo do tempo em bits/s e pacotes/s; tráfego por país e por rede |
 | Ameaças | Hosts que se comunicaram com endereços das suas listas de ameaças, e quanto enviaram |
 | Registros de fluxo | Quantos registros de fluxo houve e quando (uma barra por intervalo), e os próprios registros, dos mais recentes para os mais antigos, página a página, com colunas selecionáveis |
 | Conferência de interfaces | Tráfego de cada interface ao longo do tempo (entrada e saída, bits/s e pacotes/s), e números de fluxo ao lado dos contadores de interface, piores primeiro, com os motivos |
@@ -920,7 +919,7 @@ Opções de `traffic66` e `traffic66 demo`:
 | `-sampling-wait` | `5m` | quanto tempo os registros esperam por uma taxa de amostragem |
 | `-capture` | | captura em uma interface local (repetível) |
 | `-inventory` | `<data>/inventory.txt` | arquivo de nomes |
-| `-asn` | `<data>/asn.tsv.gz` | tabela IP-para-ASN (arquivos `.mmdb`: envie-os, ou `<data>/country.mmdb` e `<data>/asn.mmdb`) |
+| `-asn` | `<data>/asn.tsv.gz` | tabela IP-para-ASN (arquivos `.mmdb`: envie-os, ou `<data>/country.mmdb` e `<data>/asn.mmdb`, `<data>/both.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | lista de ameaças extra no formato `name=path` (repetível) |
 | `-dns-upstream` | resolvedor do sistema | servidor DNS para exibir nomes de host |
 | `-dns-rate` | `20` | máximo de consultas reversas por segundo |
@@ -948,7 +947,7 @@ O diretório de dados guarda tudo:
 | `password` | senhas de login (em hash) |
 | `inventory.txt` | nomes (**Fontes → Nomes**) |
 | `logo.png` (ou `.svg`, `.jpg`, `.webp`, `.gif`) | seu logotipo (**Fontes → Logotipo**), se você enviou um |
-| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | bancos de dados de países e redes e listas de ameaças que você adicionou |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | bancos de dados de países e redes e listas de ameaças que você adicionou |
 
 **Por quanto tempo os dados ficam**: o detalhe de fluxos 30 dias; os resumos (visão geral e períodos longos)
 400 dias. O que for mais antigo é apagado automaticamente, com verificação a cada 5 minutos; nada mais é apagado e
