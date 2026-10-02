@@ -316,5 +316,8 @@
 "logo.upload": "Subir un logotipo…",
 "logo.reset": "Usar el logotipo integrado",
 "logo.hint": "PNG, SVG, JPEG, WebP o GIF, hasta 1 MB. Lo ideal es 272 × 92 píxeles; otros tamaños se ajustan.",
-"logo.saved": "Logotipo guardado"
+"logo.saved": "Logotipo guardado",
+"sankey.title_conv": "Cliente → servicio → servidor",
+"sankey.by_conv": "Cliente → servidor",
+"fbar.any": "Todos"
 }

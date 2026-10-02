@@ -126,7 +126,7 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 		out["now_bps"] = float64(nt.Wire) * 8 / 300
 	}
 
-	se, err := s.Store.SeriesByApp(q, 6)
+	se, err := s.Store.SeriesByApp(q, 8)
 	if err != nil {
 		fail(w, err)
 		return
@@ -238,14 +238,22 @@ func (s *Server) sankey(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	byHost := r.URL.Query().Get("by") != "segment"
-	links, err := s.Store.Sankey(q, byHost, 10)
+	mode := r.URL.Query().Get("by")
+	if mode == "" {
+		mode = "host"
+	}
+	// 8 hosts, clients or servers (the colours there are); 6 applications,
+	// services and countries
+	n0, n2 := 8, 6
+	if mode == "conv" {
+		n2 = 8
+	}
+	links, err := s.Store.Sankey(q, mode, n0, n2)
 	if err != nil {
 		fail(w, err)
 		return
 	}
-	// keep the largest nodes per column (10 hosts or 6 segments, 6
-	// applications, 6 countries), fold the rest into "__other__"
+	// fold everything past the largest nodes of each column into "__other__"
 	top := func(get func(store.SankeyLink) string, n ...int) map[string]bool {
 		t := map[string]uint64{}
 		for _, l := range links {
@@ -268,13 +276,10 @@ func (s *Server) sankey(w http.ResponseWriter, r *http.Request) {
 		}
 		return m
 	}
-	first := 6
-	if byHost {
-		first = 10
-	}
+	first := n0
 	ks := top(func(l store.SankeyLink) string { return l.Seg }, first)
 	ka := top(func(l store.SankeyLink) string { return l.App })
-	kc := top(func(l store.SankeyLink) string { return l.CC })
+	kc := top(func(l store.SankeyLink) string { return l.CC }, n2)
 	fold := func(m map[string]bool, k string) string {
 		if m[k] {
 			return k
@@ -299,11 +304,7 @@ func (s *Server) sankey(w http.ResponseWriter, r *http.Request) {
 		sort.Slice(out, func(i, j int) bool { return out[i].V > out[j].V })
 		return out
 	}
-	by := "segment"
-	if byHost {
-		by = "host"
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"by": by, "seg_app": flat(l1), "app_cc": flat(l2)})
+	writeJSON(w, http.StatusOK, map[string]any{"by": mode, "seg_app": flat(l1), "app_cc": flat(l2)})
 }
 
 func (s *Server) records(w http.ResponseWriter, r *http.Request) {

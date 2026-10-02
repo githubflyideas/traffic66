@@ -316,5 +316,8 @@
 "logo.upload": "Unggah logo…",
 "logo.reset": "Pakai logo bawaan",
 "logo.hint": "PNG, SVG, JPEG, WebP, atau GIF, maks. 1 MB. Paling baik 272 × 92 piksel; ukuran lain disesuaikan.",
-"logo.saved": "Logo disimpan"
+"logo.saved": "Logo disimpan",
+"sankey.title_conv": "Klien → layanan → server",
+"sankey.by_conv": "Klien → server",
+"fbar.any": "Semua"
 }

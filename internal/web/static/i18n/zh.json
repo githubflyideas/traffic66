@@ -316,5 +316,8 @@
 "logo.upload": "上传 Logo…",
 "logo.reset": "恢复内置 Logo",
 "logo.hint": "PNG、SVG、JPEG、WebP 或 GIF，最大 1 MB。最佳尺寸 272 × 92 像素，其他尺寸会自动缩放。",
-"logo.saved": "Logo 已保存"
+"logo.saved": "Logo 已保存",
+"sankey.title_conv": "客户端 → 服务 → 服务器",
+"sankey.by_conv": "客户端 → 服务器",
+"fbar.any": "全部"
 }

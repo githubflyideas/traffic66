@@ -316,5 +316,8 @@
 "logo.upload": "Upload a logo…",
 "logo.reset": "Use the built-in logo",
 "logo.hint": "PNG, SVG, JPEG, WebP or GIF, up to 1 MB. Best at 272 × 92 pixels; other sizes are scaled to fit.",
-"logo.saved": "Logo saved"
+"logo.saved": "Logo saved",
+"sankey.title_conv": "Client → service → server",
+"sankey.by_conv": "Client → server",
+"fbar.any": "Any"
 }

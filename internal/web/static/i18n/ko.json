@@ -316,5 +316,8 @@
 "logo.upload": "로고 업로드…",
 "logo.reset": "기본 로고로 되돌리기",
 "logo.hint": "PNG, SVG, JPEG, WebP 또는 GIF, 최대 1 MB. 272 × 92 픽셀이 가장 좋으며 다른 크기는 맞춰서 조정됩니다.",
-"logo.saved": "로고를 저장했습니다"
+"logo.saved": "로고를 저장했습니다",
+"sankey.title_conv": "클라이언트 → 서비스 → 서버",
+"sankey.by_conv": "클라이언트 → 서버",
+"fbar.any": "전체"
 }
