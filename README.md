@@ -814,6 +814,14 @@ The data directory holds everything:
 | `inventory.txt` | names (**Sources → Names**) |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | countries and networks databases and threat lists you added |
 
+**How long data is kept**: flow detail 30 days, summaries (overview and long
+time ranges) 400 days. Older data is deleted automatically, checked every 5
+minutes; nothing else is deleted and there is no other limit. Change the
+detail period with `-retention-days`, any number of days, for example
+`-retention-days 365`. Disk use grows with it: **Free** in the side menu
+turns red when the kept days will not fit. If the disk fills up, new flows
+cannot be stored until space is freed.
+
 - **Backup**: stop traffic66 and copy the directory. Without stopping,
   copy `raw/`, `password` and `inventory.txt`; the current hour and the
   summaries are then missing.
