@@ -296,6 +296,9 @@ func (s *Sim) Records(t time.Time, dt time.Duration, today bool) ([]flow.Record,
 			}
 		}
 	}
+	if today {
+		recs = append(recs, s.attackRecords(t, dt)...)
+	}
 	return recs, s.counters(t.Add(dt))
 }
 

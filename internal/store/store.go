@@ -79,6 +79,11 @@ var schema = []string{
 	`CREATE TABLE IF NOT EXISTS r_dim (ts TIMESTAMP, dim VARCHAR, val VARCHAR, bytes UBIGINT, wire UBIGINT, pkts UBIGINT, flows UBIGINT)`,
 	`CREATE TABLE IF NOT EXISTS ifc (ts TIMESTAMP, exporter VARCHAR, ifindex UINTEGER, speed UBIGINT, in_oct UBIGINT, out_oct UBIGINT, in_pkts UBIGINT, out_pkts UBIGINT)`,
 	`CREATE TABLE IF NOT EXISTS meta (k VARCHAR PRIMARY KEY, v VARCHAR)`,
+	// findings of the detection rules, and what the rules have seen before
+	`CREATE SEQUENCE IF NOT EXISTS finding_seq`,
+	`CREATE TABLE IF NOT EXISTS findings (id BIGINT PRIMARY KEY, kind VARCHAR, sev UTINYINT, src VARCHAR, dst VARCHAR, port VARCHAR,
+		first_ts TIMESTAMP, last_ts TIMESTAMP, hits INTEGER, ev VARCHAR, status VARCHAR, updated TIMESTAMP)`,
+	`CREATE TABLE IF NOT EXISTS seen (kind VARCHAR, a VARCHAR, b VARCHAR, port USMALLINT, first_ts TIMESTAMP, last_ts TIMESTAMP, PRIMARY KEY (kind, a, b, port))`,
 }
 
 // Options configure a Store.

@@ -15,11 +15,14 @@ antarmuka terminal.
   opsional capture lokal dari interface jaringan atau port mirror.
 - Mencocokkan angkanya sendiri dengan counter interface (counter sFlow atau
   SNMP) dan menjelaskan penyebabnya bila berbeda.
+- Menemukan pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak
+  biasa, flood, dan trafik daftar ancaman di dalam flow, juga melalui
+  sampling, lalu mencantumkannya sebagai temuan untuk ditangani.
 - Daftar Top 66, jalur trafik, negara dan jaringan, kecocokan dengan daftar
   ancaman, catatan flow, enkapsulasi (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - 13 bahasa di antarmuka web dan antarmuka terminal.
 
-![Ringkasan: bandwidth per aplikasi dibanding minggu lalu, klien dan layanan teratas](images/overview.png)
+![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding minggu lalu, klien dan layanan teratas](images/overview.png)
 
 <sub>Semua tangkapan layar berasal dari `traffic66 demo`, jaringan perusahaan simulasi yang bisa Anda jalankan sendiri (lihat [Coba demo](#1-try-the-demo)).</sub>
 
@@ -87,10 +90,13 @@ cd traffic66-windows-amd64
 ```
 
 Buka http://127.0.0.1:8066 dan login sebagai `admin` / `try66`. Demo ini
-membangun jaringan kantor kecil dengan riwayat satu hari dan trafik live
-dari empat perangkat simulasi, lengkap dengan dua insiden yang bisa Anda
-cari: mulai dari **Ringkasan**, klik sebuah host di **Klien teratas**, pilih
-**Lihat detail**, lalu terus telusuri dengan mengeklik. Hentikan dengan Ctrl+C. Data demo disimpan di
+membangun jaringan kantor kecil dengan riwayat satu hari dan trafik live dari
+empat perangkat simulasi, lengkap dengan sebuah serangan: **Temuan**
+menampilkan setiap langkahnya (pemindaian, pemindaian port, tebakan kata
+sandi, pergerakan lateral, unggahan ke server kendali) serta flood ke situs
+web publik. Klik **Detail** pada sebuah temuan, atau mulai dari **Ringkasan**,
+klik sebuah host di **Klien teratas**, pilih **Lihat detail**, lalu terus
+telusuri dengan mengeklik. Hentikan dengan Ctrl+C. Data demo disimpan di
 `traffic66-demo` di sebelah program; hapus folder itu untuk memulai demo
 dari awal.
 
@@ -669,7 +675,8 @@ Halaman:
 
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
-| Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; klien dan layanan teratas |
+| Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; temuan terbuka; klien dan layanan teratas |
+| Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
 | Top-N | Satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
 | Jalur trafik | Segmen mana berbicara dengan aplikasi apa di negara mana |
 | Geografi & jaringan | Trafik per negara dan per jaringan (AS) |
@@ -698,9 +705,52 @@ masih kosong; arahkan kursor ke ruang kosong untuk melihat berapa yang
 dibutuhkan detail untuk hari-hari yang disimpan pada laju saat ini
 (diperkirakan setelah ada data satu hari).
 
+<a id="findings"></a>
+
+### Temuan
+
+**Temuan** mencantumkan apa yang ditemukan traffic66 di dalam flow, yang
+paling serius lebih dulu. Ia memeriksa 10 menit terakhir setiap 5 menit;
+sesuatu yang berlangsung satu jam adalah satu temuan yang terus bertambah,
+bukan temuan baru di setiap pemeriksaan.
+
+| Temuan | Artinya | Tingkat |
+|---|---|---|
+| Pemindaian | Satu alamat mengirim probe kecil ke banyak alamat pada satu port (TCP atau ping) | Tinggi dari dalam jaringan Anda, rendah dari internet |
+| Pemindaian port | Satu alamat mengirim probe kecil ke banyak port pada satu host | Tinggi dari dalam, rendah dari internet |
+| Tebak kata sandi | Banyak koneksi singkat ke layanan login (SSH, RDP, SMB, database, dan lainnya) | Tinggi dari dalam, rendah dari internet |
+| Pergerakan lateral | Di dalam jaringan Anda, sesi berbagi file atau administrasi jarak jauh (SMB, RDP, SSH, WinRM, VNC) ke host yang sebelumnya tidak pernah menyediakan layanan itu | Tinggi |
+| Unggahan tidak biasa | Host internal mengirim jauh lebih banyak daripada yang diterimanya (100 MB dalam 10 menit, tiga kali yang diterimanya) ke alamat yang belum pernah bertukar data dengannya | Tinggi |
+| Flood | 20,000 paket kecil atau lebih per detik ke satu alamat, sepuluh kali laju biasanya | Sedang |
+| Daftar ancaman | Trafik dengan alamat di salah satu daftar ancaman Anda | Tinggi bila host Anda terhubung ke alamat itu, rendah bila alamat dalam daftar mengetuk dari luar |
+
+Setiap temuan menyebutkan siapa melakukan apa terhadap siapa, kapan dan berapa
+lama, beserta angka di baliknya dan cara data di-sampling. **Detail** membuka
+halaman host, yang juga mencantumkan temuan tentang host itu.
+**Sudah ditangani** menutup temuan; jika terjadi lagi, temuan baru dibuka.
+**Bukan masalah** menutupnya untuk selamanya: temuan itu tidak akan pernah
+dilaporkan lagi. Angka merah di samping **Temuan** di menu samping menghitung
+temuan terbuka bertingkat tinggi dan sedang dalam 24 jam terakhir.
+
+Pergerakan lateral dan unggahan tidak biasa perlu tahu apa yang normal, jadi
+keduanya baru dilaporkan setelah ada riwayat satu hari. Saat pertama kali
+dijalankan, traffic66 belajar dari riwayat yang sudah ada.
+
+Dengan data hasil sampling (sFlow, NetFlow dengan sampling) aturan menghitung
+apa yang terlihat di sampel dan meminta jumlah yang lebih sedikit, tetapi
+setiap sampel harus tampak seperti satu probe singkat, sehingga host normal
+yang sibuk tidak memicunya. Apa yang disembunyikan sampling tidak bisa
+ditemukan: di balik sampling 1:4096, pemindaian terhadap beberapa puluh host
+mengirim terlalu sedikit paket untuk terlihat. Serangan dalam demo melewati
+switch yang melakukan sampling 1:4096 dan ditemukan seluruhnya; satu hari
+trafik normal demo tidak menghasilkan temuan apa pun kecuali pemindai internet
+yang mengetuk situs web.
+
+![Temuan: setiap langkah serangan, ditemukan melalui sampling sFlow 1:4096](images/findings.png)
+
 ![Top-N: 66 percakapan teratas dalam satu jam terakhir](images/topn.png)
 
-![Detail satu host: trafiknya, dengan siapa ia berbicara, layanan, negara, dan flow terbaru](images/detail.png)
+![Detail satu host: temuan tentangnya, trafiknya, dengan siapa ia berbicara, layanan, negara, dan flow terbaru](images/detail.png)
 
 ![Jalur trafik: segmen mana memakai aplikasi apa menuju negara mana](images/paths.png)
 

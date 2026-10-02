@@ -16,12 +16,16 @@ terminal.
 - Vérifie ses propres chiffres par rapport aux compteurs d'interface
   (compteurs sFlow ou SNMP) et explique pourquoi ils diffèrent le cas
   échéant.
+- Repère dans les flux les scans, les essais de mots de passe, les
+  mouvements latéraux, les envois inhabituels, les inondations et le trafic
+  des listes de menaces, y compris à travers l'échantillonnage, et les
+  présente comme des détections à traiter.
 - Classements Top 66, chemins du trafic, pays et réseaux, correspondances
   avec des listes de menaces, enregistrements de flux, encapsulation (GRE,
   IPIP, VXLAN, GENEVE, MPLS).
 - 13 langues dans l'interface web et dans l'interface terminal.
 
-![Vue d'ensemble : bande passante par application comparée à la semaine dernière, principaux clients et services](images/overview.png)
+![Vue d'ensemble : détections ouvertes, bande passante par application comparée à la semaine dernière, principaux clients et services](images/overview.png)
 
 <sub>Toutes les captures d'écran proviennent de `traffic66 demo`, un réseau d'entreprise simulé que vous pouvez lancer vous-même (voir [Essayer la démo](#1-try-the-demo)).</sub>
 
@@ -91,7 +95,10 @@ cd traffic66-windows-amd64
 Ouvrez http://127.0.0.1:8066 et connectez-vous avec `admin` / `try66`. La
 démo construit le réseau d'une petite entreprise avec une journée
 d'historique et du trafic en direct provenant de quatre équipements
-simulés, dont deux incidents à trouver : commencez par
+simulés, dont une attaque : **Détections** en montre chaque étape (un
+scan, un scan de ports, des essais de mots de passe, un mouvement latéral,
+un envoi vers un serveur de contrôle) ainsi qu'une inondation du site web
+public. Cliquez sur **Détails** sur une détection, ou commencez par
 **Vue d'ensemble**, cliquez sur un hôte dans **Principaux clients**,
 choisissez **Voir les détails** et continuez à cliquer de proche en
 proche. Arrêtez-la avec Ctrl+C. Les données de la démo sont conservées dans
@@ -690,7 +697,8 @@ Pages :
 
 | Page | À quoi elle répond |
 |---|---|
-| Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; principaux clients et services |
+| Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; détections ouvertes ; principaux clients et services |
+| Détections | Ce qui demande votre attention : scans, essais de mots de passe, mouvements latéraux, envois inhabituels, inondations et trafic des listes de menaces ([plus](#findings)) |
 | Top-N | Un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
 | Chemins du trafic | Quel segment parle à quelle application dans quel pays |
 | Géographie et réseaux | Trafic par pays et par réseau (AS) |
@@ -718,9 +726,55 @@ libre ; survolez l'espace libre pour voir ce dont les jours de détail
 conservés ont besoin au rythme actuel (estimation disponible dès qu'il y a
 une journée de données).
 
+<a id="findings"></a>
+
+### Détections
+
+**Détections** liste ce que traffic66 a trouvé dans les flux, le plus grave
+en premier. Il examine les 10 dernières minutes toutes les 5 minutes ; ce
+qui dure une heure forme une seule détection qui grandit, pas une nouvelle
+à chaque examen.
+
+| Détection | Ce que cela signifie | Gravité |
+|---|---|---|
+| Scan | Une adresse a envoyé de petites sondes à de nombreuses adresses sur un même port (TCP ou ping) | Élevée depuis votre réseau, faible depuis internet |
+| Scan de ports | Une adresse a envoyé de petites sondes à de nombreux ports d'un même hôte | Élevée depuis l'intérieur, faible depuis internet |
+| Essais de mots de passe | De nombreuses connexions courtes vers un service de connexion (SSH, RDP, SMB, bases de données et autres) | Élevée depuis l'intérieur, faible depuis internet |
+| Mouvement latéral | Dans votre réseau, des sessions de partage de fichiers ou d'administration à distance (SMB, RDP, SSH, WinRM, VNC) vers des hôtes qui n'avaient jamais offert ce service | Élevée |
+| Envoi inhabituel | Un hôte interne a envoyé bien plus qu'il n'a reçu (100 Mo en 10 minutes, trois fois ce qu'il a reçu) vers une adresse avec laquelle il n'avait jamais échangé de données | Élevée |
+| Inondation | 20 000 petits paquets par seconde ou plus vers une adresse, dix fois son débit habituel | Moyenne |
+| Liste de menaces | Trafic avec une adresse de l'une de vos listes de menaces | Élevée quand votre hôte s'y est connecté, faible quand l'adresse listée a frappé de l'extérieur |
+
+Chaque détection indique qui a fait quoi à qui, quand et pendant combien de
+temps, avec les chiffres à l'appui et la façon dont les données ont été
+échantillonnées. **Détails** ouvre la page de l'hôte, qui liste aussi les
+détections qui le concernent. **Traité** ferme une détection ; si cela se
+reproduit, une nouvelle s'ouvre. **Fausse alerte** la ferme définitivement :
+elle n'est plus jamais signalée. Le nombre rouge à côté de **Détections**
+dans le menu latéral compte les détections ouvertes de gravité élevée et
+moyenne des dernières 24 heures.
+
+Les mouvements latéraux et les envois inhabituels ont besoin de savoir ce
+qui est normal ; ils ne sont donc signalés qu'une fois qu'il y a une
+journée d'historique. Au premier démarrage, traffic66 apprend à partir de
+l'historique dont il dispose déjà.
+
+Avec des données échantillonnées (sFlow, NetFlow échantillonné), les règles
+comptent ce que montrent les échantillons et en demandent moins, mais
+chacun doit alors ressembler à une courte sonde, si bien que les hôtes
+normaux très actifs ne les déclenchent pas. Ce que l'échantillonnage cache
+ne peut pas être trouvé : derrière un échantillonnage 1:4096, un scan de
+quelques dizaines d'hôtes envoie trop peu de paquets pour être vu.
+L'attaque de la démo passe par un switch qui échantillonne à 1:4096 et est
+trouvée entièrement ; une journée de trafic normal de la démo ne produit
+aucune détection, hormis le scanner d'internet qui frappe à la porte du
+site web.
+
+![Détections : chaque étape d'une attaque, trouvée à travers un échantillonnage sFlow 1:4096](images/findings.png)
+
 ![Top-N : le top 66 des conversations de la dernière heure](images/topn.png)
 
-![Détails d'un hôte : son trafic, avec qui il communique, services, pays et derniers flux](images/detail.png)
+![Détails d'un hôte : les détections qui le concernent, son trafic, avec qui il communique, services, pays et derniers flux](images/detail.png)
 
 ![Chemins du trafic : quel segment utilise quelle application vers quel pays](images/paths.png)
 

@@ -113,9 +113,9 @@ td.rank{color:var(--ink-3);width:2.5em;text-align:end}
 .nw{white-space:nowrap}
 .sb{height:6px;border-radius:3px;background:var(--surface-2);min-width:60px;position:relative}
 .sb span{position:absolute;inset-block:0;inset-inline-start:0;border-radius:3px;background:var(--accent)}
-.v{border:0;background:none;padding:0;cursor:pointer;color:var(--ink);text-align:start;border-bottom:1px dashed transparent;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.v{unicode-bidi:plaintext;border:0;background:none;padding:0;cursor:pointer;color:var(--ink);text-align:start;border-bottom:1px dashed transparent;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .v:hover{border-bottom-color:var(--accent);color:var(--accent-ink)}
-.v .ip{color:var(--ink-3);font-size:12.5px;margin-inline-start:6px}
+.v .ip{unicode-bidi:isolate;color:var(--ink-3);font-size:12.5px;margin-inline-start:2px}
 .tag{display:inline-block;font-size:11.5px;border-radius:4px;padding:0 5px;background:var(--surface-2);color:var(--ink-2);margin-inline-start:4px}
 
 .movers{list-style:none;margin:0;padding:0}
@@ -189,3 +189,22 @@ th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
 .helpbox{background:var(--surface-2);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--ink-2);margin:0 0 10px}
 .helpbox pre{margin:6px 0 0;font-size:12px;white-space:pre-wrap}
 .geo li{margin:3px 0}
+
+/* findings */
+.badge.crit{background:var(--crit);color:#fff}
+.sev{display:inline-block;min-width:52px;text-align:center;font-size:12px;font-weight:650;border-radius:4px;padding:1px 6px;white-space:nowrap}
+.sev.s3{background:var(--crit);color:#fff}.sev.s2{background:var(--warn);color:#1b2432}.sev.s1{background:var(--surface-2);color:var(--ink-2)}
+.fd td{vertical-align:top;padding-top:10px;padding-bottom:10px}
+.fd .what{font-size:14px;line-height:1.5}
+.fd .what .v{font-weight:600}
+.fd .ev{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.fd .kind{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px}
+.fd .when{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.fd .acts{white-space:nowrap;text-align:end}
+.fd .acts .btn{padding:2px 9px;font-size:12.5px;margin-inline-start:4px}
+.fd tr.closed .what,.fd tr.closed .sev{opacity:.55}
+.fd .stl{font-size:12px;color:var(--ink-3);margin-inline-start:6px}
+.fdhead{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.fdhead .cnt{display:flex;align-items:center;gap:6px;font-size:13px}
+.fdhead .cnt b{font-size:20px;font-weight:650}
+.fdnote{font-size:12.5px;color:var(--ink-3);margin:10px 0 0}
