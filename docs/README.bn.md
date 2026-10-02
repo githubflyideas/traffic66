@@ -603,26 +603,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. দেশ, নেটওয়ার্ক ও threat list
 
-দেশ ও নেটওয়ার্ক (AS)-এর নামের জন্য এমন একটি database লাগে যা address থেকে
-সেগুলো বের করে। web UI-তে সেটি আপলোড করুন: **উৎস → দেশ ও নেটওয়ার্ক ডেটাবেস → ডেটাবেস ফাইল আপলোড করুন…**।
-ফাইলটি যাচাই করা হয়, data directory-তে সেভ হয় এবং নতুন ট্রাফিকের জন্য সঙ্গে
-সঙ্গে ব্যবহার হয়; restart লাগে না। আগে থেকে সংরক্ষিত ট্রাফিক যে দেশ নিয়ে সেভ
-হয়েছিল সেটিই রাখে।
+দেশ ও নেটওয়ার্ক (AS) শুরু থেকেই কাজ করে: traffic66-এ DB-IP-এর বিনামূল্যের **IP to Country Lite** ও **IP to ASN Lite** ডেটাবেস অন্তর্নির্মিত (লাইসেন্স [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com))। দেশ ও নেটওয়ার্ক দেখানো পেজগুলো ডেটার উৎস জানায়।
 
-গ্রহণযোগ্য ফাইল:
+অন্তর্নির্মিত কপিটি আপনার চালানো রিলিজের সময়ের। DB-IP প্রতি মাসে নতুন সংস্করণ প্রকাশ করে; **উৎস → দেশ ও নেটওয়ার্ক ডেটাবেস → DB-IP Lite এখনই আপডেট করুন** db-ip.com থেকে সর্বশেষটি ডাউনলোড করে (traffic66 চালানো সার্ভারের ইন্টারনেট লাগবে; ব্যর্থ হলে ওয়েব UI জানায়)।
 
-| ফাইল | কী দেয় | কোথায় পাবেন |
-|---|---|---|
-| DB-IP Lite country বা ASN, `.mmdb` | দেশ, অথবা AS number ও নাম | বিনামূল্যে, account ছাড়া: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country বা ASN, `.mmdb` | দেশ, অথবা AS number ও নাম | MaxMind account থাকলে বিনামূল্যে: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IP-to-ASN table, `.tsv` বা `.tsv.gz` | AS number, AS name ও দেশ | বিনামূল্যে: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+অন্য কোনো বিনামূল্যের ডেটাবেসও ব্যবহার করতে পারেন। সেটি ডাউনলোড করে একই পেজে **ডেটাবেস ফাইল আপলোড করুন…** দিয়ে আপলোড করুন। ফাইলটি যাচাই করে ডেটা ডিরেক্টরিতে রাখা হয় এবং সঙ্গে সঙ্গে নতুন ট্রাফিকে ব্যবহার হয়; রিস্টার্ট লাগে না। আগে সংরক্ষিত ট্রাফিক সংরক্ষণের সময়ের দেশই রাখে।
 
-দুটোই পেতে একটি country database ও একটি ASN database আপলোড করুন; একাধিক লোড
-থাকলে, `.mmdb` ফাইলগুলোতে যা আছে সে বিষয়ে সেগুলোই অগ্রাধিকার পায়। নতুন
-version প্রতি মাসে বের হয়: পুরোনোটি বদলাতে নতুন ফাইল একইভাবে আপলোড করুন।
+| ডেটাবেস | যা দেয় | লাইসেন্স | কোথায় পাবেন |
+|---|---|---|---|
+| DB-IP Lite (অন্তর্নির্মিত) | দেশ; নেটওয়ার্ক | CC BY 4.0, অ্যাকাউন্ট লাগে না | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country ও ASN, `.mmdb` | দেশ; নেটওয়ার্ক | GeoLite2 EULA, বিনামূল্যের অ্যাকাউন্ট | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite, `ipinfo_lite.mmdb` | দেশ ও নেটওয়ার্ক একটি ফাইলে | CC BY-SA 4.0, বিনামূল্যের অ্যাকাউন্ট | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN, `ip2asn-combined.tsv.gz` | নেটওয়ার্ক ও তাদের দেশ | PDDL 1.0, অ্যাকাউন্ট লাগে না | [iptoasn.com](https://iptoasn.com) |
 
-web UI ছাড়া, ফাইলটি data directory-তে `country.mmdb`, `asn.mmdb` বা
-`asn.tsv.gz` নামে কপি করুন এবং traffic66 restart করুন।
+আপনার নিজের ফাইল আগে ব্যবহার হয়; যা তাতে নেই তা অন্তর্নির্মিত DB-IP Lite দেখে। ফাইলের পাশে **মুছুন** বাকিগুলোতে ফিরিয়ে দেয়। পেজে দেখা যায় কোনটি ব্যবহার হচ্ছে এবং প্রতিটি ডেটাবেসের তারিখ।
+
+ওয়েব UI ছাড়া, ফাইলটি ডেটা ডিরেক্টরিতে `country.mmdb`, `asn.mmdb`, `both.mmdb` (দেশ ও নেটওয়ার্ক একসাথে থাকা ফাইল, যেমন IPinfo Lite) বা `asn.tsv.gz` নামে কপি করে traffic66 রিস্টার্ট করুন।
+
+**ভূগোল ও নেটওয়ার্ক** অন্য দেশের সঙ্গে ট্রাফিক বিশ্ব মানচিত্রে দেখায়: দেশ যত গাঢ়, ট্রাফিক তত বেশি। কোনো দেশের ওপর পয়েন্টার রাখলে তার ট্রাফিক দেখা যায়; ক্লিক করে ফিল্টার করুন বা তার flow records খুলুন। দেশের সীমানা [Natural Earth](https://www.naturalearthdata.com) (পাবলিক ডোমেইন) থেকে।
+
+![ভূগোল ও নেটওয়ার্ক: বিশ্ব মানচিত্রে দেশ অনুযায়ী বাইরের ট্রাফিক](images/geo.png)
 
 Threat list হলো সাধারণ text ফাইল, প্রতি লাইনে একটি address বা নেটওয়ার্ক
 (`#` বা `;`-এর পরের লেখা উপেক্ষা করা হয়), সেভ করা হয়
@@ -667,7 +667,7 @@ application, দেশ, ডিভাইস — ক্লিক করা যা�
 | ট্রাফিকের বিস্তারিত | সময়ের সাথে client, server ও service, bits/s ও packets/s-এ: প্রতিটির শীর্ষ 8টি, আর মোট কতগুলো ছিল |
 | সন্দেহজনক কার্যকলাপ | কীসে নজর দিতে হবে: scan, পাসওয়ার্ড অনুমান, lateral movement, অস্বাভাবিক upload, flood আর threat list-এর ট্রাফিক ([আরও](#findings)) |
 | ট্রাফিকের পথ | কোন host কোন দেশের দিকে কোন application ব্যবহার করে: সবচেয়ে ব্যস্ত 8টি host, বাকিগুলো "অন্যান্য" হিসেবে। **ক্লায়েন্ট → সার্ভার** client → service → server দেখায়; **সেগমেন্ট অনুযায়ী** host-এর বদলে নেটওয়ার্ক দেখায় |
-| ভূগোল ও নেটওয়ার্ক | যেসব নেটওয়ার্ক (AS) থেকে ট্রাফিক এসেছে ও যেখানে গেছে, সময়ের সাথে bits/s ও packets/s-এ; দেশ ও নেটওয়ার্ক অনুযায়ী ট্রাফিক |
+| ভূগোল ও নেটওয়ার্ক | দেশ অনুযায়ী ট্রাফিকের বিশ্ব মানচিত্র; যেসব নেটওয়ার্ক (AS) থেকে ট্রাফিক এসেছে ও যেখানে গেছে, সময়ের সাথে bits/s ও packets/s-এ; দেশ ও নেটওয়ার্ক অনুযায়ী ট্রাফিক |
 | হুমকির তথ্য | যেসব host আপনার threat list-এর address-এর সাথে কথা বলেছে, এবং কতটা পাঠিয়েছে |
 | ফ্লো রেকর্ড | কতগুলো flow record ছিল এবং কখন (প্রতি interval-এ একটি bar), আর record-গুলো নিজেই, নতুনগুলো আগে, পেজ ধরে ধরে, বেছে নেওয়া যায় এমন column সহ |
 | ইন্টারফেস মিলানো | সময়ের সাথে প্রতিটি interface-এর ট্রাফিক (ingress ও egress, bits/s ও packets/s), আর interface counter-এর পাশে flow-এর সংখ্যা, সবচেয়ে খারাপগুলো আগে, কারণসহ |
@@ -896,7 +896,7 @@ port-এ) দুবার গোনা হয়।
 | `-sampling-wait` | `5m` | record কতক্ষণ sampling rate-এর জন্য অপেক্ষা করবে |
 | `-capture` | | local interface-এ capture (একাধিকবার দেওয়া যায়) |
 | `-inventory` | `<data>/inventory.txt` | নামের ফাইল |
-| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` ফাইল: সেগুলো আপলোড করুন, অথবা `<data>/country.mmdb` ও `<data>/asn.mmdb`) |
+| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` ফাইল: সেগুলো আপলোড করুন, অথবা `<data>/country.mmdb` ও `<data>/asn.mmdb`, `<data>/both.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | অতিরিক্ত threat list, `name=path` আকারে (একাধিকবার দেওয়া যায়) |
 | `-dns-upstream` | system resolver | host name দেখানোর জন্য DNS server |
 | `-dns-rate` | `20` | প্রতি সেকেন্ডে সর্বোচ্চ reverse lookup |
@@ -924,7 +924,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `password` | login পাসওয়ার্ড (hashed) |
 | `inventory.txt` | নাম (**উৎস → নাম**) |
 | `logo.png` (বা `.svg`, `.jpg`, `.webp`, `.gif`) | আপনার লোগো (**উৎস → লোগো**), যদি আপলোড করে থাকেন |
-| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | আপনার যোগ করা দেশ ও নেটওয়ার্ক database এবং threat list |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | আপনার যোগ করা দেশ ও নেটওয়ার্ক database এবং threat list |
 
 **ডেটা কতদিন রাখা হয়**: flow detail 30 দিন, summary (overview ও দীর্ঘ সময়সীমা) 400 দিন। এর চেয়ে পুরোনো ডেটা
 নিজে থেকেই মুছে যায়, প্রতি 5 মিনিটে যাচাই হয়; এ ছাড়া কিছু মোছা হয় না এবং অন্য কোনো সীমা নেই। detail-এর মেয়াদ

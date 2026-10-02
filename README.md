@@ -570,27 +570,43 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. Countries, networks and threat lists
 
-Countries and network (AS) names need a database that maps addresses to
-them. Upload one in the web UI: **Sources → Countries and networks
-database → Upload a database file…**. It is checked, saved in the data
+Countries and networks (AS) work out of the box: traffic66 has DB-IP's free
+**IP to Country Lite** and **IP to ASN Lite** databases built in (licensed
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); "IP Geolocation
+by DB-IP", [db-ip.com](https://db-ip.com)). The pages that show countries
+and networks name the data's source.
+
+The built-in copy is from the release you run. DB-IP publishes a new one
+every month; **Sources → Countries and networks database → Update DB-IP
+Lite now** downloads the latest from db-ip.com (the server running
+traffic66 needs internet access for this; the web UI says so if it fails).
+
+You can also use another free database. Download it, then upload it on the
+same page with **Upload a database file…**. It is checked, saved in the data
 directory and used for new traffic at once; no restart is needed. Traffic
 already stored keeps the country it was saved with.
 
-Accepted files:
+| Database | Gives | Licence | Where to get it |
+|---|---|---|---|
+| DB-IP Lite (built in) | countries; networks | CC BY 4.0, no account | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country and ASN, `.mmdb` | countries; networks | GeoLite2 EULA, free account | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite, `ipinfo_lite.mmdb` | countries and networks in one file | CC BY-SA 4.0, free account | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN, `ip2asn-combined.tsv.gz` | networks with their country | PDDL 1.0, no account | [iptoasn.com](https://iptoasn.com) |
 
-| File | Gives | Where to get it |
-|---|---|---|
-| DB-IP Lite country or ASN, `.mmdb` | country, or AS number and name | free, no account: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country or ASN, `.mmdb` | country, or AS number and name | free with a MaxMind account: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IP-to-ASN table, `.tsv` or `.tsv.gz` | AS number, AS name and country | free: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
-
-Upload a country database and an ASN database to get both; where several
-are loaded, the `.mmdb` files take precedence for what they contain. New
-versions come out monthly: upload the new file the same way to replace the
-old one.
+Your own files are used first; the built-in DB-IP Lite answers what they
+do not cover. **Remove** next to a file goes back to the rest. The page
+lists what is in use and the date of each database.
 
 Without the web UI, copy the file into the data directory as
-`country.mmdb`, `asn.mmdb` or `asn.tsv.gz` and restart traffic66.
+`country.mmdb`, `asn.mmdb`, `both.mmdb` (a file with countries and
+networks, such as IPinfo Lite) or `asn.tsv.gz` and restart traffic66.
+
+**Geo & networks** shows the traffic to and from other countries on a
+world map: the darker a country, the more traffic. Point at a country for
+its traffic; click it to filter or open its flow records. Country outlines
+come from [Natural Earth](https://www.naturalearthdata.com) (public domain).
+
+![Geo & networks: remote traffic by country on a world map](docs/images/geo.png)
 
 Threat lists are plain text files with one address or network per line
 (text after `#` or `;` is ignored), saved as `<data directory>/threats/<name>.txt`, for
@@ -633,7 +649,7 @@ Pages:
 | Traffic details | Clients, servers and services over time, in bits/s and in packets/s: the top 8 of each, and how many there were |
 | Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
 | Flow paths | Which host uses which application towards which country: the 8 busiest hosts, the rest as Other. **Client → server** shows client → service → server; **By network** shows networks instead of hosts |
-| Geo & networks | The networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
+| Geo & networks | A world map of traffic by country; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
 | Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns |
 | Interface check | Traffic of every interface over time (ingress and egress, bits/s and packets/s), and flow numbers next to the interface counters, worst first, with reasons |
@@ -847,7 +863,7 @@ Options of `traffic66` and `traffic66 demo`:
 | `-sampling-wait` | `5m` | how long records wait for a sampling rate |
 | `-capture` | | capture on a local interface (repeatable) |
 | `-inventory` | `<data>/inventory.txt` | names file |
-| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` files: upload them, or `<data>/country.mmdb` and `<data>/asn.mmdb`) |
+| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` files: upload them, or `<data>/country.mmdb`, `<data>/asn.mmdb`, `<data>/both.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | extra threat list as `name=path` (repeatable) |
 | `-dns-upstream` | system resolver | DNS server for showing host names |
 | `-dns-rate` | `20` | reverse lookups per second at most |
@@ -873,7 +889,7 @@ The data directory holds everything:
 | `password` | login passwords (hashed) |
 | `inventory.txt` | names (**Sources → Names**) |
 | `logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) | your logo (**Sources → Logo**), if you uploaded one |
-| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | countries and networks databases and threat lists you added |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | countries and networks databases you added or downloaded, and threat lists |
 
 **How long data is kept**: flow detail 30 days, summaries (overview and long
 time ranges) 400 days. Older data is deleted automatically, checked every 5

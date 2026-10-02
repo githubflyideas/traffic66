@@ -605,26 +605,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. ممالک، نیٹ ورک اور threat lists
 
-ممالک اور نیٹ ورک (AS) کے ناموں کے لیے ایسا database درکار ہے جو addresses کو
-ان سے جوڑے۔ اسے web UI میں اپ لوڈ کریں: **ذرائع → ممالک اور نیٹ ورکس کا ڈیٹابیس → ڈیٹابیس فائل اپ لوڈ کریں…**۔
-فائل جانچی جاتی ہے، data directory میں محفوظ ہوتی ہے اور نئی ٹریفک کے لیے فوراً
-استعمال ہوتی ہے؛ restart کی ضرورت نہیں۔ پہلے سے محفوظ ٹریفک وہی ملک رکھتی ہے
-جس کے ساتھ وہ محفوظ ہوئی تھی۔
+ممالک اور نیٹ ورکس (AS) شروع سے کام کرتے ہیں: traffic66 میں DB-IP کے مفت **IP to Country Lite** اور **IP to ASN Lite** ڈیٹابیس اندرونی طور پر شامل ہیں (لائسنس [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)؛ "IP Geolocation by DB-IP"، [db-ip.com](https://db-ip.com))۔ ممالک اور نیٹ ورکس دکھانے والے صفحات ڈیٹا کا ماخذ بتاتے ہیں۔
 
-قابلِ قبول فائلیں:
+اندرونی کاپی آپ کے چلائے جا رہے ریلیز کے وقت کی ہے۔ DB-IP ہر ماہ نیا ورژن جاری کرتا ہے؛ **ذرائع ← ممالک اور نیٹ ورکس کا ڈیٹابیس ← DB-IP Lite ابھی اپ ڈیٹ کریں** db-ip.com سے تازہ ترین ڈاؤن لوڈ کرتا ہے (traffic66 چلانے والے سرور کو انٹرنیٹ چاہیے؛ ناکامی پر ویب UI بتاتا ہے)۔
 
-| فائل | کیا دیتی ہے | کہاں سے ملے گی |
-|---|---|---|
-| DB-IP Lite country یا ASN، `.mmdb` | ملک، یا AS number اور نام | مفت، account کے بغیر: [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country یا ASN، `.mmdb` | ملک، یا AS number اور نام | MaxMind account کے ساتھ مفت: [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IP-to-ASN table، `.tsv` یا `.tsv.gz` | AS number، AS name اور ملک | مفت: [iptoasn.com](https://iptoasn.com) (`ip2asn-combined.tsv.gz`) |
+آپ کوئی دوسرا مفت ڈیٹابیس بھی استعمال کر سکتے ہیں۔ اسے ڈاؤن لوڈ کریں، پھر اسی صفحے پر **ڈیٹابیس فائل اپ لوڈ کریں…** سے اپ لوڈ کریں۔ فائل جانچی جاتی ہے، ڈیٹا ڈائریکٹری میں محفوظ ہوتی ہے اور نئے ٹریفک کے لیے فوراً استعمال ہوتی ہے؛ ری اسٹارٹ کی ضرورت نہیں۔ پہلے سے محفوظ ٹریفک وہی ملک رکھتا ہے جس کے ساتھ محفوظ ہوا تھا۔
 
-دونوں حاصل کرنے کے لیے ایک country database اور ایک ASN database اپ لوڈ کریں؛
-جہاں کئی لوڈ ہوں، وہاں `.mmdb` فائلیں اپنے مواد کے لیے ترجیح پاتی ہیں۔ نئے
-versions ہر مہینے آتے ہیں: پرانی فائل بدلنے کے لیے نئی فائل اسی طرح اپ لوڈ کریں۔
+| ڈیٹابیس | کیا دیتا ہے | لائسنس | کہاں سے ملے گا |
+|---|---|---|---|
+| DB-IP Lite (اندرونی) | ممالک؛ نیٹ ورکس | CC BY 4.0، اکاؤنٹ کی ضرورت نہیں | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country اور ASN، `.mmdb` | ممالک؛ نیٹ ورکس | GeoLite2 EULA، مفت اکاؤنٹ | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite، `ipinfo_lite.mmdb` | ممالک اور نیٹ ورکس ایک فائل میں | CC BY-SA 4.0، مفت اکاؤنٹ | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN، `ip2asn-combined.tsv.gz` | نیٹ ورکس اور ان کا ملک | PDDL 1.0، اکاؤنٹ کی ضرورت نہیں | [iptoasn.com](https://iptoasn.com) |
 
-web UI کے بغیر، فائل کو data directory میں `country.mmdb`، `asn.mmdb` یا
-`asn.tsv.gz` کے نام سے کاپی کریں اور traffic66 restart کریں۔
+آپ کی اپنی فائلیں پہلے استعمال ہوتی ہیں؛ جو ان میں نہیں اس کا جواب اندرونی DB-IP Lite دیتا ہے۔ فائل کے ساتھ **ہٹائیں** باقی پر واپس لے جاتا ہے۔ صفحہ دکھاتا ہے کہ کیا استعمال ہو رہا ہے اور ہر ڈیٹابیس کی تاریخ۔
+
+ویب UI کے بغیر، فائل کو ڈیٹا ڈائریکٹری میں `country.mmdb`، `asn.mmdb`، `both.mmdb` (ممالک اور نیٹ ورکس والی ایک فائل، جیسے IPinfo Lite) یا `asn.tsv.gz` کے نام سے کاپی کریں اور traffic66 ری اسٹارٹ کریں۔
+
+**مقامات اور نیٹ ورک** دوسرے ممالک کے ساتھ ٹریفک کو دنیا کے نقشے پر دکھاتا ہے: ملک جتنا گہرا، ٹریفک اتنی زیادہ۔ کسی ملک پر پوائنٹر لے جائیں تو اس کی ٹریفک نظر آتی ہے؛ کلک کر کے فلٹر کریں یا اس کے flow records کھولیں۔ ممالک کی سرحدیں [Natural Earth](https://www.naturalearthdata.com) (پبلک ڈومین) سے ہیں۔
+
+![مقامات اور نیٹ ورک: دنیا کے نقشے پر ملک کے لحاظ سے بیرونی ٹریفک](images/geo.png)
 
 Threat lists سادہ text فائلیں ہیں، ہر لائن میں ایک address یا نیٹ ورک (`#` یا
 `;` کے بعد کا متن نظرانداز ہوتا ہے)، جو
@@ -669,7 +669,7 @@ application، ملک، ڈیوائس — پر کلک کیا جا سکتا ہے:
 | ٹریفک کی تفصیل | وقت کے ساتھ clients، servers اور services، bits/s اور packets/s میں: ہر ایک کے سرفہرست 8، اور وہ کل کتنے تھے |
 | مشتبہ سرگرمی | کس چیز پر توجہ چاہیے: scans، پاس ورڈ کا اندازہ، lateral movement، غیر معمولی uploads، floods اور threat list والی ٹریفک ([مزید](#findings)) |
 | ٹریفک کے راستے | کون سا host کس ملک کی طرف کون سی application استعمال کرتا ہے: 8 سب سے مصروف hosts، باقی "دیگر" کے طور پر۔ **کلائنٹ ← سرور** کلائنٹ ← سروس ← سرور دکھاتا ہے؛ **سیگمنٹ کے لحاظ سے** hosts کی جگہ نیٹ ورکس دکھاتا ہے |
-| مقامات اور نیٹ ورک | وہ نیٹ ورکس (AS) جہاں سے ٹریفک آئی اور جہاں گئی، وقت کے ساتھ bits/s اور packets/s میں؛ ملک کے حساب سے اور نیٹ ورک کے حساب سے ٹریفک |
+| مقامات اور نیٹ ورک | ملک کے لحاظ سے ٹریفک کا دنیا کا نقشہ؛ وہ نیٹ ورکس (AS) جہاں سے ٹریفک آئی اور جہاں گئی، وقت کے ساتھ bits/s اور packets/s میں؛ ملک کے حساب سے اور نیٹ ورک کے حساب سے ٹریفک |
 | خطرے کی معلومات | وہ hosts جنہوں نے آپ کی threat lists کے addresses سے بات کی، اور کتنا بھیجا |
 | فلو ریکارڈ | کتنے flow records تھے اور کب (ہر interval کے لیے ایک bar)، اور خود records، نئے پہلے، صفحہ بہ صفحہ، منتخب کیے جا سکنے والے columns کے ساتھ |
 | انٹرفیس جانچ | وقت کے ساتھ ہر interface کی ٹریفک (ingress اور egress، bits/s اور packets/s)، اور interface counters کے ساتھ flow کے اعداد، بدترین پہلے، وجوہات کے ساتھ |
@@ -900,7 +900,7 @@ Capture کے لیے root درکار ہے؛ کچھ انسٹال نہیں کرنا
 | `-sampling-wait` | `5m` | records کتنی دیر sampling rate کا انتظار کریں |
 | `-capture` | | local interface پر capture (دہرایا جا سکتا ہے) |
 | `-inventory` | `<data>/inventory.txt` | ناموں کی فائل |
-| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` فائلیں: انہیں اپ لوڈ کریں، یا `<data>/country.mmdb` اور `<data>/asn.mmdb`) |
+| `-asn` | `<data>/asn.tsv.gz` | IP-to-ASN table (`.mmdb` فائلیں: انہیں اپ لوڈ کریں، یا `<data>/country.mmdb` اور `<data>/asn.mmdb`, `<data>/both.mmdb`) |
 | `-threat` | `<data>/threats/*.txt` | اضافی threat list، `name=path` کی شکل میں (دہرایا جا سکتا ہے) |
 | `-dns-upstream` | system resolver | host names دکھانے کے لیے DNS server |
 | `-dns-rate` | `20` | فی سیکنڈ زیادہ سے زیادہ reverse lookups |
@@ -927,7 +927,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `password` | login پاس ورڈز (hashed) |
 | `inventory.txt` | نام (**ذرائع → نام**) |
 | `logo.png` (یا `.svg`، `.jpg`، `.webp`، `.gif`) | آپ کا لوگو (**ذرائع → لوگو**)، اگر آپ نے اپ لوڈ کیا ہو |
-| `country.mmdb`، `asn.mmdb`، `asn.tsv.gz`، `threats/` | آپ کے شامل کردہ ممالک اور نیٹ ورکس کے databases اور threat lists |
+| `country.mmdb`، `asn.mmdb`، `both.mmdb`، `asn.tsv.gz`، `dbip-country.mmdb`، `dbip-asn.mmdb`، `threats/` | آپ کے شامل کردہ ممالک اور نیٹ ورکس کے databases اور threat lists |
 
 **ڈیٹا کتنی دیر رکھا جاتا ہے**: flow detail 30 دن، summaries (overview اور لمبی مدتیں) 400 دن۔ اس سے پرانا
 ڈیٹا خود بخود حذف ہوتا ہے، ہر 5 منٹ میں جانچ ہوتی ہے؛ اس کے علاوہ کچھ حذف نہیں ہوتا اور کوئی اور حد نہیں۔ detail

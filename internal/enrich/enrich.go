@@ -342,9 +342,11 @@ type asRange struct {
 
 // ASNDB maps addresses to ASN, country and organisation. Sources: a
 // tab-separated table (range_start range_end as_number country description,
-// as published by iptoasn.com) and MaxMind DB files (.mmdb, as GeoLite2 and
-// DB-IP Lite): a country database and an ASN database. When several are
-// loaded, the .mmdb files win for what they hold.
+// as published by iptoasn.com), MaxMind DB files (.mmdb, as GeoLite2, DB-IP
+// Lite and IPinfo Lite) installed by the operator, and the DB-IP Lite
+// databases built into the program (or a newer download of them). The
+// operator's .mmdb files win over the table for what they hold; the DB-IP
+// Lite databases answer only what nothing else does.
 type ASNDB struct {
 	mu      sync.RWMutex
 	v4, v6  []asRange
@@ -352,26 +354,67 @@ type ASNDB struct {
 	cty, as *geo.Reader
 	ctyFile string
 	asFile  string
+	// fallback: DB-IP Lite, built in or downloaded
+	fcty, fas         *geo.Reader
+	fctyFile, fasFile string
 }
 
 // GeoSource describes one loaded database.
 type GeoSource struct {
-	Kind    string    `json:"kind"`    // "table", "country" or "asn"
-	File    string    `json:"file"`    // file name in the data directory
-	Type    string    `json:"type"`    // database type from the file
-	Built   time.Time `json:"built"`   // build date of an .mmdb
-	Entries int       `json:"entries"` // ranges in a table
+	Kind     string    `json:"kind"`     // "table", "country", "asn" or "both"
+	File     string    `json:"file"`     // file name in the data directory, or "built-in"
+	Type     string    `json:"type"`     // database type from the file
+	Vendor   string    `json:"vendor"`   // dbip, maxmind, ipinfo, iptoasn or ""
+	Built    time.Time `json:"built"`    // build date of an .mmdb
+	Entries  int       `json:"entries"`  // ranges in a table
+	Fallback bool      `json:"fallback"` // used only where the others have no answer
 }
 
-// SetMMDB installs an .mmdb reader as the country or ASN database.
+// Vendor guesses who published a database from its type name.
+func Vendor(typ string) string {
+	t := strings.ToLower(typ)
+	switch {
+	case strings.Contains(t, "dbip") || strings.Contains(t, "db-ip"):
+		return "dbip"
+	case strings.Contains(t, "geolite") || strings.Contains(t, "geoip2"):
+		return "maxmind"
+	case strings.Contains(t, "ipinfo"):
+		return "ipinfo"
+	}
+	return ""
+}
+
+// SetMMDB installs an .mmdb reader as the country or ASN database, or both.
 func (db *ASNDB) SetMMDB(r *geo.Reader, file string) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	if r.Kind() == "asn" {
+	k := r.Kind()
+	if k == "asn" || k == "both" {
 		db.as, db.asFile = r, file
-	} else {
+	}
+	if k == "country" || k == "both" {
 		db.cty, db.ctyFile = r, file
 	}
+}
+
+// SetFallback installs the DB-IP Lite country and ASN databases; nil keeps
+// the one in place.
+func (db *ASNDB) SetFallback(cty, as *geo.Reader, ctyFile, asFile string) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if cty != nil {
+		db.fcty, db.fctyFile = cty, ctyFile
+	}
+	if as != nil {
+		db.fas, db.fasFile = as, asFile
+	}
+}
+
+// Fallback returns the DB-IP Lite databases in use.
+func (db *ASNDB) Fallback() (cty, as *geo.Reader) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	return db.fcty, db.fas
 }
 
 // Sources lists the loaded databases.
@@ -380,13 +423,30 @@ func (db *ASNDB) Sources() []GeoSource {
 	defer db.mu.RUnlock()
 	var out []GeoSource
 	if n := len(db.v4) + len(db.v6); n > 0 {
-		out = append(out, GeoSource{Kind: "table", File: db.tsvFile, Type: "IP to ASN table", Entries: n})
+		out = append(out, GeoSource{Kind: "table", File: db.tsvFile, Type: "IP to ASN table", Vendor: "iptoasn", Entries: n})
 	}
-	if db.cty != nil {
-		out = append(out, GeoSource{Kind: "country", File: db.ctyFile, Type: db.cty.Type, Built: db.cty.Built})
+	src := func(kind string, r *geo.Reader, file string, fb bool) GeoSource {
+		v := Vendor(r.Type)
+		if fb {
+			v = "dbip"
+		}
+		return GeoSource{Kind: kind, File: file, Type: r.Type, Vendor: v, Built: r.Built, Fallback: fb}
 	}
-	if db.as != nil {
-		out = append(out, GeoSource{Kind: "asn", File: db.asFile, Type: db.as.Type, Built: db.as.Built})
+	if db.cty != nil && db.cty == db.as {
+		out = append(out, src("both", db.cty, db.ctyFile, false))
+	} else {
+		if db.cty != nil {
+			out = append(out, src("country", db.cty, db.ctyFile, false))
+		}
+		if db.as != nil {
+			out = append(out, src("asn", db.as, db.asFile, false))
+		}
+	}
+	if db.fcty != nil {
+		out = append(out, src("country", db.fcty, db.fctyFile, true))
+	}
+	if db.fas != nil {
+		out = append(out, src("asn", db.fas, db.fasFile, true))
 	}
 	return out
 }
@@ -505,6 +565,16 @@ func (db *ASNDB) Lookup(a netip.Addr) (asn uint32, cc, org string) {
 			asn, org = in.ASN, in.Org
 		}
 	}
+	if cc == "" && db.fcty != nil {
+		if in, ok := db.fcty.Lookup(a); ok {
+			cc = in.Country
+		}
+	}
+	if asn == 0 && db.fas != nil {
+		if in, ok := db.fas.Lookup(a); ok && in.ASN != 0 {
+			asn, org = in.ASN, in.Org
+		}
+	}
 	return asn, cc, org
 }
 
@@ -598,4 +668,69 @@ func (t *Threats) Lists() map[string]int {
 		out[k] = v
 	}
 	return out
+}
+
+// ---------------------------------------------------------------- geo files
+
+// MMDBFiles are the operator's databases in the data directory, in loading
+// order: a later file replaces what an earlier one holds.
+var MMDBFiles = []string{"both.mmdb", "country.mmdb", "asn.mmdb"}
+
+// LoadMMDBs (re)loads the operator's .mmdb files from dir; databases whose
+// file is gone are dropped.
+func (db *ASNDB) LoadMMDBs(dir string) []error {
+	db.mu.Lock()
+	db.cty, db.as, db.ctyFile, db.asFile = nil, nil, "", ""
+	db.mu.Unlock()
+	var errs []error
+	for _, name := range MMDBFiles {
+		p := filepath.Join(dir, name)
+		if _, err := os.Stat(p); err != nil {
+			continue
+		}
+		r, err := geo.Open(p)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", p, err))
+			continue
+		}
+		db.SetMMDB(r, name)
+	}
+	return errs
+}
+
+// DB-IP Lite files downloaded into the data directory.
+const (
+	DBIPCountryFile = "dbip-country.mmdb"
+	DBIPASNFile     = "dbip-asn.mmdb"
+)
+
+// LoadDBIP installs the DB-IP Lite databases: a download in dir when it is
+// newer than the built-in one, else the built-in one.
+func (db *ASNDB) LoadDBIP(dir string) error {
+	bc, ba, err := geo.Builtin()
+	if err != nil {
+		return fmt.Errorf("built-in country and ASN data: %w", err)
+	}
+	pick := func(b *geo.Reader, name string) (*geo.Reader, string) {
+		if dir != "" {
+			if r, err := geo.Open(filepath.Join(dir, name)); err == nil && r.Built.After(b.Built) {
+				return r, name
+			}
+		}
+		return b, "built-in"
+	}
+	c, cf := pick(bc, DBIPCountryFile)
+	a, af := pick(ba, DBIPASNFile)
+	db.SetFallback(c, a, cf, af)
+	return nil
+}
+
+// TableFile is the file the table was loaded from.
+func (db *ASNDB) TableFile() string {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	if len(db.v4)+len(db.v6) == 0 {
+		return ""
+	}
+	return filepath.Base(db.tsvFile)
 }

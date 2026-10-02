@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/netip"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -185,6 +186,15 @@ func infoFrom(v any) Info {
 	}
 	in.ASN = uint32(asUint(m["autonomous_system_number"]))
 	in.Org, _ = m["autonomous_system_organization"].(string)
+	if in.ASN == 0 { // IPinfo Lite: "asn": "AS15169", "as_name": "Google LLC"
+		if s, ok := m["asn"].(string); ok {
+			n, _ := strconv.ParseUint(strings.TrimPrefix(strings.ToUpper(s), "AS"), 10, 32)
+			in.ASN = uint32(n)
+			in.Org, _ = m["as_name"].(string)
+		} else {
+			in.ASN = uint32(asUint(m["asn"]))
+		}
+	}
 	return in
 }
 
@@ -342,13 +352,35 @@ func decode(d []byte, off, depth int) (any, int, error) {
 	return nil, 0, fmt.Errorf("unsupported data type %d", typ)
 }
 
-// Kind tells whether a database holds countries, AS numbers or both.
+// probes are well-known addresses every country or ASN database covers.
+var probes = []netip.Addr{
+	netip.MustParseAddr("8.8.8.8"), netip.MustParseAddr("1.1.1.1"), netip.MustParseAddr("9.9.9.9"),
+	netip.MustParseAddr("208.67.222.222"), netip.MustParseAddr("114.114.114.114"), netip.MustParseAddr("77.88.8.8"),
+	netip.MustParseAddr("2001:4860:4860::8888"), netip.MustParseAddr("2606:4700:4700::1111"),
+}
+
+// Kind tells whether a database holds countries ("country"), AS numbers
+// ("asn") or both ("both"), from what it answers for a few well-known
+// addresses, or else from its type name.
 func (r *Reader) Kind() string {
-	t := strings.ToLower(r.Type)
+	var cty, as bool
+	for _, a := range probes {
+		if in, ok := r.Lookup(a); ok {
+			cty = cty || in.Country != ""
+			as = as || in.ASN != 0
+		}
+	}
 	switch {
-	case strings.Contains(t, "asn") || strings.Contains(t, "-as-") || strings.Contains(t, "isp"):
+	case cty && as:
+		return "both"
+	case as:
 		return "asn"
-	default:
+	case cty:
 		return "country"
 	}
+	t := strings.ToLower(r.Type)
+	if strings.Contains(t, "asn") || strings.Contains(t, "-as-") || strings.Contains(t, "isp") {
+		return "asn"
+	}
+	return "country"
 }

@@ -505,19 +505,26 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 ## 8. 国家、运营商网络与威胁情报列表
 
-显示国家和网络（AS）名称需要一个把地址映射到国家和网络的数据库。在 Web 界面中上传即可：**接入 → 国家和运营商数据库 → 上传数据库文件…**。文件会经过校验、保存到数据目录，并立即用于新的流量，无需重启。已经存储的流量保留保存时的国家。
+国家和运营商（AS）开箱即用：traffic66 内置了 DB-IP 的免费 **IP to Country Lite** 和 **IP to ASN Lite** 数据库（许可证 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)；"IP Geolocation by DB-IP"，[db-ip.com](https://db-ip.com)）。显示国家和运营商的页面会注明数据来源。
 
-可接受的文件：
+内置的是你所运行版本发布时的数据。DB-IP 每月发布新版；**接入 → 国家和运营商数据库 → 立即更新 DB-IP Lite** 会从 db-ip.com 下载最新版（运行 traffic66 的服务器需要能上网；下载失败时界面会提示）。
 
-| 文件 | 提供 | 获取途径 |
-|---|---|---|
-| DB-IP Lite country 或 ASN，`.mmdb` | 国家，或 AS 号和名称 | 免费，无需账号：[db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country 或 ASN，`.mmdb` | 国家，或 AS 号和名称 | 注册 MaxMind 账号后免费：[maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IP 到 ASN 映射表，`.tsv` 或 `.tsv.gz` | AS 号、AS 名称和国家 | 免费：[iptoasn.com](https://iptoasn.com)（`ip2asn-combined.tsv.gz`） |
+也可以换用其他免费数据库：下载后在同一页面点 **上传数据库文件…**。文件会经过校验、保存到数据目录，并立即用于新的流量，无需重启。已经存储的流量保留保存时的国家。
 
-同时上传一个国家数据库和一个 ASN 数据库即可两者兼得；加载了多个时，`.mmdb` 文件对其包含的内容优先。新版本每月发布：用同样的方式上传新文件即可替换旧文件。
+| 数据库 | 提供 | 许可证 | 获取途径 |
+|---|---|---|---|
+| DB-IP Lite（内置） | 国家；运营商 | CC BY 4.0，无需账号 | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
+| MaxMind GeoLite2 Country 和 ASN，`.mmdb` | 国家；运营商 | GeoLite2 EULA，需免费账号 | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| IPinfo Lite，`ipinfo_lite.mmdb` | 国家和运营商在同一个文件里 | CC BY-SA 4.0，需免费账号 | [ipinfo.io/lite](https://ipinfo.io/lite) |
+| IPtoASN，`ip2asn-combined.tsv.gz` | 运营商及其所属国家 | PDDL 1.0，无需账号 | [iptoasn.com](https://iptoasn.com) |
 
-不使用 Web 界面时，把文件复制到数据目录，命名为 `country.mmdb`、`asn.mmdb` 或 `asn.tsv.gz`，然后重启 traffic66。
+优先使用你自己的文件，查不到的再由内置的 DB-IP Lite 回答。文件旁的 **删除** 可恢复为其余的库。页面列出正在使用的库和各自的日期。
+
+不使用 Web 界面时，把文件复制到数据目录，命名为 `country.mmdb`、`asn.mmdb`、`both.mmdb`（国家和运营商在同一个文件里，如 IPinfo Lite）或 `asn.tsv.gz`，然后重启 traffic66。
+
+**地理与运营商** 在世界地图上显示与其他国家之间的流量：颜色越深，流量越大。鼠标指向国家可看到流量，点击可筛选或打开它的流记录。国界来自 [Natural Earth](https://www.naturalearthdata.com)（公有领域）。
+
+![地理与运营商：世界地图上按国家显示的外部流量](images/geo.png)
 
 威胁情报列表是纯文本文件，每行一个地址或网段（`#` 或 `;` 之后的内容会被忽略），保存为 `<data directory>/threats/<name>.txt`，例如：
 
@@ -552,7 +559,7 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 | 流量明细 | 客户端、服务器和服务随时间的变化，单位为 bits/s 和 packets/s：各自的前 8 名，以及总共有多少个 |
 | 发现 | 哪些需要处理：扫描、暴力破解、横向移动、异常上传、泛洪和威胁情报流量（[详见](#findings)） |
 | 流向 | 哪台主机在访问哪个国家的哪个应用：流量最大的 8 台主机，其余归为“其他”。**客户端 → 服务器** 显示客户端 → 服务 → 服务器；**按网段** 显示网段而不是主机 |
-| 地理与运营商 | 流量来自和去往哪些网络（AS），以 bits/s 和 packets/s 显示随时间的变化；按国家和按网络统计的流量 |
+| 地理与运营商 | 世界地图上按国家显示的流量；流量来自和去往哪些网络（AS），以 bits/s 和 packets/s 显示随时间的变化；按国家和按网络统计的流量 |
 | 威胁情报 | 与威胁情报列表中地址有通信的主机，以及它们发送了多少流量 |
 | 流记录 | 有多少条流记录、出现在什么时候（每个间隔一根柱），以及流记录本身，最新的在前，分页显示，可选择显示列 |
 | 接口对账 | 每个接口的流量随时间变化（入向和出向，bits/s 和 packets/s），以及流统计与接口计数器并列对比，差异最大的在前，附原因 |
@@ -725,7 +732,7 @@ sudo traffic66 -capture en0
 | `-sampling-wait` | `5m` | 记录等待采样率的最长时间 |
 | `-capture` | | 在本机网卡上抓包（可重复指定） |
 | `-inventory` | `<data>/inventory.txt` | 名称文件 |
-| `-asn` | `<data>/asn.tsv.gz` | IP 到 ASN 映射表（`.mmdb` 文件：在 Web 界面上传，或放在 `<data>/country.mmdb` 和 `<data>/asn.mmdb`） |
+| `-asn` | `<data>/asn.tsv.gz` | IP 到 ASN 映射表（`.mmdb` 文件：在 Web 界面上传，或放在 `<data>/country.mmdb` 和 `<data>/asn.mmdb`, `<data>/both.mmdb`） |
 | `-threat` | `<data>/threats/*.txt` | 额外的威胁情报列表，格式为 `name=path`（可重复指定） |
 | `-dns-upstream` | 系统解析器 | 用于显示主机名的 DNS 服务器 |
 | `-dns-rate` | `20` | 每秒反向解析次数上限 |
@@ -752,7 +759,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `password` | 登录密码（哈希） |
 | `inventory.txt` | 名称（**接入 → 名称**） |
 | `logo.png`（或 `.svg`、`.jpg`、`.webp`、`.gif`） | 你的 Logo（**接入 → Logo**），如果上传过 |
-| `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | 你添加的国家和运营商数据库以及威胁情报列表 |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | 你添加的国家和运营商数据库以及威胁情报列表 |
 
 **数据保留多久**：流明细 30 天，汇总（总览和长时间范围）400 天。更早的数据自动删除，每 5 分钟检查一次；除此之外不删任何数据，也没有其他限制。用 `-retention-days` 修改明细保留天数，任意天数都可以，例如 `-retention-days 365`。占用的磁盘随之增长：保留天数放不下时，侧边栏的 **可用** 会变红。磁盘写满后，新的流无法保存，直到腾出空间。
 
