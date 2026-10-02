@@ -67,6 +67,11 @@ type Sandbox struct {
 	Lim Limits
 	Mem float64 // share of memory for the sandbox database
 
+	// work is held by an import for its whole run, and by a rebuild or
+	// close while it replaces the database, so the two never overlap
+	work   sync.Mutex
+	closed bool
+
 	mu    sync.Mutex
 	files []*File
 	st    *store.Store
@@ -407,11 +412,23 @@ func slicesDelete(fs []*File, f *File) []*File {
 // rebuilt from the remaining files.
 func (sb *Sandbox) Delete(name string) error {
 	sb.mu.Lock()
-	var keep []*File
 	found := name == ""
 	for _, f := range sb.files {
+		found = found || f.Name == name
+	}
+	if !found {
+		sb.mu.Unlock()
+		return errors.New("no such file")
+	}
+	sb.gen++ // a running import stops at its next check
+	sb.mu.Unlock()
+
+	sb.work.Lock()
+	defer sb.work.Unlock()
+	sb.mu.Lock()
+	var keep []*File
+	for _, f := range sb.files {
 		if name == "" || f.Name == name {
-			found = true
 			if f.Status == "uploading" {
 				keep = append(keep, f)
 				continue
@@ -423,12 +440,7 @@ func (sb *Sandbox) Delete(name string) error {
 		}
 		keep = append(keep, f)
 	}
-	if !found {
-		sb.mu.Unlock()
-		return errors.New("no such file")
-	}
 	sb.files = keep
-	sb.gen++
 	st := sb.st
 	sb.st, sb.det = nil, nil
 	for _, f := range sb.files {
@@ -452,6 +464,12 @@ func (sb *Sandbox) Delete(name string) error {
 	return nil
 }
 
+func (sb *Sandbox) stale(gen int) bool {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return gen != sb.gen
+}
+
 func (sb *Sandbox) kick() {
 	select {
 	case sb.wake <- struct{}{}:
@@ -468,7 +486,13 @@ func (sb *Sandbox) worker() {
 
 // importNext imports one waiting file; it reports whether it did.
 func (sb *Sandbox) importNext() bool {
+	sb.work.Lock()
+	defer sb.work.Unlock()
 	sb.mu.Lock()
+	if sb.closed {
+		sb.mu.Unlock()
+		return false
+	}
 	var f *File
 	for _, x := range sb.files {
 		if x.Status == "waiting" {
@@ -498,6 +522,9 @@ func (sb *Sandbox) importNext() bool {
 		// the rules over the whole capture, window by window
 		every := det.Cfg.Every
 		for t := res.first.Truncate(every).Add(every); !t.After(res.last.Add(every)); t = t.Add(every) {
+			if sb.stale(gen) {
+				break
+			}
 			if _, err := det.Run(t); err != nil {
 				log.Printf("sandbox: detect: %v", err)
 				break
@@ -594,6 +621,12 @@ func (sb *Sandbox) importFile(gen int, f *File, st *store.Store, inv *enrich.Inv
 
 // Close closes the database.
 func (sb *Sandbox) Close() {
+	sb.mu.Lock()
+	sb.closed = true
+	sb.gen++
+	sb.mu.Unlock()
+	sb.work.Lock() // wait for a running import to stop
+	defer sb.work.Unlock()
 	sb.mu.Lock()
 	st := sb.st
 	sb.st = nil
