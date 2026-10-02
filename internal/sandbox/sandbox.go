@@ -27,10 +27,18 @@ import (
 	"github.com/githubflyideas/traffic66/internal/store"
 )
 
-// Limits of the free edition.
+// Limits bound what a sandbox takes in.
+type Limits struct {
+	Files     int   `json:"max_files"`
+	FileSize  int64 `json:"max_file_size"`
+	TotalSize int64 `json:"max_total"`
+}
+
+// UploadLimits apply to files uploaded in the web UI; LocalLimits to files
+// opened from the command line (traffic66 capture.pcap).
 var (
-	MaxFiles    = 3
-	MaxFileSize = int64(50 << 20)
+	UploadLimits = Limits{Files: 3, FileSize: 50 << 20, TotalSize: 150 << 20}
+	LocalLimits  = Limits{Files: 3, FileSize: 3e9, TotalSize: 3e9}
 )
 
 // File is one capture file in the sandbox.
@@ -46,7 +54,8 @@ type File struct {
 	Last     time.Time `json:"last"`
 	Status   string    `json:"status"` // waiting, importing, done, error
 	Error    string    `json:"error,omitempty"`
-	Exporter string    `json:"exporter"` // the "device" the file's flows appear under
+	Exporter string    `json:"exporter"`       // the "device" the file's flows appear under
+	Path     string    `json:"path,omitempty"` // a file opened in place (never deleted); else it is in Dir/files
 }
 
 // Sandbox holds the uploaded files and their database.
@@ -55,6 +64,8 @@ type Sandbox struct {
 	Inv *enrich.Inventory // the live inventory: names of networks and hosts
 	ASN *enrich.ASNDB
 	Thr *enrich.Threats
+	Lim Limits
+	Mem float64 // share of memory for the sandbox database
 
 	mu    sync.Mutex
 	files []*File
@@ -75,7 +86,12 @@ var ErrNotCapture = errors.New("not a capture file: use .pcap or .pcapng as save
 // New opens the sandbox in dir (creating nothing until a file is added) and
 // starts its import worker.
 func New(dir string, inv *enrich.Inventory, asn *enrich.ASNDB, thr *enrich.Threats) *Sandbox {
-	sb := &Sandbox{Dir: dir, Inv: inv, ASN: asn, Thr: thr, wake: make(chan struct{}, 1)}
+	return NewWith(dir, inv, asn, thr, UploadLimits, 0.05)
+}
+
+// NewWith is New with other limits and a share of memory for the database.
+func NewWith(dir string, inv *enrich.Inventory, asn *enrich.ASNDB, thr *enrich.Threats, lim Limits, mem float64) *Sandbox {
+	sb := &Sandbox{Dir: dir, Inv: inv, ASN: asn, Thr: thr, Lim: lim, Mem: mem, wake: make(chan struct{}, 1)}
 	sb.load()
 	go sb.worker()
 	if len(sb.files) > 0 {
@@ -92,7 +108,15 @@ func New(dir string, inv *enrich.Inventory, asn *enrich.ASNDB, thr *enrich.Threa
 }
 
 func (sb *Sandbox) pcapDir() string { return filepath.Join(sb.Dir, "files") }
-func (sb *Sandbox) dbDir() string   { return filepath.Join(sb.Dir, "db") }
+
+// filePath is where a file's packets are read from.
+func (sb *Sandbox) filePath(f *File) string {
+	if f.Path != "" {
+		return f.Path
+	}
+	return filepath.Join(sb.pcapDir(), f.Name)
+}
+func (sb *Sandbox) dbDir() string { return filepath.Join(sb.Dir, "db") }
 func (sb *Sandbox) indexPath() string {
 	return filepath.Join(sb.Dir, "files.json")
 }
@@ -107,7 +131,7 @@ func (sb *Sandbox) load() {
 		return
 	}
 	for _, f := range fs {
-		if _, err := os.Stat(filepath.Join(sb.pcapDir(), f.Name)); err == nil {
+		if _, err := os.Stat(sb.filePath(f)); err == nil {
 			sb.files = append(sb.files, f)
 		}
 	}
@@ -134,7 +158,11 @@ func (sb *Sandbox) save() {
 
 // open opens (or creates) the database; sb.mu held or not yet shared.
 func (sb *Sandbox) open() error {
-	st, err := store.Open(store.Options{Dir: sb.dbDir(), MemoryFraction: 0.05, Threads: 2})
+	threads := 2 // beside live collection
+	if sb.Mem > 0.1 {
+		threads = 0 // on its own: all but one core
+	}
+	st, err := store.Open(store.Options{Dir: sb.dbDir(), MemoryFraction: sb.Mem, Threads: threads})
 	if err != nil {
 		return err
 	}
@@ -173,19 +201,18 @@ func (sb *Sandbox) Store() (*store.Store, *detect.Detector, *enrich.Inventory) {
 
 // Info describes the sandbox for the UI.
 type Info struct {
-	Files       []File    `json:"files"`
-	Busy        bool      `json:"busy"`
-	First       time.Time `json:"first"`
-	Last        time.Time `json:"last"`
-	MaxFiles    int       `json:"max_files"`
-	MaxFileSize int64     `json:"max_file_size"`
-	Ready       bool      `json:"ready"` // has data to look at
+	Files []File    `json:"files"`
+	Busy  bool      `json:"busy"`
+	First time.Time `json:"first"`
+	Last  time.Time `json:"last"`
+	Limits
+	Ready bool `json:"ready"` // has data to look at
 }
 
 func (sb *Sandbox) Info() Info {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
-	in := Info{Files: []File{}, Busy: sb.busy, MaxFiles: MaxFiles, MaxFileSize: MaxFileSize}
+	in := Info{Files: []File{}, Busy: sb.busy, Limits: sb.Lim}
 	for _, f := range sb.files {
 		in.Files = append(in.Files, *f)
 		if f.Flows == 0 {
@@ -235,15 +262,10 @@ func (sb *Sandbox) cleanName(name string) string {
 // start like a pcap or pcapng file.
 func (sb *Sandbox) Add(name string, r io.Reader, sample bool) (*File, error) {
 	sb.mu.Lock()
-	n := 0
-	for _, f := range sb.files {
-		if !f.Sample {
-			n++
-		}
-	}
-	if !sample && n >= MaxFiles {
+	room, err := sb.room(sample)
+	if err != nil {
 		sb.mu.Unlock()
-		return nil, fmt.Errorf("%w: at most %d files; delete one first", ErrLimit, MaxFiles)
+		return nil, err
 	}
 	name = sb.cleanName(name)
 	// reserve the name while the upload runs
@@ -270,17 +292,13 @@ func (sb *Sandbox) Add(name string, r io.Reader, sample bool) (*File, error) {
 		return fail(err)
 	}
 	out.Write(head)
-	limit := MaxFileSize
-	if sample {
-		limit = 1 << 30
-	}
-	written, err := io.Copy(out, io.LimitReader(r, limit-4+1))
+	written, err := io.Copy(out, io.LimitReader(r, room-4+1))
 	out.Close()
 	if err != nil {
 		return fail(err)
 	}
-	if written+4 > limit {
-		return fail(fmt.Errorf("%w: a file may be at most %d MB", ErrLimit, MaxFileSize>>20))
+	if written+4 > room {
+		return fail(sb.sizeErr())
 	}
 	sb.mu.Lock()
 	f.Size = written + 4
@@ -289,6 +307,74 @@ func (sb *Sandbox) Add(name string, r io.Reader, sample bool) (*File, error) {
 	sb.save()
 	sb.refreshInventory()
 	sb.mu.Unlock()
+	sb.kick()
+	return f, nil
+}
+
+// room returns how many bytes the next file may have; sb.mu held.
+func (sb *Sandbox) room(sample bool) (int64, error) {
+	if sample {
+		return 1 << 30, nil
+	}
+	n, used := 0, int64(0)
+	for _, f := range sb.files {
+		if !f.Sample {
+			n++
+			used += f.Size
+		}
+	}
+	if n >= sb.Lim.Files {
+		return 0, fmt.Errorf("%w: at most %d files; delete one first", ErrLimit, sb.Lim.Files)
+	}
+	room := min(sb.Lim.FileSize, sb.Lim.TotalSize-used)
+	if room <= 0 {
+		return 0, sb.sizeErr()
+	}
+	return room, nil
+}
+
+func (sb *Sandbox) sizeErr() error {
+	return fmt.Errorf("%w: each file at most %d MB, %d MB in all", ErrLimit, sb.Lim.FileSize>>20, sb.Lim.TotalSize>>20)
+}
+
+// AddPath imports a capture file where it is, without copying it; the file
+// is never deleted.
+func (sb *Sandbox) AddPath(path string) (*File, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	fi, err := os.Stat(abs)
+	if err != nil {
+		return nil, err
+	}
+	if !fi.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a file", path)
+	}
+	in, err := os.Open(abs)
+	if err != nil {
+		return nil, err
+	}
+	head := make([]byte, 4)
+	_, err = io.ReadFull(in, head)
+	in.Close()
+	if err != nil || pcapfile.Format(head) == "" {
+		return nil, fmt.Errorf("%s: %w", path, ErrNotCapture)
+	}
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	room, err := sb.room(false)
+	if err != nil {
+		return nil, err
+	}
+	if fi.Size() > room {
+		return nil, sb.sizeErr()
+	}
+	f := &File{Name: sb.cleanName(filepath.Base(abs)), Path: abs, Size: fi.Size(), Added: time.Now().UTC(), Status: "waiting"}
+	sb.files = append(sb.files, f)
+	f.Exporter = sb.exporterFor(f)
+	sb.save()
+	sb.refreshInventory()
 	sb.kick()
 	return f, nil
 }
@@ -330,7 +416,9 @@ func (sb *Sandbox) Delete(name string) error {
 				keep = append(keep, f)
 				continue
 			}
-			os.Remove(filepath.Join(sb.pcapDir(), f.Name))
+			if f.Path == "" {
+				os.Remove(filepath.Join(sb.pcapDir(), f.Name))
+			}
 			continue
 		}
 		keep = append(keep, f)
@@ -444,7 +532,7 @@ type result struct {
 
 func (sb *Sandbox) importFile(gen int, f *File, st *store.Store, inv *enrich.Inventory) (result, error) {
 	var res result
-	in, err := os.Open(filepath.Join(sb.pcapDir(), f.Name))
+	in, err := os.Open(sb.filePath(f))
 	if err != nil {
 		return res, err
 	}

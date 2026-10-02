@@ -570,7 +570,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"disk_bytes": u.DiskBytes, "disk_free": free, "disk_need": need, "retention_days": s.Store.RetentionDays(), "oldest": u.Oldest.UnixMilli(),
 		"hot_rows": u.HotRows, "segments": u.Segments, "segment_rows": u.SegmentRows,
 		"dns_upstream": s.DNS.Upstream(), "dns_queries": s.DNS.Queries, "asn_ranges": s.ASN.Size(), "threat_lists": s.Thr.Lists(),
-		"source_warnings": warn, "findings_open": s.Store.OpenFindings(2, time.Now().Add(-24*time.Hour)), "hosts": names, "skewed": s.Col.Skewed.Load(), "go": runtime.Version(),
+		"source_warnings": warn, "offline": s.Offline, "findings_open": s.Store.OpenFindings(2, time.Now().Add(-24*time.Hour)), "hosts": names, "skewed": s.Col.Skewed.Load(), "go": runtime.Version(),
 	})
 }
 

@@ -174,6 +174,8 @@ function writeHash(push) {
 const SB_DATA = new Set(['overview', 'topn', 'sankey', 'series', 'records', 'threats', 'findings']);
 const inSB = () => state.ds === 'sb' && sbInfo.ready;
 let sbInfo = {files: [], ready: false};
+// started as "traffic66 file.pcap": there is no live data, only the files
+let offlineMode = false;
 async function api(path, extra = {}, filters = state.f) {
   if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
   const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : {range: state.r, ...extra});
@@ -468,7 +470,8 @@ views.overview = async (el) => {
   const sv = d.top_services || [], smax = Math.max(1, ...sv.map(r => r.wire));
   el.innerHTML = `<div class="grid">
     <div class="panel c12"><div class="kpis">
-      <div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(t(basis === 'week' ? 'kpi.vs_week' : 'kpi.vs_prev', {p: fmtPct(change, 0)}))}</div></div>
+      ${inSB() ? `<div class="kpi"><div class="lab">${t('sb.avg')}</div><div class="n">${fmtBps(tot.wire * 8 / (spanMs() / 1000))}</div><div class="d muted">&nbsp;</div></div>`
+        : `<div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(t(basis === 'week' ? 'kpi.vs_week' : 'kpi.vs_prev', {p: fmtPct(change, 0)}))}</div></div>`}
       <div class="kpi"><div class="lab">${t('kpi.total', {r: rangeLabel()})}</div><div class="n">${fmtBytes(tot.wire)}</div><div class="d muted">${esc(peakTxt)}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.hosts')}</div><div class="n">${nf(tot.hosts)}</div><div class="d muted">&nbsp;</div></div>
       <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
@@ -921,7 +924,7 @@ views.sandbox = async (el) => {
     <div class="sbactions"><button class="primary" id="sbGo" ${sbInfo.ready && !pending ? '' : 'disabled'}>${t('sb.analyze')}</button>
       <label class="btn ${own >= sbInfo.max_files ? 'disabled' : ''}" style="cursor:pointer">${t('sb.upload')}<input type="file" id="sbFile" accept=".pcap,.pcapng,.cap" multiple hidden ${own >= sbInfo.max_files ? 'disabled' : ''}></label>
       ${fs.length ? `<button class="btn" id="sbAll">${t('sb.delete_all')}</button>` : ''}<span id="sbMsg" style="font-size:13px"></span></div>
-    <p class="muted" style="font-size:12.5px;margin:10px 0 0">${esc(t('sb.limits', {n: sbInfo.max_files, mb}))} ${esc(t('sb.formats'))}</p>`)}</div>`;
+    <p class="muted" style="font-size:12.5px;margin:10px 0 0">${esc(sbInfo.max_total >= sbInfo.max_file_size * sbInfo.max_files ? t('sb.limits', {n: sbInfo.max_files, mb}) : sbInfo.max_total <= sbInfo.max_file_size ? t('sb.limits_total', {n: sbInfo.max_files, gb: fmtBytes(sbInfo.max_total)}) : t('sb.limits', {n: sbInfo.max_files, mb}) + ' ' + t('sb.limits_total', {n: sbInfo.max_files, gb: fmtBytes(sbInfo.max_total)}))} ${esc(t('sb.formats'))}</p>`)}</div>`;
   // the last upload problem stays shown after the page refreshes
   const msg = (ok, text) => { sbMsg = ok === false ? text : ''; const m = $('#sbMsg'); m.style.color = ok === null ? 'var(--ink-3)' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
   if (sbMsg) msg(false, sbMsg);
@@ -959,8 +962,11 @@ views.sandbox = async (el) => {
     }
     render();
   };
-  if (pending) setTimeout(() => { if (state.v === 'sandbox') render(); }, 1500);
+  if (pending) { setTimeout(() => { if (state.v === 'sandbox') render(); }, 1500); sbWaited = true; }
+  else if (offlineMode && sbInfo.ready && sbWaited) { sbWaited = false; state.ds = 'sb'; go('overview'); }
 };
+// in offline mode the first visit goes on to the overview once the files are in
+let sbWaited = true;
 
 views.threats = async (el) => {
   const d = await api('threats', {limit: 66});
@@ -1201,7 +1207,7 @@ views.detail = async (el) => {
       <button class="v btn" data-k="${isIP ? 'ip' : 'port'}" data-val="${esc(det.v)}" data-label="${esc(isIP ? (names.get(det.v) || det.v) : det.v)}" aria-haspopup="menu">${esc(t('pop.actions'))} ▾</button></div>
       <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-top:10px">
         <div class="kpi"><div class="lab">${t('kpi.total', {r: rangeLabel()})}</div><div class="n">${fmtBytes(tot.wire)}</div><div class="d muted">${d.peak_at ? esc(t('kpi.peak', {v: fmtBps(d.peak_bps), t: fmtTime(d.peak_at, spanMs())})) : '&nbsp;'}</div></div>
-        <div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d">&nbsp;</div></div>
+        <div class="kpi"><div class="lab">${t(inSB() ? 'sb.avg' : 'kpi.now')}</div><div class="n">${fmtBps(inSB() ? tot.wire * 8 / (spanMs() / 1000) : d.now_bps)}</div><div class="d">&nbsp;</div></div>
         <div class="kpi"><div class="lab">${t(isIP ? 'det.peers' : 'det.clients')}</div><div class="n">${nf(isIP ? tot.peers + tot.hosts - 1 : tot.hosts)}</div><div class="d">&nbsp;</div></div>
         <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       </div></div>
@@ -1227,7 +1233,7 @@ function renderSB() {
   $('#sbbar').hidden = !on;
   $('#range').hidden = on;
   $('#refresh').hidden = on;
-  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources]').forEach(b => b.hidden = inSB());
+  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources]').forEach(b => b.hidden = inSB() || offlineMode);
   if (!on) return;
   const r = sbRange(), span = r.to - r.from;
   const df = new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}), tf = new Intl.DateTimeFormat(LANG, {timeStyle: 'short'});
@@ -1235,8 +1241,8 @@ function renderSB() {
   const names = sbInfo.files.filter(f => f.status === 'done').map(f => f.name);
   $('#sbbar').innerHTML = `<span class="sbtag">${t('sb.banner')}</span><span class="sbfiles">${names.map(esc).join(' · ')}</span>
     <span class="muted nw">${esc(df.format(r.from))} – ${esc(sameDay ? tf.format(r.to) : df.format(r.to))} (${esc(fmtDur(span))})</span>
-    <button class="btn" id="sbBack">${t('sb.back')}</button>`;
-  $('#sbBack').onclick = () => { state.ds = ''; render(); };
+    ${offlineMode ? '' : `<button class="btn" id="sbBack">${t('sb.back')}</button>`}`;
+  if ($('#sbBack')) $('#sbBack').onclick = () => { state.ds = ''; render(); };
 }
 function fmtDur(ms) {
   const m = Math.round(ms / 6e4);
@@ -1245,6 +1251,7 @@ function fmtDur(ms) {
 async function loadSB() {
   try { const res = await fetch('/api/sandbox'); if (res.ok) sbInfo = await res.json(); } catch (e) {}
   if (state.ds && !sbInfo.ready) state.ds = '';
+  if (offlineMode && sbInfo.ready) state.ds = 'sb';  // nothing else to show
 }
 
 async function render(push) {
@@ -1274,6 +1281,8 @@ async function loadStatus() {
     const s = await res.json();
     for (const [ip, n] of Object.entries(s.hosts || {})) names.set(ip, n);
     $('#demo').hidden = !s.demo; $('#demo').textContent = t('demo.badge');
+    offlineMode = !!s.offline;
+    $('#self').hidden = offlineMode;  // nothing is collected
     const live = s.records_per_sec > 0.2;
     $('#self').innerHTML = `<div class="live ${live ? 'ok' : 'idle'}"><i></i>${t(live ? 'self.receiving' : 'self.idle')}</div>
       <span class="k">${t('self.ingest')}</span><span class="val">${esc(t('self.per_sec', {n: nf(s.records_per_sec, s.records_per_sec < 10 ? 1 : 0)}))}</span>

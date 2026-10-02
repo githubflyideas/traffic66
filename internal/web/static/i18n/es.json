@@ -411,5 +411,7 @@
 "sb.range": "toda la captura",
 "sb.min": "{n} min",
 "sb.hours": "{n} h",
-"sb.not_capture": "{f} no es un archivo de captura. Use .pcap o .pcapng guardado con Wireshark o tcpdump."
+"sb.not_capture": "{f} no es un archivo de captura. Use .pcap o .pcapng guardado con Wireshark o tcpdump.",
+"sb.avg": "Tasa media",
+"sb.limits_total": "Hasta {n} archivos, {gb} en total."
 }

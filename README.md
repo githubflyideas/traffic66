@@ -20,6 +20,7 @@ in a web UI and in a terminal UI.
 - Top 66 lists, traffic over time by client, server, service, interface
   and network (AS), flow paths, countries, threat list matches, flow
   records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
+- `traffic66 capture.pcap` opens up to 3 packet captures (3 GB in all) in the web UI: flows, findings, countries and flow records over the whole capture, with nothing to set up.
 - 13 languages in the web UI and the terminal UI.
 
 ![Overview: open findings, bandwidth by application compared with last week, top clients and services](docs/images/overview.png)
@@ -737,7 +738,30 @@ The same overview in Chinese; every page is available in 13 languages:
 
 ### Offline analysis
 
-**Offline analysis** looks at packet captures from Wireshark or tcpdump with the same pages as the live data, without mixing them in:
+**Offline analysis** looks at packet captures from Wireshark or tcpdump with the same pages as the live data, without mixing them in.
+
+It summarizes all the packets into flows: who talked to whom, how much, when, and what looks like an attack. It does not decode protocols or show packet contents; for one packet or one TCP stream, use Wireshark.
+
+From the command line, without setting anything up:
+
+```
+traffic66 office.pcap
+traffic66 a.pcap b.pcapng c.pcap
+```
+
+traffic66 starts on this computer only (127.0.0.1, a free port), prints the address, the password and a one-time sign-in link, and opens the browser on the capture. Up to 3 files, 3 GB in all; they are read where they are and never changed. Nothing is collected or sent, and host names are not looked up (`-dns` turns that on). Ctrl+C stops and deletes the imported data. On a 2-core machine a 1 GB capture is ready in about 5 seconds (1.2 million full-size packets) to 30 seconds (14 million small packets).
+
+```
+$ traffic66 office.pcap
+
+traffic66 0.3.1: analysing 1 capture file(s); nothing is collected or sent
+  Web UI    http://127.0.0.1:38217  (port 38217, this computer only)
+  Sign in   user admin, password gfhfhbuutz2e
+  Open      http://127.0.0.1:38217/auto?t=b9388f…  (signs in once)
+  Stop      Ctrl+C; the imported data is deleted, your files are kept
+```
+
+In the web UI of a running traffic66:
 
 1. **Upload capture files…**: `.pcap` or `.pcapng`, not compressed. Up to 3 files, each at most 50 MB. The files are turned into flows in a database of their own (`<data>/sandbox/`); the live data, its numbers and findings are not touched.
 2. **Analyse**: every page (overview, Top 66, traffic details, findings, flow paths, map, flow records) now shows the capture files over their whole time. An orange bar names the files; **Back to live data** returns. Each file appears as a device, so the **Device** box shows one file at a time.

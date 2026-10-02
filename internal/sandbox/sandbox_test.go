@@ -89,10 +89,7 @@ func TestSampleImport(t *testing.T) {
 }
 
 func TestLimits(t *testing.T) {
-	old := MaxFileSize
-	MaxFileSize = 1000
-	defer func() { MaxFileSize = old }()
-	sb := New(t.TempDir(), enrich.NewInventory(), enrich.NewASNDB(), enrich.NewThreats())
+	sb := NewWith(t.TempDir(), enrich.NewInventory(), enrich.NewASNDB(), enrich.NewThreats(), Limits{Files: 3, FileSize: 1000, TotalSize: 3000}, 0.05)
 	defer sb.Close()
 	var small bytes.Buffer
 	Sample(&small, time.Now())
@@ -130,5 +127,29 @@ func TestLimits(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(sb.Dir, "files", "passwd.pcap")); err != nil {
 		t.Errorf("name not cleaned: %v", err)
+	}
+}
+
+// Files opened in place count against the total and are never deleted.
+func TestAddPath(t *testing.T) {
+	dir := t.TempDir()
+	var buf bytes.Buffer
+	Sample(&buf, time.Now())
+	p := filepath.Join(dir, "x.pcap")
+	os.WriteFile(p, buf.Bytes()[:800], 0o644)
+	sb := NewWith(filepath.Join(dir, "sb"), enrich.NewInventory(), enrich.NewASNDB(), enrich.NewThreats(), Limits{Files: 3, FileSize: 1000, TotalSize: 1500}, 0.05)
+	defer sb.Close()
+	if _, err := sb.AddPath(p); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sb.AddPath(p); !errors.Is(err, ErrLimit) {
+		t.Fatalf("over the total: %v", err)
+	}
+	wait(t, sb)
+	if err := sb.Delete(""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(p); err != nil {
+		t.Errorf("the original file was deleted: %v", err)
 	}
 }

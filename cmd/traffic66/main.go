@@ -18,6 +18,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -47,6 +48,7 @@ const usage = `traffic66 %s — flow analytics for sFlow, NetFlow and IPFIX
 
 Usage:
   traffic66 [serve] [flags]     collect flows and serve the web UI (default)
+  traffic66 FILE.pcap [...]     analyse up to 3 capture files (pcap, pcapng) in the web UI
   traffic66 demo [flags]        run with a built-in simulated network
   traffic66 tui [flags]         terminal UI (connects to a running traffic66)
   traffic66 simulate -to HOST   send simulated exports to another collector
@@ -60,6 +62,10 @@ Run "traffic66 <command> -h" for the flags of a command.
 func main() {
 	log.SetFlags(log.LstdFlags)
 	args := cleanArgs(os.Args[1:])
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") && !slices.Contains(commands, strings.ToLower(args[0])) && looksLikeCapture(args[0]) {
+		runOffline(args)
+		return
+	}
 	cmd := "serve"
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		cmd, args = strings.ToLower(args[0]), args[1:]
@@ -389,7 +395,18 @@ func serve(args []string, demo bool) {
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Det: det, Static: web.FS(), Version: version,
 		Demo: demo, Check: checker.Check, Exists: checker.Exists, LocalTok: tok, DataDir: f.data, Started: time.Now()}
 	srv.SNMP = poller.Status
-	srv.SB = sandbox.New(filepath.Join(f.data, "sandbox"), inv, asn, thr)
+	if offline != nil {
+		srv.SB = sandbox.NewWith(filepath.Join(f.data, "sandbox"), inv, asn, thr, sandbox.LocalLimits, 0.25)
+		srv.Offline = true
+		srv.AutoLogin = randomHex(16)
+		for _, p := range offline.files {
+			if _, err := srv.SB.AddPath(p); err != nil {
+				fatalf("%v", err)
+			}
+		}
+	} else {
+		srv.SB = sandbox.New(filepath.Join(f.data, "sandbox"), inv, asn, thr)
+	}
 	defer srv.SB.Close()
 	if demo {
 		demoSample(f.data, srv.SB)
@@ -408,6 +425,18 @@ func serve(args []string, demo bool) {
 	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go hs.Serve(ln)
 	log.Printf("web UI: http://%s", displayAddr(ln.Addr()))
+	if offline != nil {
+		u := "http://" + displayAddr(ln.Addr())
+		_, port, _ := net.SplitHostPort(ln.Addr().String())
+		fmt.Printf("\ntraffic66 %s: analysing %d capture file(s); nothing is collected or sent\n", version, len(offline.files))
+		fmt.Printf("  Web UI    %s  (port %s, this computer only)\n", u, port)
+		fmt.Printf("  Sign in   user %s, password %s\n", f.user, f.password)
+		fmt.Printf("  Open      %s/auto?t=%s  (signs in once)\n", u, srv.AutoLogin)
+		fmt.Printf("  Stop      Ctrl+C; the imported data is deleted, your files are kept\n\n")
+		if offline.browser {
+			tui.OpenBrowser(u + "/auto?t=" + srv.AutoLogin)
+		}
+	}
 	if doubleClick {
 		log.Printf("opening the web UI in your browser; close this window to stop traffic66")
 		tui.OpenBrowser("http://" + displayAddr(ln.Addr()))
