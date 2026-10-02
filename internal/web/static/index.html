@@ -11,11 +11,11 @@
 <body>
 <div class="app" id="app" hidden>
 <aside>
-  <div class="brand"><span>traffic<b>66</b></span><span class="demo" id="demo" hidden></span></div>
+  <div class="brand"><img class="logo" src="/logo" alt="traffic66"><span class="demo" id="demo" hidden></span></div>
   <nav class="dash" id="nav" aria-label="Dashboards">
     <button data-v="overview" data-i="nav.overview"></button>
-    <button data-v="findings"><span data-i="nav.findings"></span><span class="badge crit" id="findBadge" hidden></span></button>
     <button data-v="topn" data-i="nav.topn"></button>
+    <button data-v="findings"><span data-i="nav.findings"></span><span class="badge crit" id="findBadge" hidden></span></button>
     <button data-v="sankey" data-i="nav.sankey"></button>
     <button data-v="geo" data-i="nav.geo"></button>
     <hr>
@@ -60,8 +60,8 @@
 </div>
 
 <div class="login" id="login" hidden>
+  <img class="logo" src="/logo" alt="traffic66" width="272" height="92">
   <form id="loginForm" class="panel">
-    <div class="brand"><span>traffic<b>66</b></span></div>
     <h2 data-i="login.title"></h2>
     <label><span data-i="login.user"></span><input name="user" autocomplete="username" required></label>
     <label><span data-i="login.password"></span><input name="password" type="password" autocomplete="current-password" required></label>

@@ -79,6 +79,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", s.logout)
+	mux.HandleFunc("GET /logo", s.logo)
 	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
 	api("GET /api/status", s.status)
 	api("GET /api/overview", s.overview)
@@ -94,6 +95,8 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/inventory", s.putInventory)
 	api("GET /api/findings", s.findings)
 	api("POST /api/findings", s.setFindings)
+	api("POST /api/logo", s.putLogo)
+	api("DELETE /api/logo", s.deleteLogo)
 	api("GET /api/geo", s.getGeo)
 	api("POST /api/geo", s.putGeo)
 	static := http.FileServer(http.FS(s.Static))

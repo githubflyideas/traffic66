@@ -601,7 +601,7 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 - `net`: rentang privat (10/8, 172.16/12, 192.168/16, 100.64/10) selalu
   dianggap milik Anda. Tambahkan rentang publik Anda agar trafik ke dan
   dari rentang itu juga dihitung sebagai milik Anda; namanya muncul di
-  **Top-N → Segmen** dan di jalur trafik.
+  **Top 66** saat dikelompokkan per segmen dan di jalur trafik per jaringan.
 - `snmp <device> <community> [<management address>[:port]]`: device adalah
   alamat asal flow. Tambahkan alamat manajemen bila perangkat menjawab SNMP
   di alamat lain. Deskripsi interface yang dibaca lewat SNMP dipakai
@@ -676,14 +676,14 @@ Halaman:
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
 | Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; temuan terbuka; klien dan layanan teratas |
+| Top 66 | Satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
 | Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
-| Top-N | Satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
-| Jalur trafik | Segmen mana berbicara dengan aplikasi apa di negara mana |
+| Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 10 host tersibuk, sisanya sebagai Lainnya. **Per segmen** menampilkan jaringan, bukan host |
 | Geografi & jaringan | Trafik per negara dan per jaringan (AS) |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
 | Catatan flow | Flow individual, terbaru di atas, dengan kolom yang bisa dipilih |
 | Pencocokan antarmuka | Angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
-| Sumber | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, dan **Nama** |
+| Sumber | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
 
 Di atas halaman: rentang waktu (15 menit sampai 30 hari), kotak pencarian
 opsional, refresh otomatis setiap 30 detik, dan **Salin tautan**, yang
@@ -693,7 +693,7 @@ bagian bawah menu.
 
 Rentang yang lebih panjang dari 6 jam dimulai pada jam penuh, sehingga
 setiap angka di halaman menghitung waktu yang persis sama: "24 jam" mencakup
-24 jam penuh terakhir ditambah jam yang sedang berjalan. Top-N untuk rentang
+24 jam penuh terakhir ditambah jam yang sedang berjalan. Top 66 untuk rentang
 ini diambil dari ringkasan per jam; filter tidak tersedia di sana, dan
 halaman memberi tahu hal itu. Pilih rentang yang lebih pendek untuk
 memfilter. Percakapan selalu dibaca dari detail flow, jadi untuk rentang
@@ -704,6 +704,11 @@ Menu samping menunjukkan berapa banyak disk yang dipakai data dan berapa yang
 masih kosong; arahkan kursor ke ruang kosong untuk melihat berapa yang
 dibutuhkan detail untuk hari-hari yang disimpan pada laju saat ini
 (diperkirakan setelah ada data satu hari).
+
+Untuk menampilkan logo Anda sendiri di halaman masuk dan di bagian atas menu,
+gunakan **Sumber → Logo → Unggah logo…**: PNG, SVG, JPEG, WebP, atau GIF, hingga
+1 MB, paling baik 272 × 92 piksel (ukuran lain diskalakan agar pas).
+**Pakai logo bawaan** mengembalikan logo traffic66.
 
 <a id="findings"></a>
 
@@ -748,11 +753,11 @@ yang mengetuk situs web.
 
 ![Temuan: setiap langkah serangan, ditemukan melalui sampling sFlow 1:4096](images/findings.png)
 
-![Top-N: 66 percakapan teratas dalam satu jam terakhir](images/topn.png)
+![Top 66: 66 percakapan teratas dalam satu jam terakhir](images/topn.png)
 
 ![Detail satu host: temuan tentangnya, trafiknya, dengan siapa ia berbicara, layanan, negara, dan flow terbaru](images/detail.png)
 
-![Jalur trafik: segmen mana memakai aplikasi apa menuju negara mana](images/paths.png)
+![Jalur trafik: host mana memakai aplikasi apa menuju negara mana](images/paths.png)
 
 Ringkasan yang sama dalam bahasa Tionghoa; setiap halaman tersedia dalam 13 bahasa:
 
@@ -780,7 +785,7 @@ tampilan yang sama di browser, q keluar.
 
 ![Antarmuka terminal: ringkasan](images/tui-overview.png)
 
-![Antarmuka terminal: percakapan Top-N](images/tui-topn.png)
+![Antarmuka terminal: percakapan Top 66](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -930,6 +935,7 @@ Semua tersimpan di direktori data:
 | `traffic66.duckdb` | ringkasan, counter interface, dan jam berjalan |
 | `password` | kata sandi login (dalam bentuk hash) |
 | `inventory.txt` | nama (**Sumber → Nama**) |
+| `logo.png` (atau `.svg`, `.jpg`, `.webp`, `.gif`) | logo Anda (**Sumber → Logo**), jika Anda mengunggahnya |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
 
 **Berapa lama data disimpan**: detail flow 30 hari, ringkasan (ikhtisar dan rentang waktu panjang) 400 hari. Data

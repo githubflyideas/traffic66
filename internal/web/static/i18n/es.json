@@ -1,7 +1,7 @@
 {
 "lang.name": "Español",
 "nav.overview": "Resumen",
-"nav.topn": "Top-N",
+"nav.topn": "Top 66",
 "nav.sankey": "Rutas de tráfico",
 "nav.geo": "Geografía y redes",
 "nav.threats": "Inteligencia de amenazas",
@@ -307,5 +307,14 @@
 "fd.e.sources": "desde {n} direcciones",
 "fd.e.usual": "normalmente {n} paquetes por segundo",
 "ov.findings_all": "Todos los hallazgos pendientes ({n})",
-"det.findings": "Hallazgos sobre este equipo"
+"det.findings": "Hallazgos sobre este equipo",
+"sankey.title_host": "Equipo → aplicación → país remoto",
+"sankey.by_host": "Por equipo",
+"sankey.by_seg": "Por segmento",
+"logo.title": "Logotipo",
+"logo.sub": "Se muestra en la página de inicio de sesión y arriba del menú",
+"logo.upload": "Subir un logotipo…",
+"logo.reset": "Usar el logotipo integrado",
+"logo.hint": "PNG, SVG, JPEG, WebP o GIF, hasta 1 MB. Lo ideal es 272 × 92 píxeles; otros tamaños se ajustan.",
+"logo.saved": "Logotipo guardado"
 }

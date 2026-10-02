@@ -1,7 +1,7 @@
 {
 "lang.name": "日本語",
 "nav.overview": "概要",
-"nav.topn": "Top-N",
+"nav.topn": "上位 66",
 "nav.sankey": "フローの流れ",
 "nav.geo": "地域とネットワーク",
 "nav.threats": "脅威インテル",
@@ -307,5 +307,14 @@
 "fd.e.sources": "{n} 個のアドレスから",
 "fd.e.usual": "平常時は毎秒 {n} パケット",
 "ov.findings_all": "未対応の検知をすべて表示（{n}）",
-"det.findings": "このホストに関する検知"
+"det.findings": "このホストに関する検知",
+"sankey.title_host": "ホスト → アプリケーション → 相手の国",
+"sankey.by_host": "ホスト別",
+"sankey.by_seg": "ネットワーク別",
+"logo.title": "ロゴ",
+"logo.sub": "サインイン画面とメニュー上部に表示されます",
+"logo.upload": "ロゴをアップロード…",
+"logo.reset": "内蔵ロゴに戻す",
+"logo.hint": "PNG、SVG、JPEG、WebP、GIF（1 MB まで）。推奨サイズは 272 × 92 ピクセルで、他のサイズは自動で縮小・拡大されます。",
+"logo.saved": "ロゴを保存しました"
 }

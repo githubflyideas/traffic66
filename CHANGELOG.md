@@ -21,6 +21,14 @@ Findings
   host's details page lists the findings about it, and the side menu shows
   how many high and medium findings are open.
 
+Pages
+- Flow paths start from each host by default (the 10 busiest, the rest as
+  Other); **By network** switches back to network segments.
+- The overview shows the findings below the traffic chart.
+- Top-N is called Top 66 and comes right after Overview in the menu.
+- Your own logo: **Sources → Logo** takes a PNG, SVG, JPEG, WebP or GIF
+  (best at 272 × 92 pixels) for the sign-in page and the top of the menu.
+
 Fixes
 - A host's details page counted only part of the internal hosts it talked
   to (the servers of internal conversations were missed).

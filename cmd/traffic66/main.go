@@ -370,7 +370,16 @@ func serve(args []string, demo bool) {
 		startDemoAgents(ctx, s)
 		log.Printf("demo: simulated exporters are running (core router, switch, firewall, branch router)")
 	}
-	go poller.Run(ctx)
+	go func() {
+		if demo { // let the simulated devices count a few seconds first
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(10 * time.Second):
+			}
+		}
+		poller.Run(ctx)
+	}()
 
 	checker := loginChecker(f.data, f.user, f.password)
 	tok := randomHex(24)
