@@ -882,6 +882,12 @@ Semua tersimpan di direktori data:
 | `inventory.txt` | nama (**Sumber → Nama**) |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
 
+**Berapa lama data disimpan**: detail flow 30 hari, ringkasan (ikhtisar dan rentang waktu panjang) 400 hari. Data
+yang lebih lama dihapus otomatis, diperiksa setiap 5 menit; tidak ada yang lain dihapus dan tidak ada batas lain.
+Ubah masa simpan detail dengan `-retention-days`, berapa pun harinya, misalnya `-retention-days 365`. Pemakaian disk
+ikut bertambah: **Tersedia** di menu samping menjadi merah bila hari yang disimpan tidak muat. Jika disk penuh, flow
+baru tidak dapat disimpan sampai ada ruang kosong.
+
 - **Backup**: hentikan traffic66 lalu salin direktorinya. Tanpa
   menghentikannya, salin `raw/`, `password`, dan `inventory.txt`; jam
   berjalan dan ringkasan tidak ikut tersalin.

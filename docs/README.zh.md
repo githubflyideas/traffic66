@@ -720,6 +720,8 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `inventory.txt` | 名称（**接入 → 名称**） |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | 你添加的国家和运营商数据库以及威胁情报列表 |
 
+**数据保留多久**：流明细 30 天，汇总（总览和长时间范围）400 天。更早的数据自动删除，每 5 分钟检查一次；除此之外不删任何数据，也没有其他限制。用 `-retention-days` 修改明细保留天数，任意天数都可以，例如 `-retention-days 365`。占用的磁盘随之增长：保留天数放不下时，侧边栏的 **可用** 会变红。磁盘写满后，新的流无法保存，直到腾出空间。
+
 - **备份**：停止 traffic66，复制整个目录。如果不停服务，就复制 `raw/`、`password`和 `inventory.txt`；这样会缺少当前小时的数据和汇总数据。
 - **迁移**：停止 traffic66，移动目录，启动时用 `-data` 指向新位置。
 - **升级**：停止 traffic66，替换程序文件，再重新启动。数据不受影响。以 Linux 为例：

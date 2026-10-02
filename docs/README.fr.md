@@ -907,6 +907,13 @@ Le répertoire de données contient tout :
 | `inventory.txt` | noms (**Sources → Noms**) |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | bases de données pays et réseaux et listes de menaces que vous avez ajoutées |
 
+**Durée de conservation** : le détail des flux 30 jours, les résumés (vue d'ensemble et longues périodes) 400 jours.
+Les données plus anciennes sont supprimées automatiquement, vérifiées toutes les 5 minutes ; rien d'autre n'est
+supprimé et il n'y a aucune autre limite. Modifiez la durée du détail avec `-retention-days`, n'importe quel nombre
+de jours, par exemple `-retention-days 365`. L'espace disque augmente d'autant : **Libre** dans le menu latéral passe
+au rouge quand les jours conservés ne tiennent pas. Si le disque est plein, les nouveaux flux ne peuvent pas être
+enregistrés tant que de l'espace n'est pas libéré.
+
 - **Sauvegarde** : arrêtez traffic66 et copiez le répertoire. Sans
   l'arrêter, copiez `raw/`, `password` et `inventory.txt` ; l'heure en
   cours et les agrégats manqueront alors.

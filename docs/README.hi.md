@@ -862,6 +862,12 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `inventory.txt` | नाम (**स्रोत → नाम**) |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | आपके जोड़े हुए देश और नेटवर्क databases और threat lists |
 
+**डेटा कितने समय तक रखा जाता है**: flow detail 30 दिन, summaries (overview और लंबी समय-सीमाएँ) 400 दिन।
+इससे पुराना डेटा अपने आप हटता है, हर 5 मिनट में जाँच होती है; इसके अलावा कुछ नहीं हटता और कोई और सीमा नहीं है।
+detail की अवधि `-retention-days` से बदलें, कितने भी दिन, उदाहरण के लिए `-retention-days 365`। डिस्क का उपयोग
+उसी के साथ बढ़ता है: रखे गए दिन न समाएँ तो साइड मेनू में **खाली** लाल हो जाता है। डिस्क भर जाए तो जगह खाली होने तक
+नए flows सहेजे नहीं जा सकते।
+
 - **बैकअप**: traffic66 रोकें और directory कॉपी करें। बिना रोके
   `raw/`, `password` और `inventory.txt` कॉपी करें; तब मौजूदा घंटा और
   summaries छूट जाते हैं।

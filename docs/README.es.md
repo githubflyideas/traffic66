@@ -885,6 +885,12 @@ El directorio de datos lo contiene todo:
 | `inventory.txt` | nombres (**Fuentes → Nombres**) |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | bases de datos de países y redes y listas de amenazas que haya añadido |
 
+**Cuánto tiempo se guardan los datos**: el detalle de flujos 30 días; los resúmenes (vista general y periodos largos)
+400 días. Lo más antiguo se borra automáticamente, con una comprobación cada 5 minutos; no se borra nada más ni hay
+otro límite. Cambie el periodo del detalle con `-retention-days`, cualquier número de días, por ejemplo
+`-retention-days 365`. El uso de disco crece con él: **Libre** en el menú lateral se pone en rojo cuando los días
+guardados no caben. Si el disco se llena, los nuevos flujos no se pueden guardar hasta liberar espacio.
+
 - **Copia de seguridad**: detenga traffic66 y copie el directorio. Sin
   detenerlo, copie `raw/`, `password` e `inventory.txt`; en ese caso faltan
   la hora en curso y los resúmenes.
