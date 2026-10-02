@@ -58,6 +58,11 @@ function fmtAxisBps(v) {
   for (const [n, m] of [['T', 1e12], ['G', 1e9], ['M', 1e6], ['K', 1e3]]) if (v >= m) return nf(v / m, v / m < 10 && v % m ? 1 : 0) + n;
   return nf(v);
 }
+function fmtPps(v) {
+  if (v == null || !isFinite(v)) return '—';
+  for (const [n, m] of [['M', 1e6], ['k', 1e3]]) if (Math.abs(v) >= m) return nf(v / m, Math.abs(v / m) < 10 ? 2 : Math.abs(v / m) < 100 ? 1 : 0) + ' ' + n + 'p/s';
+  return nf(v, v < 10 ? 1 : 0) + ' p/s';
+}
 let regionNames = null;
 function country(cc) {
   if (cc === '__internal__') return t('internal');
@@ -135,7 +140,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['overview', 'findings', 'topn', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources', 'detail'];
+const VIEWS = ['overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'in', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
@@ -143,6 +148,7 @@ function readHash() {
   if (VIEWS.includes(p.get('v'))) state.v = p.get('v');
   if (RANGES.includes(p.get('r'))) state.r = p.get('r');
   if (p.get('dim')) state.dim = p.get('dim');
+  state.tm = p.get('tm') === 'table' || (p.get('v') === 'topn' && p.get('dim')) ? 'table' : 'talkers';
   state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
   const dd = p.get('d'); if (dd && dd.includes(':')) state.det = {f: dd.slice(0, dd.indexOf(':')), v: dd.slice(dd.indexOf(':') + 1)};
   state.f = (p.get('f') || '').split(',').filter(Boolean).map(s => {
@@ -153,7 +159,7 @@ function readHash() {
 }
 function writeHash(push) {
   const p = new URLSearchParams({v: state.v, r: state.r});
-  if (state.v === 'topn') p.set('dim', state.dim);
+  if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
   if (state.v === 'detail' && state.det) p.set('d', state.det.f + ':' + state.det.v);
   if (state.f.length) p.set('f', state.f.map(x => (x.neg ? '!' : '') + encodeURIComponent(x.f) + ':' + encodeURIComponent(x.v)).join(','));
@@ -364,7 +370,7 @@ function renderFilters() {
 // values; choosing one replaces any filter on that field, emptying it
 // removes the filter.
 const FBAR = [['exporter', 'field.exporter'], ['client', 'field.client'], ['server', 'field.server'], ['port', 'col.service']];
-const FBAR_HIDDEN = new Set(['findings', 'ifaces', 'sources']);
+const FBAR_HIDDEN = new Set(['findings', 'sources']);
 function renderFbar() {
   const bar = $('#fbar');
   bar.hidden = FBAR_HIDDEN.has(state.v);
@@ -572,6 +578,88 @@ views.findings = async (el) => {
   bindFindings(el);
 };
 
+
+// ------------------------------------------------------------ series charts
+// One measure over time, split by a dimension: the top 8 values in the
+// fixed colours, the rest as Other. The legend names each value with its
+// total and opens the usual menu.
+const ifaceNames = new Map(); // "exporter/ifindex" -> "name · device"
+function seriesLabel(by, k) {
+  if (k === '__other__') return t('other');
+  if (by === 'client' || by === 'server') return names.get(k) || k;
+  if (by === 'service') { const [p, a] = k.split('\t'); return a ? p + ' ' + a : p; }
+  if (by.startsWith('asn')) { const [n, o] = k.split('\t'); return 'AS' + n + (o ? ' ' + o : ''); }
+  if (by.startsWith('if_')) return ifaceNames.get(k) || k;
+  return appLabel(k);
+}
+function seriesValue(by, k) {
+  if (by === 'client' || by === 'server') return [by, k];
+  if (by === 'service') return ['port', k.split('\t')[0]];
+  if (by.startsWith('asn')) return ['asn', k.split('\t')[0]];
+  if (by.startsWith('if_')) return ['iface', k];
+  return ['app', k];
+}
+const seriesPanel = (id, cls, title, sub = '') => `<div class="panel ${cls}" id="${id}"><div class="ph"><h2>${title}</h2><span class="sub">${sub}</span></div>
+  <div class="chart" style="height:200px" aria-label="${esc(title)}"></div><div class="legend"></div></div>`;
+function fillSeries(id, d, by, measure) {
+  const el = document.getElementById(id); if (!el || !d) return;
+  const pk = measure === 'pkts';
+  if (!d.names.length) { el.querySelector('.chart').innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  // with thousands of hosts the rest dwarfs the top 8: draw only those and
+  // give the rest's total in the legend
+  const hideOther = by === 'client' || by === 'server';
+  const all = d.names.map((n, i) => ({n, name: seriesLabel(by, n), color: color(i, n), data: d.values[i], tot: d.totals?.[i]}));
+  const areas = all.filter(a => !(hideOther && a.n === '__other__'));
+  tsChart(el.querySelector('.chart'), {times: d.times, areas, fmtV: pk ? fmtPps : fmtBps});
+  el.querySelector('.legend').innerHTML = all.map(a => {
+    const [f, v] = seriesValue(by, a.n), tot = a.tot == null ? '' : pk ? nf(a.tot) : fmtBytes(a.tot);
+    if (a.n === '__other__') return `<span>${hideOther ? '' : `<i style="background:${a.color}"></i>`}${esc(hideOther ? t('ch.rest') : a.name)}<span class="muted">${tot}</span></span>`;
+    return `<span><i style="background:${a.color}"></i>${V(f, v, a.name)}<span class="muted">${tot}</span></span>`;
+  }).join('');
+}
+async function seriesData(by, measure, filters) {
+  const d = await api('series', {by, measure, top: 8}, filters);
+  if (by === 'client' || by === 'server') await lookupNames(d.names.filter(n => n !== '__other__'));
+  return d;
+}
+// Bars over time (flow record counts).
+function barChart(el, times, values, fmtV) {
+  const draw = () => {
+    const W = el.clientWidth, H = el.clientHeight; if (W < 120 || !times.length) { el.innerHTML = ''; return; }
+    const rtl = document.documentElement.dir === 'rtl', L = rtl ? 8 : 50, R = rtl ? 50 : 8, T = 8, B = 22, n = times.length;
+    const Y = niceMax(Math.max(...values) * 1.05), y = v => T + (H - T - B) * (1 - v / Y);
+    const bw = (W - L - R) / n, x = i => rtl ? W - R - bw * (i + 1) : L + bw * i, span = times[n - 1] - times[0];
+    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(el.getAttribute('aria-label') || '')}">`;
+    for (let k = 0; k <= 4; k++) { const yy = y(Y * k / 4); s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="ax" x="${rtl ? W - R + 8 : L - 8}" y="${yy + 4}" text-anchor="${rtl ? 'start' : 'end'}">${fmtAxisBps(Y * k / 4)}</text>`; }
+    const ticks = W < 600 ? 4 : 7, step = Math.max(1, Math.round(n / ticks));
+    for (let i = 0; i < n; i += step) s += `<text class="ax" x="${x(i) + bw / 2}" y="${H - 5}" text-anchor="middle">${fmtAxisTime(times[i], span)}</text>`;
+    values.forEach((v, i) => { if (v > 0) s += `<rect x="${(x(i) + 1).toFixed(1)}" y="${y(v).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${(H - B - y(v)).toFixed(1)}" rx="${Math.min(2, bw / 4)}" fill="var(--c1)"/>`; });
+    s += `<rect class="hit" x="${Math.min(L, R)}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg>`;
+    el.innerHTML = s;
+    const svg = el.querySelector('svg');
+    svg.querySelector('.hit').onmousemove = e => {
+      const r = svg.getBoundingClientRect(); let fx = (e.clientX - r.left - L) / (W - L - R); if (rtl) fx = 1 - fx;
+      const i = Math.max(0, Math.min(n - 1, Math.floor(fx * n)));
+      showTip(e, `<div class="t">${fmtTime(times[i], span)}</div><b>${fmtV(values[i])}</b>`);
+    };
+    svg.querySelector('.hit').onmouseleave = hideTip;
+  };
+  el._draw = draw; draw();
+  if (!el._ro) { el._ro = new ResizeObserver(() => el._draw && el._draw()); el._ro.observe(el); }
+}
+
+// Traffic details: clients, servers and services over time, in bits and
+// packets per second.
+views.traffic = async (el) => {
+  const groups = [['client', 'td.clients', 'td.n_clients'], ['server', 'td.servers', 'td.n_servers'], ['service', 'td.services', 'td.n_services']];
+  const data = await Promise.all(groups.flatMap(([by]) => [seriesData(by, 'wire'), seriesData(by, 'pkts')]));
+  el.innerHTML = `<div class="grid">${groups.map(([by, title, cnt], gi) => {
+    const n = data[gi * 2].distinct || 0;
+    return seriesPanel('td-' + by + '-w', 'c6', `${t(title)} · ${t('ch.bps')}`, esc(t(cnt, {n: nf(n)}))) + seriesPanel('td-' + by + '-p', 'c6', `${t(title)} · ${t('ch.pps')}`);
+  }).join('')}</div>`;
+  groups.forEach(([by], gi) => { fillSeries('td-' + by + '-w', data[gi * 2], by, 'wire'); fillSeries('td-' + by + '-p', data[gi * 2 + 1], by, 'pkts'); });
+};
+
 const DIMS = ['conv', 'client', 'server', 'app', 'port', 'country', 'asn', 'segment', 'exporter', 'encap', 'vlan'];
 // Top-N is one table. It starts with conversations (client, server,
 // service, country); the select switches the grouping. Every column heading
@@ -581,10 +669,31 @@ const DIMS = ['conv', 'client', 'server', 'app', 'port', 'country', 'asn', 'segm
 const NUMK = ['wire', 'pkts', 'avg', 'flows', 'peers'];
 const TEXT_OF = {client: ['key'], server: ['key', 'extra'], conv: ['key', 'key2', 'key3', 'extra'], app: ['key'], port: ['key', 'extra'],
   country: ['key', ''], asn: ['key', 'extra'], segment: ['key'], exporter: ['key'], encap: ['key'], vlan: ['key']};
+// The Top 66 page opens on "Talkers": traffic by service over time, and the
+// top 30 clients and servers side by side with bytes, packets and flow
+// records, over a total row for all traffic. "Table" is the single
+// regroupable table of the top 66.
+const modeSeg = () => `<div class="seg" role="group"><button data-tm="talkers" aria-pressed="${state.tm !== 'table'}">${t('topn.talkers')}</button><button data-tm="table" aria-pressed="${state.tm === 'table'}">${t('topn.table')}</button></div>`;
+function bindMode(el) { el.querySelectorAll('[data-tm]').forEach(b => b.onclick = () => { state.tm = b.dataset.tm; render(); }); }
 views.topn = el => {
   if (!DIMS.includes(state.dim)) state.dim = 'conv';
-  return topTable(el, state.dim);
+  return state.tm === 'table' ? topTable(el, state.dim) : talkers(el);
 };
+async function talkers(el) {
+  const [sv, cl, srv, ov] = await Promise.all([seriesData('service', 'wire'), api('topn', {dim: 'client', limit: 30}), api('topn', {dim: 'server', limit: 30}), api('overview')]);
+  const tot = ov.totals || {};
+  const table = (rows, head, f) => `<table class="talk"><tr><th></th><th>${t(head)}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.pkts')}</th><th class="num">${t('col.flows')}</th></tr>
+    ${(rows || []).map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}
+    <tr class="sum"><td></td><td>${t('topn.all')}</td><td class="num">${fmtBytes(tot.wire)}</td><td class="num">${nf(tot.pkts)}</td><td class="num">${nf(tot.flows)}</td></tr></table>`;
+  el.innerHTML = `<div class="grid">
+    <div class="panel c12" id="tkSvc"><div class="ph"><h2>${t('td.services')} · ${t('ch.bps')}</h2><span class="sub">${esc(t('td.n_services', {n: nf(sv.distinct || 0)}))}</span><div class="tools" style="margin-inline-start:auto">${modeSeg()}</div></div>
+      <div class="chart" style="height:220px" aria-label="${esc(t('td.services'))}"></div><div class="legend"></div></div>
+    ${panel('c6', t('ov.top_clients'), esc(t('topn.top_n', {n: 30})), table(cl.rows, 'col.client', 'client'))}
+    ${panel('c6', t('topn.top_servers'), esc(t('topn.top_n', {n: 30})), table(srv.rows, 'col.server', 'server'))}
+  </div>`;
+  fillSeries('tkSvc', sv, 'service', 'wire');
+  bindMode(el);
+}
 async function topTable(el, dim) {
   const sk = state.sort.k, asc = state.sort.asc, num = NUMK.includes(sk);
   const d = await api('topn', num ? {dim, limit: 66, by: sk, asc: asc ? 1 : 0} : {dim, limit: 66});
@@ -623,11 +732,12 @@ async function topTable(el, dim) {
   const slow = dim === 'conv' && spanMs() > 216e5 ? ` · ${esc(t('conv.slow'))}` : '';
   el.innerHTML = `<div class="panel">
     <div class="ph"><h2>${t('topn.title', {n: 66})}</h2><span class="sub">${esc(t('topn.hint'))}${slow}</span>
-      <div class="tools"><label>${t('topn.group')} <select class="dimsel" id="dimSel">${DIMS.map(k => `<option value="${k}" ${k === dim ? 'selected' : ''}>${t('dim.' + k)}</option>`).join('')}</select></label></div></div>
+      <div class="tools" style="display:flex;gap:12px;align-items:center">${modeSeg()}<label>${t('topn.group')} <select class="dimsel" id="dimSel">${DIMS.map(k => `<option value="${k}" ${k === dim ? 'selected' : ''}>${t('dim.' + k)}</option>`).join('')}</select></label></div></div>
     <table><tr><th></th>${heads.map((h, i) => sortTh('t' + i, h && t(h), '')).join('')}${sortTh('wire', t('col.traffic'))}<th class="num">%</th><th style="width:16%">${t('col.share')}</th>${sortTh('pkts', t('col.pkts'))}${sortTh('avg', t('col.avg'))}${showPeers ? sortTh('peers', t('col.peers')) : ''}${sortTh('flows', t('col.flows'))}</tr>
     ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(avg(r))}&nbsp;B</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${t('empty.nodata')}</td></tr>`}
     </table></div>`;
   $('#dimSel').onchange = e => { state.dim = e.target.value; state.sort = {k: 'wire', asc: false}; render(); };
+  bindMode(el);
   el.querySelectorAll('th[data-s]').forEach(h => h.onclick = () => {
     const k = h.dataset.s;
     // a new column starts at its interesting end: largest first, except the
@@ -709,15 +819,18 @@ views.sankey = async (el) => {
 };
 
 views.geo = async (el) => {
-  const [c, a] = await Promise.all([api('topn', {dim: 'country', limit: 66}), api('topn', {dim: 'asn', limit: 66})]);
+  const asCharts = [['asn_src', 'wire'], ['asn_dst', 'wire'], ['asn_src', 'pkts'], ['asn_dst', 'pkts']];
+  const [c, a, ...ad] = await Promise.all([api('topn', {dim: 'country', limit: 66}), api('topn', {dim: 'asn', limit: 66}), ...asCharts.map(([by, m]) => seriesData(by, m))]);
   const cr = (c.rows || []).filter(r => r.key !== '__internal__'), ar = a.rows || [];
   const cm = Math.max(1, ...cr.map(r => r.wire)), am = Math.max(1, ...ar.map(r => r.wire));
-  el.innerHTML = `<div class="grid">
+  el.innerHTML = `<div class="grid" style="margin-bottom:16px">${asCharts.map(([by, m], i) => seriesPanel('asr' + i, 'c6', `${t(by === 'asn_src' ? 'geo.as_src' : 'geo.as_dst')} · ${t(m === 'wire' ? 'ch.bps' : 'ch.pps')}`, i < 2 ? esc(t(by === 'asn_src' ? 'geo.as_src_sub' : 'geo.as_dst_sub')) : '')).join('')}</div>
+    <div class="grid">
     ${panel('c6', t('geo.countries'), t('geo.countries_sub'), `<table><tr><th></th><th>${t('col.country')}</th><th class="num">${t('col.traffic')}</th><th style="width:40%">${t('col.share')}</th></tr>
       ${cr.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${V('country', r.key, country(r.key))} <span class="muted">${esc(r.key)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cm)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
     ${panel('c6', t('geo.as'), '', `<table><tr><th></th><th>${t('col.asn')}</th><th>${t('col.org')}</th><th class="num">${t('col.traffic')}</th><th style="width:32%">${t('col.share')}</th></tr>
-      ${ar.map((r, i) => `<tr><td class="rank">${i + 1}</td><td class="nw">${V('asn', r.key, 'AS' + r.key)}</td><td>${esc(r.extra)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, am)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
+      ${ar.map((r, i) => `<tr><td class="rank">${i + 1}</td><td class="nw">${r.key === '0' ? `<span class="muted">${t('unknown')}</span>` : V('asn', r.key, 'AS' + r.key)}</td><td>${esc(r.extra)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, am)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
   </div>`;
+  asCharts.forEach(([by, m], i) => fillSeries('asr' + i, ad[i], by, m));
 };
 
 views.threats = async (el) => {
@@ -747,8 +860,11 @@ function recCols() {
 }
 const tcpFlags = f => ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG'].filter((_, i) => f & (1 << i)).join(' ');
 views.records = async (el) => {
-  const d = await api('records', {limit: 200});
-  const rows = d.rows || [], on = recCols();
+  const key = state.r + JSON.stringify(state.f);
+  if (state.rk !== key) { state.rk = key; state.rp = 0; }
+  const per = state.rps || 50, page = state.rp || 0;
+  const d = await api('records', {limit: per, offset: page * per, stats: 1});
+  const rows = d.rows || [], on = recCols(), total = d.total || 0, pages = Math.max(1, Math.ceil(total / per));
   const cols = REC_COLS.filter(c => on.has(c[0])).map(c => c[0]);
   const cell = (c, r) => ({
     time: `<span class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</span>`,
@@ -761,10 +877,19 @@ views.records = async (el) => {
     asn: r.asn ? V('asn', r.asn, 'AS' + r.asn) : '', direction: t('dir.' + r.dir), list: r.threat ? status('bad', r.threat) : ''
   })[c];
   const num = new Set(['cport', 'port', 'traffic', 'packets', 'in_if', 'out_if', 'sampling']);
-  el.innerHTML = `<div class="panel"><div class="ph"><h2>${t('rec.title')}</h2><span class="sub">${esc(t('rec.latest', {n: rows.length}))}</span>
+  const pager = `<div class="pager"><label>${t('rec.per_page')} <select id="recPer">${[50, 100, 200].map(n => `<option ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <span>${esc(t('rec.range', {a: nf(total ? page * per + 1 : 0), b: nf(Math.min(total, page * per + rows.length)), n: nf(total)}))}</span>
+      <button class="btn" id="recPrev" ${page ? '' : 'disabled'}>‹ ${t('rec.prev')}</button><button class="btn" id="recNext" ${page + 1 < pages ? '' : 'disabled'}>${t('rec.next')} ›</button></div>`;
+  el.innerHTML = `<div class="panel" style="margin-bottom:16px"><div class="rechead"><div class="kpi"><div class="lab">${t('rec.title')}</div><div class="n big">${nf(total)}</div><div class="d muted">${esc(t('rec.in', {r: t('range.' + state.r)}))}</div></div>
+      <div class="chart" id="chRec" style="height:150px" aria-label="${esc(t('rec.title'))}"></div></div></div>
+    <div class="panel"><div class="ph"><h2>${t('rec.title')}</h2><span class="sub">${esc(t('rec.sorted'))}</span>
       <div class="cols"><button class="btn" id="colBtn">${t('rec.columns')}</button><div class="menu" id="colMenu" hidden>${REC_COLS.map(c => `<label><input type="checkbox" value="${c[0]}" ${on.has(c[0]) ? 'checked' : ''}>${t('rc.' + c[0])}</label>`).join('')}</div></div></div>
     <div style="overflow-x:auto"><table><tr>${cols.map(c => `<th class="${num.has(c) ? 'num' : ''}">${t('rc.' + c)}</th>`).join('')}</tr>
-    ${rows.map(r => `<tr>${cols.map(c => `<td class="${num.has(c) ? 'num' : ''}">${cell(c, r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="empty">${t('empty.nodata')}</td></tr>`}</table></div></div>`;
+    ${rows.map(r => `<tr>${cols.map(c => `<td class="${num.has(c) ? 'num' : ''}">${cell(c, r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="empty">${t('empty.nodata')}</td></tr>`}</table></div>${pager}</div>`;
+  if (d.hist) barChart($('#chRec'), d.hist.times, d.hist.values[0], v => t('rec.n', {n: nf(v)}));
+  $('#recPer').onchange = e => { state.rps = +e.target.value; state.rp = 0; render(); };
+  $('#recPrev').onclick = () => { state.rp = Math.max(0, page - 1); render(); };
+  $('#recNext').onclick = () => { state.rp = page + 1; render(); };
   $('#colBtn').onclick = e => { e.stopPropagation(); $('#colMenu').hidden = !$('#colMenu').hidden; };
   $('#colMenu').onchange = () => {
     const sel = [...$('#colMenu').querySelectorAll('input:checked')].map(i => i.value);
@@ -780,16 +905,20 @@ function devKind(f) {
   return dv > Math.max(0.02, 2 * (f.stat_err || 0)) ? 'warn' : 'ok';
 }
 views.ifaces = async (el) => {
-  const d = await api('ifaces');
+  const rates = [['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']];
+  const [d, ...rd] = await Promise.all([api('ifaces'), ...rates.map(([by, m]) => seriesData(by, m))]);
+  (d.ifaces || []).forEach(f => ifaceNames.set(f.exporter + '/' + f.ifindex, ifName(f) + ' · ' + (f.device || f.exporter)));
   const list = (d.ifaces || []).slice().sort((a, b) => (!!b.has_counters - !!a.has_counters) || ((devKind(b) === 'warn') - (devKind(a) === 'warn')));
   if (!list.length) { el.innerHTML = `<div class="panel"><div class="empty">${t('empty.nodata')}</div></div>`; return; }
   if (!state.ifc || !list.some(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex)) state.ifc = {exporter: list[0].exporter, ifindex: list[0].ifindex};
-  el.innerHTML = `<div class="grid">
+  el.innerHTML = `<div class="grid" style="margin-bottom:16px">${rates.map(([by, m], i) => seriesPanel('ifr' + i, 'c6', `${t(by === 'if_in' ? 'if.ingress' : 'if.egress')} · ${t(m === 'wire' ? 'ch.bps' : 'ch.pps')}`)).join('')}</div>
+    <div class="grid">
     ${panel('c4', t('if.title'), t('if.sub'), `<div class="iflist">${list.map(f => {
       const k = devKind(f), cur = f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex;
       return `<button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>`;
     }).join('')}</div>`)}
     <div class="panel c8" id="recon"><div class="empty">…</div></div></div>`;
+  rates.forEach(([by, m], i) => fillSeries('ifr' + i, rd[i], by, m));
   el.querySelectorAll('.iflist button').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
   const rc = await api('recon', {exporter: state.ifc.exporter, ifindex: state.ifc.ifindex});
   const r = rc.recon, dirIn = state.ifdir === 'in';

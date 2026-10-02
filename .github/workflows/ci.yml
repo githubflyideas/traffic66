@@ -52,7 +52,10 @@ jobs:
       - name: Static C libraries (Linux)
         if: ${{ matrix.container }}
         run: |
-          rpm -q glibc-static || dnf install -y glibc-static || dnf --enablerepo=powertools install -y glibc-static
+          # only the distribution's own repositories: fetching every repository's
+          # metadata from slow mirrors has taken up to 20 minutes
+          quick="--disablerepo=* --enablerepo=baseos,appstream,powertools --setopt=install_weak_deps=False --setopt=timeout=30 --setopt=retries=5"
+          rpm -q glibc-static || timeout 600 dnf $quick install -y glibc-static || dnf install -y glibc-static || dnf --enablerepo=powertools install -y glibc-static
       - name: Resolve modules
         run: go mod tidy
       - name: Vet

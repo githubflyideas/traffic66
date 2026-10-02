@@ -368,3 +368,61 @@ func TestTotalsInternalHosts(t *testing.T) {
 		t.Fatalf("one host's totals %+v %v, want itself and the 2 it talked to", tot, err)
 	}
 }
+
+// SeriesBy splits a measure by a dimension, keeps the top values apart and
+// sums the rest; RecordCounts counts the records per bucket.
+func TestSeriesByAndRecordCounts(t *testing.T) {
+	p, st := setup(t)
+	now := time.Now().UTC().Truncate(time.Minute)
+	exp := netip.MustParseAddr("10.0.0.1")
+	srv := netip.MustParseAddr("198.51.100.9")
+	var recs []flow.Record
+	for i, c := range []string{"10.1.1.1", "10.1.1.2", "10.1.1.3"} {
+		for m := 0; m < 3; m++ {
+			ts := now.Add(-time.Duration(10+m) * time.Minute)
+			recs = append(recs, flow.Record{Start: ts, End: ts, Src: netip.MustParseAddr(c), Dst: srv, SrcPort: 50000, DstPort: 443, Proto: 6,
+				Bytes: uint64(1000 * (i + 1)), Packets: uint64(10 * (i + 1)), Mult: 1, SamplingKnown: true, Exporter: exp, InIf: 3, OutIf: 4, Source: flow.SrcIPFIX})
+		}
+	}
+	p.Ingest(recs)
+	p.FlushRows()
+	q := store.Query{From: now.Add(-time.Hour), To: now}
+	se, err := st.SeriesBy(q, "client", "pkts", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if se.Distinct != 3 || len(se.Names) != 3 || se.Names[0] != "10.1.1.3" || se.Names[2] != "__other__" || se.Totals[0] != 90 || se.Totals[2] != 30 {
+		t.Fatalf("series %v totals %v distinct %d", se.Names, se.Totals, se.Distinct)
+	}
+	sum := 0.0
+	for _, v := range se.Values[0] {
+		sum += v * float64(se.Step)
+	}
+	if sum < 89.9 || sum > 90.1 {
+		t.Fatalf("packets per second do not add up to the total: %v", sum)
+	}
+	for by, want := range map[string]string{"service": "443/tcp\tHTTPS", "if_in": "10.0.0.1/3", "if_out": "10.0.0.1/4"} {
+		se, err := st.SeriesBy(q, by, "wire", 8)
+		if err != nil || len(se.Names) != 1 || se.Names[0] != want {
+			t.Fatalf("%s: %v %v", by, se, err)
+		}
+	}
+	if _, err := st.SeriesBy(q, "nope", "wire", 8); err == nil {
+		t.Fatal("unknown series accepted")
+	}
+	total, hist, err := st.RecordCounts(q)
+	if err != nil || total != 9 {
+		t.Fatalf("records %d %v", total, err)
+	}
+	n := 0.0
+	for _, v := range hist.Values[0] {
+		n += v
+	}
+	if n != 9 {
+		t.Fatalf("histogram holds %v records", n)
+	}
+	page, err := st.Records(q, 4, 8)
+	if err != nil || len(page) != 1 {
+		t.Fatalf("last page %d %v", len(page), err)
+	}
+}
