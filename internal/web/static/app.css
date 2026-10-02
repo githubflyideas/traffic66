@@ -17,7 +17,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
 aside{background:var(--surface);border-inline-end:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-.brand{padding:16px 18px 14px;font-weight:700;font-size:18px;letter-spacing:-.01em;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.brand{padding:10px 14px 8px;font-weight:700;font-size:18px;letter-spacing:-.01em;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.brand .logo{display:block;height:46px;max-width:150px;object-fit:contain;object-position:left center}
+[dir=rtl] .brand .logo{object-position:right center}
 .brand b{color:var(--accent)}
 .brand .demo{font-size:11px;font-weight:600;background:var(--warn);color:#1b2432;border-radius:4px;padding:1px 6px;letter-spacing:0}
 nav.dash{padding:8px;overflow-y:auto;flex:1}
@@ -159,7 +161,8 @@ textarea.inv{width:100%;min-height:180px;border:1px solid var(--line-2);border-r
 .sankey rect,.sankey path{cursor:pointer}
 .sankey path:hover{stroke-opacity:.6}
 
-.login{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg)}
+.login{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--bg)}
+.login .logo{width:272px;height:92px;object-fit:contain}
 .login form{width:min(360px,92vw);display:grid;gap:12px;padding:24px}
 .login .brand{border:0;padding:0 0 4px}
 .login h2{margin:0;font-size:16px}
@@ -208,3 +211,7 @@ th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
 .fdhead .cnt{display:flex;align-items:center;gap:6px;font-size:13px}
 .fdhead .cnt b{font-size:20px;font-weight:650}
 .fdnote{font-size:12.5px;color:var(--ink-3);margin:10px 0 0}
+
+/* logo on Sources */
+.logoprev{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.logoprev img{width:272px;height:92px;object-fit:contain;border:1px dashed var(--line-2);border-radius:8px;background:var(--surface)}

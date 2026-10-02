@@ -1,7 +1,7 @@
 {
 "lang.name": "English",
 "nav.overview": "Overview",
-"nav.topn": "Top-N",
+"nav.topn": "Top 66",
 "nav.sankey": "Flow paths",
 "nav.geo": "Geo & networks",
 "nav.threats": "Threat intel",
@@ -307,5 +307,14 @@
 "fd.e.sources": "from {n} addresses",
 "fd.e.usual": "usually {n} packets per second",
 "ov.findings_all": "All open findings ({n})",
-"det.findings": "Findings about it"
+"det.findings": "Findings about it",
+"sankey.title_host": "Host → application → remote country",
+"sankey.by_host": "By host",
+"sankey.by_seg": "By network",
+"logo.title": "Logo",
+"logo.sub": "Shown on the sign-in page and at the top of the menu",
+"logo.upload": "Upload a logo…",
+"logo.reset": "Use the built-in logo",
+"logo.hint": "PNG, SVG, JPEG, WebP or GIF, up to 1 MB. Best at 272 × 92 pixels; other sizes are scaled to fit.",
+"logo.saved": "Logo saved"
 }

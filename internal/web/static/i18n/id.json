@@ -1,7 +1,7 @@
 {
 "lang.name": "Bahasa Indonesia",
 "nav.overview": "Ringkasan",
-"nav.topn": "Top-N",
+"nav.topn": "Top 66",
 "nav.sankey": "Jalur trafik",
 "nav.geo": "Geografi & jaringan",
 "nav.threats": "Intel ancaman",
@@ -307,5 +307,14 @@
 "fd.e.sources": "dari {n} alamat",
 "fd.e.usual": "biasanya {n} paket per detik",
 "ov.findings_all": "Semua temuan yang belum ditangani ({n})",
-"det.findings": "Temuan tentang host ini"
+"det.findings": "Temuan tentang host ini",
+"sankey.title_host": "Host → aplikasi → negara lawan",
+"sankey.by_host": "Per host",
+"sankey.by_seg": "Per segmen",
+"logo.title": "Logo",
+"logo.sub": "Ditampilkan di halaman masuk dan di atas menu",
+"logo.upload": "Unggah logo…",
+"logo.reset": "Pakai logo bawaan",
+"logo.hint": "PNG, SVG, JPEG, WebP, atau GIF, maks. 1 MB. Paling baik 272 × 92 piksel; ukuran lain disesuaikan.",
+"logo.saved": "Logo disimpan"
 }

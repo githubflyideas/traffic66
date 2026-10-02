@@ -602,7 +602,7 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 - `net`: as faixas privadas (10/8, 172.16/12, 192.168/16, 100.64/10) são
   sempre consideradas suas. Adicione suas faixas públicas para que o
   tráfego de e para elas também conte como seu; o nome aparece em
-  **Top-N → Segmentos** e nos caminhos do tráfego.
+  **Top 66** agrupado por segmento e nos caminhos do tráfego por segmento.
 - `snmp <device> <community> [<management address>[:port]]`: o equipamento
   é o endereço de onde vêm os fluxos. Adicione o endereço de gerência
   quando o equipamento responder SNMP em outro endereço. As descrições de
@@ -679,14 +679,14 @@ Páginas:
 | Página | O que responde |
 |---|---|
 | Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; detecções abertas; principais clientes e serviços |
+| Top 66 | Uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
 | Detecções | O que precisa de atenção: varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças ([mais](#findings)) |
-| Top-N | Uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
-| Caminhos do tráfego | Qual segmento fala com qual aplicação em qual país |
+| Caminhos do tráfego | Qual host usa qual aplicação para qual país: os 10 hosts com mais tráfego, o resto como Outros. **Por segmento** mostra segmentos em vez de hosts |
 | Geografia e redes | Tráfego por país e por rede (AS) |
 | Ameaças | Hosts que se comunicaram com endereços das suas listas de ameaças, e quanto enviaram |
 | Registros de fluxo | Fluxos individuais, dos mais recentes para os mais antigos, com colunas selecionáveis |
 | Conferência de interfaces | Números de fluxo ao lado dos contadores de interface, piores primeiro, com os motivos |
-| Fontes | Equipamentos, amostragem, perdas, coletores, SNMP, o banco de dados de países e redes, e **Nomes** |
+| Fontes | Equipamentos, amostragem, perdas, coletores, SNMP, o banco de dados de países e redes, o logotipo e **Nomes** |
 
 Acima das páginas: intervalo de tempo (de 15 minutos a 30 dias), uma caixa
 de busca opcional, atualização automática a cada 30 segundos e
@@ -696,7 +696,7 @@ navegador; dá para trocar no fim do menu.
 
 Intervalos maiores que 6 horas começam em uma hora cheia, para que todos os
 números da página contem exatamente o mesmo tempo: "24 horas" cobre as
-últimas 24 horas cheias mais a atual. Nesses intervalos, o Top-N vem de
+últimas 24 horas cheias mais a atual. Nesses intervalos, o Top 66 vem de
 resumos por hora; lá não há filtros, e a página avisa. Escolha um intervalo
 menor para filtrar. As conversas sempre leem o detalhe dos fluxos, então em intervalos
 longos com muitos fluxos podem demorar; uma hora é o mais rápido.
@@ -704,6 +704,11 @@ longos com muitos fluxos podem demorar; uma hora é o mais rápido.
 O menu lateral mostra quanto disco os dados usam e quanto está livre; passe
 o mouse sobre o espaço livre para ver quanto os dias de detalhe mantidos
 precisam no ritmo atual (estimado assim que houver um dia de dados).
+
+Para mostrar o seu próprio logotipo na página de login e no topo do menu,
+use **Fontes → Logotipo → Enviar um logotipo…**: PNG, SVG, JPEG, WebP ou
+GIF, até 1 MB, de preferência com 272 × 92 pixels (outros tamanhos são
+ajustados). **Usar o logotipo embutido** volta ao do traffic66.
 
 <a id="findings"></a>
 
@@ -747,11 +752,11 @@ nenhuma detecção, exceto o scanner da internet batendo no site.
 
 ![Detecções: cada etapa de um ataque, encontrada através de amostragem sFlow 1:4096](images/findings.png)
 
-![Top-N: as 66 maiores conversas da última hora](images/topn.png)
+![Top 66: as 66 maiores conversas da última hora](images/topn.png)
 
 ![Detalhes de um host: as detecções sobre ele, o tráfego, com quem fala, serviços, países e fluxos mais recentes](images/detail.png)
 
-![Caminhos do tráfego: qual segmento usa qual aplicação para qual país](images/paths.png)
+![Caminhos do tráfego: qual host usa qual aplicação para qual país](images/paths.png)
 
 A mesma visão geral em chinês; todas as páginas estão disponíveis em 13 idiomas:
 
@@ -779,7 +784,7 @@ w abrir a mesma visão no navegador, q sair.
 
 ![Interface de terminal: visão geral](images/tui-overview.png)
 
-![Interface de terminal: Top-N de conversas](images/tui-topn.png)
+![Interface de terminal: Top 66 de conversas](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -929,6 +934,7 @@ O diretório de dados guarda tudo:
 | `traffic66.duckdb` | resumos, contadores de interface e a hora atual |
 | `password` | senhas de login (em hash) |
 | `inventory.txt` | nomes (**Fontes → Nomes**) |
+| `logo.png` (ou `.svg`, `.jpg`, `.webp`, `.gif`) | seu logotipo (**Fontes → Logotipo**), se você enviou um |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | bancos de dados de países e redes e listas de ameaças que você adicionou |
 
 **Por quanto tempo os dados ficam**: o detalhe de fluxos 30 dias; os resumos (visão geral e períodos longos)

@@ -637,13 +637,26 @@ type SankeyLink struct {
 	Wire         uint64
 }
 
-func (s *Store) Sankey(q Query) ([]SankeyLink, error) {
+// Sankey returns traffic by segment (or, with byHost, by internal host),
+// application and remote country. By host, only the top hosts are kept
+// apart; the rest are summed as "__other__".
+func (s *Store) Sankey(q Query, byHost bool, hosts int) ([]SankeyLink, error) {
 	where, args, err := q.where()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.DB.Query(fmt.Sprintf(`SELECT segment, app, CASE WHEN dir = 3 THEN '__internal__' WHEN peer_cc = '' THEN '__unknown__' ELSE peer_cc END, sum(wire)
-		FROM %s WHERE %s GROUP BY 1,2,3`, s.Source(q.From, q.To), where), args...)
+	cc := `CASE WHEN dir = 3 THEN '__internal__' WHEN peer_cc = '' THEN '__unknown__' ELSE peer_cc END`
+	sqlq := fmt.Sprintf(`SELECT segment, app, %s, sum(wire) FROM %s WHERE %s GROUP BY 1,2,3`, cc, s.Source(q.From, q.To), where)
+	if byHost {
+		// the internal side of each conversation: the client, or the server
+		// of inbound traffic
+		sqlq = fmt.Sprintf(`WITH b AS (SELECT CASE WHEN dir = %d THEN server ELSE client END AS h, app, %s AS cc, sum(wire) AS w
+				FROM %s WHERE %s GROUP BY 1,2,3),
+			t AS (SELECT h FROM b GROUP BY h ORDER BY sum(w) DESC LIMIT %d)
+			SELECT CASE WHEN h IN (SELECT h FROM t) THEN h ELSE '__other__' END, app, cc, sum(w) FROM b GROUP BY 1,2,3`,
+			DirInbound, cc, s.Source(q.From, q.To), where, hosts)
+	}
+	rows, err := s.DB.Query(sqlq, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -558,8 +558,8 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 - `net`: private ranges (10/8, 172.16/12, 192.168/16, 100.64/10) are
   always yours. Add your public ranges so traffic to and from them counts
-  as yours too; the name shows up in **Top-N → Segments** and in the flow
-  paths.
+  as yours too; the name shows up in **Top 66** grouped by segment and in
+  the flow paths by network.
 - `snmp <device> <community> [<management address>[:port]]`: the device
   is the address flows come from. Add the management address when the
   device answers SNMP on another address. Interface descriptions read over
@@ -628,14 +628,14 @@ Pages:
 | Page | What it answers |
 |---|---|
 | Overview | How much traffic now and compared with last week, by application; open findings; top clients and services |
+| Top 66 | One table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
 | Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
-| Top-N | One table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
-| Flow paths | Which segment talks to which application in which country |
+| Flow paths | Which host uses which application towards which country: the 10 busiest hosts, the rest as Other. **By network** shows networks instead of hosts |
 | Geo & networks | Traffic by country and by network (AS) |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
 | Flow records | Individual flows, newest first, with selectable columns |
 | Interface check | Flow numbers next to the interface counters, worst first, with reasons |
-| Sources | Devices, sampling, loss, collectors, SNMP, the countries and networks database, and **Names** |
+| Sources | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
 
 Above the pages: time range (15 minutes to 30 days), an optional search
 box, automatic refresh every 30 seconds, and **Copy link**, which copies a
@@ -645,7 +645,7 @@ the menu.
 
 Ranges longer than 6 hours start on a whole hour, so every number on the
 page counts exactly the same time: "24 hours" covers the last 24 whole
-hours plus the current one. Top-N over these ranges comes from hourly
+hours plus the current one. Top 66 over these ranges comes from hourly
 summaries; filters are not available there, and the page says so. Choose a
 shorter range to filter. Conversations always read the flow detail, so over long ranges
 at high flow rates they can take a while; one hour is fastest.
@@ -653,6 +653,11 @@ at high flow rates they can take a while; one hour is fastest.
 The side menu shows how much disk the data uses and how much is free;
 hover over the free space to see how much the kept days of detail need at
 the current rate (estimated once there is a day of data).
+
+To show your own logo on the sign-in page and at the top of the menu, use
+**Sources → Logo → Upload a logo…**: PNG, SVG, JPEG, WebP or GIF, up to
+1 MB, best at 272 × 92 pixels (other sizes are scaled to fit). **Use the
+built-in logo** goes back to traffic66's.
 
 ### Findings
 
@@ -691,11 +696,11 @@ no findings except the internet scanner knocking on the website.
 
 ![Findings: every step of an attack, found through 1:4096 sFlow sampling](docs/images/findings.png)
 
-![Top-N: the top 66 conversations of the last hour](docs/images/topn.png)
+![Top 66: the top 66 conversations of the last hour](docs/images/topn.png)
 
 ![Details of one host: the findings about it, its traffic, who it talks to, services, countries and latest flows](docs/images/detail.png)
 
-![Flow paths: which segment uses which application towards which country](docs/images/paths.png)
+![Flow paths: which host uses which application towards which country](docs/images/paths.png)
 
 The same overview in Chinese; every page is available in 13 languages:
 
@@ -721,7 +726,7 @@ view in a browser, q quit.
 
 ![Terminal UI: overview](docs/images/tui-overview.png)
 
-![Terminal UI: Top-N conversations](docs/images/tui-topn.png)
+![Terminal UI: Top 66 conversations](docs/images/tui-topn.png)
 
 ## 11. Local capture
 
@@ -855,6 +860,7 @@ The data directory holds everything:
 | `traffic66.duckdb` | summaries, interface counters and the current hour |
 | `password` | login passwords (hashed) |
 | `inventory.txt` | names (**Sources → Names**) |
+| `logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) | your logo (**Sources → Logo**), if you uploaded one |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | countries and networks databases and threat lists you added |
 
 **How long data is kept**: flow detail 30 days, summaries (overview and long

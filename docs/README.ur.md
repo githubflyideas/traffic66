@@ -591,7 +591,8 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 - `net`: private ranges (10/8، 172.16/12، 192.168/16، 100.64/10) ہمیشہ آپ کی
   مانی جاتی ہیں۔ اپنی public ranges شامل کریں تاکہ ان سے آنے جانے والی ٹریفک بھی
-  آپ کی گنی جائے؛ نام **ٹاپ N → سیگمنٹس** میں اور flow کے راستوں میں نظر آتا ہے۔
+  آپ کی گنی جائے؛ نام **ٹاپ 66** میں segment کے لحاظ سے گروپ بندی پر اور network
+  کے لحاظ سے flow کے راستوں میں نظر آتا ہے۔
 - `snmp <device> <community> [<management address>[:port]]`: device وہ address
   ہے جہاں سے flows آتے ہیں۔ جب ڈیوائس SNMP کا جواب کسی دوسرے address پر دیتی ہو
   تو management address شامل کریں۔ SNMP سے پڑھی گئی interface descriptions بطور
@@ -663,14 +664,14 @@ application، ملک، ڈیوائس — پر کلک کیا جا سکتا ہے:
 | صفحہ | کس سوال کا جواب دیتا ہے |
 |---|---|
 | جائزہ | ابھی کتنی ٹریفک ہے اور پچھلے ہفتے کے مقابلے میں کتنی، application کے حساب سے؛ کھلی مشتبہ سرگرمیاں؛ سرفہرست clients اور services |
+| ٹاپ 66 | سرفہرست 66 کی ایک table: ڈیفالٹ طور پر conversations (client، server، service، ملک)۔ ہر column heading سے sort ہوتا ہے؛ عددی columns (ٹریفک، پیکٹ، اوسط پیکٹ، flows) وقت کی حد کے پورے ٹریفک سے سرفہرست 66 دوبارہ چنتے ہیں، اس لیے سب سے چھوٹے اوسط پیکٹ سے scan اور flood پکڑے جاتے ہیں۔ **گروپ بندی بلحاظ** سے applications، نیٹ ورکس، segments، ڈیوائسز، encapsulation اور VLAN پر جائیں |
 | مشتبہ سرگرمی | کس چیز پر توجہ چاہیے: scans، پاس ورڈ کا اندازہ، lateral movement، غیر معمولی uploads، floods اور threat list والی ٹریفک ([مزید](#findings)) |
-| ٹاپ N | سرفہرست 66 کی ایک table: ڈیفالٹ طور پر conversations (client، server، service، ملک)۔ ہر column heading سے sort ہوتا ہے؛ عددی columns (ٹریفک، پیکٹ، اوسط پیکٹ، flows) وقت کی حد کے پورے ٹریفک سے سرفہرست 66 دوبارہ چنتے ہیں، اس لیے سب سے چھوٹے اوسط پیکٹ سے scan اور flood پکڑے جاتے ہیں۔ **گروپ بندی بلحاظ** سے applications، نیٹ ورکس، segments، ڈیوائسز، encapsulation اور VLAN پر جائیں |
-| ٹریفک کے راستے | کون سا segment کس ملک میں کس application سے بات کرتا ہے |
+| ٹریفک کے راستے | کون سا host کس ملک کی طرف کون سی application استعمال کرتا ہے: 10 سب سے مصروف hosts، باقی "دیگر" کے طور پر۔ **سیگمنٹ کے لحاظ سے** hosts کی جگہ نیٹ ورکس دکھاتا ہے |
 | مقامات اور نیٹ ورک | ملک کے حساب سے اور نیٹ ورک (AS) کے حساب سے ٹریفک |
 | خطرے کی معلومات | وہ hosts جنہوں نے آپ کی threat lists کے addresses سے بات کی، اور کتنا بھیجا |
 | فلو ریکارڈ | انفرادی flows، نئے پہلے، منتخب کیے جا سکنے والے columns کے ساتھ |
 | انٹرفیس جانچ | interface counters کے ساتھ flow کے اعداد، بدترین پہلے، وجوہات کے ساتھ |
-| ذرائع | ڈیوائسز، sampling، loss، collectors، SNMP، ممالک اور نیٹ ورکس کا ڈیٹابیس، اور **نام** |
+| ذرائع | ڈیوائسز، sampling، loss، collectors، SNMP، ممالک اور نیٹ ورکس کا ڈیٹابیس، لوگو، اور **نام** |
 
 صفحات کے اوپر: time range (15 منٹ سے 30 دن)، ایک اختیاری search box، ہر 30
 سیکنڈ پر automatic refresh، اور **لنک کاپی کریں**، جو بالکل موجودہ view (صفحہ،
@@ -679,13 +680,18 @@ time range اور filters) کا link کاپی کرتا ہے تاکہ آپ اسے
 
 6 گھنٹے سے لمبی ranges پورے گھنٹے سے شروع ہوتی ہیں، تاکہ صفحے کا ہر عدد
 بالکل ایک ہی وقت گنے: "24 گھنٹے" میں آخری 24 پورے گھنٹے اور موجودہ گھنٹہ
-شامل ہیں۔ ان ranges پر ٹاپ N گھنٹہ وار summaries سے آتا ہے؛ وہاں filters
+شامل ہیں۔ ان ranges پر ٹاپ 66 گھنٹہ وار summaries سے آتا ہے؛ وہاں filters
 دستیاب نہیں، اور صفحہ یہ بتا دیتا ہے۔ filter کرنے کے لیے چھوٹی range چنیں۔ گفتگو (conversations) ہمیشہ flow کی تفصیل پڑھتی ہے، اس لیے
 زیادہ flow rates پر لمبی ranges میں اس میں کچھ وقت لگ سکتا ہے؛ ایک گھنٹہ سب سے تیز ہے۔
 
 سائیڈ menu دکھاتا ہے کہ data کتنی disk استعمال کر رہا ہے اور کتنی خالی ہے؛ خالی
 جگہ پر hover کریں تو پتا چلتا ہے کہ موجودہ رفتار پر رکھے گئے دنوں کی تفصیل کو کتنی
 جگہ چاہیے (ایک دن کا data جمع ہونے کے بعد اندازہ لگایا جاتا ہے)۔
+
+سائن اِن پیج پر اور menu کے اوپر اپنا لوگو دکھانے کے لیے
+**ذرائع → لوگو → لوگو اپ لوڈ کریں…** استعمال کریں: PNG، SVG، JPEG، WebP یا GIF،
+1 MB تک، 272 × 92 pixels پر بہترین (دوسرے سائز فٹ ہونے کے لیے scale کیے جاتے
+ہیں)۔ **بلٹ اِن لوگو پر واپس جائیں** سے traffic66 کا لوگو واپس آ جاتا ہے۔
 
 <a id="findings"></a>
 
@@ -728,11 +734,11 @@ packets بھیجتا ہے کہ نظر نہیں آتا۔ ڈیمو کا حملہ �
 
 ![مشتبہ سرگرمی: ایک حملے کا ہر مرحلہ، 1:4096 sFlow sampling کے باوجود پکڑا گیا](images/findings.png)
 
-![ٹاپ N: پچھلے گھنٹے کی top 66 conversations](images/topn.png)
+![ٹاپ 66: پچھلے گھنٹے کی top 66 conversations](images/topn.png)
 
 ![ایک host کی تفصیل: اس کے بارے میں مشتبہ سرگرمیاں، اس کی ٹریفک، وہ کس سے بات کرتا ہے، services، ممالک اور تازہ ترین flows](images/detail.png)
 
-![ٹریفک کے راستے: کون سا segment کس ملک کی طرف کون سی application استعمال کرتا ہے](images/paths.png)
+![ٹریفک کے راستے: کون سا host کس ملک کی طرف کون سی application استعمال کرتا ہے](images/paths.png)
 
 یہی جائزہ چینی زبان میں؛ ہر صفحہ 13 زبانوں میں دستیاب ہے:
 
@@ -760,7 +766,7 @@ browser میں کھولیں، q باہر نکلیں۔
 
 ![Terminal UI: جائزہ](images/tui-overview.png)
 
-![Terminal UI: ٹاپ N conversations](images/tui-topn.png)
+![Terminal UI: ٹاپ 66 conversations](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -907,6 +913,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | `traffic66.duckdb` | summaries، interface counters اور موجودہ گھنٹہ |
 | `password` | login پاس ورڈز (hashed) |
 | `inventory.txt` | نام (**ذرائع → نام**) |
+| `logo.png` (یا `.svg`، `.jpg`، `.webp`، `.gif`) | آپ کا لوگو (**ذرائع → لوگو**)، اگر آپ نے اپ لوڈ کیا ہو |
 | `country.mmdb`، `asn.mmdb`، `asn.tsv.gz`، `threats/` | آپ کے شامل کردہ ممالک اور نیٹ ورکس کے databases اور threat lists |
 
 **ڈیٹا کتنی دیر رکھا جاتا ہے**: flow detail 30 دن، summaries (overview اور لمبی مدتیں) 400 دن۔ اس سے پرانا

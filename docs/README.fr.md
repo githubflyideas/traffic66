@@ -617,7 +617,8 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 - `net` : les plages privées (10/8, 172.16/12, 192.168/16, 100.64/10) sont
   toujours considérées comme les vôtres. Ajoutez vos plages publiques pour
   que le trafic vers et depuis elles compte aussi comme le vôtre ; le nom
-  apparaît dans **Top-N → Segments** et dans les chemins du trafic.
+  apparaît dans **Top 66** regroupé par segment et dans les chemins du
+  trafic par segment.
 - `snmp <device> <community> [<management address>[:port]]` : l'équipement
   est l'adresse d'où proviennent les flux. Ajoutez l'adresse de gestion
   quand l'équipement répond en SNMP sur une autre adresse. Les descriptions
@@ -698,14 +699,14 @@ Pages :
 | Page | À quoi elle répond |
 |---|---|
 | Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; détections ouvertes ; principaux clients et services |
+| Top 66 | Un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
 | Détections | Ce qui demande votre attention : scans, essais de mots de passe, mouvements latéraux, envois inhabituels, inondations et trafic des listes de menaces ([plus](#findings)) |
-| Top-N | Un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
-| Chemins du trafic | Quel segment parle à quelle application dans quel pays |
+| Chemins du trafic | Quel hôte utilise quelle application vers quel pays : les 10 hôtes les plus actifs, le reste dans Autres. **Par segment** affiche les segments au lieu des hôtes |
 | Géographie et réseaux | Trafic par pays et par réseau (AS) |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
 | Enregistrements de flux | Flux individuels, du plus récent au plus ancien, avec colonnes au choix |
 | Contrôle des interfaces | Chiffres de flux à côté des compteurs d'interface, les pires en premier, avec les causes |
-| Sources | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, et **Noms** |
+| Sources | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
 
 Au-dessus des pages : la plage de temps (de 15 minutes à 30 jours), un
 champ de recherche facultatif, le rafraîchissement automatique toutes les
@@ -716,7 +717,7 @@ celle du navigateur ; on la change en bas du menu.
 Les plages de plus de 6 heures commencent à une heure pile, si bien que
 chaque chiffre de la page porte exactement sur la même durée : "24 heures"
 couvre les 24 dernières heures entières plus l'heure en cours. Sur ces
-plages, Top-N s'appuie sur des agrégats horaires ; les filtres n'y sont pas
+plages, Top 66 s'appuie sur des agrégats horaires ; les filtres n'y sont pas
 disponibles, et la page le signale. Choisissez une plage plus courte pour
 filtrer. Les conversations lisent toujours le détail des flux : sur de longues plages
 avec beaucoup de flux, cela peut prendre un moment ; une heure est le plus rapide.
@@ -725,6 +726,11 @@ Le menu latéral indique l'espace disque utilisé par les données et l'espace
 libre ; survolez l'espace libre pour voir ce dont les jours de détail
 conservés ont besoin au rythme actuel (estimation disponible dès qu'il y a
 une journée de données).
+
+Pour afficher votre propre logo sur la page de connexion et en haut du
+menu, utilisez **Sources → Logo → Importer un logo…** : PNG, SVG, JPEG,
+WebP ou GIF, 1 Mo au plus, idéalement 272 × 92 pixels (les autres tailles
+sont ajustées). **Revenir au logo intégré** rétablit celui de traffic66.
 
 <a id="findings"></a>
 
@@ -772,11 +778,11 @@ site web.
 
 ![Détections : chaque étape d'une attaque, trouvée à travers un échantillonnage sFlow 1:4096](images/findings.png)
 
-![Top-N : le top 66 des conversations de la dernière heure](images/topn.png)
+![Top 66 : le top 66 des conversations de la dernière heure](images/topn.png)
 
 ![Détails d'un hôte : les détections qui le concernent, son trafic, avec qui il communique, services, pays et derniers flux](images/detail.png)
 
-![Chemins du trafic : quel segment utilise quelle application vers quel pays](images/paths.png)
+![Chemins du trafic : quel hôte utilise quelle application vers quel pays](images/paths.png)
 
 La même vue d'ensemble en chinois ; toutes les pages sont disponibles en 13 langues :
 
@@ -806,7 +812,7 @@ q quitter.
 
 ![Interface terminal : vue d'ensemble](images/tui-overview.png)
 
-![Interface terminal : Top-N des conversations](images/tui-topn.png)
+![Interface terminal : Top 66 des conversations](images/tui-topn.png)
 
 <a id="11-local-capture"></a>
 
@@ -959,6 +965,7 @@ Le répertoire de données contient tout :
 | `traffic66.duckdb` | agrégats, compteurs d'interface et heure en cours |
 | `password` | mots de passe de connexion (hachés) |
 | `inventory.txt` | noms (**Sources → Noms**) |
+| `logo.png` (ou `.svg`, `.jpg`, `.webp`, `.gif`) | votre logo (**Sources → Logo**), si vous en avez importé un |
 | `country.mmdb`, `asn.mmdb`, `asn.tsv.gz`, `threats/` | bases de données pays et réseaux et listes de menaces que vous avez ajoutées |
 
 **Durée de conservation** : le détail des flux 30 jours, les résumés (vue d'ensemble et longues périodes) 400 jours.

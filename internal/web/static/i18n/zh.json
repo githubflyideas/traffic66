@@ -1,7 +1,7 @@
 {
 "lang.name": "中文",
 "nav.overview": "概览",
-"nav.topn": "Top-N",
+"nav.topn": "Top 66",
 "nav.sankey": "流向",
 "nav.geo": "地理与运营商",
 "nav.threats": "威胁情报",
@@ -307,5 +307,14 @@
 "fd.e.sources": "来自 {n} 个地址",
 "fd.e.usual": "平时每秒 {n} 个包",
 "ov.findings_all": "全部未处理的发现（{n}）",
-"det.findings": "关于它的发现"
+"det.findings": "关于它的发现",
+"sankey.title_host": "主机 → 应用 → 对端国家",
+"sankey.by_host": "按主机",
+"sankey.by_seg": "按网段",
+"logo.title": "Logo",
+"logo.sub": "显示在登录页和菜单顶部",
+"logo.upload": "上传 Logo…",
+"logo.reset": "恢复内置 Logo",
+"logo.hint": "PNG、SVG、JPEG、WebP 或 GIF，最大 1 MB。最佳尺寸 272 × 92 像素，其他尺寸会自动缩放。",
+"logo.saved": "Logo 已保存"
 }

@@ -238,13 +238,15 @@ func (s *Server) sankey(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	links, err := s.Store.Sankey(q)
+	byHost := r.URL.Query().Get("by") != "segment"
+	links, err := s.Store.Sankey(q, byHost, 10)
 	if err != nil {
 		fail(w, err)
 		return
 	}
-	// keep the 6 largest nodes per column, fold the rest into "__other__"
-	top := func(get func(store.SankeyLink) string) map[string]bool {
+	// keep the largest nodes per column (10 hosts or 6 segments, 6
+	// applications, 6 countries), fold the rest into "__other__"
+	top := func(get func(store.SankeyLink) string, n ...int) map[string]bool {
 		t := map[string]uint64{}
 		for _, l := range links {
 			t[get(l)] += l.Wire
@@ -255,14 +257,22 @@ func (s *Server) sankey(w http.ResponseWriter, r *http.Request) {
 		}
 		sort.Slice(keys, func(i, j int) bool { return t[keys[i]] > t[keys[j]] })
 		m := map[string]bool{}
+		limit := 6
+		if len(n) > 0 {
+			limit = n[0]
+		}
 		for i, k := range keys {
-			if i < 6 {
+			if i < limit && k != "__other__" {
 				m[k] = true
 			}
 		}
 		return m
 	}
-	ks := top(func(l store.SankeyLink) string { return l.Seg })
+	first := 6
+	if byHost {
+		first = 10
+	}
+	ks := top(func(l store.SankeyLink) string { return l.Seg }, first)
 	ka := top(func(l store.SankeyLink) string { return l.App })
 	kc := top(func(l store.SankeyLink) string { return l.CC })
 	fold := func(m map[string]bool, k string) string {
@@ -289,7 +299,11 @@ func (s *Server) sankey(w http.ResponseWriter, r *http.Request) {
 		sort.Slice(out, func(i, j int) bool { return out[i].V > out[j].V })
 		return out
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"seg_app": flat(l1), "app_cc": flat(l2)})
+	by := "segment"
+	if byHost {
+		by = "host"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"by": by, "seg_app": flat(l1), "app_cc": flat(l2)})
 }
 
 func (s *Server) records(w http.ResponseWriter, r *http.Request) {

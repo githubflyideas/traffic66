@@ -1,7 +1,7 @@
 {
 "lang.name": "Português",
 "nav.overview": "Visão geral",
-"nav.topn": "Top-N",
+"nav.topn": "Top 66",
 "nav.sankey": "Caminhos do tráfego",
 "nav.geo": "Geografia e redes",
 "nav.threats": "Ameaças",
@@ -307,5 +307,14 @@
 "fd.e.sources": "de {n} endereços",
 "fd.e.usual": "normalmente {n} pacotes por segundo",
 "ov.findings_all": "Todas as detecções pendentes ({n})",
-"det.findings": "Detecções sobre este host"
+"det.findings": "Detecções sobre este host",
+"sankey.title_host": "Host → aplicação → país remoto",
+"sankey.by_host": "Por host",
+"sankey.by_seg": "Por segmento",
+"logo.title": "Logotipo",
+"logo.sub": "Aparece na página de login e no topo do menu",
+"logo.upload": "Enviar um logotipo…",
+"logo.reset": "Usar o logotipo embutido",
+"logo.hint": "PNG, SVG, JPEG, WebP ou GIF, até 1 MB. O ideal é 272 × 92 pixels; outros tamanhos são ajustados.",
+"logo.saved": "Logotipo salvo"
 }

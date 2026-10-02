@@ -1,7 +1,7 @@
 {
 "lang.name": "Français",
 "nav.overview": "Vue d'ensemble",
-"nav.topn": "Top-N",
+"nav.topn": "Top 66",
 "nav.sankey": "Chemins du trafic",
 "nav.geo": "Géographie et réseaux",
 "nav.threats": "Menaces",
@@ -307,5 +307,14 @@
 "fd.e.sources": "depuis {n} adresses",
 "fd.e.usual": "habituellement {n} paquets par seconde",
 "ov.findings_all": "Toutes les détections à traiter ({n})",
-"det.findings": "Détections le concernant"
+"det.findings": "Détections le concernant",
+"sankey.title_host": "Hôte → application → pays distant",
+"sankey.by_host": "Par hôte",
+"sankey.by_seg": "Par segment",
+"logo.title": "Logo",
+"logo.sub": "Affiché sur la page de connexion et en haut du menu",
+"logo.upload": "Importer un logo…",
+"logo.reset": "Revenir au logo intégré",
+"logo.hint": "PNG, SVG, JPEG, WebP ou GIF, 1 Mo au plus. Idéalement 272 × 92 pixels ; les autres tailles sont ajustées.",
+"logo.saved": "Logo enregistré"
 }

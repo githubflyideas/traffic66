@@ -1,7 +1,7 @@
 {
 "lang.name": "한국어",
 "nav.overview": "개요",
-"nav.topn": "Top-N",
+"nav.topn": "Top 66",
 "nav.sankey": "트래픽 경로",
 "nav.geo": "지역 및 네트워크",
 "nav.threats": "위협 정보",
@@ -307,5 +307,14 @@
 "fd.e.sources": "{n}개 주소에서",
 "fd.e.usual": "평소 초당 {n}개 패킷",
 "ov.findings_all": "미처리 탐지 모두 보기({n})",
-"det.findings": "이 호스트에 대한 탐지"
+"det.findings": "이 호스트에 대한 탐지",
+"sankey.title_host": "호스트 → 애플리케이션 → 상대 국가",
+"sankey.by_host": "호스트별",
+"sankey.by_seg": "세그먼트별",
+"logo.title": "로고",
+"logo.sub": "로그인 화면과 메뉴 맨 위에 표시됩니다",
+"logo.upload": "로고 업로드…",
+"logo.reset": "기본 로고로 되돌리기",
+"logo.hint": "PNG, SVG, JPEG, WebP 또는 GIF, 최대 1 MB. 272 × 92 픽셀이 가장 좋으며 다른 크기는 맞춰서 조정됩니다.",
+"logo.saved": "로고를 저장했습니다"
 }
