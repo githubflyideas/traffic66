@@ -316,5 +316,8 @@
 "logo.upload": "ロゴをアップロード…",
 "logo.reset": "内蔵ロゴに戻す",
 "logo.hint": "PNG、SVG、JPEG、WebP、GIF（1 MB まで）。推奨サイズは 272 × 92 ピクセルで、他のサイズは自動で縮小・拡大されます。",
-"logo.saved": "ロゴを保存しました"
+"logo.saved": "ロゴを保存しました",
+"sankey.title_conv": "クライアント → サービス → サーバー",
+"sankey.by_conv": "クライアント → サーバー",
+"fbar.any": "すべて"
 }

@@ -69,7 +69,10 @@ const PROTO = {1: 'ICMP', 2: 'IGMP', 4: 'IPIP', 6: 'TCP', 17: 'UDP', 41: 'IPv6',
 const proto = p => PROTO[p] || String(p);
 const ENCAP = ['', 'GRE', 'IPIP', '6in4', 'IPv6-in-IPv6', 'VXLAN', 'GENEVE', 'MPLS'];
 const DIRS = {1: 'outbound', 2: 'inbound', 3: 'internal', 4: 'transit'};
-const COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)'];
+// categorical colours in fixed order (validated for colour-blind readers); a
+// ninth series is folded into "other", never given a recycled colour
+const COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)', 'var(--c7)', 'var(--c8)'];
+const color = (i, key) => key === '__other__' || i >= COLORS.length ? OTHER : COLORS[i];
 const OTHER = 'var(--other)';
 const appLabel = a => a === '__other__' ? t('other') : a;
 function fmtTime(ms, span) {
@@ -140,7 +143,7 @@ function readHash() {
   if (VIEWS.includes(p.get('v'))) state.v = p.get('v');
   if (RANGES.includes(p.get('r'))) state.r = p.get('r');
   if (p.get('dim')) state.dim = p.get('dim');
-  state.sk = p.get('by') === 'segment' ? 'segment' : 'host';
+  state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
   const dd = p.get('d'); if (dd && dd.includes(':')) state.det = {f: dd.slice(0, dd.indexOf(':')), v: dd.slice(dd.indexOf(':') + 1)};
   state.f = (p.get('f') || '').split(',').filter(Boolean).map(s => {
     const neg = s[0] === '!'; if (neg) s = s.slice(1);
@@ -151,7 +154,7 @@ function readHash() {
 function writeHash(push) {
   const p = new URLSearchParams({v: state.v, r: state.r});
   if (state.v === 'topn') p.set('dim', state.dim);
-  if (state.v === 'sankey' && state.sk === 'segment') p.set('by', 'segment');
+  if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
   if (state.v === 'detail' && state.det) p.set('d', state.det.f + ':' + state.det.v);
   if (state.f.length) p.set('f', state.f.map(x => (x.neg ? '!' : '') + encodeURIComponent(x.f) + ':' + encodeURIComponent(x.v)).join(','));
   const h = '#' + p.toString();
@@ -261,6 +264,8 @@ function donut(el, parts, field) {
 const pop = $('#pop'); let ctx = null;
 const LOOKUP = {
   ip: v => 'https://bgp.he.net/ip/' + encodeURIComponent(v),
+  client: v => 'https://bgp.he.net/ip/' + encodeURIComponent(v),
+  server: v => 'https://bgp.he.net/ip/' + encodeURIComponent(v),
   asn: v => 'https://bgp.he.net/AS' + encodeURIComponent(v.replace(/^AS/i, '')),
   port: v => 'https://www.speedguide.net/port.php?port=' + encodeURIComponent(v.split('/')[0]),
 };
@@ -280,9 +285,9 @@ function openPop(c, rect) {
   pop.querySelector('button').focus();
 }
 // what a value's popup offers besides filtering
-const DETAIL = new Set(['ip', 'exporter', 'port']);
-const NAMEABLE = new Set(['ip', 'exporter']);
-function showDetail(f, v) { state.det = {f: f === 'exporter' ? 'ip' : f, v}; go('detail'); }
+const DETAIL = new Set(['ip', 'client', 'server', 'exporter', 'port']);
+const NAMEABLE = new Set(['ip', 'client', 'server', 'exporter']);
+function showDetail(f, v) { state.det = {f: ['exporter', 'client', 'server'].includes(f) ? 'ip' : f, v}; go('detail'); }
 // Name an address from anywhere: the inventory line for it is replaced
 // (host for an address, device for a flow exporter) and saved at once.
 function nameForm() {
@@ -354,6 +359,44 @@ function renderFilters() {
       + (state.f.length > 1 ? `<button class="btn" data-clear style="padding:2px 10px">${t('filters.clear')}</button>` : '')
     : `<span class="hint">${t('filters.hint')}</span>`;
 }
+// Filter dropdowns: device, client, server, service. Each offers the busiest
+// values of the time range (given the other filters) and also takes typed
+// values; choosing one replaces any filter on that field, emptying it
+// removes the filter.
+const FBAR = [['exporter', 'field.exporter'], ['client', 'field.client'], ['server', 'field.server'], ['port', 'col.service']];
+const FBAR_HIDDEN = new Set(['findings', 'ifaces', 'sources']);
+function renderFbar() {
+  const bar = $('#fbar');
+  bar.hidden = FBAR_HIDDEN.has(state.v);
+  if (bar.hidden) return;
+  bar.innerHTML = FBAR.map(([f, lab]) => {
+    const cur = state.f.find(x => x.f === f && !x.neg);
+    return `<label><span>${esc(t(lab))}</span><input data-fb="${f}" list="dl-${f}" autocomplete="off" spellcheck="false" class="${cur ? 'on' : ''}" value="${esc(cur ? cur.v : '')}" placeholder="${esc(t('fbar.any'))}"><datalist id="dl-${f}"></datalist></label>`;
+  }).join('');
+  bar.querySelectorAll('input').forEach(inp => {
+    const f = inp.dataset.fb;
+    inp.onfocus = async () => {
+      const dl = $('#dl-' + f);
+      if (dl.dataset.k === state.r + JSON.stringify(state.f)) return;
+      dl.dataset.k = state.r + JSON.stringify(state.f);
+      try {
+        const d = await api('topn', {dim: f, limit: 200}, state.f.filter(x => x.f !== f));
+        const rows = d.rows || [];
+        if (f !== 'port') await lookupNames(rows.map(r => r.key));
+        dl.innerHTML = rows.map(r => `<option value="${esc(r.key)}">${esc([f === 'port' ? r.extra : names.get(r.key), fmtBytes(r.wire)].filter(Boolean).join(' · '))}</option>`).join('');
+      } catch (e) {}
+    };
+    const apply = () => {
+      const v = inp.value.trim(), cur = state.f.find(x => x.f === f && !x.neg);
+      if ((cur ? cur.v : '') === v) return;
+      state.f = state.f.filter(x => x.f !== f);
+      if (v) state.f.push({f, v, neg: false});
+      render();
+    };
+    inp.onchange = apply;
+    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); apply(); } };
+  });
+}
 // search box: guess the field from what was typed
 $('#q').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
@@ -396,11 +439,10 @@ views.overview = async (el) => {
   }
   const peakTxt = d.peak_at ? t('kpi.peak', {v: fmtBps(d.peak_bps), t: fmtTime(d.peak_at, spanMs())}) : '';
   const series = d.series || {times: [], names: [], values: []};
-  const areas = series.names.map((n, i) => ({name: appLabel(n), color: n === '__other__' ? OTHER : COLORS[i % 6], data: series.values[i]}));
+  const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
   const lines = d.baseline ? [{name: t(basis === 'week' ? 'last_week' : 'prev_period'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
-  const dirParts = (d.dir || []).map((p, i) => ({n: t('dir.' + p.key), v: p.wire, c: COLORS[i % 6], val: DIRS[p.key]}));
-  const protoParts = (d.proto || []).map((p, i) => ({n: p.key === '__other__' ? t('other') : proto(+p.key), v: p.wire, c: p.key === '__other__' ? OTHER : COLORS[i % 6], val: p.key === '__other__' ? null : p.key}));
-  const ccParts = (d.country || []).map((p, i) => ({n: country(p.key), v: p.wire, c: p.key === '__other__' ? OTHER : COLORS[i % 6], val: p.key === '__other__' ? null : p.key}));
+  const dirParts = (d.dir || []).map((p, i) => ({n: t('dir.' + p.key), v: p.wire, c: color(i), val: DIRS[p.key]}));
+  const protoParts = (d.proto || []).map((p, i) => ({n: p.key === '__other__' ? t('other') : proto(+p.key), v: p.wire, c: color(i, p.key), val: p.key === '__other__' ? null : p.key}));
   const cl = d.top_clients || [], cmax = Math.max(1, ...cl.map(r => r.wire));
   const sv = d.top_services || [], smax = Math.max(1, ...sv.map(r => r.wire));
   el.innerHTML = `<div class="grid">
@@ -415,11 +457,10 @@ views.overview = async (el) => {
       <div class="chart" id="chStack" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}${lines.length ? `<span><i class="dash"></i>${esc(lines[0].name)}</span>` : ''}</div></div>
     ${fd ? findingsPanel(fd) : ''}
-    ${panel('c4', t('ov.dir'), '', '<div class="donut" id="dDir"></div>')}
-    ${panel('c4', t('ov.proto'), '', '<div class="donut" id="dProto"></div>')}
-    ${panel('c4', t('ov.country'), '', '<div class="donut" id="dCC"></div>')}
-    ${panel('c6', t('ov.top_clients'), t('ov.top_clients_sub'), `<table><tr><th></th><th>${t('col.client')}</th><th class="num">${t('col.traffic')}</th><th style="width:26%">${t('col.share')}</th><th class="num">${t(basis === 'week' ? 'col.vs_week' : 'col.vs_prev')}</th></tr>
-      ${cl.map((r, i) => { const b = +r.extra; const ch = b > 0 ? (r.wire - b) / b : null; return `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td><td class="num ${ch > 0.3 ? 'up' : ''}">${ch == null ? `<span class="tag">${t('ov.mover_new')}</span>` : fmtPct(ch, 0)}</td></tr>`; }).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
+    ${panel('c6', t('ov.dir'), '', '<div class="donut" id="dDir"></div>')}
+    ${panel('c6', t('ov.proto'), '', '<div class="donut" id="dProto"></div>')}
+    ${panel('c6', t('ov.top_clients'), t('ov.top_clients_sub'), `<table><tr><th></th><th>${t('col.client')}</th><th class="num">${t('col.traffic')}</th><th style="width:34%">${t('col.share')}</th></tr>
+      ${cl.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
     ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
       ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
   </div>`;
@@ -427,7 +468,6 @@ views.overview = async (el) => {
   bindFindings(el);
   donut($('#dDir'), dirParts, 'dir');
   donut($('#dProto'), protoParts, 'proto');
-  donut($('#dCC'), ccParts, 'country');
 };
 
 
@@ -609,13 +649,16 @@ async function lookupNames(ips) {
   } catch (e) {}
 }
 views.sankey = async (el) => {
-  const byHost = state.sk !== 'segment';
-  const d = await api('sankey', {by: byHost ? 'host' : 'segment'});
-  if (byHost) await lookupNames((d.seg_app || []).map(l => l.S).filter(k => k !== '__other__'));
-  const title = t(byHost ? 'sankey.title_host' : 'sankey.title');
+  // host: host → application → country; segment: network → application →
+  // country; conv: client → service → server
+  const mode = ['segment', 'conv'].includes(state.sk) ? state.sk : 'host', byHost = mode === 'host', conv = mode === 'conv';
+  const d = await api('sankey', {by: mode});
+  const ipCols = conv ? [0, 2] : byHost ? [0] : [];
+  await lookupNames([...(d.seg_app || []).map(l => l.S), ...(conv ? (d.app_cc || []).map(l => l.T) : [])].filter(k => k !== '__other__'));
+  const title = t({host: 'sankey.title_host', segment: 'sankey.title', conv: 'sankey.title_conv'}[mode]);
   el.innerHTML = `<div class="panel"><div class="ph"><h2>${title}</h2><span class="sub">${t('sankey.hint')}</span>
-      <div class="tools" style="margin-inline-start:auto"><div class="seg" role="group"><button data-sk="host" aria-pressed="${byHost}">${t('sankey.by_host')}</button><button data-sk="segment" aria-pressed="${!byHost}">${t('sankey.by_seg')}</button></div></div></div>
-    <div class="chart sankey" id="chSankey" style="height:${byHost ? 520 : 440}px" aria-label="${esc(title)}"></div></div>`;
+      <div class="tools" style="margin-inline-start:auto"><div class="seg" role="group">${['host', 'conv', 'segment'].map(m => `<button data-sk="${m}" aria-pressed="${m === mode}">${t({host: 'sankey.by_host', conv: 'sankey.by_conv', segment: 'sankey.by_seg'}[m])}</button>`).join('')}</div></div></div>
+    <div class="chart sankey" id="chSankey" style="height:${mode === 'segment' ? 440 : 520}px" aria-label="${esc(title)}"></div></div>`;
   el.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { state.sk = b.dataset.sk; render(); });
   const sEl = $('#chSankey');
   if (!(d.seg_app || []).length) { sEl.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
@@ -624,16 +667,16 @@ views.sankey = async (el) => {
   d.seg_app.forEach(l => { node(0, l.S).out += l.V; node(1, l.T).in += l.V; });
   d.app_cc.forEach(l => { node(1, l.S).out += l.V; node(2, l.T).in += l.V; });
   cols.forEach(c => c.sort((a, b) => (a.k === '__other__') - (b.k === '__other__') || Math.max(b.in, b.out) - Math.max(a.in, a.out)));
-  const label = (c, k) => c === 2 ? country(k) : c === 0 && byHost && k !== '__other__' ? (names.get(k) || k) : appLabel(k);
-  const field = [byHost ? 'ip' : 'segment', 'app', 'country'];
+  const label = (c, k) => k === '__other__' ? t('other') : ipCols.includes(c) ? (names.get(k) || k) : c === 2 ? country(k) : appLabel(k);
+  const field = {host: ['ip', 'app', 'country'], segment: ['segment', 'app', 'country'], conv: ['client', 'port', 'server']}[mode];
   const draw = () => {
     const W = sEl.clientWidth, H = sEl.clientHeight; if (W < 300) return;
     const rtl = document.documentElement.dir === 'rtl';
-    const nodeW = 12, pad = 14, lw = byHost ? 170 : 118, colX = rtl ? [W - lw - 12, Math.round(W / 2 - 6), 118] : [lw, Math.round(W / 2 - 6), W - 130];
+    const nodeW = 12, pad = 14, lw = mode === 'segment' ? 118 : 170, rw = conv ? 182 : 130, colX = rtl ? [W - lw - 12, Math.round(W / 2 - 6), rw - 12] : [lw, Math.round(W / 2 - 6), W - rw];
     const nv = n => Math.max(n.in, n.out);
     const k = Math.min(...cols.map(c => (H - pad * (c.length - 1)) / Math.max(1, c.reduce((s, n) => s + nv(n), 0))));
-    cols.forEach((c, ci) => { let yy = 0; c.forEach((n, i) => { n.ci = ci; n.x = colX[ci]; n.y = yy; n.h = nv(n) * k; n.o = 0; n.i = 0; n.color = ci === 0 ? (n.k === '__other__' ? OTHER : COLORS[i % 6]) : 'var(--ink-2)'; yy += n.h + pad; }); });
-    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(t('sankey.title'))}">`;
+    cols.forEach((c, ci) => { let yy = 0; c.forEach((n, i) => { n.ci = ci; n.x = colX[ci]; n.y = yy; n.h = nv(n) * k; n.o = 0; n.i = 0; n.color = ci === 0 ? color(i, n.k) : 'var(--ink-2)'; yy += n.h + pad; }); });
+    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(title)}">`;
     const link = (A, B, v, col, lab) => {
       const w = v * k, y0 = A.y + A.o + w / 2, y1 = B.y + B.i + w / 2; A.o += w; B.i += w;
       const x0 = rtl ? A.x : A.x + nodeW, x1 = rtl ? B.x + nodeW : B.x, mx = (x0 + x1) / 2;
@@ -861,7 +904,7 @@ views.detail = async (el) => {
   const title = isIP ? (names.get(det.v) ? `${esc(names.get(det.v))} <span class="sub">${esc(det.v)}</span>` : esc(det.v)) : esc(det.v);
   $('#title').textContent = t('nav.detail') + ': ' + (isIP ? (names.get(det.v) || det.v) : det.v);
   const tot = d.totals, series = d.series || {times: [], names: [], values: []};
-  const areas = series.names.map((n, i) => ({name: appLabel(n), color: n === '__other__' ? OTHER : COLORS[i % 6], data: series.values[i]}));
+  const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
   const lines = d.baseline ? [{name: t(d.basis === 'week' ? 'last_week' : 'prev_period'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
   const table = (rows, heads, cell) => { const m = Math.max(1, ...rows.map(r => r.wire)); return `<table><tr><th></th>${heads.map(h => `<th>${t(h)}</th>`).join('')}<th class="num">${t('col.traffic')}</th><th style="width:26%">${t('col.share')}</th></tr>
     ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, m)}</td></tr>`).join('') || `<tr><td colspan="${heads.length + 3}" class="empty">${t('empty.nodata')}</td></tr>`}</table>`; };
@@ -893,6 +936,7 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 async function render(push) {
   renderFilters();
+  renderFbar();
   writeHash(push);
   $('#title').textContent = t('nav.' + state.v);  // the detail view refines it
   document.title = t('nav.' + state.v) + ' · traffic66';

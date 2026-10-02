@@ -316,5 +316,8 @@
 "logo.upload": "Importer un logo…",
 "logo.reset": "Revenir au logo intégré",
 "logo.hint": "PNG, SVG, JPEG, WebP ou GIF, 1 Mo au plus. Idéalement 272 × 92 pixels ; les autres tailles sont ajustées.",
-"logo.saved": "Logo enregistré"
+"logo.saved": "Logo enregistré",
+"sankey.title_conv": "Client → service → serveur",
+"sankey.by_conv": "Client → serveur",
+"fbar.any": "Tous"
 }

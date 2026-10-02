@@ -637,25 +637,34 @@ type SankeyLink struct {
 	Wire         uint64
 }
 
-// Sankey returns traffic by segment (or, with byHost, by internal host),
-// application and remote country. By host, only the top hosts are kept
-// apart; the rest are summed as "__other__".
-func (s *Store) Sankey(q Query, byHost bool, hosts int) ([]SankeyLink, error) {
+// Sankey modes: the three columns of the flow paths chart.
+var sankeyCols = map[string][3]string{
+	// the internal side of each conversation (the client, or the server of
+	// inbound traffic) → application → remote country
+	"host":    {"CASE WHEN dir = 2 THEN server ELSE client END", "app", sankeyCC},
+	"segment": {"segment", "app", sankeyCC},
+	"conv":    {"client", portProtoExpr, "server"},
+}
+
+const sankeyCC = `CASE WHEN dir = 3 THEN '__internal__' WHEN peer_cc = '' THEN '__unknown__' ELSE peer_cc END`
+
+// Sankey returns traffic by the mode's three columns. The first and last
+// columns keep their top n0 and n2 values; the rest are "__other__".
+func (s *Store) Sankey(q Query, mode string, n0, n2 int) ([]SankeyLink, error) {
 	where, args, err := q.where()
 	if err != nil {
 		return nil, err
 	}
-	cc := `CASE WHEN dir = 3 THEN '__internal__' WHEN peer_cc = '' THEN '__unknown__' ELSE peer_cc END`
-	sqlq := fmt.Sprintf(`SELECT segment, app, %s, sum(wire) FROM %s WHERE %s GROUP BY 1,2,3`, cc, s.Source(q.From, q.To), where)
-	if byHost {
-		// the internal side of each conversation: the client, or the server
-		// of inbound traffic
-		sqlq = fmt.Sprintf(`WITH b AS (SELECT CASE WHEN dir = %d THEN server ELSE client END AS h, app, %s AS cc, sum(wire) AS w
-				FROM %s WHERE %s GROUP BY 1,2,3),
-			t AS (SELECT h FROM b GROUP BY h ORDER BY sum(w) DESC LIMIT %d)
-			SELECT CASE WHEN h IN (SELECT h FROM t) THEN h ELSE '__other__' END, app, cc, sum(w) FROM b GROUP BY 1,2,3`,
-			DirInbound, cc, s.Source(q.From, q.To), where, hosts)
+	c, ok := sankeyCols[mode]
+	if !ok {
+		return nil, fmt.Errorf("unknown flow paths mode %q", mode)
 	}
+	sqlq := fmt.Sprintf(`WITH b AS (SELECT %s AS c0, %s AS c1, %s AS c2, sum(wire) AS w FROM %s WHERE %s GROUP BY 1,2,3),
+			t0 AS (SELECT c0 FROM b GROUP BY c0 ORDER BY sum(w) DESC LIMIT %d),
+			t2 AS (SELECT c2 FROM b GROUP BY c2 ORDER BY sum(w) DESC LIMIT %d)
+		SELECT CASE WHEN c0 IN (SELECT c0 FROM t0) THEN c0 ELSE '__other__' END,
+			c1, CASE WHEN c2 IN (SELECT c2 FROM t2) THEN c2 ELSE '__other__' END, sum(w)
+		FROM b GROUP BY 1,2,3`, c[0], c[1], c[2], s.Source(q.From, q.To), where, n0, n2)
 	rows, err := s.DB.Query(sqlq, args...)
 	if err != nil {
 		return nil, err
