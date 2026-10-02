@@ -20,7 +20,8 @@ terminal.
   mouvements latéraux, les envois inhabituels, les inondations et le trafic
   des listes de menaces, y compris à travers l'échantillonnage, et les
   présente comme des détections à traiter.
-- Classements Top 66, chemins du trafic, pays et réseaux, correspondances
+- Classements Top 66, trafic dans le temps par client, serveur, service,
+  interface et réseau (AS), chemins du trafic, pays, correspondances
   avec des listes de menaces, enregistrements de flux, encapsulation (GRE,
   IPIP, VXLAN, GENEVE, MPLS).
 - 13 langues dans l'interface web et dans l'interface terminal.
@@ -555,7 +556,7 @@ compteurs d'interface de l'équipement et affiche l'écart dans
 **Contrôle des interfaces**, avec la cause probable quand il dépasse ce que
 l'échantillonnage seul explique.
 
-![Contrôle des interfaces : estimation des flux à côté du compteur de l'équipement pour chaque interface](images/interfaces.png)
+![Contrôle des interfaces : trafic de chaque interface, et l'estimation des flux à côté du compteur de l'équipement](images/interfaces.png)
 
 Pour disposer de compteurs de comparaison :
 
@@ -698,21 +699,31 @@ Pages :
 
 | Page | À quoi elle répond |
 |---|---|
-| Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; détections ouvertes ; principaux clients et services |
-| Top 66 | Un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
+| Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; détections ouvertes ; sens et protocole ; principaux clients et services |
+| Top 66 | S'ouvre sur **Interlocuteurs principaux** : trafic par service dans le temps, et les 30 premiers clients et serveurs côte à côte avec trafic, paquets et enregistrements de flux, au-dessus d'une ligne pour tout le trafic. **Tableau** est un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
+| Détails du trafic | Clients, serveurs et services dans le temps, en bits/s et en paquets/s : les 8 premiers de chaque, et combien il y en avait |
 | Détections | Ce qui demande votre attention : scans, essais de mots de passe, mouvements latéraux, envois inhabituels, inondations et trafic des listes de menaces ([plus](#findings)) |
-| Chemins du trafic | Quel hôte utilise quelle application vers quel pays : les 10 hôtes les plus actifs, le reste dans Autres. **Par segment** affiche les segments au lieu des hôtes |
-| Géographie et réseaux | Trafic par pays et par réseau (AS) |
+| Chemins du trafic | Quel hôte utilise quelle application vers quel pays : les 8 hôtes les plus actifs, le reste dans Autres. **Client → serveur** affiche client → service → serveur ; **Par segment** affiche les segments au lieu des hôtes |
+| Géographie et réseaux | Les réseaux (AS) d'où venait et où allait le trafic, dans le temps en bits/s et paquets/s ; trafic par pays et par réseau |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
-| Enregistrements de flux | Flux individuels, du plus récent au plus ancien, avec colonnes au choix |
-| Contrôle des interfaces | Chiffres de flux à côté des compteurs d'interface, les pires en premier, avec les causes |
+| Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix |
+| Contrôle des interfaces | Trafic de chaque interface dans le temps (entrée et sortie, bits/s et paquets/s), et chiffres de flux à côté des compteurs d'interface, les pires en premier, avec les causes |
 | Sources | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
 
 Au-dessus des pages : la plage de temps (de 15 minutes à 30 jours), un
 champ de recherche facultatif, le rafraîchissement automatique toutes les
 30 secondes et **Copier le lien**, qui copie un lien vers la vue exacte
-(page, plage de temps et filtres) à envoyer à un collègue. La langue suit
+(page, plage de temps et filtres) à envoyer à un collègue. En dessous,
+**Équipement**, **Client**, **Serveur** et **Service** listent les valeurs
+les plus actives de la plage : choisissez-en une, ou tapez-la, pour filtrer
+toutes les pages ; videz le champ pour retirer le filtre. La langue suit
 celle du navigateur ; on la change en bas du menu.
+
+Les graphiques dans le temps montrent les 8 plus grandes valeurs en couleurs
+fixes et le reste dans Autres ; la légende donne le total de chaque valeur
+et se clique comme n'importe quelle autre valeur. Les graphiques des clients
+et des serveurs ne dessinent pas le reste, car avec des milliers d'hôtes il
+écraserait les 8 premiers ; la légende en donne toujours le total.
 
 Les plages de plus de 6 heures commencent à une heure pile, si bien que
 chaque chiffre de la page porte exactement sur la même durée : "24 heures"
@@ -778,7 +789,9 @@ site web.
 
 ![Détections : chaque étape d'une attaque, trouvée à travers un échantillonnage sFlow 1:4096](images/findings.png)
 
-![Top 66 : le top 66 des conversations de la dernière heure](images/topn.png)
+![Top 66, Interlocuteurs principaux : trafic par service, et les 30 premiers clients et serveurs avec une ligne pour tout le trafic](images/topn.png)
+
+![Détails du trafic : clients, serveurs et services dans le temps, en bits/s et paquets/s](images/traffic.png)
 
 ![Détails d'un hôte : les détections qui le concernent, son trafic, avec qui il communique, services, pays et derniers flux](images/detail.png)
 

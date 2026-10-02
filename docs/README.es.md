@@ -17,7 +17,8 @@ propios equipos, tanto en una interfaz web como en una interfaz de terminal.
 - Detecta en los flujos escaneos, adivinación de contraseñas, movimiento
   lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas,
   también a través del muestreo, y los muestra como hallazgos que atender.
-- Listas Top 66, rutas de tráfico, países y redes, coincidencias con listas
+- Listas Top 66, tráfico en el tiempo por cliente, servidor, servicio,
+  interfaz y red (AS), rutas de tráfico, países, coincidencias con listas
   de amenazas, registros de flujo, encapsulación (GRE, IPIP, VXLAN, GENEVE,
   MPLS).
 - 13 idiomas en la interfaz web y en la de terminal.
@@ -541,7 +542,7 @@ muestreo. traffic66 las compara con los contadores de interfaz del propio
 equipo y muestra la diferencia en **Verificación de interfaces**, con la
 causa probable cuando es mayor de lo que explica el propio muestreo.
 
-![Verificación de interfaces: estimación de flujos junto al contador del equipo para cada interfaz](images/interfaces.png)
+![Verificación de interfaces: tráfico de cada interfaz, y la estimación de flujos junto al contador del equipo](images/interfaces.png)
 
 Para disponer de contadores con los que comparar:
 
@@ -679,20 +680,30 @@ Páginas:
 
 | Página | Qué responde |
 |---|---|
-| Resumen | Cuánto tráfico hay ahora y frente a la semana pasada, por aplicación; hallazgos abiertos; principales clientes y servicios |
-| Top 66 | Una sola tabla de los 66 primeros: por defecto, conversaciones (cliente, servidor, servicio, país). Cualquier encabezado ordena; las columnas numéricas (tráfico, paquetes, paquete medio, flujos) clasifican todo el tráfico del periodo, así el menor paquete medio revela escaneos e inundaciones. **Agrupar por** cambia a aplicaciones, redes, segmentos, equipos, encapsulación y VLAN |
+| Resumen | Cuánto tráfico hay ahora y frente a la semana pasada, por aplicación; hallazgos abiertos; dirección y protocolo; principales clientes y servicios |
+| Top 66 | Se abre en **Interlocutores principales**: tráfico por servicio en el tiempo, y los 30 primeros clientes y servidores lado a lado con tráfico, paquetes y registros de flujo, sobre una fila para todo el tráfico. **Tabla** es una sola tabla de los 66 primeros: por defecto, conversaciones (cliente, servidor, servicio, país). Cualquier encabezado ordena; las columnas numéricas (tráfico, paquetes, paquete medio, flujos) clasifican todo el tráfico del periodo, así el menor paquete medio revela escaneos e inundaciones. **Agrupar por** cambia a aplicaciones, redes, segmentos, equipos, encapsulación y VLAN |
+| Detalles del tráfico | Clientes, servidores y servicios en el tiempo, en bits/s y en paquetes/s: los 8 primeros de cada uno, y cuántos hubo |
 | Hallazgos | Qué requiere atención: escaneos, adivinación de contraseñas, movimiento lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas ([más](#findings)) |
-| Rutas de tráfico | Qué host usa qué aplicación hacia qué país: los 10 hosts con más tráfico, el resto como Otros. **Por segmento** muestra segmentos en lugar de hosts |
-| Geografía y redes | Tráfico por país y por red (AS) |
+| Rutas de tráfico | Qué host usa qué aplicación hacia qué país: los 8 hosts con más tráfico, el resto como Otros. **Cliente → servidor** muestra cliente → servicio → servidor; **Por segmento** muestra segmentos en lugar de hosts |
+| Geografía y redes | Las redes (AS) de las que vino y a las que fue el tráfico, en el tiempo en bits/s y paquetes/s; tráfico por país y por red |
 | Inteligencia de amenazas | Hosts que hablaron con direcciones de sus listas de amenazas y cuánto enviaron |
-| Registros de flujo | Flujos individuales, del más reciente al más antiguo, con columnas seleccionables |
-| Verificación de interfaces | Cifras de flujo junto a los contadores de interfaz, de peor a mejor, con motivos |
+| Registros de flujo | Cuántos registros de flujo hubo y cuándo (una barra por intervalo), y los registros mismos, del más reciente al más antiguo, página a página, con columnas seleccionables |
+| Verificación de interfaces | Tráfico de cada interfaz en el tiempo (entrada y salida, bits/s y paquetes/s), y cifras de flujo junto a los contadores de interfaz, de peor a mejor, con motivos |
 | Fuentes | Equipos, muestreo, pérdidas, colectores, SNMP, la base de datos de países y redes, el logotipo y **Nombres** |
 
 Encima de las páginas: rango de tiempo (de 15 minutos a 30 días), un cuadro
 de búsqueda opcional, refresco automático cada 30 segundos y **Copiar enlace**, que copia un enlace exactamente a la vista actual
-(página, rango de tiempo y filtros) para enviárselo a un compañero. El idioma sigue al del
+(página, rango de tiempo y filtros) para enviárselo a un compañero. Debajo,
+**Dispositivo**, **Cliente**, **Servidor** y **Servicio** listan los valores
+con más tráfico del rango: elija uno, o escríbalo, para filtrar todas las
+páginas; vacíe el cuadro para quitar el filtro. El idioma sigue al del
 navegador; se cambia al final del menú.
+
+Los gráficos en el tiempo muestran los 8 valores mayores en colores fijos y
+el resto como Otros; la leyenda da el total de cada valor y se puede hacer
+clic en ella como en cualquier otro valor. Los gráficos de clientes y
+servidores dejan el resto fuera del dibujo, ya que con miles de hosts
+aplanaría a los 8 primeros; la leyenda sigue dando su total.
 
 Los rangos de más de 6 horas empiezan en una hora en punto, de modo que
 todas las cifras de la página cuentan exactamente el mismo tiempo: "24 horas"
@@ -752,7 +763,9 @@ hallazgo salvo el escáner de internet que llama a la puerta del sitio web.
 
 ![Hallazgos: cada paso de un ataque, encontrado a través de un muestreo sFlow 1:4096](images/findings.png)
 
-![Top 66: las 66 primeras conversaciones de la última hora](images/topn.png)
+![Top 66, Interlocutores principales: tráfico por servicio, y los 30 primeros clientes y servidores con una fila para todo el tráfico](images/topn.png)
+
+![Detalles del tráfico: clientes, servidores y servicios en el tiempo, en bits/s y paquetes/s](images/traffic.png)
 
 ![Detalles de un host: los hallazgos sobre él, su tráfico, con quién habla, servicios, países y últimos flujos](images/detail.png)
 

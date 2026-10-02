@@ -17,7 +17,8 @@ equipamentos, em uma interface web e em uma interface de terminal.
 - Encontra nos fluxos varreduras, tentativas de senhas, movimento lateral,
   envios incomuns, inundações e tráfego de listas de ameaças, inclusive
   através da amostragem, e os lista como detecções a tratar.
-- Listas Top 66, caminhos do tráfego, países e redes, ocorrências em listas
+- Listas Top 66, tráfego ao longo do tempo por cliente, servidor, serviço,
+  interface e rede (AS), caminhos do tráfego, países, ocorrências em listas
   de ameaças, registros de fluxo, encapsulamento (GRE, IPIP, VXLAN, GENEVE,
   MPLS).
 - 13 idiomas na interface web e na interface de terminal.
@@ -539,7 +540,7 @@ próprio equipamento e mostra a diferença em **Conferência de interfaces**,
 com a causa provável quando ela é maior do que a amostragem sozinha
 explica.
 
-![Conferência de interfaces: estimativa de fluxo ao lado do contador do equipamento para cada interface](images/interfaces.png)
+![Conferência de interfaces: tráfego de cada interface, e a estimativa de fluxo ao lado do contador do equipamento](images/interfaces.png)
 
 Para ter contadores com que comparar:
 
@@ -678,21 +679,31 @@ Páginas:
 
 | Página | O que responde |
 |---|---|
-| Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; detecções abertas; principais clientes e serviços |
-| Top 66 | Uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
+| Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; detecções abertas; direção e protocolo; principais clientes e serviços |
+| Top 66 | Abre em **Principais interlocutores**: tráfego por serviço ao longo do tempo, e os 30 maiores clientes e servidores lado a lado com tráfego, pacotes e registros de fluxo, acima de uma linha para todo o tráfego. **Tabela** é uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
+| Detalhes do tráfego | Clientes, servidores e serviços ao longo do tempo, em bits/s e em pacotes/s: os 8 maiores de cada, e quantos havia |
 | Detecções | O que precisa de atenção: varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças ([mais](#findings)) |
-| Caminhos do tráfego | Qual host usa qual aplicação para qual país: os 10 hosts com mais tráfego, o resto como Outros. **Por segmento** mostra segmentos em vez de hosts |
-| Geografia e redes | Tráfego por país e por rede (AS) |
+| Caminhos do tráfego | Qual host usa qual aplicação para qual país: os 8 hosts com mais tráfego, o resto como Outros. **Cliente → servidor** mostra cliente → serviço → servidor; **Por segmento** mostra segmentos em vez de hosts |
+| Geografia e redes | As redes (AS) de onde o tráfego veio e para onde foi, ao longo do tempo em bits/s e pacotes/s; tráfego por país e por rede |
 | Ameaças | Hosts que se comunicaram com endereços das suas listas de ameaças, e quanto enviaram |
-| Registros de fluxo | Fluxos individuais, dos mais recentes para os mais antigos, com colunas selecionáveis |
-| Conferência de interfaces | Números de fluxo ao lado dos contadores de interface, piores primeiro, com os motivos |
+| Registros de fluxo | Quantos registros de fluxo houve e quando (uma barra por intervalo), e os próprios registros, dos mais recentes para os mais antigos, página a página, com colunas selecionáveis |
+| Conferência de interfaces | Tráfego de cada interface ao longo do tempo (entrada e saída, bits/s e pacotes/s), e números de fluxo ao lado dos contadores de interface, piores primeiro, com os motivos |
 | Fontes | Equipamentos, amostragem, perdas, coletores, SNMP, o banco de dados de países e redes, o logotipo e **Nomes** |
 
 Acima das páginas: intervalo de tempo (de 15 minutos a 30 dias), uma caixa
 de busca opcional, atualização automática a cada 30 segundos e
 **Copiar link**, que copia um link para exatamente a visão atual (página,
-intervalo de tempo e filtros) para mandar a um colega. O idioma segue o do
+intervalo de tempo e filtros) para mandar a um colega. Abaixo deles,
+**Equipamento**, **Cliente**, **Servidor** e **Serviço** listam os valores
+com mais tráfego do intervalo: escolha um, ou digite um, para filtrar todas
+as páginas; esvazie a caixa para remover o filtro. O idioma segue o do
 navegador; dá para trocar no fim do menu.
+
+Os gráficos ao longo do tempo mostram os 8 maiores valores em cores fixas e
+o resto como Outros; a legenda dá o total de cada valor e pode ser clicada
+como qualquer outro valor. Os gráficos de clientes e servidores deixam o
+resto fora do desenho, já que com milhares de hosts ele achataria os 8
+maiores; a legenda continua dando o total.
 
 Intervalos maiores que 6 horas começam em uma hora cheia, para que todos os
 números da página contem exatamente o mesmo tempo: "24 horas" cobre as
@@ -752,7 +763,9 @@ nenhuma detecção, exceto o scanner da internet batendo no site.
 
 ![Detecções: cada etapa de um ataque, encontrada através de amostragem sFlow 1:4096](images/findings.png)
 
-![Top 66: as 66 maiores conversas da última hora](images/topn.png)
+![Top 66, Principais interlocutores: tráfego por serviço, e os 30 maiores clientes e servidores com uma linha para todo o tráfego](images/topn.png)
+
+![Detalhes do tráfego: clientes, servidores e serviços ao longo do tempo, em bits/s e pacotes/s](images/traffic.png)
 
 ![Detalhes de um host: as detecções sobre ele, o tráfego, com quem fala, serviços, países e fluxos mais recentes](images/detail.png)
 

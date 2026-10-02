@@ -85,6 +85,7 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/overview", s.overview)
 	api("GET /api/topn", s.topn)
 	api("GET /api/sankey", s.sankey)
+	api("GET /api/series", s.series)
 	api("GET /api/records", s.records)
 	api("GET /api/threats", s.threats)
 	api("GET /api/ifaces", s.ifaces)

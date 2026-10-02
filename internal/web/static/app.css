@@ -223,3 +223,14 @@ th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
 /* logo on Sources */
 .logoprev{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 .logoprev img{width:272px;height:92px;object-fit:contain;border:1px dashed var(--line-2);border-radius:8px;background:var(--surface)}
+
+/* flow records header and pages */
+.rechead{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:center}
+.rechead .kpi{border:0}
+.kpi .n.big{font-size:40px}
+.pager{display:flex;gap:12px;align-items:center;justify-content:flex-end;margin-top:12px;font-size:13px;color:var(--ink-2);flex-wrap:wrap}
+.pager .btn[disabled]{opacity:.45;cursor:default}
+@media (max-width:820px){.rechead{grid-template-columns:1fr}}
+/* talkers tables */
+.talk tr.sum td{border-top:2px solid var(--line-2);font-weight:650}
+.legend .muted{margin-inline-start:4px}

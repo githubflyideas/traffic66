@@ -21,10 +21,28 @@ Findings
   host's details page lists the findings about it, and the side menu shows
   how many high and medium findings are open.
 
+Charts and filters (compared with ElastiFlow's dashboards)
+- **Device**, **Client**, **Server** and **Service** filter boxes above every
+  page list the busiest values of the time range.
+- Top 66 opens on **Talkers**: traffic by service over time and the top 30
+  clients and servers with traffic, packets and flow records, and a row for
+  all traffic. The regroupable table is one click away.
+- New page **Traffic details**: clients, servers and services over time in
+  bits/s and packets/s.
+- Interface check shows every interface's traffic over time (ingress and
+  egress, bits/s and packets/s); Geo & networks shows source and
+  destination networks (AS) over time.
+- Flow records shows how many records there were and when, and pages
+  through all of them.
+- Flow paths can show client → service → server.
+- Charts use 8 fixed colours checked for colour-blind readers; the rest is
+  Other.
+
 Pages
 - Flow paths start from each host by default (the 10 busiest, the rest as
   Other); **By network** switches back to network segments.
-- The overview shows the findings below the traffic chart.
+- The overview shows the findings below the traffic chart, and no longer
+  the "remote location" chart or the change column in Top clients.
 - Top-N is called Top 66 and comes right after Overview in the menu.
 - Your own logo: **Sources → Logo** takes a PNG, SVG, JPEG, WebP or GIF
   (best at 272 × 92 pixels) for the sign-in page and the top of the menu.

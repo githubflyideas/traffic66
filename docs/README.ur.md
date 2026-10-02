@@ -19,8 +19,9 @@ embedded database میں رکھتا ہے، اور دکھاتا ہے کہ bandwid
 - flows میں scans، پاس ورڈ کا اندازہ، lateral movement، غیر معمولی uploads،
   floods اور threat list والی ٹریفک ڈھونڈتا ہے، sampling کے باوجود بھی، اور
   انہیں نمٹانے کے لیے مشتبہ سرگرمیوں کی فہرست میں دکھاتا ہے۔
-- Top 66 فہرستیں، flow کے راستے، ممالک اور نیٹ ورک، threat list کے matches،
-  flow records، encapsulation (GRE، IPIP، VXLAN، GENEVE، MPLS)۔
+- Top 66 فہرستیں، client، server، service، interface اور نیٹ ورک (AS) کے لحاظ
+  سے وقت کے ساتھ ٹریفک، flow کے راستے، ممالک، threat list کے matches، flow
+  records، encapsulation (GRE، IPIP، VXLAN، GENEVE، MPLS)۔
 - web UI اور terminal UI میں 13 زبانیں۔
 
 ![جائزہ: کھلی مشتبہ سرگرمیاں، پچھلے ہفتے کے مقابلے میں application کے حساب سے bandwidth، سرفہرست clients اور services](images/overview.png)
@@ -533,7 +534,7 @@ Flow کے اعداد اندازے ہوتے ہیں: sampled packets ضرب sampli
 دکھاتا ہے؛ جب فرق صرف sampling سے سمجھ میں آنے والے فرق سے زیادہ ہو تو ممکنہ
 وجہ بھی بتاتا ہے۔
 
-![انٹرفیس جانچ: ہر interface کے لیے ڈیوائس کے counter کے ساتھ flow کا اندازہ](images/interfaces.png)
+![انٹرفیس جانچ: ہر interface کی ٹریفک، اور ڈیوائس کے counter کے ساتھ flow کا اندازہ](images/interfaces.png)
 
 موازنے کے لیے counters حاصل کرنے کے لیے:
 
@@ -663,20 +664,30 @@ application، ملک، ڈیوائس — پر کلک کیا جا سکتا ہے:
 
 | صفحہ | کس سوال کا جواب دیتا ہے |
 |---|---|
-| جائزہ | ابھی کتنی ٹریفک ہے اور پچھلے ہفتے کے مقابلے میں کتنی، application کے حساب سے؛ کھلی مشتبہ سرگرمیاں؛ سرفہرست clients اور services |
-| ٹاپ 66 | سرفہرست 66 کی ایک table: ڈیفالٹ طور پر conversations (client، server، service، ملک)۔ ہر column heading سے sort ہوتا ہے؛ عددی columns (ٹریفک، پیکٹ، اوسط پیکٹ، flows) وقت کی حد کے پورے ٹریفک سے سرفہرست 66 دوبارہ چنتے ہیں، اس لیے سب سے چھوٹے اوسط پیکٹ سے scan اور flood پکڑے جاتے ہیں۔ **گروپ بندی بلحاظ** سے applications، نیٹ ورکس، segments، ڈیوائسز، encapsulation اور VLAN پر جائیں |
+| جائزہ | ابھی کتنی ٹریفک ہے اور پچھلے ہفتے کے مقابلے میں کتنی، application کے حساب سے؛ کھلی مشتبہ سرگرمیاں؛ سمت اور protocol؛ سرفہرست clients اور services |
+| ٹاپ 66 | **سب سے فعال ہوسٹ** پر کھلتا ہے: وقت کے ساتھ service کے لحاظ سے ٹریفک، اور سرفہرست 30 clients اور servers ساتھ ساتھ، ٹریفک، پیکٹ اور flow records کے ساتھ، پوری ٹریفک کی ایک row کے اوپر۔ **جدول** سرفہرست 66 کی ایک table ہے: ڈیفالٹ طور پر conversations (client، server، service، ملک)۔ ہر column heading سے sort ہوتا ہے؛ عددی columns (ٹریفک، پیکٹ، اوسط پیکٹ، flows) وقت کی حد کے پورے ٹریفک سے سرفہرست 66 دوبارہ چنتے ہیں، اس لیے سب سے چھوٹے اوسط پیکٹ سے scan اور flood پکڑے جاتے ہیں۔ **گروپ بندی بلحاظ** سے applications، نیٹ ورکس، segments، ڈیوائسز، encapsulation اور VLAN پر جائیں |
+| ٹریفک کی تفصیل | وقت کے ساتھ clients، servers اور services، bits/s اور packets/s میں: ہر ایک کے سرفہرست 8، اور وہ کل کتنے تھے |
 | مشتبہ سرگرمی | کس چیز پر توجہ چاہیے: scans، پاس ورڈ کا اندازہ، lateral movement، غیر معمولی uploads، floods اور threat list والی ٹریفک ([مزید](#findings)) |
-| ٹریفک کے راستے | کون سا host کس ملک کی طرف کون سی application استعمال کرتا ہے: 10 سب سے مصروف hosts، باقی "دیگر" کے طور پر۔ **سیگمنٹ کے لحاظ سے** hosts کی جگہ نیٹ ورکس دکھاتا ہے |
-| مقامات اور نیٹ ورک | ملک کے حساب سے اور نیٹ ورک (AS) کے حساب سے ٹریفک |
+| ٹریفک کے راستے | کون سا host کس ملک کی طرف کون سی application استعمال کرتا ہے: 8 سب سے مصروف hosts، باقی "دیگر" کے طور پر۔ **کلائنٹ ← سرور** کلائنٹ ← سروس ← سرور دکھاتا ہے؛ **سیگمنٹ کے لحاظ سے** hosts کی جگہ نیٹ ورکس دکھاتا ہے |
+| مقامات اور نیٹ ورک | وہ نیٹ ورکس (AS) جہاں سے ٹریفک آئی اور جہاں گئی، وقت کے ساتھ bits/s اور packets/s میں؛ ملک کے حساب سے اور نیٹ ورک کے حساب سے ٹریفک |
 | خطرے کی معلومات | وہ hosts جنہوں نے آپ کی threat lists کے addresses سے بات کی، اور کتنا بھیجا |
-| فلو ریکارڈ | انفرادی flows، نئے پہلے، منتخب کیے جا سکنے والے columns کے ساتھ |
-| انٹرفیس جانچ | interface counters کے ساتھ flow کے اعداد، بدترین پہلے، وجوہات کے ساتھ |
+| فلو ریکارڈ | کتنے flow records تھے اور کب (ہر interval کے لیے ایک bar)، اور خود records، نئے پہلے، صفحہ بہ صفحہ، منتخب کیے جا سکنے والے columns کے ساتھ |
+| انٹرفیس جانچ | وقت کے ساتھ ہر interface کی ٹریفک (ingress اور egress، bits/s اور packets/s)، اور interface counters کے ساتھ flow کے اعداد، بدترین پہلے، وجوہات کے ساتھ |
 | ذرائع | ڈیوائسز، sampling، loss، collectors، SNMP، ممالک اور نیٹ ورکس کا ڈیٹابیس، لوگو، اور **نام** |
 
 صفحات کے اوپر: time range (15 منٹ سے 30 دن)، ایک اختیاری search box، ہر 30
 سیکنڈ پر automatic refresh، اور **لنک کاپی کریں**، جو بالکل موجودہ view (صفحہ،
 time range اور filters) کا link کاپی کرتا ہے تاکہ آپ اسے کسی ساتھی کو بھیج
-سکیں۔ زبان browser کے مطابق ہوتی ہے؛ menu کے نیچے سے بدلیں۔
+سکیں۔ ان کے نیچے **آلہ**، **کلائنٹ**، **سرور** اور **سروس** وقت کی حد کی سب سے
+مصروف values دکھاتے ہیں: ہر صفحے کو filter کرنے کے لیے ایک چنیں یا ٹائپ کریں؛
+filter ہٹانے کے لیے box خالی کریں۔ زبان browser کے مطابق ہوتی ہے؛ menu کے نیچے
+سے بدلیں۔
+
+وقت کے charts سب سے بڑی 8 values مقررہ رنگوں میں اور باقی کو "دیگر" کے طور پر
+دکھاتے ہیں؛ legend ہر value کا کل دیتا ہے اور اس پر کسی بھی دوسری value کی طرح
+click کیا جا سکتا ہے۔ clients اور servers کے charts باقی کو drawing سے باہر
+رکھتے ہیں، کیونکہ ہزاروں hosts کے ساتھ وہ سرفہرست 8 کو چپٹا کر دیتا؛ legend
+پھر بھی اس کا کل دیتا ہے۔
 
 6 گھنٹے سے لمبی ranges پورے گھنٹے سے شروع ہوتی ہیں، تاکہ صفحے کا ہر عدد
 بالکل ایک ہی وقت گنے: "24 گھنٹے" میں آخری 24 پورے گھنٹے اور موجودہ گھنٹہ
@@ -734,7 +745,9 @@ packets بھیجتا ہے کہ نظر نہیں آتا۔ ڈیمو کا حملہ �
 
 ![مشتبہ سرگرمی: ایک حملے کا ہر مرحلہ، 1:4096 sFlow sampling کے باوجود پکڑا گیا](images/findings.png)
 
-![ٹاپ 66: پچھلے گھنٹے کی top 66 conversations](images/topn.png)
+![ٹاپ 66، سب سے فعال ہوسٹ: service کے لحاظ سے ٹریفک، اور پوری ٹریفک کی ایک row کے ساتھ سرفہرست 30 clients اور servers](images/topn.png)
+
+![ٹریفک کی تفصیل: وقت کے ساتھ clients، servers اور services، bits/s اور packets/s میں](images/traffic.png)
 
 ![ایک host کی تفصیل: اس کے بارے میں مشتبہ سرگرمیاں، اس کی ٹریفک، وہ کس سے بات کرتا ہے، services، ممالک اور تازہ ترین flows](images/detail.png)
 

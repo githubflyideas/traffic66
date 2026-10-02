@@ -17,8 +17,9 @@ counters से मेल खाते हैं — web UI में भी औ
 - flows में scans, पासवर्ड का अनुमान, lateral movement, असामान्य uploads,
   floods और threat list वाला ट्रैफ़िक ढूँढता है, sampling के बावजूद भी, और
   उन्हें निपटाने के लिए संदिग्ध गतिविधियों की सूची में रखता है।
-- Top 66 सूचियाँ, flow के रास्ते, देश और नेटवर्क, threat list के matches,
-  flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS)।
+- Top 66 सूचियाँ, client, server, service, interface और नेटवर्क (AS) के हिसाब से
+  समय के साथ ट्रैफ़िक, flow के रास्ते, देश, threat list के matches, flow
+  records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS)।
 - web UI और terminal UI में 13 भाषाएँ।
 
 ![सारांश: खुली संदिग्ध गतिविधियाँ, पिछले हफ़्ते की तुलना में application के हिसाब से bandwidth, top clients और services](images/overview.png)
@@ -532,7 +533,7 @@ traffic66 इन्हें डिवाइस के अपने interface co
 **इंटरफ़ेस मिलान** पर दिखाता है; जब फ़र्क़ अकेले sampling से समझ में आने
 लायक से ज़्यादा हो, तो संभावित कारण भी बताता है।
 
-![इंटरफ़ेस मिलान: हर interface के लिए डिवाइस के counter के बगल में flow का अनुमान](images/interfaces.png)
+![इंटरफ़ेस मिलान: हर interface का ट्रैफ़िक, और डिवाइस के counter के बगल में flow का अनुमान](images/interfaces.png)
 
 तुलना के लिए counters पाने के लिए:
 
@@ -663,20 +664,30 @@ application, देश, डिवाइस — पर क्लिक किय�
 
 | पेज | किस सवाल का जवाब देता है |
 |---|---|
-| सारांश | अभी कितना ट्रैफ़िक है और पिछले हफ़्ते की तुलना में कितना, application के हिसाब से; खुली संदिग्ध गतिविधियाँ; top clients और services |
-| शीर्ष 66 | top 66 की एक table: डिफ़ॉल्ट रूप से conversations (client, server, service, देश)। हर column heading से sort होता है; संख्या वाले columns (ट्रैफ़िक, पैकेट, औसत पैकेट, flows) समय-सीमा के पूरे ट्रैफ़िक से top 66 फिर से चुनते हैं, इसलिए सबसे छोटे औसत पैकेट से scan और flood पकड़े जाते हैं। **इसके अनुसार समूह** से applications, नेटवर्क, segments, डिवाइस, encapsulation और VLAN पर जाएँ |
+| सारांश | अभी कितना ट्रैफ़िक है और पिछले हफ़्ते की तुलना में कितना, application के हिसाब से; खुली संदिग्ध गतिविधियाँ; दिशा और protocol; top clients और services |
+| शीर्ष 66 | **सबसे सक्रिय होस्ट** पर खुलता है: समय के साथ service के हिसाब से ट्रैफ़िक, और top 30 clients और servers साथ-साथ, ट्रैफ़िक, पैकेट और flow records के साथ, पूरे ट्रैफ़िक वाली एक row के ऊपर। **तालिका** top 66 की एक table है: डिफ़ॉल्ट रूप से conversations (client, server, service, देश)। हर column heading से sort होता है; संख्या वाले columns (ट्रैफ़िक, पैकेट, औसत पैकेट, flows) समय-सीमा के पूरे ट्रैफ़िक से top 66 फिर से चुनते हैं, इसलिए सबसे छोटे औसत पैकेट से scan और flood पकड़े जाते हैं। **इसके अनुसार समूह** से applications, नेटवर्क, segments, डिवाइस, encapsulation और VLAN पर जाएँ |
+| ट्रैफ़िक विवरण | समय के साथ clients, servers और services, bits/s और packets/s में: हर एक के top 8, और वे कुल कितने थे |
 | संदिग्ध गतिविधि | किस पर ध्यान देना है: scans, पासवर्ड का अनुमान, lateral movement, असामान्य uploads, floods और threat list वाला ट्रैफ़िक ([और जानें](#findings)) |
-| ट्रैफ़िक के रास्ते | कौन-सा host किस देश की ओर किस application का इस्तेमाल करता है: सबसे व्यस्त 10 hosts, बाकी "अन्य" के रूप में। **सेगमेंट के अनुसार** hosts की जगह नेटवर्क दिखाता है |
-| भूगोल और नेटवर्क | देश के हिसाब से और नेटवर्क (AS) के हिसाब से ट्रैफ़िक |
+| ट्रैफ़िक के रास्ते | कौन-सा host किस देश की ओर किस application का इस्तेमाल करता है: सबसे व्यस्त 8 hosts, बाकी "अन्य" के रूप में। **क्लाइंट → सर्वर** client → service → server दिखाता है; **सेगमेंट के अनुसार** hosts की जगह नेटवर्क दिखाता है |
+| भूगोल और नेटवर्क | वे नेटवर्क (AS) जहाँ से ट्रैफ़िक आया और जहाँ गया, समय के साथ bits/s और packets/s में; देश के हिसाब से और नेटवर्क के हिसाब से ट्रैफ़िक |
 | ख़तरे की जानकारी | वे hosts जिन्होंने आपकी threat lists के addresses से बात की, और उन्होंने कितना भेजा |
-| फ़्लो रिकॉर्ड | अलग-अलग flows, सबसे नए पहले, चुने जा सकने वाले columns के साथ |
-| इंटरफ़ेस मिलान | interface counters के बगल में flow के आँकड़े, सबसे ख़राब पहले, कारणों के साथ |
+| फ़्लो रिकॉर्ड | कितने flow records थे और कब (हर interval के लिए एक bar), और ख़ुद records, सबसे नए पहले, पेज-दर-पेज, चुने जा सकने वाले columns के साथ |
+| इंटरफ़ेस मिलान | समय के साथ हर interface का ट्रैफ़िक (ingress और egress, bits/s और packets/s), और interface counters के बगल में flow के आँकड़े, सबसे ख़राब पहले, कारणों के साथ |
 | स्रोत | डिवाइस, sampling, loss, collectors, SNMP, देश और नेटवर्क डेटाबेस, लोगो, और **नाम** |
 
 पेजों के ऊपर: time range (15 मिनट से 30 दिन), एक वैकल्पिक search box, हर 30
 सेकंड पर automatic refresh, और **लिंक कॉपी करें**, जो ठीक मौजूदा view (पेज,
 time range और filters) का link कॉपी करता है ताकि आप उसे किसी सहकर्मी को भेज
-सकें। भाषा browser के हिसाब से चुनी जाती है; menu के नीचे से बदलें।
+सकें। इनके नीचे **डिवाइस**, **क्लाइंट**, **सर्वर** और **सेवा** समय-सीमा की सबसे
+व्यस्त values दिखाते हैं: हर पेज को filter करने के लिए एक चुनें या टाइप करें;
+filter हटाने के लिए box ख़ाली करें। भाषा browser के हिसाब से चुनी जाती है;
+menu के नीचे से बदलें।
+
+समय वाले charts सबसे बड़ी 8 values तय रंगों में और बाकी को "अन्य" के रूप में
+दिखाते हैं; legend हर value का कुल देता है और उस पर किसी भी दूसरी value की तरह
+click किया जा सकता है। clients और servers के charts बाकी को drawing से बाहर
+रखते हैं, क्योंकि हज़ारों hosts के साथ वह top 8 को चपटा कर देता; legend फिर भी
+उसका कुल देता है।
 
 6 घंटे से लंबी ranges पूरे घंटे से शुरू होती हैं, ताकि पेज का हर आँकड़ा ठीक
 एक जैसा समय गिने: "24 घंटे" में पिछले 24 पूरे घंटे और मौजूदा घंटा शामिल हैं।
@@ -734,7 +745,9 @@ internet scanner के।
 
 ![संदिग्ध गतिविधि: एक हमले का हर चरण, 1:4096 sFlow sampling के बावजूद पकड़ा गया](images/findings.png)
 
-![शीर्ष 66: पिछले घंटे की top 66 conversations](images/topn.png)
+![शीर्ष 66, सबसे सक्रिय होस्ट: service के हिसाब से ट्रैफ़िक, और पूरे ट्रैफ़िक वाली एक row के साथ top 30 clients और servers](images/topn.png)
+
+![ट्रैफ़िक विवरण: समय के साथ clients, servers और services, bits/s और packets/s में](images/traffic.png)
 
 ![एक host का विवरण: उसके बारे में मिली संदिग्ध गतिविधियाँ, उसका ट्रैफ़िक, वह किससे बात करता है, services, देश और नवीनतम flows](images/detail.png)
 

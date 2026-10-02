@@ -17,8 +17,9 @@ in a web UI and in a terminal UI.
 - Finds scans, password guessing, lateral movement, unusual uploads, floods
   and threat list traffic in the flows, also through sampling, and lists
   them as findings to deal with.
-- Top 66 lists, flow paths, countries and networks, threat list matches,
-  flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
+- Top 66 lists, traffic over time by client, server, service, interface
+  and network (AS), flow paths, countries, threat list matches, flow
+  records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - 13 languages in the web UI and the terminal UI.
 
 ![Overview: open findings, bandwidth by application compared with last week, top clients and services](docs/images/overview.png)
@@ -503,7 +504,7 @@ traffic66 compares them with the device's own interface counters and shows
 the difference on **Interface check**, with the likely cause when it is
 larger than sampling alone explains.
 
-![Interface check: flow estimate next to the device counter for every interface](docs/images/interfaces.png)
+![Interface check: traffic of every interface, and the flow estimate next to the device counter](docs/images/interfaces.png)
 
 To get counters to compare with:
 
@@ -627,21 +628,30 @@ Pages:
 
 | Page | What it answers |
 |---|---|
-| Overview | How much traffic now and compared with last week, by application; open findings; top clients and services |
-| Top 66 | One table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
+| Overview | How much traffic now and compared with last week, by application; open findings; direction and protocol; top clients and services |
+| Top 66 | Opens on **Talkers**: traffic by service over time, and the top 30 clients and servers side by side with traffic, packets and flow records, above a row for all traffic. **Table** is one table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
+| Traffic details | Clients, servers and services over time, in bits/s and in packets/s: the top 8 of each, and how many there were |
 | Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
-| Flow paths | Which host uses which application towards which country: the 10 busiest hosts, the rest as Other. **By network** shows networks instead of hosts |
-| Geo & networks | Traffic by country and by network (AS) |
+| Flow paths | Which host uses which application towards which country: the 8 busiest hosts, the rest as Other. **Client → server** shows client → service → server; **By network** shows networks instead of hosts |
+| Geo & networks | The networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
-| Flow records | Individual flows, newest first, with selectable columns |
-| Interface check | Flow numbers next to the interface counters, worst first, with reasons |
+| Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns |
+| Interface check | Traffic of every interface over time (ingress and egress, bits/s and packets/s), and flow numbers next to the interface counters, worst first, with reasons |
 | Sources | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
 
 Above the pages: time range (15 minutes to 30 days), an optional search
 box, automatic refresh every 30 seconds, and **Copy link**, which copies a
 link to exactly the current view (page, time range and filters) to send to
-a colleague. The language follows the browser; change it at the bottom of
-the menu.
+a colleague. Under them, **Device**, **Client**, **Server** and **Service**
+list the busiest values of the time range: pick one, or type one, to filter
+every page; empty the box to remove the filter. The language follows the
+browser; change it at the bottom of the menu.
+
+Charts over time show the 8 largest values in fixed colours and the rest as
+Other; the legend gives each value's total and can be clicked like any
+other value. Charts of clients and servers leave the rest out of the
+drawing, since with thousands of hosts it would flatten the top 8; the
+legend still gives its total.
 
 Ranges longer than 6 hours start on a whole hour, so every number on the
 page counts exactly the same time: "24 hours" covers the last 24 whole
@@ -696,7 +706,9 @@ no findings except the internet scanner knocking on the website.
 
 ![Findings: every step of an attack, found through 1:4096 sFlow sampling](docs/images/findings.png)
 
-![Top 66: the top 66 conversations of the last hour](docs/images/topn.png)
+![Top 66, Talkers: traffic by service, and the top 30 clients and servers with a row for all traffic](docs/images/topn.png)
+
+![Traffic details: clients, servers and services over time, in bits/s and packets/s](docs/images/traffic.png)
 
 ![Details of one host: the findings about it, its traffic, who it talks to, services, countries and latest flows](docs/images/detail.png)
 

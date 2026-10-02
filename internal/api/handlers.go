@@ -313,12 +313,22 @@ func (s *Server) records(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	rows, err := s.Store.Records(q, limitParam(r, 200))
+	off, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	rows, err := s.Store.Records(q, limitParam(r, 200), off)
 	if err != nil {
 		fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"rows": rows})
+	out := map[string]any{"rows": rows}
+	if r.URL.Query().Get("stats") == "1" {
+		total, hist, err := s.Store.RecordCounts(q)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		out["total"], out["hist"] = total, hist
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) threats(w http.ResponseWriter, r *http.Request) {
@@ -608,4 +618,26 @@ func (s *Server) putInventory(w http.ResponseWriter, r *http.Request) {
 	}
 	s.Col.NF.SetUnsampled(s.Inv.Unsampled())
 	writeJSON(w, http.StatusOK, map[string]string{"ok": "saved"})
+}
+
+// series: a measure over time split by one dimension (top values and the
+// rest), for the detail charts.
+func (s *Server) series(w http.ResponseWriter, r *http.Request) {
+	q, err := parseQuery(r)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	v := r.URL.Query()
+	measure := v.Get("measure")
+	if measure == "" {
+		measure = "wire"
+	}
+	top, _ := strconv.Atoi(v.Get("top"))
+	se, err := s.Store.SeriesBy(q, v.Get("by"), measure, top)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, se)
 }

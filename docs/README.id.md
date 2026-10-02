@@ -18,7 +18,8 @@ antarmuka terminal.
 - Menemukan pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak
   biasa, flood, dan trafik daftar ancaman di dalam flow, juga melalui
   sampling, lalu mencantumkannya sebagai temuan untuk ditangani.
-- Daftar Top 66, jalur trafik, negara dan jaringan, kecocokan dengan daftar
+- Daftar Top 66, trafik dari waktu ke waktu per klien, server, layanan,
+  interface, dan jaringan (AS), jalur trafik, negara, kecocokan dengan daftar
   ancaman, catatan flow, enkapsulasi (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - 13 bahasa di antarmuka web dan antarmuka terminal.
 
@@ -541,7 +542,7 @@ menampilkan selisihnya di **Pencocokan antarmuka**, beserta kemungkinan
 penyebabnya bila selisih itu lebih besar daripada yang bisa dijelaskan oleh
 sampling saja.
 
-![Pencocokan antarmuka: estimasi flow di samping counter perangkat untuk setiap interface](images/interfaces.png)
+![Pencocokan antarmuka: trafik setiap interface, dan estimasi flow di samping counter perangkat](images/interfaces.png)
 
 Agar ada counter untuk dibandingkan:
 
@@ -675,21 +676,31 @@ Halaman:
 
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
-| Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; temuan terbuka; klien dan layanan teratas |
-| Top 66 | Satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
+| Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; temuan terbuka; arah dan protokol; klien dan layanan teratas |
+| Top 66 | Terbuka di **Pihak teratas**: trafik per layanan dari waktu ke waktu, dan 30 klien dan server teratas berdampingan dengan trafik, paket, dan catatan flow, di atas satu baris untuk semua trafik. **Tabel** adalah satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
+| Detail trafik | Klien, server, dan layanan dari waktu ke waktu, dalam bit/s dan paket/s: 8 teratas dari masing-masing, dan berapa jumlahnya |
 | Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
-| Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 10 host tersibuk, sisanya sebagai Lainnya. **Per segmen** menampilkan jaringan, bukan host |
-| Geografi & jaringan | Trafik per negara dan per jaringan (AS) |
+| Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 8 host tersibuk, sisanya sebagai Lainnya. **Klien → server** menampilkan klien → layanan → server; **Per segmen** menampilkan jaringan, bukan host |
+| Geografi & jaringan | Jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
-| Catatan flow | Flow individual, terbaru di atas, dengan kolom yang bisa dipilih |
-| Pencocokan antarmuka | Angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
+| Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih |
+| Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu (masuk dan keluar, bit/s dan paket/s), dan angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
 | Sumber | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
 
 Di atas halaman: rentang waktu (15 menit sampai 30 hari), kotak pencarian
 opsional, refresh otomatis setiap 30 detik, dan **Salin tautan**, yang
 menyalin tautan ke tampilan saat ini secara persis (halaman, rentang waktu,
-dan filter) untuk dikirim ke rekan kerja. Bahasa mengikuti browser; ubah di
+dan filter) untuk dikirim ke rekan kerja. Di bawahnya, **Perangkat**,
+**Klien**, **Server**, dan **Layanan** mencantumkan nilai tersibuk dalam
+rentang waktu: pilih satu, atau ketik satu, untuk memfilter setiap halaman;
+kosongkan kotaknya untuk menghapus filter. Bahasa mengikuti browser; ubah di
 bagian bawah menu.
+
+Grafik dari waktu ke waktu menampilkan 8 nilai terbesar dengan warna tetap
+dan sisanya sebagai Lainnya; legenda memberikan total setiap nilai dan bisa
+diklik seperti nilai lainnya. Grafik klien dan server tidak menggambar
+sisanya, karena dengan ribuan host sisanya akan meratakan 8 teratas; legenda
+tetap memberikan totalnya.
 
 Rentang yang lebih panjang dari 6 jam dimulai pada jam penuh, sehingga
 setiap angka di halaman menghitung waktu yang persis sama: "24 jam" mencakup
@@ -753,7 +764,9 @@ yang mengetuk situs web.
 
 ![Temuan: setiap langkah serangan, ditemukan melalui sampling sFlow 1:4096](images/findings.png)
 
-![Top 66: 66 percakapan teratas dalam satu jam terakhir](images/topn.png)
+![Top 66, Pihak teratas: trafik per layanan, dan 30 klien dan server teratas dengan satu baris untuk semua trafik](images/topn.png)
+
+![Detail trafik: klien, server, dan layanan dari waktu ke waktu, dalam bit/s dan paket/s](images/traffic.png)
 
 ![Detail satu host: temuan tentangnya, trafiknya, dengan siapa ia berbicara, layanan, negara, dan flow terbaru](images/detail.png)
 

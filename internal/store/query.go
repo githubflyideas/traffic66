@@ -427,7 +427,11 @@ type Series struct {
 	Step   int64       `json:"step"` // seconds
 	Times  []int64     `json:"times"`
 	Names  []string    `json:"names"`
-	Values [][]float64 `json:"values"` // [series][time] bits per second
+	Values [][]float64 `json:"values"` // [series][time] bits (or packets) per second
+	// SeriesBy only: each series' total over the range (bytes or packets),
+	// and how many distinct values there were
+	Totals   []float64 `json:"totals,omitempty"`
+	Distinct int       `json:"distinct,omitempty"`
 }
 
 // StepFor picks a bucket size giving at most ~300 points.
@@ -602,9 +606,13 @@ type Record struct {
 	Threat   string  `json:"threat,omitempty"`
 }
 
-func (s *Store) Records(q Query, limit int) ([]Record, error) {
+func (s *Store) Records(q Query, limit int, offset ...int) ([]Record, error) {
 	if limit <= 0 || limit > 2000 {
 		limit = 200
+	}
+	off := 0
+	if len(offset) > 0 && offset[0] > 0 {
+		off = offset[0]
 	}
 	where, args, err := q.where()
 	if err != nil {
@@ -612,7 +620,7 @@ func (s *Store) Records(q Query, limit int) ([]Record, error) {
 	}
 	rows, err := s.DB.Query(fmt.Sprintf(`SELECT ts, client, server, CASE WHEN client = src THEN sport ELSE dport END, svc_port, proto, app,
 		peer_cc, peer_asn, encap, wire, pkts, exporter, in_if, out_if, vlan, tcp_flags, mult, dir, threat
-		FROM %s WHERE %s ORDER BY ts DESC, wire DESC LIMIT %d`, s.Source(q.From, q.To), where, limit), args...)
+		FROM %s WHERE %s ORDER BY ts DESC, wire DESC LIMIT %d OFFSET %d`, s.Source(q.From, q.To), where, limit, off), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -679,4 +687,38 @@ func (s *Store) Sankey(q Query, mode string, n0, n2 int) ([]SankeyLink, error) {
 		out = append(out, l)
 	}
 	return out, rows.Err()
+}
+
+// RecordCounts counts the flow records matching q, in all and per time
+// bucket (the same buckets as the charts).
+func (s *Store) RecordCounts(q Query) (total int64, se *Series, err error) {
+	step := StepFor(q.span())
+	q.From = q.From.UTC().Truncate(step)
+	where, args, err := q.where()
+	if err != nil {
+		return 0, nil, err
+	}
+	rows, err := s.DB.Query(fmt.Sprintf(`SELECT time_bucket(INTERVAL '%d seconds', ts), count(*) FROM %s WHERE %s GROUP BY 1`,
+		int64(step.Seconds()), s.Source(q.From, q.To), where), args...)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer rows.Close()
+	n := int(q.To.Sub(q.From)/step) + 1
+	se = &Series{Step: int64(step.Seconds()), Names: []string{"records"}, Values: [][]float64{make([]float64, n)}}
+	for i := 0; i < n; i++ {
+		se.Times = append(se.Times, q.From.Add(time.Duration(i)*step).UnixMilli())
+	}
+	for rows.Next() {
+		var t time.Time
+		var c int64
+		if err := rows.Scan(&t, &c); err != nil {
+			return 0, nil, err
+		}
+		if i := int(t.UTC().Sub(q.From) / step); i >= 0 && i < n {
+			se.Values[0][i] += float64(c)
+		}
+		total += c
+	}
+	return total, se, rows.Err()
 }
