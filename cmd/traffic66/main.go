@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -32,6 +33,7 @@ import (
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/flow"
 	"github.com/githubflyideas/traffic66/internal/pipeline"
+	"github.com/githubflyideas/traffic66/internal/sandbox"
 	"github.com/githubflyideas/traffic66/internal/sim"
 	"github.com/githubflyideas/traffic66/internal/snmp"
 	"github.com/githubflyideas/traffic66/internal/store"
@@ -387,6 +389,11 @@ func serve(args []string, demo bool) {
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Det: det, Static: web.FS(), Version: version,
 		Demo: demo, Check: checker.Check, Exists: checker.Exists, LocalTok: tok, DataDir: f.data, Started: time.Now()}
 	srv.SNMP = poller.Status
+	srv.SB = sandbox.New(filepath.Join(f.data, "sandbox"), inv, asn, thr)
+	defer srv.SB.Close()
+	if demo {
+		demoSample(f.data, srv.SB)
+	}
 	srv.Capture = func() []api.CaptureInfo {
 		var out []api.CaptureInfo
 		for _, c := range caps {
@@ -478,6 +485,25 @@ func prepareDemo(dir string) {
 	c2, scan := sim.ThreatList()
 	write("threats/c2.txt", c2)
 	write("threats/scanner.txt", scan)
+}
+
+// demoSample puts the example capture into the sandbox once, so that offline
+// analysis can be tried at once; deleting it keeps it deleted.
+func demoSample(dir string, sb *sandbox.Sandbox) {
+	mark := filepath.Join(dir, "sandbox-sample")
+	if _, err := os.Stat(mark); err == nil {
+		return
+	}
+	var buf bytes.Buffer
+	if err := sandbox.Sample(&buf, time.Now().Add(-2*time.Hour).Truncate(time.Minute)); err != nil {
+		log.Printf("demo: example capture: %v", err)
+		return
+	}
+	if _, err := sb.Add(sandbox.SampleName, &buf, true); err != nil {
+		log.Printf("demo: example capture: %v", err)
+		return
+	}
+	os.WriteFile(mark, nil, 0o644)
 }
 
 func backfillDemo(pipe *pipeline.Pipeline, st *store.Store) {

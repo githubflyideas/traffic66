@@ -243,3 +243,11 @@ th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
 .attrib{font-size:11.5px;margin:8px 0 0}
 .attrib a{color:inherit}
 h3.subhead{font-size:14px;font-weight:650;margin:20px 0 4px}
+.sbbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 20px 8px;padding:8px 12px;border-radius:8px;background:#fff4e0;border:1px solid #f0c27a;font-size:13px}
+.sbbar[hidden]{display:none}
+.sbtag{font-weight:700;color:#8a4b00}
+.sbfiles{font-weight:600}
+.sbbar .btn{margin-inline-start:auto}
+.sbexplain{font-size:13px;color:var(--ink-2);margin:0 0 12px}
+.sbactions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+label.btn.disabled{opacity:.5;cursor:not-allowed!important}

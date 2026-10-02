@@ -652,6 +652,7 @@ Pages:
 | Geo & networks | A world map of traffic by country; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
 | Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns |
+| Offline analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-analysis)) |
 | Interface check | Traffic of every interface over time (ingress and egress, bits/s and packets/s), and flow numbers next to the interface counters, worst first, with reasons |
 | Sources | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
 
@@ -733,6 +734,19 @@ no findings except the internet scanner knocking on the website.
 The same overview in Chinese; every page is available in 13 languages:
 
 ![Overview in Chinese](docs/images/overview-zh.png)
+
+### Offline analysis
+
+**Offline analysis** looks at packet captures from Wireshark or tcpdump with the same pages as the live data, without mixing them in:
+
+1. **Upload capture files…**: `.pcap` or `.pcapng`, not compressed. Up to 3 files, each at most 50 MB. The files are turned into flows in a database of their own (`<data>/sandbox/`); the live data, its numbers and findings are not touched.
+2. **Analyse**: every page (overview, Top 66, traffic details, findings, flow paths, map, flow records) now shows the capture files over their whole time. An orange bar names the files; **Back to live data** returns. Each file appears as a device, so the **Device** box shows one file at a time.
+3. The detection rules run over the capture: scans, port scans and password guessing are listed under **Findings**. Rules that need a day of history (lateral movement, unusual uploads) do not apply to a capture.
+4. **Delete** removes a file and its data; **Delete all** removes everything.
+
+The demo includes an example capture with an attack in it.
+
+![Offline analysis: capture files with their packets, flows and time](docs/images/sandbox.png)
 
 ## 10. Terminal UI
 
@@ -889,7 +903,7 @@ The data directory holds everything:
 | `password` | login passwords (hashed) |
 | `inventory.txt` | names (**Sources → Names**) |
 | `logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) | your logo (**Sources → Logo**), if you uploaded one |
-| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/` | countries and networks databases you added or downloaded, and threat lists |
+| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | countries and networks databases you added or downloaded, and threat lists |
 
 **How long data is kept**: flow detail 30 days, summaries (overview and long
 time ranges) 400 days. Older data is deleted automatically, checked every 5

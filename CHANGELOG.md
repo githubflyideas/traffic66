@@ -5,6 +5,19 @@ heading is the version number.
 
 ## 0.3.1
 
+Offline analysis
+- New page **Offline analysis**: upload packet captures (.pcap, .pcapng
+  from Wireshark or tcpdump; up to 3 files of at most 50 MB). They are
+  turned into flows in a database of their own, apart from the live data.
+  **Analyse** shows them on every page (overview, Top 66, traffic details,
+  findings, flow paths, map, flow records) with an orange bar naming the
+  files; **Back to live data** returns. **Delete** removes the files and
+  their data.
+- The detection rules run over the capture: scans, port scans and password
+  guessing are found in it.
+- The demo includes an example capture with an attack.
+
+Pages
 - Traffic details opens on servers only; tabs switch to clients, both ends
   side by side, and services (13 languages).
 
