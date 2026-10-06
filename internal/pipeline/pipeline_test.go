@@ -426,3 +426,57 @@ func TestSeriesByAndRecordCounts(t *testing.T) {
 		t.Fatalf("last page %d %v", len(page), err)
 	}
 }
+
+// Charts by client, server and service have no empty buckets between the
+// data: a 6-hour range is answered from the flows (5-minute buckets), a
+// 24-hour range from the hourly summaries (hourly buckets). Before, both
+// showed one spike an hour.
+func TestSeriesNoGaps(t *testing.T) {
+	p, st := setup(t)
+	// not on a 5-minute boundary, as most of the time: rounding the start
+	// down makes the range a little longer than 6 hours
+	now := time.Now().UTC().Truncate(5 * time.Minute).Add(-3 * time.Minute)
+	cli := netip.MustParseAddr("10.1.1.1")
+	srv := netip.MustParseAddr("198.51.100.9")
+	exp := netip.MustParseAddr("10.0.0.1")
+	var recs []flow.Record
+	for i := 1; i <= 30*60; i++ {
+		ts := now.Add(-time.Duration(i) * time.Minute)
+		recs = append(recs, flow.Record{Start: ts, End: ts.Add(59 * time.Second), Src: cli, Dst: srv, SrcPort: 50000, DstPort: 443,
+			Proto: 6, Bytes: 1000 * 1482, Packets: 1000, Mult: 1, SamplingKnown: true, Exporter: exp, Source: flow.SrcNetFlow9})
+	}
+	p.Ingest(recs)
+	p.FlushRows()
+	p.FlushRollups()
+	for _, tc := range []struct {
+		span time.Duration
+		step int64
+	}{{6 * time.Hour, 300}, {24 * time.Hour, 3600}} {
+		q := store.Query{From: now.Add(-tc.span), To: now}
+		if tc.span > 6*time.Hour {
+			q.From = q.From.Truncate(time.Hour)
+		}
+		for _, by := range []string{"server", "client", "service", "app"} {
+			se, err := st.SeriesBy(q, by, "wire", 8)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if by != "app" && se.Step != tc.step {
+				t.Errorf("%v %s: step %d, want %d", tc.span, by, se.Step, tc.step)
+			}
+			zero := 0
+			for i := range se.Times[:len(se.Times)-1] { // the last bucket is still filling
+				sum := 0.0
+				for _, v := range se.Values {
+					sum += v[i]
+				}
+				if sum == 0 {
+					zero++
+				}
+			}
+			if zero > 0 {
+				t.Errorf("%v %s: %d of %d buckets empty", tc.span, by, zero, len(se.Times))
+			}
+		}
+	}
+}
