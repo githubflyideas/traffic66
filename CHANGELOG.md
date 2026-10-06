@@ -24,6 +24,13 @@ Offline analysis
   given. A 1 GB capture takes about 5 s (1.2 million full-size packets) to
   30 s (14 million small packets) on 2 cores.
 
+Fixes
+- Traffic details over 6 and 24 hours showed one spike an hour instead of
+  a continuous chart: 6 hours was read from the hourly summaries by
+  mistake, and 24 hours drew the hourly summaries in 5-minute steps. 6
+  hours now uses 5-minute steps from the flows, 24 hours and longer hourly
+  steps.
+
 Pages
 - Traffic details opens on servers only; tabs switch to clients, both ends
   side by side, and services (13 languages).

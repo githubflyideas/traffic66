@@ -14,6 +14,7 @@ type seriesDim struct {
 	key, cond string
 	distinct  string // expression counted for the "how many" number ("" = key)
 	rollup    func(bucket string) string
+	hourly    bool // the rollup has one row per hour: no finer buckets
 }
 
 // peerExpr is the external side of a conversation: the server, or the
@@ -25,15 +26,15 @@ var seriesDims = map[string]seriesDim{
 		rollup: func(b string) string {
 			return `SELECT ` + b + `, app, sum(wire), sum(pkts) FROM r_ts WHERE ts >= ? AND ts < ? GROUP BY 1,2`
 		}},
-	"client": {key: "client", cond: "true",
+	"client": {key: "client", cond: "true", hourly: true,
 		rollup: func(b string) string {
 			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM r_host WHERE ts >= ? AND ts < ? AND role = 1 GROUP BY 1,2`
 		}},
-	"server": {key: "server", cond: "true",
+	"server": {key: "server", cond: "true", hourly: true,
 		rollup: func(b string) string {
 			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM r_host WHERE ts >= ? AND ts < ? AND role = 2 GROUP BY 1,2`
 		}},
-	"service": {key: portProtoExpr + " || chr(9) || app", cond: "svc_port <> 0",
+	"service": {key: portProtoExpr + " || chr(9) || app", cond: "svc_port <> 0", hourly: true,
 		rollup: func(b string) string {
 			return `SELECT ` + b + `, val, sum(wire), sum(pkts) FROM r_dim WHERE ts >= ? AND ts < ? AND dim = 'port' AND NOT starts_with(val, '0/') GROUP BY 1,2`
 		}},
@@ -60,12 +61,19 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 	if k <= 0 || k > 20 {
 		k = 8
 	}
+	// decide before the start is rounded down to a bucket: rounding makes a
+	// 6-hour range a little longer, which must not switch it to the summaries
+	rollup := q.usesRollup() && d.rollup != nil
 	step := StepFor(q.span())
+	if rollup && d.hourly && step < time.Hour {
+		// hourly summaries in 5-minute buckets would show one spike an hour
+		step = time.Hour
+	}
 	q.From = q.From.UTC().Truncate(step)
 	bucket := fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts)", int64(step.Seconds()))
 	var inner string
 	var args []any
-	if q.usesRollup() && d.rollup != nil {
+	if rollup {
 		inner = d.rollup(bucket)
 		args = []any{q.From.UTC(), q.To.UTC()}
 	} else {
