@@ -684,7 +684,7 @@ Halaman:
 | Geografi & jaringan | Peta dunia trafik per negara; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
 | Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih |
-| Analisis offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-offline)) |
+| Analisis pcap offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-pcap-offline)) |
 | Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu (masuk dan keluar, bit/s dan paket/s), dan angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
 | Sumber | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
 
@@ -779,9 +779,9 @@ Ringkasan yang sama dalam bahasa Tionghoa; setiap halaman tersedia dalam 13 baha
 
 <a id="10-terminal-ui"></a>
 
-### Analisis offline
+### Analisis pcap offline
 
-**Analisis offline** menampilkan tangkapan Wireshark atau tcpdump dengan halaman yang sama seperti data langsung, tanpa mencampurnya.
+**Analisis pcap offline** menampilkan tangkapan Wireshark atau tcpdump dengan halaman yang sama seperti data langsung, tanpa mencampurnya.
 
 traffic66 merangkum semua paket menjadi flow: siapa bicara dengan siapa, berapa banyak, kapan, dan apa yang tampak seperti serangan. Ia tidak mendekode protokol atau menampilkan isi paket; untuk satu paket atau satu aliran TCP, gunakan Wireshark.
 

@@ -176,6 +176,12 @@ const inSB = () => state.ds === 'sb' && sbInfo.ready;
 let sbInfo = {files: [], ready: false};
 // started as "traffic66 file.pcap": there is no live data, only the files
 let offlineMode = false;
+// the server's clock, shown under the logo
+let clockSkew = 0;
+function tickClock() {
+  try { $('#clock').textContent = new Intl.DateTimeFormat(LANG, {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(Date.now() + clockSkew)); } catch (e) {}
+}
+setInterval(tickClock, 1000);
 async function api(path, extra = {}, filters = state.f) {
   if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
   const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : {range: state.r, ...extra});
@@ -387,10 +393,15 @@ function renderFilters() {
 // values; choosing one replaces any filter on that field, emptying it
 // removes the filter.
 const FBAR = [['exporter', 'field.exporter'], ['client', 'field.client'], ['server', 'field.server'], ['port', 'col.service']];
-const FBAR_HIDDEN = new Set(['findings', 'sources', 'sandbox']);
+// The search box and the filter boxes are on Top 66 and Traffic details
+// only; elsewhere filters come from clicking values, and their chips show
+// when there are any.
+const FBAR_VIEWS = new Set(['topn', 'traffic']);
 function renderFbar() {
-  const bar = $('#fbar');
-  bar.hidden = FBAR_HIDDEN.has(state.v);
+  const bar = $('#fbar'), on = FBAR_VIEWS.has(state.v);
+  bar.hidden = !on;
+  $('.search').hidden = !on;
+  $('#filters').hidden = !on && !state.f.length;
   if (bar.hidden) return;
   bar.innerHTML = FBAR.map(([f, lab]) => {
     const cur = state.f.find(x => x.f === f && !x.neg);
@@ -706,18 +717,16 @@ views.topn = el => {
   return state.tm === 'table' ? topTable(el, state.dim) : talkers(el);
 };
 async function talkers(el) {
-  const [sv, cl, srv, ov] = await Promise.all([seriesData('service', 'wire'), api('topn', {dim: 'client', limit: 30}), api('topn', {dim: 'server', limit: 30}), api('overview')]);
+  const [cl, srv, ov] = await Promise.all([api('topn', {dim: 'client', limit: 30}), api('topn', {dim: 'server', limit: 30}), api('overview')]);
   const tot = ov.totals || {};
   const table = (rows, head, f) => `<table class="talk"><tr><th></th><th>${t(head)}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.pkts')}</th><th class="num">${t('col.flows')}</th></tr>
     ${(rows || []).map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}
     <tr class="sum"><td></td><td>${t('topn.all')}</td><td class="num">${fmtBytes(tot.wire)}</td><td class="num">${nf(tot.pkts)}</td><td class="num">${nf(tot.flows)}</td></tr></table>`;
   el.innerHTML = `<div class="grid">
-    <div class="panel c12" id="tkSvc"><div class="ph"><h2>${t('td.services')} · ${t('ch.bps')}</h2><span class="sub">${esc(t('td.n_services', {n: nf(sv.distinct || 0)}))}</span><div class="tools" style="margin-inline-start:auto">${modeSeg()}</div></div>
-      <div class="chart" style="height:220px" aria-label="${esc(t('td.services'))}"></div><div class="legend"></div></div>
+    <div class="c12"><div style="display:inline-block">${modeSeg()}</div></div>
     ${panel('c6', t('ov.top_clients'), esc(t('topn.top_n', {n: 30})), table(cl.rows, 'col.client', 'client'))}
     ${panel('c6', t('topn.top_servers'), esc(t('topn.top_n', {n: 30})), table(srv.rows, 'col.server', 'server'))}
   </div>`;
-  fillSeries('tkSvc', sv, 'service', 'wire');
   bindMode(el);
 }
 async function topTable(el, dim) {
@@ -804,11 +813,13 @@ views.sankey = async (el) => {
   d.app_cc.forEach(l => { node(1, l.S).out += l.V; node(2, l.T).in += l.V; });
   cols.forEach(c => c.sort((a, b) => (a.k === '__other__') - (b.k === '__other__') || Math.max(b.in, b.out) - Math.max(a.in, a.out)));
   const label = (c, k) => k === '__other__' ? t('other') : ipCols.includes(c) ? (names.get(k) || k) : c === 2 ? country(k) : appLabel(k);
+  // long host names are cut to 22 characters; the full name shows on hover
+  const short = v => { const a = [...v]; return a.length > 22 ? a.slice(0, 21).join('') + '…' : v; };
   const field = {host: ['ip', 'app', 'country'], segment: ['segment', 'app', 'country'], conv: ['client', 'port', 'server']}[mode];
   const draw = () => {
     const W = sEl.clientWidth, H = sEl.clientHeight; if (W < 300) return;
     const rtl = document.documentElement.dir === 'rtl';
-    const nodeW = 12, pad = 14, lw = mode === 'segment' ? 118 : 170, rw = conv ? 182 : 130, colX = rtl ? [W - lw - 12, Math.round(W / 2 - 6), rw - 12] : [lw, Math.round(W / 2 - 6), W - rw];
+    const nodeW = 12, pad = 14, lw = mode === 'segment' ? 118 : 200, rw = conv ? 200 : 130, colX = rtl ? [W - lw - 12, Math.round(W / 2 - 6), rw - 12] : [lw, Math.round(W / 2 - 6), W - rw];
     const nv = n => Math.max(n.in, n.out);
     const k = Math.min(...cols.map(c => (H - pad * (c.length - 1)) / Math.max(1, c.reduce((s, n) => s + nv(n), 0))));
     cols.forEach((c, ci) => { let yy = 0; c.forEach((n, i) => { n.ci = ci; n.x = colX[ci]; n.y = yy; n.h = nv(n) * k; n.o = 0; n.i = 0; n.color = ci === 0 ? color(i, n.k) : 'var(--ink-2)'; yy += n.h + pad; }); });
@@ -826,11 +837,12 @@ views.sankey = async (el) => {
       s += `<rect x="${n.x}" y="${n.y}" width="${nodeW}" height="${Math.max(2, n.h)}" rx="2" fill="${n.color}" ${dk}><title>${esc(label(ci, n.k))} ${fmtBytes(nv(n))}</title></rect>`;
       s += `<rect class="hit" x="${n.x - 8}" y="${n.y - 2}" width="${nodeW + 16}" height="${Math.max(6, n.h + 4)}" ${dk}/>`;
       const right = (ci === 2) !== rtl, tx = right ? n.x + nodeW + 8 : n.x - 8, anc = right ? 'start' : 'end';
+      const full = `<title>${esc(label(ci, n.k))} · ${fmtBytes(nv(n))}</title>`;
       if (n.h >= 26) {
-        s += `<text x="${tx}" y="${n.y + n.h / 2 - 6}" text-anchor="${anc}" dominant-baseline="middle" ${dk}>${esc(label(ci, n.k))}</text>`;
+        s += `<text x="${tx}" y="${n.y + n.h / 2 - 6}" text-anchor="${anc}" dominant-baseline="middle" ${dk}>${full}${esc(short(label(ci, n.k)))}</text>`;
         s += `<text class="nv" x="${tx}" y="${n.y + n.h / 2 + 9}" text-anchor="${anc}" dominant-baseline="middle" ${dk}>${fmtBytes(nv(n))}</text>`;
       } else if (n.h >= 9 || ci !== 1) {
-        s += `<text x="${tx}" y="${n.y + n.h / 2}" text-anchor="${anc}" dominant-baseline="middle" ${dk}>${esc(label(ci, n.k))} <tspan class="nv">${fmtBytes(nv(n))}</tspan></text>`;
+        s += `<text x="${tx}" y="${n.y + n.h / 2}" text-anchor="${anc}" dominant-baseline="middle" ${dk}>${full}${esc(short(label(ci, n.k)))} <tspan class="nv">${fmtBytes(nv(n))}</tspan></text>`;
       }
     }));
     sEl.innerHTML = s + '</svg>';
@@ -1282,6 +1294,8 @@ async function loadStatus() {
     for (const [ip, n] of Object.entries(s.hosts || {})) names.set(ip, n);
     $('#demo').hidden = !s.demo; $('#demo').textContent = t('demo.badge');
     offlineMode = !!s.offline;
+    $('#verNo').textContent = 'v' + s.version;
+    if (s.now) clockSkew = s.now - Date.now();
     $('#self').hidden = offlineMode;  // nothing is collected
     const live = s.records_per_sec > 0.2;
     $('#self').innerHTML = `<div class="live ${live ? 'ok' : 'idle'}"><i></i>${t(live ? 'self.receiving' : 'self.idle')}</div>

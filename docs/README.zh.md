@@ -563,7 +563,7 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 | 地理与运营商 | 世界地图上按国家显示的流量；流量来自和去往哪些网络（AS），以 bits/s 和 packets/s 显示随时间的变化；按国家和按网络统计的流量 |
 | 威胁情报 | 与威胁情报列表中地址有通信的主机，以及它们发送了多少流量 |
 | 流记录 | 有多少条流记录、出现在什么时候（每个间隔一根柱），以及流记录本身，最新的在前，分页显示，可选择显示列 |
-| 离线分析 | 在实时数据之外分析抓包文件（pcap、pcapng） ([详情](#离线分析)) |
+| 离线 pcap 分析 | 在实时数据之外分析抓包文件（pcap、pcapng） ([详情](#离线-pcap-分析)) |
 | 接口对账 | 每个接口的流量随时间变化（入向和出向，bits/s 和 packets/s），以及流统计与接口计数器并列对比，差异最大的在前，附原因 |
 | 接入 | 设备、采样、丢包、采集器、SNMP、国家和运营商数据库、Logo，以及 **名称** |
 
@@ -615,9 +615,9 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 <a id="10-terminal-ui"></a>
 
-### 离线分析
+### 离线 pcap 分析
 
-**离线分析** 用和实时数据相同的页面查看 Wireshark 或 tcpdump 的抓包文件，但不混进实时数据。
+**离线 pcap 分析** 用和实时数据相同的页面查看 Wireshark 或 tcpdump 的抓包文件，但不混进实时数据。
 
 它把所有包汇总成流：谁和谁通信、多少、什么时候，以及哪些像是攻击。它不解码协议，也不显示包内容；要看单个包或单条 TCP 流，请用 Wireshark。
 

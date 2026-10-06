@@ -377,7 +377,7 @@
 "geo.data_from": "Countries and networks:",
 "geo.map_from": "Map:",
 "td.both": "Both ends",
-"nav.sandbox": "Offline analysis",
+"nav.sandbox": "Offline pcap analysis",
 "sb.title": "Capture files",
 "sb.sub": "Analyse pcap files apart from the live data",
 "sb.explain": "Upload packet captures from Wireshark or tcpdump. They go into a separate database: the live data, its numbers and findings are not touched. Analyse shows the files on every page (overview, Top 66, findings, flow paths, map, flow records); Delete removes the files and their data.",

@@ -377,7 +377,7 @@
 "geo.data_from": "Países y redes:",
 "geo.map_from": "Mapa:",
 "td.both": "Ambos extremos",
-"nav.sandbox": "Análisis offline",
+"nav.sandbox": "Análisis offline de pcap",
 "sb.title": "Archivos de captura",
 "sb.sub": "Analizar archivos pcap aparte de los datos en vivo",
 "sb.explain": "Suba capturas de Wireshark o tcpdump. Van a una base de datos aparte: los datos en vivo, sus cifras y hallazgos no se tocan. Analizar muestra los archivos en todas las páginas (resumen, Top 66, hallazgos, rutas, mapa, registros); Eliminar borra los archivos y sus datos.",
