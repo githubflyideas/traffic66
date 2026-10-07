@@ -3,7 +3,25 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 1.0.4
+## 1.2.2
+
+NetFlow and IPFIX sampling
+- Sampling rates are found in more of the ways devices declare them:
+  samplingProbability (IPFIX 311); a rate per interface that is set on the
+  egress interface of a flow; a single sampler whose id the flow records do
+  not name; a rate declared under another observation domain of the same
+  device (line cards export under their own ids); a samplingInterval of 0
+  next to samplerRandomInterval.
+- A rate can be given by hand for a device that does not declare one:
+  sampling=N on its device line in Names (Settings). A rate the device
+  declares still wins; flows waiting for a rate go on with it at once.
+- Settings shows the templates a device sent (template and field ids) when
+  its sampling rate is not declared, to see what it does send.
+- Export sessions silent for an hour while the same device sends in another
+  way (a changed version or domain) are listed apart as stopped, not as
+  faults.
+
+## 1.2.1
 
 Pages
 - Overview: **Total**, **Inbound** and **Outbound** above the bandwidth

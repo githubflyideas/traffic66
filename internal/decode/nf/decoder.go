@@ -31,6 +31,8 @@ type Stats struct {
 	Sampling      uint32   // exporter-wide rate if known
 	Rates         []uint32 // every declared rate (exporter, sampler, interface)
 	Templates     int
+	TemplateInfo  []string // the templates seen and their field ids
+	Manual        bool     // the rate was set by hand (sampling= in the names)
 	// LossComp is the multiplier currently applied to make up for records
 	// lost in transit (1 = no loss).
 	LossComp  float64
@@ -74,6 +76,7 @@ type samplerRef struct {
 	samplerID  uint32
 	hasSampler bool
 	inIf       uint32
+	outIf      uint32
 }
 
 type session struct {
@@ -89,6 +92,8 @@ type session struct {
 	assumed   bool
 
 	pending []pendingRec
+
+	tmplDesc map[uint16]string // templates seen, for the sources page
 
 	initMs int64
 
@@ -127,6 +132,11 @@ type Decoder struct {
 	MaxSessions int
 	// Unsampled lists exporters known to export every packet.
 	Unsampled map[netip.Addr]bool
+	// Manual is the sampling rate of exporters that do not declare it,
+	// from sampling= in the names; a declared rate takes precedence.
+	Manual map[netip.Addr]uint32
+	// byAddr is the last rate an exporter declared, in any domain.
+	byAddr map[netip.Addr]uint32
 }
 
 func NewDecoder() *Decoder {
@@ -136,6 +146,8 @@ func NewDecoder() *Decoder {
 		MaxPending:  200000,
 		MaxSessions: 10000,
 		Unsampled:   map[netip.Addr]bool{},
+		Manual:      map[netip.Addr]uint32{},
+		byAddr:      map[netip.Addr]uint32{},
 	}
 }
 
@@ -190,7 +202,17 @@ func (d *Decoder) Stats() []Stats {
 		st := s.stats
 		st.Pending = len(s.pending)
 		st.Templates = len(s.templates)
-		st.Sampling = s.def
+		for _, v := range s.tmplDesc {
+			st.TemplateInfo = append(st.TemplateInfo, v)
+		}
+		sort.Strings(st.TemplateInfo)
+		if s.def == 0 && len(s.bySampler) == 0 && len(s.byIf) == 0 && d.Manual[s.stats.Exporter] > 0 {
+			st.Manual = true
+			st.Sampling = d.Manual[s.stats.Exporter]
+		}
+		if !st.Manual {
+			st.Sampling = s.def
+		}
 		st.LossComp = s.comp
 		seen := map[uint32]bool{}
 		add := func(r uint32) {
@@ -200,6 +222,9 @@ func (d *Decoder) Stats() []Stats {
 			}
 		}
 		add(s.def)
+		if st.Manual {
+			add(st.Sampling)
+		}
 		for _, r := range s.bySampler {
 			add(r)
 		}
@@ -208,6 +233,8 @@ func (d *Decoder) Stats() []Stats {
 		}
 		sort.Slice(st.Rates, func(i, j int) bool { return st.Rates[i] < st.Rates[j] })
 		switch {
+		case st.Manual:
+			st.SamplingState = "manual"
 		case s.assumed:
 			st.SamplingState = "assumed1"
 		case len(s.pending) > 0:
@@ -272,10 +299,41 @@ func (d *Decoder) rateFor(s *session, rec *flow.Record, ref samplerRef, inRecord
 	if rate == 0 {
 		rate = s.byIf[ref.inIf]
 	}
+	if rate == 0 && ref.outIf != 0 {
+		// sampling configured on the egress interface
+		rate = s.byIf[ref.outIf]
+	}
 	if rate == 0 {
 		rate = s.def
 	}
+	if rate == 0 {
+		// one rate declared for a sampler or interface the record does not
+		// name: it is the only one there is
+		rate = s.onlyRate()
+	}
+	if rate == 0 {
+		// declared by the same device in another observation domain (line
+		// cards export under their own ids)
+		rate = d.byAddr[rec.Exporter]
+	}
+	if rate == 0 {
+		rate = d.Manual[rec.Exporter]
+	}
 	return rate
+}
+
+// onlyRate is the session's rate when all its declared rates agree.
+func (s *session) onlyRate() uint32 {
+	var r uint32
+	for _, m := range []map[uint32]uint32{s.bySampler, s.byIf} {
+		for _, x := range m {
+			if r != 0 && x != r {
+				return 0
+			}
+			r = x
+		}
+	}
+	return r
 }
 
 // resolve fills in the sampling multiplier or queues the record.
@@ -408,4 +466,17 @@ func (d *Decoder) SetUnsampled(m map[netip.Addr]bool) {
 	d.mu.Lock()
 	d.Unsampled = m
 	d.mu.Unlock()
+}
+
+// SetManual replaces the hand-set sampling rates; records waiting for a
+// rate are released with them.
+func (d *Decoder) SetManual(m map[netip.Addr]uint32) Result {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.Manual = m
+	var res Result
+	for _, s := range d.sessions {
+		d.retryPending(s, &res.Records)
+	}
+	return res
 }

@@ -609,9 +609,11 @@ Todas as linhas são opcionais.
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1161,7 +1163,7 @@ ficar sem memória.
 | Sintoma | Causa e solução |
 |---|---|
 | Equipamento não aparece em **Configurações** | Os pacotes não chegam: veja [Verificar se os fluxos estão chegando](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | O equipamento ainda não enviou as opções do sampler; a maioria reenvia em poucos minutos. Se nunca enviar, exporte-as (`option sampler-table` no Cisco) ou marque-o como `unsampled` em Nomes se ele for de fato 1:1 |
+| "waiting for the sampling rate" | O equipamento ainda não enviou as opções do sampler; a maioria reenvia em poucos minutos. Se nunca enviar, exporte-as (`option sampler-table` no Cisco) ou marque-o como `unsampled` em Nomes se ele for de fato 1:1, ou informe a taxa com `sampling=N` na linha `device` dele. **Configurações** lista então os templates que o equipamento enviou, para ver o que ele declara |
 | Números abaixo dos contadores de interface | Veja **Conferência de interfaces**: perdas no caminho, interfaces não amostradas ou fluxos ainda no cache do equipamento (timeout ativo acima de 60 s) |
 | Números acima dos contadores de interface | O mesmo tráfego amostrado em duas interfaces ou dois equipamentos |
 | Sem países nem redes ("Desconhecido") | Nenhum banco de dados carregado: envie um em **Configurações**; veja [Países](#8-countries-networks-and-threat-lists) |

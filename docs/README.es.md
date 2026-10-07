@@ -609,9 +609,11 @@ las líneas son opcionales.
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1166,7 +1168,7 @@ máquina sin memoria.
 | Síntoma | Causa y solución |
 |---|---|
 | El equipo no aparece en **Configuración** | Los paquetes no llegan: vea [Comprobar que llegan los flujos](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | El equipo aún no ha enviado sus opciones de sampler; la mayoría las reenvía en pocos minutos. Si no lo hace nunca, expórtelas (`option sampler-table` en Cisco) o márquelo como `unsampled` en Nombres si de verdad es 1:1 |
+| "waiting for the sampling rate" | El equipo aún no ha enviado sus opciones de sampler; la mayoría las reenvía en pocos minutos. Si no lo hace nunca, expórtelas (`option sampler-table` en Cisco) o márquelo como `unsampled` en Nombres si de verdad es 1:1, o indique su tasa con `sampling=N` en su línea `device`. **Configuración** muestra entonces las plantillas que envió el equipo, para ver qué declara |
 | Cifras por debajo de los contadores de interfaz | Vea **Verificación de interfaces**: pérdidas por el camino, interfaces sin muestrear o flujos aún en la caché del equipo (timeout activo superior a 60 s) |
 | Cifras por encima de los contadores de interfaz | El mismo tráfico se muestrea en dos interfaces o en dos equipos |
 | No hay países ni redes ("Desconocido") | No hay ninguna base de datos cargada: suba una en **Configuración**; vea [Países](#8-countries-networks-and-threat-lists) |

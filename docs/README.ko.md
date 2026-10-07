@@ -571,9 +571,11 @@ traffic66에 도착하기 전에 유실됨, 샘플링 레이트를 아직 모름
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1065,7 +1067,7 @@ Top 66은 약 9초이며, 소요 시간은 범위에 비례해 늘고 코어가 
 | 증상 | 원인과 해결 |
 |---|---|
 | **설정**에 장비가 없음 | 패킷이 도착하지 않음: [플로 수신 확인](#5-check-that-flows-arrive) 참조 |
-| "waiting for the sampling rate" | 장비가 아직 샘플러 옵션을 보내지 않았습니다. 대부분 몇 분 안에 다시 보냅니다. 끝내 보내지 않으면 익스포트하도록 설정하거나(Cisco는 `option sampler-table`), 정말 1:1이라면 이름에서 `unsampled`로 표시합니다 |
+| "waiting for the sampling rate" | 장비가 아직 샘플러 옵션을 보내지 않았습니다. 대부분 몇 분 안에 다시 보냅니다. 끝내 보내지 않으면 익스포트하도록 설정하거나(Cisco는 `option sampler-table`), 정말 1:1이라면 이름에서 `unsampled`로 표시하거나, 해당 `device` 줄에 `sampling=N`으로 비율을 지정합니다. 그러면 **설정**에 장비가 보낸 템플릿이 표시되어 무엇을 선언하는지 확인할 수 있습니다 |
 | 수치가 인터페이스 카운터보다 낮음 | **인터페이스 대조** 확인: 경로상 유실, 샘플링되지 않은 인터페이스, 또는 플로가 아직 장비 캐시에 있음(액티브 타임아웃이 60초보다 김) |
 | 수치가 인터페이스 카운터보다 높음 | 같은 트래픽을 두 인터페이스 또는 두 장비에서 샘플링함 |
 | 국가나 네트워크가 표시되지 않음("알 수 없음") | 로드된 데이터베이스가 없음: **설정**에서 업로드. [국가](#8-countries-networks-and-threat-lists) 참조 |

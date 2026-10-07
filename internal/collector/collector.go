@@ -308,6 +308,9 @@ type SourceInfo struct {
 	DecodeErrors  uint64        `json:"decode_errors"`
 	LastSeen      time.Time     `json:"last_seen"`
 	ClockSkew     time.Duration `json:"clock_skew_ns"`
+	// NetFlow/IPFIX: the templates received (id and field ids), shown when
+	// the sampling rate is not declared
+	TemplateInfo []string `json:"template_info,omitempty"`
 }
 
 // Sources lists every exporter seen.
@@ -337,6 +340,7 @@ func (c *Collector) Sources() []SourceInfo {
 			Packets: s.Packets, Records: s.Records, LostPct: lost, LostRecords: s.LostRecords, TransitPct: lost,
 			Sampling: samp, SamplingState: s.SamplingState, Pending: s.Pending, NoTemplate: s.NoTemplate,
 			Templates: s.Templates, LastSeen: s.LastSeen, ClockSkew: s.ClockSkew, LossComp: s.LossComp,
+			TemplateInfo: s.TemplateInfo,
 		})
 	}
 	c.mu.Lock()
@@ -387,4 +391,14 @@ func (c *Collector) Sources() []SourceInfo {
 	c.mu.Unlock()
 	sort.Slice(out, func(i, j int) bool { return out[i].Exporter < out[j].Exporter })
 	return out
+}
+
+// SetSampling applies the names' sampling settings: devices that export
+// every packet, and hand-set rates for devices that do not declare one.
+// Records that were waiting for a rate go on with it.
+func (c *Collector) SetSampling(unsampled map[netip.Addr]bool, manual map[netip.Addr]uint32) {
+	c.NF.SetUnsampled(unsampled)
+	if res := c.NF.SetManual(manual); len(res.Records) > 0 {
+		c.sink.Submit(res.Records)
+	}
 }

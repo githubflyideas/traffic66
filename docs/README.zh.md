@@ -488,9 +488,11 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -873,7 +875,7 @@ traffic66 以 [PolyForm Noncommercial License 1.0.0](../LICENSE.md) 和 [Traffic
 | 现象 | 原因与解决方法 |
 |---|---|
 | **设定** 中看不到设备 | 报文没有到达：见 [确认流数据已到达](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | 设备尚未发送采样器选项；大多数设备几分钟内会重发。如果一直不发，请配置导出（Cisco 上为 `option sampler-table`）；如果确实是 1:1，可在名称中标记为 `unsampled` |
+| "waiting for the sampling rate" | 设备尚未发送采样器选项；大多数设备几分钟内会重发。如果一直不发，请配置导出（Cisco 上为 `option sampler-table`）；如果确实是 1:1，可在名称中标记为 `unsampled`，或在其 `device` 行用 `sampling=N` 指定采样率。之后 **设定** 会列出该设备发送的模板，可据此查看它声明了什么 |
 | 统计值低于接口计数器 | 查看 **接口对账**：途中丢包、有接口未采样，或流仍在设备缓存中（活动超时超过 60 秒） |
 | 统计值高于接口计数器 | 同一流量在两个接口或两台设备上被采样 |
 | 没有国家或网络信息（"未知"） | 未加载数据库：在 **设定** 上传一个，见 [国家](#8-countries-networks-and-threat-lists) |

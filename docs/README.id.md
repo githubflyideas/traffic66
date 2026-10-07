@@ -608,9 +608,11 @@ bersifat opsional.
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1159,7 +1161,7 @@ kehabisan memori.
 | Gejala | Penyebab dan solusi |
 |---|---|
 | Perangkat tidak muncul di **Pengaturan** | Paket tidak sampai: lihat [Pastikan flow masuk](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | Perangkat belum mengirim sampler options; kebanyakan mengirim ulang dalam beberapa menit. Jika tidak pernah, ekspor opsi itu (`option sampler-table` di Cisco) atau tandai perangkat sebagai `unsampled` di Nama jika memang 1:1 |
+| "waiting for the sampling rate" | Perangkat belum mengirim sampler options; kebanyakan mengirim ulang dalam beberapa menit. Jika tidak pernah, ekspor opsi itu (`option sampler-table` di Cisco) atau tandai perangkat sebagai `unsampled` di Nama jika memang 1:1, atau beri rasionya dengan `sampling=N` di baris `device`-nya. **Pengaturan** lalu menampilkan template yang dikirim perangkat, untuk melihat apa yang dideklarasikannya |
 | Angka lebih rendah dari counter interface | Lihat **Pencocokan antarmuka**: loss di jalan, interface tidak di-sampling, atau flow masih di cache perangkat (active timeout lebih dari 60 detik) |
 | Angka lebih tinggi dari counter interface | Trafik yang sama di-sampling di dua interface atau dua perangkat |
 | Tidak ada negara atau jaringan ("Tidak diketahui") | Tidak ada basis data yang dimuat: unggah di **Pengaturan**, lihat [Negara](#8-countries-networks-and-threat-lists) |

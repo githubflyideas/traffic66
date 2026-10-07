@@ -603,9 +603,11 @@ Enter; оно сразу сохраняется и показывается ве
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1150,7 +1152,7 @@ traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:473
 | Симптом | Причина и решение |
 |---|---|
 | Устройства нет на странице **Настройки** | Пакеты не доходят: см. [Проверка поступления потоков](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | Устройство ещё не прислало sampler options; большинство устройств повторяют их в течение нескольких минут. Если так и не пришлёт, включите их экспорт (`option sampler-table` на Cisco) или пометьте устройство как `unsampled` в разделе «Названия», если оно действительно экспортирует 1:1 |
+| "waiting for the sampling rate" | Устройство ещё не прислало sampler options; большинство устройств повторяют их в течение нескольких минут. Если так и не пришлёт, включите их экспорт (`option sampler-table` на Cisco) или пометьте устройство как `unsampled` в разделе «Названия», если оно действительно экспортирует 1:1, либо укажите его коэффициент через `sampling=N` в строке `device`. На странице **Настройки** затем видны шаблоны, присланные устройством, — по ним понятно, что оно объявляет |
 | Цифры ниже счётчиков интерфейсов | См. **Сверка интерфейсов**: потери по пути, несэмплируемые интерфейсы или потоки ещё в кеше устройства (active timeout больше 60 с) |
 | Цифры выше счётчиков интерфейсов | Один и тот же трафик сэмплируется на двух интерфейсах или двух устройствах |
 | Нет стран и сетей («Неизвестно») | Не загружена база: загрузите её на странице **Настройки**, см. [Страны](#8-countries-networks-and-threat-lists) |

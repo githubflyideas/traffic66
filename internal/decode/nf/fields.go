@@ -2,7 +2,10 @@ package nf
 
 import (
 	"encoding/binary"
+	"fmt"
+	"math"
 	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/githubflyideas/traffic66/internal/flow"
@@ -64,6 +67,7 @@ const (
 	ieSamplingPktSpace = 306
 	ieSamplingSize     = 309
 	ieSamplingPop      = 310
+	ieSamplingProb     = 311 // samplingProbability, float64
 
 	// NetFlow v9 option scope types (RFC 3954 section 6.1).
 	nf9ScopeSystem    = 1
@@ -101,6 +105,7 @@ type acc struct {
 
 	interval, pktInterval, pktSpace uint32
 	sampSize, sampPop               uint32
+	prob                            float64
 	samplerID                       uint32
 	hasSampler                      bool
 
@@ -228,7 +233,16 @@ func (a *acc) set(f fieldSpec, v []byte, nf9Scope bool) {
 	case ieSysInitMs:
 		a.sysInitMs = int64(wire.Uint(v))
 	case ieSamplingInterval, ieSamplerRandom:
-		a.interval = uint32(wire.Uint(v))
+		// both may be present; a zero in one must not hide the other
+		if x := uint32(wire.Uint(v)); x > 0 {
+			a.interval = x
+		}
+	case ieSamplingProb:
+		if len(v) == 8 {
+			if p := math.Float64frombits(binary.BigEndian.Uint64(v)); p > 0 && p <= 1 {
+				a.prob = p
+			}
+		}
 	case ieSamplingPktIntvl:
 		a.pktInterval = uint32(wire.Uint(v))
 	case ieSamplingPktSpace:
@@ -251,6 +265,8 @@ func (a *acc) rate() uint32 {
 		return a.sampPop / a.sampSize
 	case a.interval > 0:
 		return a.interval
+	case a.prob > 0:
+		return uint32(math.Round(1 / a.prob))
 	}
 	return 0
 }
@@ -319,6 +335,7 @@ func parseTemplateSet(s *session, b []byte, src flow.Source, options bool) []uin
 				break
 			}
 			s.templates[id] = t
+			s.describe(id, t)
 			ids = append(ids, id)
 			// v9 options template records are padded to 4 bytes per set,
 			// not per record; one record per set is the common case.
@@ -357,6 +374,7 @@ func parseTemplateSet(s *session, b []byte, src flow.Source, options bool) []uin
 			break
 		}
 		s.templates[id] = t
+		s.describe(id, t)
 		ids = append(ids, id)
 	}
 	return ids
@@ -426,6 +444,7 @@ func (d *Decoder) decodeData(s *session, t *template, body []byte, h msgHeader, 
 			default:
 				s.def = rate
 			}
+			d.byAddr[addr] = rate
 			sampleChanged = true
 			continue
 		}
@@ -459,7 +478,7 @@ func (d *Decoder) emit(s *session, a *acc, h msgHeader, addr netip.Addr, domain 
 	default:
 		r.Bytes, r.Packets = a.totBytes, a.totPkts
 	}
-	ref := samplerRef{samplerID: a.samplerID, hasSampler: a.hasSampler, inIf: r.InIf}
+	ref := samplerRef{samplerID: a.samplerID, hasSampler: a.hasSampler, inIf: r.InIf, outIf: r.OutIf}
 	inRec := a.rate()
 	s.stats.Records++
 	if r.Bytes > 0 || r.Packets > 0 {
@@ -472,7 +491,7 @@ func (d *Decoder) emit(s *session, a *acc, h msgHeader, addr netip.Addr, domain 
 		rev.InIf, rev.OutIf = r.OutIf, r.InIf
 		rev.SrcAS, rev.DstAS = r.DstAS, r.SrcAS
 		rev.Bytes, rev.Packets = a.revBytes, a.revPkts
-		d.resolve(s, rev, samplerRef{samplerID: a.samplerID, hasSampler: a.hasSampler, inIf: rev.InIf}, inRec, now, out)
+		d.resolve(s, rev, samplerRef{samplerID: a.samplerID, hasSampler: a.hasSampler, inIf: rev.InIf, outIf: rev.OutIf}, inRec, now, out)
 	}
 }
 
@@ -502,4 +521,30 @@ func (d *Decoder) replayHeld(s *session, id uint16, addr netip.Addr, domain uint
 		s.heldBytes -= len(h.body)
 		d.decodeData(s, t, h.body, h.hdr, addr, domain, now, out)
 	}
+}
+
+// describe keeps a short description of a template for the sources page:
+// its id, whether it is an options template, and its field ids (scope
+// fields marked with s, enterprise fields as pen:id).
+func (s *session) describe(id uint16, t *template) {
+	var b strings.Builder
+	if t.options {
+		fmt.Fprintf(&b, "options %d:", id)
+	} else {
+		fmt.Fprintf(&b, "%d:", id)
+	}
+	for _, f := range t.fields {
+		b.WriteByte(' ')
+		if f.scope {
+			b.WriteByte('s')
+		}
+		if f.ent != 0 {
+			fmt.Fprintf(&b, "%d:", f.ent)
+		}
+		fmt.Fprintf(&b, "%d", f.id)
+	}
+	if s.tmplDesc == nil {
+		s.tmplDesc = map[uint16]string{}
+	}
+	s.tmplDesc[id] = b.String()
 }

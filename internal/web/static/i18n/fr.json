@@ -197,7 +197,7 @@
 "st.bad": "Rien reçu",
 "issue.silent": "Rien reçu depuis plus de 2 minutes. Vérifiez la destination d'export sur l'équipement et que les pare-feu laissent passer l'UDP.",
 "issue.waiting_sampling": "Modèles reçus mais pas encore le taux d'échantillonnage. {n} enregistrements sont en attente ; ils seront mis à l'échelle à son arrivée et ne sont pas comptés en 1:1. Les équipements le renvoient généralement en quelques minutes.",
-"issue.assumed_unsampled": "Cet équipement n'a jamais déclaré de taux d'échantillonnage : ses enregistrements sont comptés en 1:1. S'il échantillonne, configurez l'export des options de l'échantillonneur ou marquez-le « unsampled » dans Noms.",
+"issue.assumed_unsampled": "Cet équipement n'a pas déclaré son taux d'échantillonnage, ses flux comptent donc 1:1. S'il échantillonne, faites-lui exporter les options de l'échantillonneur, ou indiquez le taux dans Paramètres → Noms, par ex. device {a} nom sampling=1000. S'il exporte tous les paquets, ajoutez unsampled à cette ligne.",
 "issue.loss": "{p} des paquets exportés ont été perdus en route (trous dans les numéros de séquence). Les totaux sont compensés, pas le détail par hôte. Si « netstat -su » sur cette machine montre des receive buffer errors en hausse, augmentez net.core.rmem_max ; sinon, vérifiez le chemin réseau.",
 "issue.no_template": "Des données arrivent mais pas encore leur modèle. Elles sont conservées et décodées dès l'arrivée du modèle.",
 "issue.clock_skew": "L'horloge de l'équipement est décalée de {s}. Les heures ont été corrigées sur l'heure de réception.",
@@ -497,5 +497,8 @@
 "ov.dir_total": "Total",
 "ov.bw_all": "Bande passante (entrant + sortant), par application",
 "ov.bw_in": "Bande passante entrante, par application",
-"ov.bw_out": "Bande passante sortante, par application"
+"ov.bw_out": "Bande passante sortante, par application",
+"src.manual": "fixé à la main",
+"src.templates": "Modèles reçus (ids de champ ; s = portée) :",
+"src.stale": "Arrêtés (l’équipement envoie désormais autrement) :"
 }

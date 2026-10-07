@@ -197,7 +197,7 @@
 "st.bad": "Tidak menerima",
 "issue.silent": "Tidak ada data lebih dari 2 menit. Periksa tujuan ekspor di perangkat dan apakah firewall mengizinkan UDP.",
 "issue.waiting_sampling": "Template sudah diterima, tetapi laju sampling belum. {n} catatan ditahan dan akan diskalakan saat laju itu tiba, bukan dihitung 1:1. Perangkat biasanya mengirim ulang dalam beberapa menit.",
-"issue.assumed_unsampled": "Perangkat ini tidak pernah menyatakan laju sampling, jadi catatannya dihitung 1:1. Jika perangkat melakukan sampling, aktifkan ekspor opsi sampler atau tandai sebagai 'unsampled' di Nama.",
+"issue.assumed_unsampled": "Perangkat ini belum menyatakan laju sampling-nya, jadi flow-nya dihitung 1:1. Jika ia melakukan sampling, minta ia mengekspor opsi sampler, atau tulis lajunya di Pengaturan → Nama, misalnya device {a} nama sampling=1000. Jika ia mengekspor setiap paket, tambahkan unsampled pada baris itu.",
 "issue.loss": "{p} paket ekspor hilang di jalan (ada celah nomor urut). Total sudah dikompensasi; rincian per host tidak. Jika “netstat -su” di mesin ini menunjukkan receive buffer errors naik, besarkan net.core.rmem_max; jika tidak, periksa jalur jaringan.",
 "issue.no_template": "Data masuk, tetapi template-nya belum. Data ditahan dan didekode begitu template tiba.",
 "issue.clock_skew": "Jam perangkat meleset {s}. Waktu sudah dikoreksi ke waktu kedatangan.",
@@ -497,5 +497,8 @@
 "ov.dir_total": "Total",
 "ov.bw_all": "Bandwidth (masuk + keluar), per aplikasi",
 "ov.bw_in": "Bandwidth masuk, per aplikasi",
-"ov.bw_out": "Bandwidth keluar, per aplikasi"
+"ov.bw_out": "Bandwidth keluar, per aplikasi",
+"src.manual": "diatur manual",
+"src.templates": "Template yang diterima (id field; s = scope):",
+"src.stale": "Berhenti (perangkat kini mengirim dengan cara lain):"
 }
