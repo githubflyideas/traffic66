@@ -576,13 +576,20 @@ func backfillDemo(pipe *pipeline.Pipeline, st *store.Store) {
 	pipe.FlushRollups()
 	s2 := sim.New(now, 67)
 	i := 0
-	s2.Backfill(now.Add(-24*time.Hour), now.Add(-time.Minute), true, func(r []flow.Record, c []flow.IfCounters) {
+	feed := func(r []flow.Record, c []flow.IfCounters) {
 		emit(r, c)
 		i++
 		if i%30 == 0 {
 			pipe.FlushRows()
 		}
-	})
+	}
+	to := now.Truncate(time.Minute)
+	s2.Backfill(now.Add(-24*time.Hour), to, true, feed)
+	// the minutes that passed while generating, so the charts have no gap
+	// where the live exporters take over
+	if t := time.Now().Truncate(time.Minute); t.After(to) {
+		s2.Backfill(to, t, true, feed)
+	}
 	pipe.FlushRows()
 	pipe.FlushRollups()
 	if err := st.Seal(now); err != nil {

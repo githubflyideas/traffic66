@@ -17,11 +17,14 @@ in a web UI and in a terminal UI.
 - Finds scans, password guessing, lateral movement, unusual uploads, floods
   and threat list traffic in the flows, also through sampling, and lists
   them as findings to deal with.
-- Top 66 lists, traffic over time by client, server, service, interface
-  and network (AS), flow paths, countries, threat list matches, flow
-  records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
+- Top 66 lists, who talks to whom as ring charts (servers and their
+  clients, services and their servers), traffic over time by interface and
+  network (AS), flow paths, countries on a world map, threat list matches,
+  flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - `traffic66 capture.pcap` opens up to 3 packet captures (3 GB in all) in the web UI: flows, findings, countries and flow records over the whole capture, with nothing to set up.
 - 13 languages in the web UI and the terminal UI.
+- Free to try for 30 days with every feature; it keeps working after that
+  (see [Trial and licence](#trial-and-licence)).
 
 ![Overview: open findings, bandwidth by application compared with last week, top clients and services](docs/images/overview.png)
 
@@ -503,7 +506,9 @@ If a device does not appear:
 Flow numbers are estimates: sampled packets times the sampling rate.
 traffic66 compares them with the device's own interface counters and shows
 the difference on **Interface check**, with the likely cause when it is
-larger than sampling alone explains.
+larger than sampling alone explains. Each interface has one chart with
+ingress (green) and egress (blue); picking an interface in the list shows
+its charts.
 
 ![Interface check: traffic of every interface, and the flow estimate next to the device counter](docs/images/interfaces.png)
 
@@ -533,15 +538,20 @@ The quickest way to name a host or a device: click its address on any page
 and choose **Name it…**. Type the name and press Enter; it is saved at
 once and shown everywhere instead of the bare address.
 
-For networks, interfaces and SNMP, **Sources → Names** in the web UI takes
-one entry per line. It is saved as
-`inventory.txt` in the data directory, so you can also edit that file (see
-`inventory.txt.example`). Every line is optional.
+For networks, interfaces and SNMP, use **Sources → Names**: choose the type
+(host, network, device, interface, SNMP), fill in the address and the name,
+and click **Add**. The table below lists every name with **Edit** and
+**Delete**; adding the same address again replaces the old entry. Addresses
+and networks are checked before saving.
+
+The names are saved as `inventory.txt` in the data directory, one entry per
+line. **Edit as text (advanced)** shows that file, and you can also edit it
+directly (see `inventory.txt.example`). Every line is optional.
 
 ```
 # your networks: traffic between them is "internal"
 net    10.10.0.0/16  Office LAN
-net    203.0.113.0/24  Public servers
+net    203.0.113.0/24  Public servers country=JP
 
 # device names; "unsampled" if it exports every packet (1:1)
 device 192.0.2.1     Core router
@@ -561,7 +571,9 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 - `net`: private ranges (10/8, 172.16/12, 192.168/16, 100.64/10) are
   always yours. Add your public ranges so traffic to and from them counts
   as yours too; the name shows up in **Top 66** grouped by segment and in
-  the flow paths by network.
+  the flow paths by network. `country=JP` (a two-letter country code)
+  says where the network is; the world map then draws lines from it to the
+  countries it talks to.
 - `snmp <device> <community> [<management address>[:port]]`: the device
   is the address flows come from. Add the management address when the
   device answers SNMP on another address. Interface descriptions read over
@@ -604,7 +616,10 @@ networks, such as IPinfo Lite) or `asn.tsv.gz` and restart traffic66.
 
 **Geo & networks** shows the traffic to and from other countries on a
 world map: the darker a country, the more traffic. Point at a country for
-its traffic; click it to filter or open its flow records. Country outlines
+its traffic; click it to filter or open its flow records. When your
+networks have a country (`country=` on a `net` line, see
+[Names](#7-names-snmp-and-your-own-networks)), lines run from that country
+to the countries they exchange traffic with, thicker for more traffic. Country outlines
 come from [Natural Earth](https://www.naturalearthdata.com) (public domain).
 
 ![Geo & networks: remote traffic by country on a world map](docs/images/geo.png)
@@ -646,24 +661,33 @@ Pages:
 | Page | What it answers |
 |---|---|
 | Overview | How much traffic now and compared with last week, by application; open findings; direction and protocol; top clients and services |
-| Top 66 | Opens on **Talkers**: traffic by service over time, and the top 30 clients and servers side by side with traffic, packets and flow records, above a row for all traffic. **Table** is one table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
-| Traffic details | Clients, servers and services over time, in bits/s and in packets/s: the top 8 of each, and how many there were. Opens on **Servers**; tabs switch to **Clients**, **Both ends** (side by side) and **Services** |
+| Top 66 | Opens on **Talkers**: the top 30 clients and servers side by side with traffic, packets and flow records, above a row for all traffic. **Table** is one table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
+| Traffic details | Two ring charts. **Servers and clients**: the inner ring is the 8 busiest servers, the outer ring the clients of each; **Clients inside** turns it round (clients inside, the servers each uses outside), since one side often explains more than the other. **Services and servers**: services inside and the servers offering them outside, or the other way round. Point at a segment for its traffic; click it like any value |
+| Flow paths | Which host uses which application towards which country: the 8 busiest hosts, the rest as Other. **Client → server** shows client → service → server; **By network** shows networks instead of hosts. Long names are shortened to 22 characters; point at one for the full name |
 | Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
-| Flow paths | Which host uses which application towards which country: the 8 busiest hosts, the rest as Other. **Client → server** shows client → service → server; **By network** shows networks instead of hosts |
-| Geo & networks | A world map of traffic by country; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
-| Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns |
-| Offline pcap analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-pcap-analysis)) |
-| Interface check | Traffic of every interface over time (ingress and egress, bits/s and packets/s), and flow numbers next to the interface counters, worst first, with reasons |
+| Geo & networks | A world map of traffic by country, with lines from your networks; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
 | Sources | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
+| Interface check | Traffic of every interface over time, ingress (green) and egress (blue) in one chart, in bits/s and packets/s, and flow numbers next to the interface counters, worst first, with reasons |
+| Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns |
+| Data cleanup | Deletes data older than 120, 90, 60, 30 or 7 days, or all of it, with how much each frees ([more](#13-data-backup-upgrade-uninstall)) |
+| Offline pcap analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-pcap-analysis)) |
 
-Above the pages: time range (15 minutes to 30 days), an optional search
-box, automatic refresh every 30 seconds, and **Copy link**, which copies a
-link to exactly the current view (page, time range and filters) to send to
-a colleague. Under them, **Device**, **Client**, **Server** and **Service**
-list the busiest values of the time range: pick one, or type one, to filter
-every page; empty the box to remove the filter. The language follows the
-browser; change it at the bottom of the menu.
+The side menu lists the pages in four groups: traffic (Overview, Top 66,
+Traffic details, Flow paths), security (Findings, Threat intel, Geo &
+networks), setup and data (Sources, Interface check, Flow records, Data
+cleanup) and Offline pcap analysis. Under the logo are the version and the
+server's date and time.
+
+Above the pages: time range (15 minutes to 30 days, or **Custom…** for any
+start and end, also further back than 30 days), automatic refresh every 30
+seconds, and **Copy link**, which copies a link to exactly the current view
+(page, time range and filters) to send to a colleague. On **Top 66** and
+**Traffic details**, a search box and **Device**, **Client**, **Server**
+and **Service** list the busiest values of the time range: pick one, or
+type one, to filter; the filter then applies to every page until you empty
+the box. The language follows the browser; change it at the bottom of the
+menu, above **Log out**.
 
 Charts over time show the 8 largest values in fixed colours and the rest as
 Other; the legend gives each value's total and can be clicked like any
@@ -724,9 +748,9 @@ no findings except the internet scanner knocking on the website.
 
 ![Findings: every step of an attack, found through 1:4096 sFlow sampling](docs/images/findings.png)
 
-![Top 66, Talkers: traffic by service, and the top 30 clients and servers with a row for all traffic](docs/images/topn.png)
+![Top 66, Talkers: the top 30 clients and servers with a row for all traffic](docs/images/topn.png)
 
-![Traffic details: clients, servers and services over time, in bits/s and packets/s](docs/images/traffic.png)
+![Traffic details: servers with their clients, and services with their servers, as ring charts](docs/images/traffic.png)
 
 ![Details of one host: the findings about it, its traffic, who it talks to, services, countries and latest flows](docs/images/detail.png)
 
@@ -926,6 +950,7 @@ The data directory holds everything:
 | `traffic66.duckdb` | summaries, interface counters and the current hour |
 | `password` | login passwords (hashed) |
 | `inventory.txt` | names (**Sources → Names**) |
+| `license.json` | installation number and licence (see [Trial and licence](#trial-and-licence)) |
 | `logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) | your logo (**Sources → Logo**), if you uploaded one |
 | `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | countries and networks databases you added or downloaded, and threat lists |
 
@@ -936,6 +961,13 @@ detail period with `-retention-days`, any number of days, for example
 `-retention-days 365`. Disk use grows with it: **Free** in the side menu
 turns red when the kept days will not fit. If the disk fills up, new flows
 cannot be stored until space is freed.
+
+**Data cleanup** in the side menu deletes data before you need to: older
+than 120, 90, 60, 30 or 7 days, or all data. It shows for each choice how
+many flow records go and about how much disk it frees, and asks before
+deleting. Flow records, the hourly and daily summaries, interface counters
+and findings are deleted; deleting all data also resets what the detection
+rules have learned. It cannot be undone.
 
 - **Backup**: stop traffic66 and copy the directory. Without stopping,
   copy `raw/`, `password` and `inventory.txt`; the current hour and the
@@ -954,6 +986,19 @@ cannot be stored until space is freed.
 - **Uninstall**: stop and remove the service or startup task (see
   [Install](#2-install)), then delete the program folder and the data
   directory.
+
+### Trial and licence
+
+traffic66 can be tried for 30 days. On first start it writes `license.json`
+to the data directory with an 8-digit installation number. The foot of
+every page shows how many days of the trial are left, then that the trial
+has ended. Nothing is switched off either way: every feature keeps working.
+
+To register, send the author the installation number (also shown at the
+foot of every page). The licence comes back as a new `license.json`; put
+it in the data directory in place of the old one. It is checked when
+traffic66 starts and every 4 hours, so no restart is needed; the foot of the
+page then shows who it is licensed to and how many days are left.
 
 ## 14. Security
 

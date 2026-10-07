@@ -279,7 +279,7 @@ label.btn.disabled{opacity:.5;cursor:not-allowed!important}
 .rgwrap svg{flex:none;max-width:100%;height:auto}
 .rgwrap path[data-n]{cursor:pointer;transition:opacity .15s}
 .rgwrap path[data-n]:hover{opacity:.8}
-.rgin{font-size:11.5px;font-weight:600;fill:#fff;pointer-events:none}
+.rgin{font-size:11px;font-weight:600;fill:#fff;pointer-events:none}
 .rgout{font-size:11px;fill:var(--ink-2);pointer-events:none}
 .rgline{fill:none;stroke:var(--ink-3);stroke-width:1}
 .rgtot{font-size:18px;font-weight:700;fill:var(--ink)}

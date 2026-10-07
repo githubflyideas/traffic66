@@ -18,11 +18,15 @@ antarmuka terminal.
 - Menemukan pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak
   biasa, flood, dan trafik daftar ancaman di dalam flow, juga melalui
   sampling, lalu mencantumkannya sebagai temuan untuk ditangani.
-- Daftar Top 66, trafik dari waktu ke waktu per klien, server, layanan,
-  interface, dan jaringan (AS), jalur trafik, negara, kecocokan dengan daftar
-  ancaman, catatan flow, enkapsulasi (GRE, IPIP, VXLAN, GENEVE, MPLS).
+- Daftar Top 66, siapa berkomunikasi dengan siapa dalam diagram cincin
+  (server dan kliennya, layanan dan servernya), trafik dari waktu ke waktu
+  per interface dan jaringan (AS), jalur trafik, negara di peta dunia,
+  kecocokan dengan daftar ancaman, catatan flow, enkapsulasi (GRE, IPIP,
+  VXLAN, GENEVE, MPLS).
 - `traffic66 capture.pcap` membuka hingga 3 tangkapan paket (total 3 GB) di UI web: flow, temuan, negara, dan catatan flow untuk seluruh tangkapan, tanpa pengaturan.
 - 13 bahasa di antarmuka web dan antarmuka terminal.
+- Gratis dicoba selama 30 hari dengan semua fitur; setelah itu tetap berjalan
+  (lihat [Masa uji dan lisensi](#trial-and-licence)).
 
 ![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding minggu lalu, klien dan layanan teratas](images/overview.png)
 
@@ -541,7 +545,8 @@ Angka flow adalah estimasi: jumlah paket sampel dikali sampling rate.
 traffic66 membandingkannya dengan counter interface milik perangkat dan
 menampilkan selisihnya di **Pencocokan antarmuka**, beserta kemungkinan
 penyebabnya bila selisih itu lebih besar daripada yang bisa dijelaskan oleh
-sampling saja.
+sampling saja. Setiap interface punya satu grafik berisi ingress (hijau) dan
+egress (biru); memilih interface di daftar menampilkan grafiknya.
 
 ![Pencocokan antarmuka: trafik setiap interface, dan estimasi flow di samping counter perangkat](images/interfaces.png)
 
@@ -574,16 +579,21 @@ Cara tercepat memberi nama host atau perangkat: klik alamatnya di halaman mana
 pun lalu pilih **Beri nama…**. Ketik namanya dan tekan Enter; nama langsung
 disimpan dan ditampilkan di mana-mana menggantikan alamat polosnya.
 
-Untuk jaringan, interface, dan SNMP, **Sumber → Nama** di antarmuka web
-menerima satu entri per baris. Isinya
-disimpan sebagai `inventory.txt` di direktori data, jadi Anda juga bisa
-mengedit file itu langsung (lihat `inventory.txt.example`). Setiap baris
+Untuk jaringan, interface, dan SNMP, gunakan **Sumber → Nama**: pilih jenisnya
+(host, jaringan, perangkat, interface, SNMP), isi alamat dan namanya, lalu
+klik **Tambah**. Tabel di bawahnya mencantumkan setiap nama dengan **Ubah**
+dan **Hapus**; menambahkan alamat yang sama lagi menggantikan entri lama.
+Alamat dan jaringan diperiksa sebelum disimpan.
+
+Nama-nama disimpan sebagai `inventory.txt` di direktori data, satu entri per
+baris. **Edit sebagai teks (lanjutan)** menampilkan file itu, dan Anda juga
+bisa mengeditnya langsung (lihat `inventory.txt.example`). Setiap baris
 bersifat opsional.
 
 ```
 # your networks: traffic between them is "internal"
 net    10.10.0.0/16  Office LAN
-net    203.0.113.0/24  Public servers
+net    203.0.113.0/24  Public servers country=JP
 
 # device names; "unsampled" if it exports every packet (1:1)
 device 192.0.2.1     Core router
@@ -604,6 +614,9 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
   dianggap milik Anda. Tambahkan rentang publik Anda agar trafik ke dan
   dari rentang itu juga dihitung sebagai milik Anda; namanya muncul di
   **Top 66** saat dikelompokkan per segmen dan di jalur trafik per jaringan.
+  `country=JP` (kode negara dua huruf) menyatakan lokasi jaringan itu; peta
+  dunia lalu menggambar garis darinya ke negara-negara yang bertukar trafik
+  dengannya.
 - `snmp <device> <community> [<management address>[:port]]`: device adalah
   alamat asal flow. Tambahkan alamat manajemen bila perangkat menjawab SNMP
   di alamat lain. Deskripsi interface yang dibaca lewat SNMP dipakai
@@ -632,7 +645,7 @@ File Anda dipakai lebih dulu; yang tidak tercakup dijawab DB-IP Lite bawaan. **H
 
 Tanpa antarmuka web, salin file ke direktori data sebagai `country.mmdb`, `asn.mmdb`, `both.mmdb` (file berisi negara dan jaringan, seperti IPinfo Lite) atau `asn.tsv.gz`, lalu restart traffic66.
 
-**Geografi & jaringan** menampilkan trafik dengan negara lain di peta dunia: makin gelap, makin banyak trafiknya. Arahkan kursor ke negara untuk melihat trafiknya; klik untuk memfilter atau membuka catatan flow-nya. Batas negara berasal dari [Natural Earth](https://www.naturalearthdata.com) (domain publik).
+**Geografi & jaringan** menampilkan trafik dengan negara lain di peta dunia: makin gelap, makin banyak trafiknya. Arahkan kursor ke negara untuk melihat trafiknya; klik untuk memfilter atau membuka catatan flow-nya. Bila jaringan Anda punya negara (`country=` di baris `net`, lihat [Nama](#7-names-snmp-and-your-own-networks)), garis ditarik dari negara itu ke negara-negara yang bertukar trafik dengannya, makin tebal makin banyak trafiknya. Batas negara berasal dari [Natural Earth](https://www.naturalearthdata.com) (domain publik).
 
 ![Geografi & jaringan: trafik luar per negara di peta dunia](images/geo.png)
 
@@ -677,25 +690,33 @@ Halaman:
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
 | Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; temuan terbuka; arah dan protokol; klien dan layanan teratas |
-| Top 66 | Terbuka di **Pihak teratas**: trafik per layanan dari waktu ke waktu, dan 30 klien dan server teratas berdampingan dengan trafik, paket, dan catatan flow, di atas satu baris untuk semua trafik. **Tabel** adalah satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
-| Detail trafik | Klien, server, dan layanan dari waktu ke waktu, dalam bit/s dan paket/s: 8 teratas dari masing-masing, dan berapa jumlahnya. Dibuka pada **Server**; tab beralih ke **Klien**, **Kedua sisi** (berdampingan), dan **Layanan** |
+| Top 66 | Terbuka di **Pihak teratas**: 30 klien dan server teratas berdampingan dengan trafik, paket, dan catatan flow, di atas satu baris untuk semua trafik. **Tabel** adalah satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
+| Detail trafik | Dua diagram cincin. **Server dan klien**: cincin dalam berisi 8 server tersibuk, cincin luar klien masing-masing; **Klien di dalam** membaliknya (klien di dalam, server yang dipakai masing-masing di luar), karena sering satu sisi lebih menjelaskan daripada sisi lainnya. **Layanan dan server**: layanan di dalam dan server yang menyediakannya di luar, atau sebaliknya. Arahkan kursor ke segmen untuk melihat trafiknya; klik seperti nilai mana pun |
+| Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 8 host tersibuk, sisanya sebagai Lainnya. **Klien → server** menampilkan klien → layanan → server; **Per segmen** menampilkan jaringan, bukan host. Nama panjang dipendekkan menjadi 22 karakter; arahkan kursor ke nama untuk melihatnya utuh |
 | Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
-| Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 8 host tersibuk, sisanya sebagai Lainnya. **Klien → server** menampilkan klien → layanan → server; **Per segmen** menampilkan jaringan, bukan host |
-| Geografi & jaringan | Peta dunia trafik per negara; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
-| Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih |
-| Analisis pcap offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-pcap-offline)) |
-| Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu (masuk dan keluar, bit/s dan paket/s), dan angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
+| Geografi & jaringan | Peta dunia trafik per negara, dengan garis dari jaringan Anda; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
 | Sumber | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
+| Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu, ingress (hijau) dan egress (biru) dalam satu grafik, dalam bit/s dan paket/s, dan angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
+| Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih |
+| Pembersihan data | Menghapus data yang lebih lama dari 120, 90, 60, 30, atau 7 hari, atau semuanya, beserta berapa banyak ruang yang dibebaskan masing-masing ([selengkapnya](#13-data-backup-upgrade-uninstall)) |
+| Analisis pcap offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-pcap-offline)) |
 
-Di atas halaman: rentang waktu (15 menit sampai 30 hari), kotak pencarian
-opsional, refresh otomatis setiap 30 detik, dan **Salin tautan**, yang
-menyalin tautan ke tampilan saat ini secara persis (halaman, rentang waktu,
-dan filter) untuk dikirim ke rekan kerja. Di bawahnya, **Perangkat**,
-**Klien**, **Server**, dan **Layanan** mencantumkan nilai tersibuk dalam
-rentang waktu: pilih satu, atau ketik satu, untuk memfilter setiap halaman;
-kosongkan kotaknya untuk menghapus filter. Bahasa mengikuti browser; ubah di
-bagian bawah menu.
+Menu samping mengelompokkan halaman menjadi empat: trafik (Ringkasan, Top 66,
+Detail trafik, Jalur trafik), keamanan (Temuan, Intel ancaman, Geografi &
+jaringan), pengaturan dan data (Sumber, Pencocokan antarmuka, Catatan flow,
+Pembersihan data), dan Analisis pcap offline. Di bawah logo ada versi serta
+tanggal dan jam server.
+
+Di atas halaman: rentang waktu (15 menit sampai 30 hari, atau **Kustom…**
+untuk awal dan akhir mana pun, juga lebih lama dari 30 hari ke belakang),
+refresh otomatis setiap 30 detik, dan **Salin tautan**, yang menyalin tautan
+ke tampilan saat ini secara persis (halaman, rentang waktu, dan filter) untuk
+dikirim ke rekan kerja. Di **Top 66** dan **Detail trafik**, kotak pencarian
+serta **Perangkat**, **Klien**, **Server**, dan **Layanan** mencantumkan nilai
+tersibuk dalam rentang waktu: pilih satu, atau ketik satu, untuk memfilter;
+filter itu lalu berlaku di setiap halaman sampai Anda mengosongkan kotaknya.
+Bahasa mengikuti browser; ubah di bagian bawah menu, di atas **Keluar**.
 
 Grafik dari waktu ke waktu menampilkan 8 nilai terbesar dengan warna tetap
 dan sisanya sebagai Lainnya; legenda memberikan total setiap nilai dan bisa
@@ -765,9 +786,9 @@ yang mengetuk situs web.
 
 ![Temuan: setiap langkah serangan, ditemukan melalui sampling sFlow 1:4096](images/findings.png)
 
-![Top 66, Pihak teratas: trafik per layanan, dan 30 klien dan server teratas dengan satu baris untuk semua trafik](images/topn.png)
+![Top 66, Pihak teratas: 30 klien dan server teratas dengan satu baris untuk semua trafik](images/topn.png)
 
-![Detail trafik: klien, server, dan layanan dari waktu ke waktu, dalam bit/s dan paket/s](images/traffic.png)
+![Detail trafik: server dengan kliennya, dan layanan dengan servernya, sebagai diagram cincin](images/traffic.png)
 
 ![Detail satu host: temuan tentangnya, trafiknya, dengan siapa ia berbicara, layanan, negara, dan flow terbaru](images/detail.png)
 
@@ -985,6 +1006,7 @@ Semua tersimpan di direktori data:
 | `traffic66.duckdb` | ringkasan, counter interface, dan jam berjalan |
 | `password` | kata sandi login (dalam bentuk hash) |
 | `inventory.txt` | nama (**Sumber → Nama**) |
+| `license.json` | nomor instalasi dan lisensi (lihat [Masa uji dan lisensi](#trial-and-licence)) |
 | `logo.png` (atau `.svg`, `.jpg`, `.webp`, `.gif`) | logo Anda (**Sumber → Logo**), jika Anda mengunggahnya |
 | `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
 
@@ -993,6 +1015,14 @@ yang lebih lama dihapus otomatis, diperiksa setiap 5 menit; tidak ada yang lain 
 Ubah masa simpan detail dengan `-retention-days`, berapa pun harinya, misalnya `-retention-days 365`. Pemakaian disk
 ikut bertambah: **Tersedia** di menu samping menjadi merah bila hari yang disimpan tidak muat. Jika disk penuh, flow
 baru tidak dapat disimpan sampai ada ruang kosong.
+
+**Pembersihan data** di menu samping menghapus data sebelum Anda
+membutuhkannya: yang lebih lama dari 120, 90, 60, 30, atau 7 hari, atau semua
+data. Untuk setiap pilihan ditampilkan berapa catatan flow yang terhapus dan
+kira-kira berapa ruang disk yang dibebaskan, dan konfirmasi diminta sebelum
+menghapus. Yang dihapus adalah catatan flow, ringkasan per jam dan per hari,
+counter interface, dan temuan; menghapus semua data juga mengatur ulang apa
+yang telah dipelajari aturan deteksi. Tindakan ini tidak dapat dibatalkan.
 
 - **Backup**: hentikan traffic66 lalu salin direktorinya. Tanpa
   menghentikannya, salin `raw/`, `password`, dan `inventory.txt`; jam
@@ -1010,6 +1040,21 @@ baru tidak dapat disimpan sampai ada ruang kosong.
 
 - **Uninstall**: hentikan dan hapus service atau startup task (lihat
   [Instalasi](#2-install)), lalu hapus folder program dan direktori data.
+
+<a id="trial-and-licence"></a>
+
+### Masa uji dan lisensi
+
+traffic66 bisa dicoba selama 30 hari. Saat pertama kali dijalankan, traffic66
+menulis `license.json` ke direktori data dengan nomor instalasi 8 digit.
+Bagian bawah setiap halaman menampilkan sisa hari masa uji, lalu bahwa masa
+uji telah berakhir. Tidak ada yang dimatikan: semua fitur tetap berfungsi.
+
+Untuk mendaftar, kirim nomor instalasi kepada pembuatnya (juga ditampilkan di
+bagian bawah setiap halaman). Lisensi dikirim balik sebagai `license.json`
+baru; letakkan di direktori data menggantikan yang lama. Lisensi diperiksa
+saat traffic66 mulai dan setiap 4 jam, jadi tidak perlu restart; bagian bawah
+halaman lalu menampilkan atas nama siapa lisensinya dan berapa hari tersisa.
 
 <a id="14-security"></a>
 

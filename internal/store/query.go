@@ -56,11 +56,23 @@ func v4range(p netip.Prefix) (uint32, uint32, bool) {
 	return lo, hi, true
 }
 
+// oneDevice: the query keeps to one device or interface. Duplicates are
+// left out so that traffic reported by two devices counts once; within one
+// device they are its own traffic and count.
+func (q Query) oneDevice() bool {
+	for _, f := range q.Filters {
+		if !f.Neg && (f.Field == "exporter" || f.Field == "iface") {
+			return true
+		}
+	}
+	return false
+}
+
 // where builds the WHERE clause and its arguments.
 func (q Query) where() (string, []any, error) {
 	conds := []string{"ts >= ?", "ts < ?"}
 	args := []any{q.From.UTC(), q.To.UTC()}
-	if !q.IncludeDup {
+	if !q.IncludeDup && !q.oneDevice() {
 		conds = append(conds, "NOT dup")
 	}
 	for _, f := range q.Filters {
