@@ -33,6 +33,7 @@ import (
 	"github.com/githubflyideas/traffic66/internal/dnsres"
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/flow"
+	"github.com/githubflyideas/traffic66/internal/license"
 	"github.com/githubflyideas/traffic66/internal/pipeline"
 	"github.com/githubflyideas/traffic66/internal/sandbox"
 	"github.com/githubflyideas/traffic66/internal/sim"
@@ -395,6 +396,19 @@ func serve(args []string, demo bool) {
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Det: det, Static: web.FS(), Version: version,
 		Demo: demo, Check: checker.Check, Exists: checker.Exists, LocalTok: tok, DataDir: f.data, Started: time.Now()}
 	srv.SNMP = poller.Status
+	licDir := f.data
+	if offline != nil {
+		// the data directory is temporary: keep the installation in the user's config
+		if d, err := os.UserConfigDir(); err == nil && os.MkdirAll(filepath.Join(d, "traffic66"), 0o755) == nil {
+			licDir = filepath.Join(d, "traffic66")
+		}
+	}
+	if lic, err := license.Open(licDir); err != nil {
+		log.Printf("license: %v", err)
+	} else {
+		srv.License = lic
+		go lic.Loop(ctx.Done(), 4*time.Hour)
+	}
 	if offline != nil {
 		srv.SB = sandbox.NewWith(filepath.Join(f.data, "sandbox"), inv, asn, thr, sandbox.LocalLimits, 0.25)
 		srv.Offline = true

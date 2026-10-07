@@ -472,5 +472,10 @@
 "rg.svc_sub_v": "Anel interno: os serviços com mais tráfego; externo: os servidores que os oferecem",
 "rg.svc_sub_s": "Anel interno: os servidores com mais tráfego; externo: os serviços de cada um",
 "geo.lines_hint": "Defina um país para suas redes internas (Fontes → Nomes, Rede) para ver linhas delas até os países com que conversam.",
-"nm.country_none": "país (opcional)"
+"nm.country_none": "país (opcional)",
+"lic.trial": "Teste do Traffic66: faltam {n} dias. Peça ao autor uma licença de registro.",
+"lic.over": "O teste do Traffic66 terminou. Peça ao autor uma licença de registro.",
+"lic.free": "Até o registro, tudo continua funcionando, com todos os recursos.",
+"lic.ok": "Licenciado para {c}: faltam {n} dias",
+"lic.id": "Instalação {id}"
 }

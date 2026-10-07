@@ -20,6 +20,7 @@ import (
 	"github.com/githubflyideas/traffic66/internal/detect"
 	"github.com/githubflyideas/traffic66/internal/dnsres"
 	"github.com/githubflyideas/traffic66/internal/enrich"
+	"github.com/githubflyideas/traffic66/internal/license"
 	"github.com/githubflyideas/traffic66/internal/pipeline"
 	"github.com/githubflyideas/traffic66/internal/sandbox"
 	"github.com/githubflyideas/traffic66/internal/store"
@@ -37,6 +38,7 @@ type Server struct {
 	Det     *detect.Detector
 	SB      *sandbox.Sandbox // offline analysis of capture files
 	Offline bool             // started on capture files (traffic66 file.pcap): no live data
+	License *license.Checker // trial or licence state for the page footer
 	// AutoLogin is a one-time token: /auto?t=<it> signs the browser in once.
 	AutoLogin string
 	Static    fs.FS

@@ -1553,6 +1553,13 @@ async function loadStatus() {
     for (const [ip, n] of Object.entries(s.hosts || {})) names.set(ip, n);
     $('#demo').hidden = !s.demo; $('#demo').textContent = t('demo.badge');
     offlineMode = !!s.offline;
+    const L = s.license;
+    if (L) {
+      const id = `<span class="muted">${esc(t('lic.id', {id: L.installation_id}))}</span>`;
+      $('#lic').innerHTML = L.kind === 'licensed' ? `<b>${esc(t('lic.ok', {c: L.customer, n: L.days}))}</b> ${id}`
+        : `<b>${esc(t(L.kind === 'trial' ? 'lic.trial' : 'lic.over', {n: L.days}))}</b><br>${esc(t('lic.free'))} ${id}`;
+      $('#lic').className = 'lic ' + L.kind; $('#lic').hidden = false;
+    }
     $('#verNo').textContent = 'v' + s.version;
     if (s.now) clockSkew = s.now - Date.now();
     $('#self').hidden = offlineMode;  // nothing is collected

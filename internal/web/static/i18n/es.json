@@ -472,5 +472,10 @@
 "rg.svc_sub_v": "Anillo interior: los servicios con más tráfico; exterior: los servidores que los ofrecen",
 "rg.svc_sub_s": "Anillo interior: los servidores con más tráfico; exterior: los servicios de cada uno",
 "geo.lines_hint": "Asigne un país a sus redes internas (Fuentes → Nombres, Red) para ver líneas desde ellas hasta los países con los que hablan.",
-"nm.country_none": "país (opcional)"
+"nm.country_none": "país (opcional)",
+"lic.trial": "Prueba de Traffic66: quedan {n} días. Solicite al autor una licencia de registro.",
+"lic.over": "La prueba de Traffic66 ha terminado. Solicite al autor una licencia de registro.",
+"lic.free": "Mientras no se registre sigue funcionando, con todas las funciones.",
+"lic.ok": "Licenciado a {c}: quedan {n} días",
+"lic.id": "Instalación {id}"
 }
