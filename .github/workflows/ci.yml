@@ -147,7 +147,7 @@ jobs:
             target: linux-arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: traffic66-${{ matrix.target }}
       - name: Run on CentOS 7 and Alpine
@@ -194,7 +194,7 @@ jobs:
           if [[ -s notes.md ]]; then echo "found notes for $v"; else echo "::warning::no section '## $v' in CHANGELOG.md"; fi
           echo "" >> notes.md
           echo "Downloads and installation: see the README." >> notes.md
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
