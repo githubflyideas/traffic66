@@ -3,7 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 1.2.4
+## 1.5.0
 
 Includes the changes listed under 1.2.3: the 1.2.3 release was built from
 the same code as 1.2.2.
@@ -42,7 +42,7 @@ Menu
 
 ## 1.2.3
 
-Built from the same code as 1.2.2; its changes are in 1.2.4.
+Built from the same code as 1.2.2; its changes are in 1.5.0.
 
 ## 1.2.2
 
