@@ -509,5 +509,10 @@
 "if.name_ph": "Nome da interface",
 "if.tag_ph": "Rótulo, ex. uplink",
 "if.save": "Salvar",
-"ov.if_sub": "Entrada e saída desta interface (sentido da interface)"
+"ov.if_sub": "Entrada e saída desta interface (sentido da interface)",
+"if.peers": "Interfaces do outro lado (sem amostragem; só o tráfego pela interface amostrada)",
+"if.peer_note": "Interface do outro lado: sem amostragem, só o tráfego pela interface amostrada deste equipamento",
+"src.sampled_if": "Amostragem em: {v}",
+"src.dir_yes": "com flowDirection (61)",
+"src.dir_no": "sem flowDirection (61): interface amostrada deduzida do tráfego"
 }

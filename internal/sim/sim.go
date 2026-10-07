@@ -472,7 +472,7 @@ func v9Values(r flow.Record, now time.Time, uptime uint32) encode.Values {
 	return encode.Values{encode.A(r.Src), encode.A(r.Dst), encode.U(uint64(r.SrcPort), 2), encode.U(uint64(r.DstPort), 2),
 		encode.U(uint64(r.Proto), 1), encode.U(uint64(r.TCPFlags), 1), encode.U(r.Bytes, 4), encode.U(r.Packets, 4),
 		encode.U(uint64(first), 4), encode.U(uint64(last), 4), encode.U(uint64(r.InIf), 2), encode.U(uint64(r.OutIf), 2),
-		encode.U(1, 1), encode.U(0, 1)}
+		encode.U(1, 1), encode.U(uint64(r.Direction), 1)}
 }
 
 var ipfixDataTmpl = encode.Template{ID: 400, Fields: []encode.Field{

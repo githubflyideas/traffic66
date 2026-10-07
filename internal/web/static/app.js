@@ -216,10 +216,15 @@ async function renderIfsel() {
   const d = await loadIfaces(), list = d.ifaces || [];
   if (state.ifv === undefined) state.ifv = d.default || 'all';
   const key = f => f.exporter + '/' + f.ifindex;
-  const opts = [['all', t('if.all')], ...list.map(f => [key(f), (f.default ? '★ ' : '') + ifName(f) + (f.tag ? ' [' + f.tag + ']' : ''), (f.device || f.exporter) + ' · ' + f.ifindex])];
-  if (state.ifv !== 'all' && !list.some(f => key(f) === state.ifv)) opts.push([state.ifv, state.ifv]);
+  const opt = (v, l, tt) => `<option value="${esc(v)}"${tt ? ` title="${esc(tt)}"` : ''}>${esc(l)}</option>`;
+  // sampled interfaces only, grouped by device; a peer only when it is the choice
+  const shown = list.filter(f => !f.peer || f.default || key(f) === state.ifv), groups = new Map();
+  shown.forEach(f => { const g = f.device || f.exporter; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(f); });
+  let html = opt('all', t('if.all'));
+  groups.forEach((fs, g) => { html += `<optgroup label="${esc(g)}">${fs.map(f => opt(key(f), (f.default ? '★ ' : '') + ifName(f) + (f.tag ? ' [' + f.tag + ']' : ''), (f.device || f.exporter) + ' · ' + f.ifindex)).join('')}</optgroup>`; });
+  if (state.ifv !== 'all' && !list.some(f => key(f) === state.ifv)) html += opt(state.ifv, state.ifv);
   const sel = $('#ifsel');
-  sel.innerHTML = opts.map(([v, l, tt]) => `<option value="${esc(v)}"${tt ? ` title="${esc(tt)}"` : ''}>${esc(l)}</option>`).join('');
+  sel.innerHTML = html;
   sel.value = state.ifv;
   sel.classList.toggle('on', state.ifv !== 'all');
   sel.title = sel.selectedOptions[0]?.title || '';
@@ -536,7 +541,7 @@ views.overview = async (el) => {
   const [d, ifs, fd] = await Promise.all([api('overview', {}, od ? [...state.f, {f: 'dir', v: od, neg: false}] : state.f), inSB() ? null : loadIfaces(), api('findings', {limit: 3}).catch(() => null)]);
   // the interface chart: the interface picked at the top, else the default, else the busiest
   const ifl = ifs?.ifaces || [], ikey = f => f.exporter + '/' + f.ifindex;
-  const ifk = state.ifv && state.ifv !== 'all' ? state.ifv : (ifs?.default || (ifl[0] ? ikey(ifl[0]) : ''));
+  const ifk = state.ifv && state.ifv !== 'all' ? state.ifv : (ifs?.default || ((ifl.find(f => !f.peer) || ifl[0]) ? ikey(ifl.find(f => !f.peer) || ifl[0]) : ''));
   const ifSel = ifl.find(f => ikey(f) === ifk);
   const [iIn, iOut] = ifk && !inSB() ? await Promise.all(['if_in', 'if_out'].map(by => api('series', {by, measure: 'wire', top: 20, dup: 1}, [...state.f, {f: 'iface', v: ifk, neg: false}]).catch(() => null))) : [null, null];
   const tot = d.totals, base = d.base_totals, basis = d.basis;
@@ -1287,9 +1292,9 @@ function ifVerdict(r, rc, dirIn) {
 views.ifaces = async (el) => {
   const d = await api('ifaces');
   (d.ifaces || []).forEach(f => ifaceNames.set(f.exporter + '/' + f.ifindex, ifName(f) + ' · ' + (f.device || f.exporter)));
-  const list = (d.ifaces || []).slice().sort((a, b) => (!!b.has_counters - !!a.has_counters) || ((devKind(b) === 'warn') - (devKind(a) === 'warn')));
+  const list = (d.ifaces || []).slice().sort((a, b) => (!!a.peer - !!b.peer) || (!!b.has_counters - !!a.has_counters) || ((devKind(b) === 'warn') - (devKind(a) === 'warn')));
   if (!list.length) { el.innerHTML = `<div class="panel"><div class="empty">${t('empty.nodata')}</div></div>`; return; }
-  if (!state.ifc || !list.some(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex)) { const d = list.find(f => f.default) || list[0]; state.ifc = {exporter: d.exporter, ifindex: d.ifindex}; }
+  if (!state.ifc || !list.some(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex)) { const d = list.find(f => f.default) || list.find(f => !f.peer) || list[0]; state.ifc = {exporter: d.exporter, ifindex: d.ifindex}; }
   const key = state.ifc.exporter + '/' + state.ifc.ifindex, sel = list.find(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex);
   // one device's interface: count everything it saw, also traffic another device reported too
   const fil = [...state.f, {f: 'iface', v: key, neg: false}];
@@ -1300,13 +1305,14 @@ views.ifaces = async (el) => {
   const r = rc.recon || {}, ctr = !!r.has_counters;
   const leg = withCtr => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span>${withCtr ? `<span><i class="line dash" style="border-top:2px dashed var(--ink-2);background:none"></i>${t('if.counter')}</span>` : ''}</div>`;
   el.innerHTML = `<div class="grid" style="margin-bottom:16px">
-    ${panel('c12', `${esc(name)} · ${t('ch.bps')}`, '', `<div class="chart" id="ifB" style="height:270px" aria-label="${esc(t('ch.bps'))}"></div>${leg(ctr)}`)}
+    ${panel('c12', `${esc(name)} · ${t('ch.bps')}`, sel.peer ? esc(t('if.peer_note')) : '', `<div class="chart" id="ifB" style="height:270px" aria-label="${esc(t('ch.bps'))}"></div>${leg(ctr)}`)}
     ${panel('c12', `${esc(name)} · ${t('ch.pps')}`, '', `<div class="chart" id="ifP" style="height:270px" aria-label="${esc(t('ch.pps'))}"></div>${leg(false)}`)}</div>
     <div class="grid">
-    ${panel('c4', t('if.title'), t('if.sub'), `<div class="iflist">${list.map(f => {
+    ${panel('c4', t('if.title'), t('if.sub'), `<div class="iflist">${list.map((f, i) => {
       const k = devKind(f), cur = f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex, id = esc(f.exporter + '/' + f.ifindex);
-      return `<div class="ifrow"><button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}${f.tag ? `<span class="iftag">${esc(f.tag)}</span>` : ''}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>
-        <button class="ifstar ${f.default ? 'on' : ''}" data-star="${id}" title="${esc(t(f.default ? 'if.is_default' : 'if.set_default'))}" aria-label="${esc(t('if.set_default'))}">${f.default ? '★' : '☆'}</button><button class="ifedit" data-edit="${id}" title="${esc(t('if.rename'))}" aria-label="${esc(t('if.rename'))}">✎</button></div>
+      const head = f.peer && !list[i - 1]?.peer ? `<div class="ifpeers">${esc(t('if.peers'))}</div>` : '';
+      return `${head}<div class="ifrow${f.peer ? ' peer' : ''}"><button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}${f.tag ? `<span class="iftag">${esc(f.tag)}</span>` : ''}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>
+        ${f.peer && !f.default ? '' : `<button class="ifstar ${f.default ? 'on' : ''}" data-star="${id}" title="${esc(t(f.default ? 'if.is_default' : 'if.set_default'))}" aria-label="${esc(t('if.set_default'))}">${f.default ? '★' : '☆'}</button>`}<button class="ifedit" data-edit="${id}" title="${esc(t('if.rename'))}" aria-label="${esc(t('if.rename'))}">✎</button></div>
         <form class="ifform" data-form="${id}" hidden><input name="name" value="${esc(f.name || '')}" placeholder="${esc(t('if.name_ph'))}"><input name="tag" value="${esc(f.tag || '')}" placeholder="${esc(t('if.tag_ph'))}"><button class="btn primary" type="submit">${t('if.save')}</button><button class="btn" type="button" data-cancel>${t('nm.cancel')}</button></form>`;
     }).join('')}</div>`)}
     <div class="panel c8" id="recon"></div></div>`;
@@ -1357,10 +1363,13 @@ views.sources = async (el) => {
     ['IPtoASN', 'geo.f_iptoasn', 'PDDL 1.0', 'https://iptoasn.com']];
   const freeRows = FREE.map(([n, k, lic, url]) => `<tr><td class="nw"><a href="${url}" target="_blank" rel="noopener">${n}</a></td><td>${esc(t(k))}</td><td class="nw muted">${lic}</td></tr>`).join('');
   const srcs = d.sources || [];
+  const ifd = await loadIfaces().catch(() => ({})), sampledIf = new Map();
+  (ifd.ifaces || []).filter(f => !f.peer && (f.in_wire || f.out_wire)).forEach(f => { if (!sampledIf.has(f.exporter)) sampledIf.set(f.exporter, []); sampledIf.get(f.exporter).push(ifName(f)); });
+  const obsLine = s => { const l = sampledIf.get(s.exporter), dir = s.dir_field ? t('src.dir_' + s.dir_field) : ''; return l || dir ? `<br><span class="muted" style="font-size:12px">${l ? esc(t('src.sampled_if', {v: l.join(', ')})) : ''}${l && dir ? ' · ' : ''}${esc(dir)}</span>` : ''; };
   const issueText = (code, s) => t('issue.' + code, {a: s.exporter, n: nf(s.pending), p: nf(code === 'agent_drops' ? s.drop_pct : code === 'loss' ? (s.transit_pct ?? s.lost_pct) : s.lost_pct, 1) + '%', s: Math.round(Math.abs(s.clock_skew_ns) / 1e9) + ' s'});
   const rows = srcs.map(s => {
     const kind = s.status;
-    return `<tr class="${s.issues?.length ? 'has-fix' : ''}"><td>${s.name ? esc(s.name) + ' ' : ''}<span class="muted" style="font-size:12.5px">${esc(s.exporter)}${s.domain ? ' / ' + s.domain : ''}</span></td>
+    return `<tr class="${s.issues?.length ? 'has-fix' : ''}"><td>${s.name ? esc(s.name) + ' ' : ''}<span class="muted" style="font-size:12.5px">${esc(s.exporter)}${s.domain ? ' / ' + s.domain : ''}</span>${obsLine(s)}</td>
       <td class="nw">${esc(s.proto)}</td><td class="num">${nf(s.rec_per_sec, 1)}</td>
       <td class="nw">${s.sampling ? esc(s.sampling) : (s.sampling_state === 'waiting' ? '<span class="muted">?</span>' : '1:1')}${s.sampling_state === 'manual' ? ` <span class="muted">(${esc(t('src.manual'))})</span>` : ''}${s.effective ? ` <span class="muted">(${esc(t('src.effective', {v: '1:' + nf(s.effective)}))})</span>` : ''}</td>
       <td class="num">${nf(s.lost_pct, 2)}%</td><td class="nw muted">${s.last_seen ? ago(Date.parse(s.last_seen)) : ''}</td>

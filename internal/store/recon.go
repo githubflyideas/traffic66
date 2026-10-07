@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -15,6 +17,10 @@ type IfaceInfo struct {
 	Counters bool   `json:"counters"`
 	InWire   uint64 `json:"in_wire"`
 	OutWire  uint64 `json:"out_wire"`
+	// Peer: flows were not sampled on this interface; it is only the other
+	// end of flows sampled on another interface of the device, so its
+	// numbers hold only the traffic that went through that interface.
+	Peer bool `json:"peer,omitempty"`
 }
 
 // Interfaces lists interfaces seen in the range, busiest first.
@@ -62,11 +68,17 @@ func (s *Store) Interfaces(q Query) ([]IfaceInfo, error) {
 		}
 		rows.Close()
 	}
+	if err := s.markPeers(q, src, m); err != nil {
+		return nil, err
+	}
 	out := make([]IfaceInfo, 0, len(m))
 	for _, f := range m {
 		out = append(out, *f)
 	}
 	sort.Slice(out, func(i, j int) bool {
+		if out[i].Peer != out[j].Peer {
+			return !out[i].Peer
+		}
 		if out[i].Counters != out[j].Counters {
 			return out[i].Counters
 		}
@@ -235,4 +247,90 @@ func minT(a, b time.Time) time.Time {
 		return a
 	}
 	return b
+}
+
+// markPeers marks the interfaces of each device that flows were not sampled
+// on. Where the device says which interface sampled a flow (sFlow data
+// source, NetFlow/IPFIX flowDirection), those interfaces are the sampled
+// ones. For flows where it does not, an interface on at least 90% of the
+// device's traffic is taken as the sampled one (a device sampling a single
+// interface); when there is none, nothing is marked.
+func (s *Store) markPeers(q Query, src string, m map[string]*IfaceInfo) error {
+	from, to := q.From.UTC().Truncate(time.Hour), q.To.UTC()
+	known := map[string]map[uint32]bool{} // exporter → sampled interfaces
+	unk := map[string]uint64{}            // exporter → traffic with no sampled interface
+	var knownWire = map[string]uint64{}
+	rows, err := s.DB.Query(`SELECT dim, val, sum(wire) FROM r_dim WHERE ts >= ? AND ts < ? AND dim IN ('obsif', 'obsunk') GROUP BY 1,2`, from, to)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var dim, val string
+		var w uint64
+		if err := rows.Scan(&dim, &val, &w); err != nil {
+			rows.Close()
+			return err
+		}
+		if dim == "obsunk" {
+			unk[val] += w
+			continue
+		}
+		i := strings.LastIndexByte(val, '/')
+		idx, err := strconv.ParseUint(val[i+1:], 10, 32)
+		if i < 0 || err != nil || w == 0 {
+			continue
+		}
+		e := val[:i]
+		if known[e] == nil {
+			known[e] = map[uint32]bool{}
+		}
+		known[e][uint32(idx)] = true
+		knownWire[e] += w
+	}
+	rows.Close()
+	// device totals, for interfaces seen on nearly all of a device's traffic
+	tot := map[string]uint64{}
+	rows, err = s.DB.Query(fmt.Sprintf(`SELECT exporter, sum(wire) FROM %s WHERE ts >= ? AND ts < ? GROUP BY 1`, src), q.From.UTC(), q.To.UTC())
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var e string
+		var w uint64
+		if err := rows.Scan(&e, &w); err != nil {
+			rows.Close()
+			return err
+		}
+		tot[e] = w
+	}
+	rows.Close()
+	byExp := map[string][]*IfaceInfo{}
+	for _, f := range m {
+		if f.InWire+f.OutWire > 0 {
+			byExp[f.Exporter] = append(byExp[f.Exporter], f)
+		}
+	}
+	for e, fs := range byExp {
+		sampled := map[uint32]bool{}
+		for i := range known[e] {
+			sampled[i] = true
+		}
+		// traffic not attributed to an interface (older data, or no
+		// direction field): fall back to the 90% rule
+		if knownWire[e] == 0 || unk[e] > knownWire[e]/20 {
+			found := false
+			for _, f := range fs {
+				if t := tot[e]; t > 0 && float64(f.InWire+f.OutWire) >= 0.9*float64(t) {
+					sampled[f.IfIndex], found = true, true
+				}
+			}
+			if !found {
+				continue // cannot be told: mark nothing
+			}
+		}
+		for _, f := range fs {
+			f.Peer = !sampled[f.IfIndex]
+		}
+	}
+	return nil
 }

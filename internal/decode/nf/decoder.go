@@ -32,6 +32,10 @@ type Stats struct {
 	Rates         []uint32 // every declared rate (exporter, sampler, interface)
 	Templates     int
 	TemplateInfo  []string // the templates seen and their field ids
+	// DirField: "yes" when the data templates carry flowDirection (61), so
+	// the interface each flow was sampled on is known; "no" when they do
+	// not; "" before any data template.
+	DirField string
 	Manual        bool     // the rate was set by hand (sampling= in the names)
 	// LossComp is the multiplier currently applied to make up for records
 	// lost in transit (1 = no loss).
@@ -94,6 +98,7 @@ type session struct {
 	pending []pendingRec
 
 	tmplDesc map[uint16]string // templates seen, for the sources page
+	tmplDir  map[uint16]bool   // data templates: whether they carry flowDirection
 
 	initMs int64
 
@@ -206,6 +211,13 @@ func (d *Decoder) Stats() []Stats {
 			st.TemplateInfo = append(st.TemplateInfo, v)
 		}
 		sort.Strings(st.TemplateInfo)
+		for _, d := range s.tmplDir {
+			if d {
+				st.DirField = "yes"
+				break
+			}
+			st.DirField = "no"
+		}
 		if s.def == 0 && len(s.bySampler) == 0 && len(s.byIf) == 0 && d.Manual[s.stats.Exporter] > 0 {
 			st.Manual = true
 			st.Sampling = d.Manual[s.stats.Exporter]

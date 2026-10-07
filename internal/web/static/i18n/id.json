@@ -509,5 +509,10 @@
 "if.name_ph": "Nama antarmuka",
 "if.tag_ph": "Label, mis. uplink",
 "if.save": "Simpan",
-"ov.if_sub": "Masuk dan keluar antarmuka ini (arah antarmuka)"
+"ov.if_sub": "Masuk dan keluar antarmuka ini (arah antarmuka)",
+"if.peers": "Antarmuka lawan (tidak disampel; hanya trafik lewat antarmuka yang disampel)",
+"if.peer_note": "Antarmuka lawan: tidak disampel, hanya trafik lewat antarmuka yang disampel di perangkat ini",
+"src.sampled_if": "Disampel di: {v}",
+"src.dir_yes": "dengan flowDirection (61)",
+"src.dir_no": "tanpa flowDirection (61): antarmuka yang disampel ditebak dari trafik"
 }

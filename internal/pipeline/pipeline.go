@@ -320,6 +320,7 @@ func (p *Pipeline) process(r *flow.Record) {
 	}
 	key := dkey{src, dst, r.SrcPort, r.DstPort, r.Proto}
 	org2 := origin{r.Exporter, r.Domain, r.Observation, r.InIf, r.OutIf, r.Direction}
+	obsIf := observedIf(r)
 
 	slices := minuteSlices(r.Start, r.End)
 	var bLeft, wLeft, pLeft = l3, wire, pkts
@@ -339,6 +340,7 @@ func (p *Pipeline) process(r *flow.Record) {
 		}
 		row.Dup = p.isDup(sl.t, key, org2)
 		p.batch = append(p.batch, row)
+		p.noteObs(&row, obsIf)
 		if row.Dup {
 			p.DupRows.Add(1)
 			continue
@@ -435,6 +437,38 @@ func (p *Pipeline) isDup(t time.Time, k dkey, o origin) bool {
 		return false
 	}
 	return prev != oh
+}
+
+// observedIf is the interface a flow was sampled on: the sFlow data source
+// when it is an interface, else the ingress or egress interface as the
+// exporter's flowDirection says; 0 when it cannot be told.
+func observedIf(r *flow.Record) uint32 {
+	switch {
+	case r.Observation != 0 && r.Observation>>24 == 0:
+		return r.Observation & 0xFFFFFF
+	case r.Direction == 0:
+		return r.InIf
+	case r.Direction == 1:
+		return r.OutIf
+	}
+	return 0
+}
+
+// noteObs counts each row, duplicates included, under the interface it was
+// sampled on (dim obsif, "exporter/ifindex"), or under its exporter when that
+// is unknown (dim obsunk). The interface list uses it to tell the sampled
+// interfaces from the ones only seen as the other end of their flows.
+func (p *Pipeline) noteObs(r *store.Row, obsIf uint32) {
+	c := store.Counters{Bytes: r.Bytes, Wire: r.Wire, Pkts: r.Pkts, Flows: uint64(r.Flows)}
+	k := store.DimKey{TS: r.TS.Truncate(time.Hour), Dim: "obsunk", Val: r.Exporter}
+	if obsIf != 0 {
+		k.Dim, k.Val = "obsif", r.Exporter+"/"+strconv.FormatUint(uint64(obsIf), 10)
+	}
+	if v := p.rDim[k]; v != nil {
+		v.Add(c)
+	} else {
+		p.rDim[k] = &c
+	}
 }
 
 func (p *Pipeline) rollup(r *store.Row, hasPeer bool) {

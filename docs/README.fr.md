@@ -584,6 +584,25 @@ dans [Utiliser l'interface web](#9-using-the-web-ui)), et la vue
 d'ensemble affiche sa bande passante. Les deux sont enregistrés aussitôt
 dans la ligne `iface` de Noms.
 
+Les enregistrements de flux nomment deux interfaces : celle par laquelle un
+paquet est entré et celle par laquelle il est sorti. Un équipement qui
+n'échantillonne que certaines interfaces montre donc aussi l'autre bout de
+leurs flux. Ces **Interfaces d’en face** sont listées en dernier, en plus
+petit et en gris, sous leur propre titre : leurs chiffres ne contiennent
+que le trafic passé par une interface échantillonnée, pas tout leur
+trafic. Elles ne sont pas proposées dans **Interface** au-dessus des
+pages. traffic66 sait quelle interface a échantillonné un flux grâce à la
+source de données sFlow, ou au champ flowDirection (IPFIX 61) de NetFlow v9
+et IPFIX (ingress : l'interface d'entrée, egress : l'interface de sortie).
+Sans ce champ, une interface présente sur au moins 90 % du trafic d'un
+équipement est considérée comme l'interface échantillonnée ; s'il n'y en a
+aucune, aucune interface n'est marquée. **Paramètres** montre, pour chaque
+équipement, les interfaces échantillonnées (**Échantillonné sur :**) et si
+ses modèles portent flowDirection (**avec flowDirection (61)**). Pour voir
+tout le trafic d'un équipement, échantillonnez chaque interface en entrée
+(voir [Envoyer les flux depuis vos
+équipements](#4-send-flows-from-your-devices)).
+
 ![Contrôle des interfaces : trafic de chaque interface, et l'estimation des flux à côté du compteur de l'équipement](images/interfaces.png)
 
 Pour disposer de compteurs de comparaison :
@@ -742,7 +761,7 @@ Pages :
 | Détections | Ce qui demande votre attention : scans, essais de mots de passe, mouvements latéraux, envois inhabituels, inondations et trafic des listes de menaces ([plus](#findings)) |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
 | Géographie et réseaux | Une carte du monde du trafic par pays, avec des lignes depuis vos réseaux ; les réseaux (AS) d'où venait et où allait le trafic, dans le temps en bits/s et paquets/s ; trafic par pays et par réseau |
-| Paramètres | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
+| Paramètres | Équipements, échantillonnage, les interfaces que chaque équipement échantillonne et s'il envoie flowDirection, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
 | Contrôle des interfaces | Trafic de chaque interface dans le temps en bits/s et, en dessous, en paquets/s, entrée (vert) et sortie (bleu), avec les compteurs de l'équipement en pointillés ; l'écart entre les chiffres de flux et les compteurs, les pires en premier, avec les causes ; un nom, une étiquette et l'interface par défaut pour chaque interface |
 | Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix. S'ouvre sur les 15 dernières minutes, mises à jour toutes les 5 secondes ; ouverte depuis une valeur d'une autre page (**Voir ses enregistrements de flux**), elle garde la plage de temps de cette page, et **Revenir au temps réel** y revient |
 | Nettoyage des données | Supprime les données de plus de 120, 90, 60, 30 ou 7 jours, ou toutes, en indiquant ce que chaque choix libère ([plus](#13-data-backup-upgrade-uninstall)) |
@@ -759,7 +778,8 @@ Au-dessus des pages de trafic (Vue d'ensemble, Top 66, Détails du trafic,
 Chemins du trafic, Géographie et réseaux, Enregistrements de flux et le
 détail d'une valeur) se trouve **Interface** : **Toutes les interfaces**,
 ou une seule interface, pour que ces pages ne montrent que le trafic qui
-la traverse (en entrée ou en sortie). Il démarre sur l'interface par
+la traverse (en entrée ou en sortie). Il liste les interfaces
+échantillonnées, regroupées par équipement, et démarre sur l'interface par
 défaut (★, définie dans **Contrôle des interfaces**) et le choix fait
 partie du lien. Détections, Menaces, Contrôle des interfaces et Paramètres
 couvrent toujours tout le trafic. Pour une interface sur 7 ou 30 jours,
