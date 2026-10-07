@@ -3,7 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 0.3.1
+## 0.4.0
 
 Licence
 - Traffic66 can be tried for 30 days. The foot of every page shows the days
@@ -74,6 +74,11 @@ Pages
 - New page **Data cleanup**: delete data older than 120, 90, 60, 30 or 7
   days, or all, with how much each frees. Summaries, interface counters and
   findings go with it.
+
+## 0.3.1
+
+- Traffic details opens on servers only; tabs switch to clients, both ends
+  side by side, and services (13 languages).
 
 ## 0.3.0
 
