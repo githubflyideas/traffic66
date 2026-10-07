@@ -480,3 +480,61 @@ func TestSeriesNoGaps(t *testing.T) {
 		}
 	}
 }
+
+// Cleanup deletes flows, summaries and counters before a time, whole hourly
+// files at a time; "all" leaves nothing.
+func TestPurge(t *testing.T) {
+	p, st := setup(t)
+	now := time.Now().UTC().Truncate(time.Minute)
+	cli := netip.MustParseAddr("10.1.1.1")
+	srv := netip.MustParseAddr("198.51.100.9")
+	exp := netip.MustParseAddr("10.0.0.1")
+	var recs []flow.Record
+	for _, age := range []time.Duration{10 * 24 * time.Hour, 3 * 24 * time.Hour, 2 * time.Hour} {
+		for i := 0; i < 10; i++ {
+			ts := now.Add(-age + time.Duration(i)*time.Minute)
+			recs = append(recs, flow.Record{Start: ts, End: ts.Add(59 * time.Second), Src: cli, Dst: srv, SrcPort: 50000, DstPort: 443,
+				Proto: 6, Bytes: 1482, Packets: 1, Mult: 1, SamplingKnown: true, Exporter: exp, Source: flow.SrcNetFlow9})
+		}
+	}
+	p.Ingest(recs)
+	p.FlushRows()
+	p.FlushRollups()
+	if err := st.Seal(now); err != nil {
+		t.Fatal(err)
+	}
+	count := func(q string) (n int64) { st.DB.QueryRow(q).Scan(&n); return }
+	flows := func() int64 { return count(`SELECT count(*) FROM ` + st.Source(now.Add(-30*24*time.Hour), now.Add(time.Hour))) }
+	if n := flows(); n != 30 {
+		t.Fatalf("%d flow rows before", n)
+	}
+	week := now.Add(-7 * 24 * time.Hour)
+	est := st.PurgeSizeBefore(week)
+	if est.Rows != 10 || est.Bytes == 0 {
+		t.Errorf("estimate %+v", est)
+	}
+	done, err := st.PurgeBefore(week)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done.Rows != 10 || flows() != 20 {
+		t.Errorf("after 7 days: purged %+v, %d left", done, flows())
+	}
+	if n := count(`SELECT count(*) FROM r_ts WHERE ts < now() - INTERVAL 7 DAY`); n != 0 {
+		t.Errorf("%d old summary rows left", n)
+	}
+	if n := count(`SELECT count(*) FROM r_ts`); n == 0 {
+		t.Error("recent summaries deleted")
+	}
+	if _, err := st.PurgeBefore(time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	if n := flows(); n != 0 {
+		t.Errorf("%d flow rows after deleting all", n)
+	}
+	for _, tb := range []string{"r_ts", "r_host", "r_dim", "segments", "findings"} {
+		if n := count(`SELECT count(*) FROM ` + tb); n != 0 {
+			t.Errorf("%s: %d rows after deleting all", tb, n)
+		}
+	}
+}

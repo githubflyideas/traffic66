@@ -140,7 +140,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'sandbox', 'ifaces', 'sources', 'detail'];
+const VIEWS = ['overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'both', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
@@ -954,6 +954,39 @@ views.geo = async (el) => {
   asCharts.forEach(([by, m], i) => fillSeries('asr' + i, ad[i], by, m));
 };
 
+// ------------------------------------------------------------ data cleanup
+// Deletes flow records, summaries, counters and findings older than a number
+// of days, or everything; each shows what it frees and asks first.
+views.cleanup = async (el) => {
+  const d = await (await fetch('/api/cleanup')).json();
+  const opts = d.options || [];
+  const row = o => {
+    const what = o.days ? t('cl.days', {n: o.days}) : t('cl.all');
+    const has = o.rows > 0 || !o.days;
+    return `<tr><td class="nw"><b>${esc(what)}</b></td><td class="num">${has && o.rows ? esc(t('cl.rows', {n: nf(o.rows)})) : `<span class="muted">${t('cl.none')}</span>`}</td>
+      <td class="num">${o.bytes ? fmtBytes(o.bytes) : '—'}</td>
+      <td style="text-align:end"><button class="btn ${o.days ? '' : 'danger'}" data-cl="${o.days}" ${has ? '' : 'disabled'}>${t('cl.run')}</button></td></tr>`;
+  };
+  el.innerHTML = `<div class="grid">${panel('c12', t('cl.title'), t('cl.sub'), `<p class="muted" style="margin:0 0 12px;font-size:13px">${esc(t('cl.what'))}</p>
+    <div class="kpis" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px"><div class="kpi"><div class="lab">${t('cl.disk')}</div><div class="n">${fmtBytes(d.disk_bytes)}</div></div>
+      <div class="kpi"><div class="lab">${t('cl.oldest')}</div><div class="n" style="font-size:20px">${d.oldest && !d.oldest.startsWith('0001') ? esc(new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(d.oldest))) : '—'}</div></div></div>
+    <table><tr><th></th><th class="num">${t('cl.col_rows')}</th><th class="num">${t('cl.col_size')}</th><th></th></tr>${opts.map(row).join('')}</table>
+    <div id="clMsg" style="margin-top:10px;font-size:13px"></div>`)}</div>`;
+  el.querySelectorAll('[data-cl]').forEach(b => b.onclick = async () => {
+    const days = +b.dataset.cl;
+    if (!confirm(days ? t('cl.confirm_days', {n: days}) : t('cl.confirm_all'))) return;
+    if (!days && !confirm(t('cl.confirm_all2'))) return;
+    b.disabled = true;
+    const res = await fetch('/api/cleanup', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({days})});
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) { const m = $('#clMsg'); m.style.color = 'var(--crit)'; m.textContent = j.error || res.statusText; b.disabled = false; return; }
+    clDone = t('cl.done', {n: nf(j.rows || 0), s: fmtBytes(j.bytes || 0)});
+    loadStatus(); render();
+  });
+  if (clDone) { const m = $('#clMsg'); m.style.color = 'var(--good)'; m.textContent = clDone; clDone = ''; }
+};
+let clDone = '';
+
 // ------------------------------------------------------------ offline analysis
 // Capture files are imported into a database of their own; "Analyse" shows
 // them on all the other pages, apart from the live data.
@@ -1194,12 +1227,19 @@ views.sources = async (el) => {
     ${panel('c12', t('logo.title'), t('logo.sub'), `<div class="logoprev"><img id="logoPrev" src="/logo?v=${Date.now()}" alt="logo">
       <div style="display:grid;gap:8px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent);color:#fff;font-weight:600">${t('logo.upload')}<input type="file" id="logoFile" accept=".png,.svg,.jpg,.jpeg,.webp,.gif,image/*" hidden></label><button class="btn" id="logoReset">${t('logo.reset')}</button></div>
       <span class="muted" style="font-size:12.5px">${t('logo.hint')}</span><span id="logoMsg" style="font-size:13px"></span></div></div>`)}
-    ${panel('c12', t('src.names'), t('src.names_sub'), `<div class="helpbox">${esc(t('src.names_help'))}<pre>host   192.168.3.28    ${esc(t('src.ex_host'))}
+    ${panel('c12', t('src.names'), t('src.names_sub'), `<div class="nmform" id="nmForm">
+        <select id="nmK">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
+        <input id="nmA" autocomplete="off" spellcheck="false"><input id="nmI" autocomplete="off" inputmode="numeric" placeholder="${esc(t('nm.ifindex'))}" hidden>
+        <input id="nmN" autocomplete="off" spellcheck="false">
+        <button class="primary" id="nmAdd">${t('nm.add')}</button><button class="btn" id="nmCancel" hidden>${t('nm.cancel')}</button></div>
+      <div id="nmMsg" style="font-size:13px;min-height:1.2em;margin:4px 0 6px"></div>
+      <table class="nmtab" id="nmTab"></table>
+      <details class="nmadv"><summary>${t('nm.advanced')}</summary><div class="helpbox">${esc(t('src.names_help'))}<pre>host   192.168.3.28    ${esc(t('src.ex_host'))}
 net    192.168.3.0/24  ${esc(t('src.ex_net'))}
 device 192.168.1.1     ${esc(t('src.ex_device'))}
 iface  192.168.1.1 3   ${esc(t('src.ex_iface'))}
 snmp   192.168.1.1     public</pre></div><textarea class="inv" id="inv" spellcheck="false">${esc(inv.text || '')}</textarea>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="primary" id="invSave">${t('src.save')}</button><span id="invMsg" class="muted" style="font-size:13px"></span></div>`)}
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="primary" id="invSave">${t('src.save')}</button><span id="invMsg" class="muted" style="font-size:13px"></span></div></details>`)}
   </div>`;
   const geoMsg = (ok, text) => { const m = $('#geoMsg'); m.style.color = ok === null ? '' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
   $('#geoDbip').onclick = async e => {
@@ -1247,9 +1287,74 @@ snmp   192.168.1.1     public</pre></div><textarea class="inv" id="inv" spellche
     const j = await res.json().catch(() => ({}));
     $('#invMsg').textContent = res.ok ? t('src.saved') : (j.error || res.statusText);
     $('#invMsg').style.color = res.ok ? 'var(--good)' : 'var(--crit)';
-    if (res.ok) loadStatus();
+    if (res.ok) { loadStatus(); namesForm(); }
   };
+  namesForm();
 };
+
+// Names: the inventory as a form and a table. Each row is one line of the
+// inventory text; comments and other lines are kept as they are.
+const NM_KINDS = ['host', 'net', 'device', 'iface', 'snmp'];
+function nmParse(text) {
+  return text.split('\n').map((line, i) => {
+    const f = line.trim().split(/\s+/), k = (f[0] || '').toLowerCase();
+    if (!NM_KINDS.includes(k)) return null;
+    return {i, k, a: f[1] || '', x: k === 'iface' ? (f[2] || '') : '', n: f.slice(k === 'iface' ? 3 : 2).join(' ')};
+  }).filter(Boolean);
+}
+const nmLine = r => [r.k, r.a, r.k === 'iface' ? r.x : '', r.n].filter(Boolean).join(' ');
+function namesForm() {
+  const tab = $('#nmTab'); if (!tab) return;
+  let editing = null;
+  const rows = nmParse($('#inv').value);
+  const sync = () => {
+    const k = $('#nmK').value;
+    $('#nmI').hidden = k !== 'iface';
+    $('#nmA').placeholder = t(k === 'net' ? 'nm.ph_net' : 'nm.ph_addr');
+    $('#nmN').placeholder = t(k === 'snmp' ? 'nm.community' : 'nm.name');
+  };
+  tab.innerHTML = `<tr><th>${t('nm.type')}</th><th>${t('nm.address')}</th><th>${t('nm.name')}</th><th></th></tr>` + (rows.map(r => `<tr><td class="nw">${t('nm.k_' + r.k)}</td>
+      <td class="nw"><code>${esc(r.a)}${r.k === 'iface' ? ' #' + esc(r.x) : ''}</code></td><td>${r.k === 'snmp' ? `<span class="muted">${esc(t('nm.community'))}:</span> ` : ''}${esc(r.n.replace(/\s*\bspeed=\d+/, ''))}${/\bspeed=(\d+)/.test(r.n) ? ` <span class="muted">${fmtBps(+r.n.match(/\bspeed=(\d+)/)[1])}</span>` : ''}</td>
+      <td class="nw" style="text-align:end"><button class="btn" data-nme="${r.i}">${t('nm.edit')}</button> <button class="btn" data-nmd="${r.i}">${t('nm.delete')}</button></td></tr>`).join('') ||
+    `<tr><td colspan="4" class="empty">${t('nm.empty')}</td></tr>`);
+  const msg = (ok, text) => { const m = $('#nmMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
+  const save = async lines => {
+    const text = lines.join('\n');
+    const res = await fetch('/api/inventory', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text})});
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) { msg(false, j.error || res.statusText); return false; }
+    $('#inv').value = text; msg(true, t('src.saved')); loadStatus(); namesForm(); return true;
+  };
+  const lines = () => $('#inv').value.split('\n');
+  const reset = () => { editing = null; $('#nmAdd').textContent = t('nm.add'); $('#nmCancel').hidden = true; ['#nmA', '#nmI', '#nmN'].forEach(x => $(x).value = ''); };
+  $('#nmK').onchange = sync; sync();
+  $('#nmCancel').onclick = reset;
+  $('#nmAdd').onclick = async () => {
+    const r = {k: $('#nmK').value, a: $('#nmA').value.trim(), x: $('#nmI').value.trim(), n: $('#nmN').value.trim().replace(/\s+/g, ' ')};
+    if (!r.a || !r.n || (r.k === 'iface' && !r.x)) { msg(false, t('nm.missing')); return; }
+    const ip = /^(\d{1,3}(\.\d{1,3}){3}|[0-9a-fA-F:]*:[0-9a-fA-F:.]*)$/;
+    if (r.k === 'net' ? !(r.a.includes('/') && ip.test(r.a.split('/')[0]) && /^\d{1,3}$/.test(r.a.split('/')[1])) : !ip.test(r.a)) { msg(false, t(r.k === 'net' ? 'nm.bad_net' : 'nm.bad_addr', {a: r.a})); return; }
+    if (r.k === 'iface' && !/^\d+$/.test(r.x)) { msg(false, t('nm.bad_index', {x: r.x})); return; }
+    const ls = lines();
+    // a name for something already named replaces the old one
+    const same = rows.find(x => x.k === r.k && x.a === r.a && x.x === r.x && x.i !== editing);
+    if (editing != null) { ls[editing] = nmLine(r); if (same) ls.splice(same.i, 1); }
+    else if (same) ls[same.i] = nmLine(r);
+    else { while (ls.length && ls[ls.length - 1].trim() === '') ls.pop(); ls.push(nmLine(r)); }
+    if (await save(ls)) reset();
+  };
+  tab.querySelectorAll('[data-nmd]').forEach(b => b.onclick = async () => {
+    const i = +b.dataset.nmd, r = rows.find(x => x.i === i);
+    if (!confirm(t('nm.confirm', {x: nmLine(r)}))) return;
+    const ls = lines(); ls.splice(i, 1); save(ls);
+  });
+  tab.querySelectorAll('[data-nme]').forEach(b => b.onclick = () => {
+    const r = rows.find(x => x.i === +b.dataset.nme);
+    editing = r.i; $('#nmK').value = r.k; sync();
+    $('#nmA').value = r.a; $('#nmI').value = r.x; $('#nmN').value = r.n;
+    $('#nmAdd').textContent = t('nm.save_edit'); $('#nmCancel').hidden = false; $('#nmA').focus();
+  });
+}
 
 // Drill-down: one host or one service, everything about it on one page.
 // Every value on it opens the same menu, so one can keep drilling.
@@ -1301,7 +1406,7 @@ function renderSB() {
   $('#sbbar').hidden = !on;
   $('#range').hidden = on;
   $('#refresh').hidden = on;
-  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources]').forEach(b => b.hidden = inSB() || offlineMode);
+  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources], #nav [data-v=cleanup]').forEach(b => b.hidden = inSB() || offlineMode);
   if (!on) return;
   const r = sbRange(), span = r.to - r.from;
   const df = new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}), tf = new Intl.DateTimeFormat(LANG, {timeStyle: 'short'});

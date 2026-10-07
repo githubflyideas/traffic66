@@ -102,6 +102,8 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/inventory", s.putInventory)
 	api("GET /api/findings", s.data((*Server).findings))
 	api("POST /api/findings", s.data((*Server).setFindings))
+	api("GET /api/cleanup", s.getCleanup)
+	api("POST /api/cleanup", s.postCleanup)
 	api("GET /api/sandbox", s.getSandbox)
 	api("POST /api/sandbox/files", s.putSandboxFile)
 	api("DELETE /api/sandbox/files", s.deleteSandbox)
