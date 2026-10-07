@@ -447,6 +447,24 @@ type Series struct {
 }
 
 // StepFor picks a bucket size giving at most ~300 points.
+// settle is how long flows of a minute keep arriving after it: export
+// intervals, active timeouts and batching.
+const settle = time.Minute
+
+// bucketCount is the number of buckets to draw from start to to. When the
+// range ends now, short buckets (up to 15 minutes) that are not complete
+// yet are left out: drawn, they would show a drop that is only data still
+// on its way. Longer buckets stay, averaged over the time they cover.
+func bucketCount(start, to time.Time, step time.Duration) int {
+	n := int(to.Sub(start)/step) + 1
+	if step <= 15*time.Minute && time.Since(to) < settle {
+		for n > 1 && start.Add(time.Duration(n)*step).After(time.Now().Add(-settle)) {
+			n--
+		}
+	}
+	return n
+}
+
 func StepFor(span time.Duration) time.Duration {
 	for _, s := range []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute, time.Hour, 3 * time.Hour, 6 * time.Hour, 24 * time.Hour} {
 		if span/s <= 300 {
@@ -506,7 +524,7 @@ func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 		idx[n] = i
 	}
 	start := q.From.UTC().Truncate(step)
-	n := int(q.To.Sub(start)/step) + 1
+	n := bucketCount(start, q.To, step)
 	se := &Series{Step: int64(step.Seconds()), Names: names, Values: make([][]float64, len(names))}
 	for i := 0; i < n; i++ {
 		se.Times = append(se.Times, start.Add(time.Duration(i)*step).UnixMilli())

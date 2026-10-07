@@ -81,8 +81,10 @@ func TestIngestQuerySeal(t *testing.T) {
 	for _, v := range se.Values[0] {
 		sum += v * float64(se.Step) / 8
 	}
-	if d := sum - float64(wantWire); d > 1 || d < -1 {
-		t.Fatalf("series sum %f want %d", sum, wantWire)
+	// the newest minute is still arriving and is not drawn (the range ends now)
+	drawn := min(len(se.Times), 120)
+	if want := float64(wantWire) * float64(drawn) / 120; drawn < 119 || sum-want > 1 || sum-want < -1 {
+		t.Fatalf("series sum %f over %d buckets, want %f", sum, len(se.Times), want)
 	}
 	// Seal everything and query again across hot+parquet. Seal keeps the
 	// hour that is still open (with 5 minutes' grace), so seal as of two

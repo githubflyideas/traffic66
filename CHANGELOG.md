@@ -3,6 +3,42 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.0.2
+
+Pages
+- **Sources** is now **Settings**, with a gear icon (13 languages and the
+  READMEs).
+- Five colour themes after iOS's system colours, chosen next to the
+  language and kept per browser: **Light** (default), **Bright** (white,
+  stronger contrast), **Grey**, **Dim** and **Dark**, or **Follow
+  system**. Charts, map and logo follow the theme.
+- The side menu is a shade darker than the pages, so the two are easy to
+  tell apart.
+- Settings, Data cleanup and Offline pcap analysis no longer show the time
+  range, refresh and Copy link; they do not use them.
+- Flow records opens on the last 15 minutes and updates every 5 seconds,
+  without the time range bar. Opened from a value on another page (Show
+  its flow records) it keeps that page's time range; **Back to live**
+  returns.
+- Interface check: the bits/s and packets/s charts again (one chart in
+  1.0.1); when the device sends counters, they are dashed lines on the
+  bits/s chart. The separate comparison chart is gone, its verdict stays.
+
+Fixes
+- Charts no longer drop at the right end: the newest minute (or 5 or 15
+  minutes) is not drawn while its flows are still arriving.
+- Last week's line is left out where there was no data then, instead of
+  falling to zero.
+- After signing in on the sign-in page, pages did not refresh on their own
+  until the browser was reloaded.
+- Pages no longer refresh while you type in a form field (the names form
+  in Settings).
+
+## 1.0.1
+
+- Interface check: one chart, Interface bandwidth, with a bits/s |
+  packets/s switch.
+
 ## 1.0.0
 
 Licence terms
@@ -72,9 +108,8 @@ Pages
   services with their servers. A switch puts either side inside.
 - Flow paths shortens long names to 22 characters; the full name shows on
   hover.
-- Interface check: one chart, **Interface bandwidth**, with ingress
-  (green) and egress (blue) and a bits/s | packets/s switch, for the
-  interface picked in the list; the comparison with the
+- Interface check: ingress (green) and egress (blue) in one chart per
+  measure, for the interface picked in the list; the comparison with the
   device counters shows both directions by default.
 - Names: a form (type, address, name) and a table with Edit and Delete,
   with addresses and networks checked; adding the same address again

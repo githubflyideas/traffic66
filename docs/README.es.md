@@ -517,12 +517,12 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 ## 5. Comprobar que llegan los flujos
 
-Abra **Fuentes**. Cada equipo que envía algo aparece en segundos, con su
+Abra **Configuración**. Cada equipo que envía algo aparece en segundos, con su
 protocolo, tasa de muestreo, pérdidas, último paquete y un estado. Cuando el
 estado no está en verde, el texto de al lado indica qué falla y qué hay que
 cambiar.
 
-![Fuentes: cada equipo con su protocolo, muestreo, pérdidas y qué corregir](images/sources.png)
+![Configuración: cada equipo con su protocolo, muestreo, pérdidas y qué corregir](images/sources.png)
 
 Si un equipo no aparece:
 
@@ -530,13 +530,13 @@ Si un equipo no aparece:
    `sudo tcpdump -ni any udp port 6343 or udp port 2055 or udp port 4739`.
    Si no se ve nada, los paquetes no llegan a la máquina: revise la
    configuración del equipo, el enrutamiento y los firewalls del camino.
-2. Llegan paquetes pero **Fuentes** sigue vacía: el firewall local los
+2. Llegan paquetes pero **Configuración** sigue vacía: el firewall local los
    descarta (vea [Instalación](#2-install)) o traffic66 escucha en otros
    puertos (`-listen`).
 3. Para probar el camino desde otra máquina sin tocar ningún equipo, ejecute
    allí `traffic66 simulate -to 192.0.2.50` durante unos segundos. Envía
    sFlow, NetFlow e IPFIX desde equipos simulados, que luego aparecen en
-   **Fuentes** y en los datos, así que mejor hágalo en una instalación de
+   **Configuración** y en los datos, así que mejor hágalo en una instalación de
    pruebas.
 
 <a id="6-make-the-numbers-match-the-interface-counters"></a>
@@ -547,8 +547,10 @@ Las cifras de flujo son estimaciones: paquetes muestreados por la tasa de
 muestreo. traffic66 las compara con los contadores de interfaz del propio
 equipo y muestra la diferencia en **Verificación de interfaces**, con la
 causa probable cuando es mayor de lo que explica el propio muestreo. Cada
-interfaz tiene un gráfico con la entrada (verde) y la salida (azul); al
-elegir una interfaz en la lista se muestran sus gráficos.
+interfaz tiene un gráfico en bits/s y otro en paquetes/s con la entrada
+(verde) y la salida (azul); los contadores del propio equipo aparecen como
+líneas discontinuas en el gráfico de bits/s. Al elegir una interfaz en la
+lista se muestran sus gráficos.
 
 ![Verificación de interfaces: tráfico de cada interfaz, y la estimación de flujos junto al contador del equipo](images/interfaces.png)
 
@@ -557,7 +559,7 @@ Para disponer de contadores con los que comparar:
 - Los equipos sFlow los envían por su cuenta cuando hay un intervalo de
   contadores configurado (`sflow counter interval 30` o similar).
 - Para equipos NetFlow e IPFIX, añada una línea `snmp` en
-  **Fuentes → Nombres** (vea [Nombres](#7-names-snmp-and-your-own-networks)).
+  **Configuración → Nombres** (vea [Nombres](#7-names-snmp-and-your-own-networks)).
   traffic66 lee entonces los contadores de interfaz cada minuto.
 
 Lo que traffic66 ya hace para que las cifras cuadren: usa la tasa de
@@ -582,7 +584,7 @@ su dirección en cualquier página y elija **Ponerle nombre…**. Escriba el
 nombre y pulse Enter; se guarda al momento y se muestra en todas partes en
 lugar de la dirección sin más.
 
-Para redes, interfaces y SNMP, use **Fuentes → Nombres**: elija el tipo
+Para redes, interfaces y SNMP, use **Configuración → Nombres**: elija el tipo
 (host, red, dispositivo, interfaz, SNMP), rellene la dirección y el nombre,
 y haga clic en **Añadir**. La tabla de abajo lista todos los nombres con
 **Editar** y **Borrar**; añadir de nuevo la misma dirección sustituye la
@@ -634,7 +636,7 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 Los países y las redes (AS) funcionan desde el primer momento: traffic66 incluye las bases de datos gratuitas **IP to Country Lite** e **IP to ASN Lite** de DB-IP (licencia [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com)). Las páginas que muestran países y redes indican de dónde vienen los datos.
 
-La copia incluida es la de la versión que usa. DB-IP publica una nueva cada mes; **Fuentes → Base de datos de países y redes → Actualizar DB-IP Lite ahora** descarga la última de db-ip.com (el servidor donde corre traffic66 necesita acceso a internet; si falla, la interfaz lo indica).
+La copia incluida es la de la versión que usa. DB-IP publica una nueva cada mes; **Configuración → Base de datos de países y redes → Actualizar DB-IP Lite ahora** descarga la última de db-ip.com (el servidor donde corre traffic66 necesita acceso a internet; si falla, la interfaz lo indica).
 
 También puede usar otra base de datos gratuita. Descárguela y súbala en la misma página con **Subir un archivo de base de datos…**. Se comprueba, se guarda en el directorio de datos y se usa para el tráfico nuevo al instante, sin reiniciar. El tráfico ya guardado conserva el país con el que se guardó.
 
@@ -701,16 +703,16 @@ Páginas:
 | Hallazgos | Qué requiere atención: escaneos, adivinación de contraseñas, movimiento lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas ([más](#findings)) |
 | Inteligencia de amenazas | Hosts que hablaron con direcciones de sus listas de amenazas y cuánto enviaron |
 | Geografía y redes | Un mapa del mundo del tráfico por país, con líneas desde sus redes; las redes (AS) de las que vino y a las que fue el tráfico, en el tiempo en bits/s y paquetes/s; tráfico por país y por red |
-| Fuentes | Equipos, muestreo, pérdidas, colectores, SNMP, la base de datos de países y redes, el logotipo y **Nombres** |
-| Verificación de interfaces | Tráfico de cada interfaz en el tiempo, entrada (verde) y salida (azul) en un mismo gráfico, en bits/s y paquetes/s, y cifras de flujo junto a los contadores de interfaz, de peor a mejor, con motivos |
-| Registros de flujo | Cuántos registros de flujo hubo y cuándo (una barra por intervalo), y los registros mismos, del más reciente al más antiguo, página a página, con columnas seleccionables |
+| Configuración | Equipos, muestreo, pérdidas, colectores, SNMP, la base de datos de países y redes, el logotipo y **Nombres** |
+| Verificación de interfaces | Tráfico de cada interfaz en el tiempo en bits/s y paquetes/s, entrada (verde) y salida (azul), con los contadores del equipo como líneas discontinuas; cuánto se alejan las cifras de flujo de los contadores, de peor a mejor, con motivos |
+| Registros de flujo | Cuántos registros de flujo hubo y cuándo (una barra por intervalo), y los registros mismos, del más reciente al más antiguo, página a página, con columnas seleccionables. Se abre en los últimos 15 minutos, actualizados cada 5 segundos; abierta desde un valor de otra página (**Ver sus registros de flujo**) conserva el rango de tiempo de esa página, y **Volver a tiempo real** regresa |
 | Limpieza de datos | Borra los datos de más de 120, 90, 60, 30 o 7 días, o todos, indicando cuánto libera cada opción ([más](#13-data-backup-upgrade-uninstall)) |
 | Análisis offline de pcap | Capturas de paquetes (pcap, pcapng) analizadas aparte de los datos en vivo ([más](#análisis-offline-de-pcap)) |
 
 El menú lateral agrupa las páginas en cuatro bloques: tráfico (Resumen,
 Top 66, Detalles del tráfico, Rutas de tráfico), seguridad (Hallazgos,
 Inteligencia de amenazas, Geografía y redes), configuración y datos
-(Fuentes, Verificación de interfaces, Registros de flujo, Limpieza de
+(Configuración, Verificación de interfaces, Registros de flujo, Limpieza de
 datos) y Análisis offline de pcap. Bajo el logotipo aparecen la versión y
 la fecha y hora del servidor.
 
@@ -723,7 +725,15 @@ tráfico**, un cuadro de búsqueda y **Dispositivo**, **Cliente**,
 **Servidor** y **Servicio** listan los valores con más tráfico del rango:
 elija uno, o escríbalo, para filtrar; el filtro se aplica entonces a todas
 las páginas hasta que vacíe el cuadro. El idioma sigue al del navegador; se
-cambia al final del menú, encima de **Cerrar sesión**.
+cambia al final del menú, encima de **Cerrar sesión**. Configuración,
+Registros de flujo (en tiempo real), Limpieza de datos y Análisis offline
+de pcap no tienen rango de tiempo.
+
+Junto al idioma está el tema de colores, inspirado en los colores del
+sistema de iOS: **Claro** (el predeterminado), **Brillante** (blanco, más
+contraste), **Gris**, **Atenuado**, **Oscuro** (negro, para pantallas de
+pared) o **Según el sistema**, que alterna entre claro y oscuro con el
+ordenador. La elección se guarda en el navegador.
 
 Los gráficos en el tiempo muestran los 8 valores mayores en colores fijos y
 el resto como Otros; la leyenda da el total de cada valor y se puede hacer
@@ -744,7 +754,7 @@ actual, los días de detalle que se conservan (se estima en cuanto hay un
 día de datos).
 
 Para mostrar su propio logotipo en la página de inicio de sesión y arriba
-del menú, use **Fuentes → Logotipo → Subir un logotipo…**: PNG, SVG, JPEG,
+del menú, use **Configuración → Logotipo → Subir un logotipo…**: PNG, SVG, JPEG,
 WebP o GIF, hasta 1 MB, idealmente de 272 × 92 píxeles (otros tamaños se
 ajustan). **Usar el logotipo integrado** vuelve al de traffic66.
 
@@ -945,7 +955,7 @@ la Wi-Fi.
 
 ### Comprobar que funciona
 
-**Fuentes** muestra cada interfaz capturada con el método de captura y el
+**Configuración** muestra cada interfaz capturada con el método de captura y el
 número de paquetes vistos. Los flujos aparecen como procedentes del equipo
 `127.0.0.1` (esta máquina), en todas las páginas, igual que los de cualquier
 otro equipo. Los paquetes vistos dos veces (por ejemplo, en dos puertos
@@ -1010,9 +1020,9 @@ El directorio de datos lo contiene todo:
 | `raw/` | detalle de flujos, un archivo comprimido por hora |
 | `traffic66.duckdb` | resúmenes, contadores de interfaz y la hora en curso |
 | `password` | contraseñas de acceso (con hash) |
-| `inventory.txt` | nombres (**Fuentes → Nombres**) |
+| `inventory.txt` | nombres (**Configuración → Nombres**) |
 | `license.json` | número de instalación y licencia (vea [Prueba y licencia](#trial-and-licence)) |
-| `logo.png` (o `.svg`, `.jpg`, `.webp`, `.gif`) | su logotipo (**Fuentes → Logotipo**), si subió uno |
+| `logo.png` (o `.svg`, `.jpg`, `.webp`, `.gif`) | su logotipo (**Configuración → Logotipo**), si subió uno |
 | `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | bases de datos de países y redes y listas de amenazas que haya añadido |
 
 **Cuánto tiempo se guardan los datos**: el detalle de flujos 30 días; los resúmenes (vista general y periodos largos)
@@ -1118,7 +1128,7 @@ todas las conversaciones unos 9 s; el tiempo crece con el rango y baja con
 más núcleos.
 
 Por tanto, 30 días a 5.000 flujos/s ocupan unos 360 GB de disco; escálelo
-según su tasa de flujos (visible en **Fuentes**) y `-retention-days`.
+según su tasa de flujos (visible en **Configuración**) y `-retention-days`.
 
 Memoria: `-memory` (por defecto el 10 % de la RAM, al menos 256 MB) limita
 la caché de la base de datos, y el resto del programa recibe un límite
@@ -1143,11 +1153,11 @@ máquina sin memoria.
 
 | Síntoma | Causa y solución |
 |---|---|
-| El equipo no aparece en **Fuentes** | Los paquetes no llegan: vea [Comprobar que llegan los flujos](#5-check-that-flows-arrive) |
+| El equipo no aparece en **Configuración** | Los paquetes no llegan: vea [Comprobar que llegan los flujos](#5-check-that-flows-arrive) |
 | "waiting for the sampling rate" | El equipo aún no ha enviado sus opciones de sampler; la mayoría las reenvía en pocos minutos. Si no lo hace nunca, expórtelas (`option sampler-table` en Cisco) o márquelo como `unsampled` en Nombres si de verdad es 1:1 |
 | Cifras por debajo de los contadores de interfaz | Vea **Verificación de interfaces**: pérdidas por el camino, interfaces sin muestrear o flujos aún en la caché del equipo (timeout activo superior a 60 s) |
 | Cifras por encima de los contadores de interfaz | El mismo tráfico se muestrea en dos interfaces o en dos equipos |
-| No hay países ni redes ("Desconocido") | No hay ninguna base de datos cargada: suba una en **Fuentes**; vea [Países](#8-countries-networks-and-threat-lists) |
+| No hay países ni redes ("Desconocido") | No hay ninguna base de datos cargada: suba una en **Configuración**; vea [Países](#8-countries-networks-and-threat-lists) |
 | "La base de datos llegó a su límite de memoria y no pudo responder" en una página | Elija un intervalo más corto o inicie con un `-memory` mayor; los detalles están en el registro |
 | Contraseña olvidada | `traffic66 passwd` en la máquina de traffic66 (añada `-data` si traffic66 se ejecuta con él) |
 | `Conflicting lock is held` | Otro traffic66 ya usa este directorio de datos |

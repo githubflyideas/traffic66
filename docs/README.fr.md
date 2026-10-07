@@ -528,12 +528,12 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 ## 5. Vérifier que les flux arrivent
 
-Ouvrez **Sources**. Chaque équipement qui envoie quelque chose apparaît en
+Ouvrez **Paramètres**. Chaque équipement qui envoie quelque chose apparaît en
 quelques secondes, avec son protocole, son taux d'échantillonnage, ses
 pertes, son dernier paquet et un état. Quand l'état n'est pas vert, le
 texte à côté indique ce qui ne va pas et ce qu'il faut changer.
 
-![Sources : chaque équipement avec son protocole, son échantillonnage, ses pertes et ce qu'il faut corriger](images/sources.png)
+![Paramètres : chaque équipement avec son protocole, son échantillonnage, ses pertes et ce qu'il faut corriger](images/sources.png)
 
 Si un équipement n'apparaît pas :
 
@@ -542,14 +542,14 @@ Si un équipement n'apparaît pas :
    Si rien ne s'affiche, les paquets n'atteignent pas la machine : vérifiez
    la configuration de l'équipement, le routage et les pare-feu sur le
    chemin.
-2. Les paquets arrivent mais **Sources** reste vide : le pare-feu local les
+2. Les paquets arrivent mais **Paramètres** reste vide : le pare-feu local les
    rejette (voir [Installation](#2-install)), ou traffic66 écoute sur
    d'autres ports (`-listen`).
 3. Pour tester le chemin depuis une autre machine sans toucher à un
    équipement, lancez-y `traffic66 simulate -to 192.0.2.50` pendant
    quelques secondes. La commande envoie du sFlow, du NetFlow et de l'IPFIX
    depuis des équipements simulés, qui apparaissent ensuite dans
-   **Sources** et dans les données ; faites-le donc plutôt sur une
+   **Paramètres** et dans les données ; faites-le donc plutôt sur une
    installation de test.
 
 <a id="6-make-the-numbers-match-the-interface-counters"></a>
@@ -560,9 +560,10 @@ Les chiffres de flux sont des estimations : paquets échantillonnés
 multipliés par le taux d'échantillonnage. traffic66 les compare aux
 compteurs d'interface de l'équipement et affiche l'écart dans
 **Contrôle des interfaces**, avec la cause probable quand il dépasse ce que
-l'échantillonnage seul explique. Chaque interface a un graphique avec
-l'entrée (vert) et la sortie (bleu) ; choisir une interface dans la liste
-affiche ses graphiques.
+l'échantillonnage seul explique. Chaque interface a un graphique en bits/s
+et un en paquets/s avec l'entrée (vert) et la sortie (bleu) ; les compteurs
+de l'équipement sont en pointillés sur le graphique en bits/s. Choisir une
+interface dans la liste affiche ses graphiques.
 
 ![Contrôle des interfaces : trafic de chaque interface, et l'estimation des flux à côté du compteur de l'équipement](images/interfaces.png)
 
@@ -571,7 +572,7 @@ Pour disposer de compteurs de comparaison :
 - Les équipements sFlow les envoient d'eux-mêmes dès qu'un intervalle de
   compteurs est configuré (`sflow counter interval 30` ou équivalent).
 - Pour les équipements NetFlow et IPFIX, ajoutez une ligne `snmp` dans
-  **Sources → Noms** (voir [Noms](#7-names-snmp-and-your-own-networks)).
+  **Paramètres → Noms** (voir [Noms](#7-names-snmp-and-your-own-networks)).
   traffic66 lit alors les compteurs d'interface toutes les minutes.
 
 Ce que traffic66 fait déjà pour que les chiffres concordent : il utilise le
@@ -597,7 +598,7 @@ adresse sur n'importe quelle page et choisissez **Nommer…**. Tapez le nom
 et appuyez sur Entrée ; il est enregistré aussitôt et affiché partout à la
 place de l'adresse brute.
 
-Pour les réseaux, les interfaces et SNMP, utilisez **Sources → Noms** :
+Pour les réseaux, les interfaces et SNMP, utilisez **Paramètres → Noms** :
 choisissez le type (hôte, réseau, équipement, interface, SNMP), saisissez
 l'adresse et le nom, puis cliquez sur **Ajouter**. Le tableau en dessous
 liste tous les noms avec **Modifier** et **Supprimer** ; ajouter de nouveau
@@ -651,7 +652,7 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 Les pays et les réseaux (AS) fonctionnent d'emblée : traffic66 intègre les bases gratuites **IP to Country Lite** et **IP to ASN Lite** de DB-IP (licence [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) ; « IP Geolocation by DB-IP », [db-ip.com](https://db-ip.com)). Les pages qui affichent pays et réseaux indiquent la source des données.
 
-La copie intégrée date de la version que vous utilisez. DB-IP en publie une nouvelle chaque mois ; **Sources → Base de données pays et réseaux → Mettre à jour DB-IP Lite** télécharge la dernière depuis db-ip.com (le serveur qui exécute traffic66 doit avoir accès à internet ; en cas d'échec, l'interface l'indique).
+La copie intégrée date de la version que vous utilisez. DB-IP en publie une nouvelle chaque mois ; **Paramètres → Base de données pays et réseaux → Mettre à jour DB-IP Lite** télécharge la dernière depuis db-ip.com (le serveur qui exécute traffic66 doit avoir accès à internet ; en cas d'échec, l'interface l'indique).
 
 Vous pouvez aussi utiliser une autre base gratuite. Téléchargez-la puis importez-la sur la même page avec **Importer un fichier de base de données…**. Elle est vérifiée, enregistrée dans le répertoire de données et utilisée aussitôt pour le nouveau trafic, sans redémarrage. Le trafic déjà enregistré garde le pays avec lequel il a été enregistré.
 
@@ -719,16 +720,16 @@ Pages :
 | Détections | Ce qui demande votre attention : scans, essais de mots de passe, mouvements latéraux, envois inhabituels, inondations et trafic des listes de menaces ([plus](#findings)) |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
 | Géographie et réseaux | Une carte du monde du trafic par pays, avec des lignes depuis vos réseaux ; les réseaux (AS) d'où venait et où allait le trafic, dans le temps en bits/s et paquets/s ; trafic par pays et par réseau |
-| Sources | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
-| Contrôle des interfaces | Trafic de chaque interface dans le temps, entrée (vert) et sortie (bleu) dans un même graphique, en bits/s et paquets/s, et chiffres de flux à côté des compteurs d'interface, les pires en premier, avec les causes |
-| Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix |
+| Paramètres | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
+| Contrôle des interfaces | Trafic de chaque interface dans le temps en bits/s et paquets/s, entrée (vert) et sortie (bleu), avec les compteurs de l'équipement en pointillés ; l'écart entre les chiffres de flux et les compteurs, les pires en premier, avec les causes |
+| Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix. S'ouvre sur les 15 dernières minutes, mises à jour toutes les 5 secondes ; ouverte depuis une valeur d'une autre page (**Voir ses enregistrements de flux**), elle garde la plage de temps de cette page, et **Revenir au temps réel** y revient |
 | Nettoyage des données | Supprime les données de plus de 120, 90, 60, 30 ou 7 jours, ou toutes, en indiquant ce que chaque choix libère ([plus](#13-data-backup-upgrade-uninstall)) |
 | Analyse hors ligne de pcap | Captures de paquets (pcap, pcapng) analysées à part des données en direct ([plus](#analyse-hors-ligne-de-pcap)) |
 
 Le menu latéral range les pages en quatre groupes : trafic (Vue
 d'ensemble, Top 66, Détails du trafic, Chemins du trafic), sécurité
 (Détections, Menaces, Géographie et réseaux), configuration et données
-(Sources, Contrôle des interfaces, Enregistrements de flux, Nettoyage des
+(Paramètres, Contrôle des interfaces, Enregistrements de flux, Nettoyage des
 données) et Analyse hors ligne de pcap. Sous le logo figurent la version
 ainsi que la date et l'heure du serveur.
 
@@ -742,7 +743,15 @@ et **Service** listent les valeurs les plus actives de la plage :
 choisissez-en une, ou tapez-la, pour filtrer ; le filtre s'applique alors
 à toutes les pages jusqu'à ce que vous vidiez le champ. La langue suit
 celle du navigateur ; on la change en bas du menu, au-dessus de
-**Se déconnecter**.
+**Se déconnecter**. Paramètres, Enregistrements de flux (en temps réel),
+Nettoyage des données et Analyse hors ligne de pcap n'ont pas de plage de
+temps.
+
+À côté de la langue se trouve le thème de couleurs, inspiré des couleurs
+système d'iOS : **Clair** (par défaut), **Lumineux** (blanc, contraste plus
+fort), **Gris**, **Tamisé**, **Sombre** (noir, pour les écrans muraux) ou
+**Comme le système**, qui passe du clair au sombre avec l'ordinateur. Le
+choix est conservé dans le navigateur.
 
 Les graphiques dans le temps montrent les 8 plus grandes valeurs en couleurs
 fixes et le reste dans Autres ; la légende donne le total de chaque valeur
@@ -764,7 +773,7 @@ conservés ont besoin au rythme actuel (estimation disponible dès qu'il y a
 une journée de données).
 
 Pour afficher votre propre logo sur la page de connexion et en haut du
-menu, utilisez **Sources → Logo → Importer un logo…** : PNG, SVG, JPEG,
+menu, utilisez **Paramètres → Logo → Importer un logo…** : PNG, SVG, JPEG,
 WebP ou GIF, 1 Mo au plus, idéalement 272 × 92 pixels (les autres tailles
 sont ajustées). **Revenir au logo intégré** rétablit celui de traffic66.
 
@@ -973,7 +982,7 @@ Wi-Fi.
 
 ### Vérifier que ça fonctionne
 
-**Sources** liste chaque interface capturée avec la méthode de capture et le
+**Paramètres** liste chaque interface capturée avec la méthode de capture et le
 nombre de paquets vus. Les flux apparaissent comme provenant de l'équipement
 `127.0.0.1` (cette machine), sur toutes les pages, comme ceux de n'importe
 quel autre équipement. Les paquets vus deux fois (par exemple sur deux ports
@@ -1038,9 +1047,9 @@ Le répertoire de données contient tout :
 | `raw/` | détail des flux, un fichier compressé par heure |
 | `traffic66.duckdb` | agrégats, compteurs d'interface et heure en cours |
 | `password` | mots de passe de connexion (hachés) |
-| `inventory.txt` | noms (**Sources → Noms**) |
+| `inventory.txt` | noms (**Paramètres → Noms**) |
 | `license.json` | numéro d'installation et licence (voir [Essai et licence](#trial-and-licence)) |
-| `logo.png` (ou `.svg`, `.jpg`, `.webp`, `.gif`) | votre logo (**Sources → Logo**), si vous en avez importé un |
+| `logo.png` (ou `.svg`, `.jpg`, `.webp`, `.gif`) | votre logo (**Paramètres → Logo**), si vous en avez importé un |
 | `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | bases de données pays et réseaux et listes de menaces que vous avez ajoutées |
 
 **Durée de conservation** : le détail des flux 30 jours, les résumés (vue d'ensemble et longues périodes) 400 jours.
@@ -1152,7 +1161,7 @@ un Top 66 sur 1 heure de toutes les conversations environ 9 s ; le temps
 augmente avec la plage et diminue avec le nombre de cœurs.
 
 Il faut donc environ 360 Go de disque pour 30 jours à 5 000 flux/s ;
-ajustez selon votre débit de flux (affiché dans **Sources**) et
+ajustez selon votre débit de flux (affiché dans **Paramètres**) et
 `-retention-days`.
 
 Mémoire : `-memory` (par défaut 10 % de la RAM, au moins 256 Mo) limite le
@@ -1178,11 +1187,11 @@ lieu que la machine manque de mémoire.
 
 | Symptôme | Cause et solution |
 |---|---|
-| Équipement absent de **Sources** | Les paquets n'arrivent pas : voir [Vérifier que les flux arrivent](#5-check-that-flows-arrive) |
+| Équipement absent de **Paramètres** | Les paquets n'arrivent pas : voir [Vérifier que les flux arrivent](#5-check-that-flows-arrive) |
 | "waiting for the sampling rate" | L'équipement n'a pas encore envoyé ses options de sampler ; la plupart les renvoient en quelques minutes. S'il ne le fait jamais, exportez-les (`option sampler-table` sur Cisco) ou marquez-le `unsampled` dans Noms s'il est réellement en 1:1 |
 | Chiffres inférieurs aux compteurs d'interface | Voir **Contrôle des interfaces** : pertes en route, interfaces non échantillonnées, ou flux encore dans le cache de l'équipement (timeout actif supérieur à 60 s) |
 | Chiffres supérieurs aux compteurs d'interface | Le même trafic est échantillonné sur deux interfaces ou deux équipements |
-| Pas de pays ni de réseaux ("Inconnu") | Aucune base de données chargée : importez-en une dans **Sources**, voir [Pays](#8-countries-networks-and-threat-lists) |
+| Pas de pays ni de réseaux ("Inconnu") | Aucune base de données chargée : importez-en une dans **Paramètres**, voir [Pays](#8-countries-networks-and-threat-lists) |
 | "La base de données a atteint sa limite de mémoire et n'a pas pu répondre" sur une page | Choisissez une période plus courte, ou lancez avec un `-memory` plus grand ; les détails sont dans le journal |
 | Mot de passe oublié | `traffic66 passwd` sur la machine traffic66 (ajoutez `-data` si traffic66 tourne avec) |
 | `Conflicting lock is held` | Un autre traffic66 utilise déjà ce répertoire de données |

@@ -482,12 +482,12 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 ## 5. Check that flows arrive
 
-Open **Sources**. Each device that sends anything appears within seconds,
+Open **Settings**. Each device that sends anything appears within seconds,
 with its protocol, sampling rate, loss, last packet and a status. When the
 status is not green, the text next to it says what is wrong and what to
 change.
 
-![Sources: each device with protocol, sampling, loss and what to fix](docs/images/sources.png)
+![Settings: each device with protocol, sampling, loss and what to fix](docs/images/sources.png)
 
 If a device does not appear:
 
@@ -495,22 +495,23 @@ If a device does not appear:
    `sudo tcpdump -ni any udp port 6343 or udp port 2055 or udp port 4739`.
    Nothing there means the packets do not reach the machine: check the
    device configuration, routing and firewalls on the way.
-2. Packets arrive but **Sources** stays empty: the local firewall drops
+2. Packets arrive but **Settings** stays empty: the local firewall drops
    them (see [Install](#2-install)), or traffic66 listens on other ports
    (`-listen`).
 3. To test the path from another machine without touching a device, run
    `traffic66 simulate -to 192.0.2.50` there for a few seconds. It sends
    sFlow, NetFlow and IPFIX from simulated devices; they then appear in
-   **Sources** and in the data, so prefer a test installation for this.
+   **Settings** and in the data, so prefer a test installation for this.
 
 ## 6. Make the numbers match the interface counters
 
 Flow numbers are estimates: sampled packets times the sampling rate.
 traffic66 compares them with the device's own interface counters and shows
 the difference on **Interface check**, with the likely cause when it is
-larger than sampling alone explains. Each interface has one chart with
-ingress (green) and egress (blue); picking an interface in the list shows
-its charts.
+larger than sampling alone explains. Each interface has a bits/s and a
+packets/s chart with ingress (green) and egress (blue); the device's own
+counters are dashed lines on the bits/s chart. Picking an interface in the
+list shows its charts.
 
 ![Interface check: traffic of every interface, and the flow estimate next to the device counter](docs/images/interfaces.png)
 
@@ -518,7 +519,7 @@ To get counters to compare with:
 
 - sFlow devices send them on their own when a counter interval is set
   (`sflow counter interval 30` and similar).
-- For NetFlow and IPFIX devices, add an `snmp` line in **Sources → Names**
+- For NetFlow and IPFIX devices, add an `snmp` line in **Settings → Names**
   (see [Names](#7-names-snmp-and-your-own-networks)). traffic66 then reads
   the interface counters every minute.
 
@@ -540,7 +541,7 @@ The quickest way to name a host or a device: click its address on any page
 and choose **Name it…**. Type the name and press Enter; it is saved at
 once and shown everywhere instead of the bare address.
 
-For networks, interfaces and SNMP, use **Sources → Names**: choose the type
+For networks, interfaces and SNMP, use **Settings → Names**: choose the type
 (host, network, device, interface, SNMP), fill in the address and the name,
 and click **Add**. The table below lists every name with **Edit** and
 **Delete**; adding the same address again replaces the old entry. Addresses
@@ -592,7 +593,7 @@ by DB-IP", [db-ip.com](https://db-ip.com)). The pages that show countries
 and networks name the data's source.
 
 The built-in copy is from the release you run. DB-IP publishes a new one
-every month; **Sources → Countries and networks database → Update DB-IP
+every month; **Settings → Countries and networks database → Update DB-IP
 Lite now** downloads the latest from db-ip.com (the server running
 traffic66 needs internet access for this; the web UI says so if it fails).
 
@@ -669,15 +670,15 @@ Pages:
 | Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
 | Geo & networks | A world map of traffic by country, with lines from your networks; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
-| Sources | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
-| Interface check | Traffic of every interface over time, ingress (green) and egress (blue) in one chart, in bits/s and packets/s, and flow numbers next to the interface counters, worst first, with reasons |
-| Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns |
+| Settings | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
+| Interface check | Traffic of every interface over time in bits/s and packets/s, ingress (green) and egress (blue), with the device counters as dashed lines; how far the flow numbers are from the counters, worst first, with reasons |
+| Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns. Opens on the last 15 minutes, updated every 5 seconds; opened from a value on another page (**Show its flow records**) it keeps that page's time range, and **Back to live** returns |
 | Data cleanup | Deletes data older than 120, 90, 60, 30 or 7 days, or all of it, with how much each frees ([more](#13-data-backup-upgrade-uninstall)) |
 | Offline pcap analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-pcap-analysis)) |
 
 The side menu lists the pages in four groups: traffic (Overview, Top 66,
 Traffic details, Flow paths), security (Findings, Threat intel, Geo &
-networks), setup and data (Sources, Interface check, Flow records, Data
+networks), setup and data (Settings, Interface check, Flow records, Data
 cleanup) and Offline pcap analysis. Under the logo are the version and the
 server's date and time.
 
@@ -689,7 +690,14 @@ seconds, and **Copy link**, which copies a link to exactly the current view
 and **Service** list the busiest values of the time range: pick one, or
 type one, to filter; the filter then applies to every page until you empty
 the box. The language follows the browser; change it at the bottom of the
-menu, above **Log out**.
+menu, above **Log out**. Settings, Flow records (while live), Data cleanup
+and Offline pcap analysis have no time range.
+
+Next to the language is the colour theme, after iOS's system colours:
+**Light** (the default), **Bright** (white, stronger contrast), **Grey**,
+**Dim**, **Dark** (black, for wall screens), or **Follow system**, which
+switches between light and dark with the computer. The choice is kept in
+the browser.
 
 Charts over time show the 8 largest values in fixed colours and the rest as
 Other; the legend gives each value's total and can be clicked like any
@@ -709,7 +717,7 @@ hover over the free space to see how much the kept days of detail need at
 the current rate (estimated once there is a day of data).
 
 To show your own logo on the sign-in page and at the top of the menu, use
-**Sources → Logo → Upload a logo…**: PNG, SVG, JPEG, WebP or GIF, up to
+**Settings → Logo → Upload a logo…**: PNG, SVG, JPEG, WebP or GIF, up to
 1 MB, best at 272 × 92 pixels (other sizes are scaled to fit). **Use the
 built-in logo** goes back to traffic66's.
 
@@ -891,7 +899,7 @@ Capture needs root; nothing to install. On MacBooks `en0` is the Wi-Fi.
 
 ### Checking that it works
 
-**Sources** lists each captured interface with the capture method and the
+**Settings** lists each captured interface with the capture method and the
 number of packets seen. The flows appear as coming from the device
 `127.0.0.1` (this machine), on every page, like any other device's. Packets
 seen twice (for example on two mirror ports) are counted twice.
@@ -951,9 +959,9 @@ The data directory holds everything:
 | `raw/` | flow detail, one compressed file per hour |
 | `traffic66.duckdb` | summaries, interface counters and the current hour |
 | `password` | login passwords (hashed) |
-| `inventory.txt` | names (**Sources → Names**) |
+| `inventory.txt` | names (**Settings → Names**) |
 | `license.json` | installation number and licence (see [Trial and licence](#trial-and-licence)) |
-| `logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) | your logo (**Sources → Logo**), if you uploaded one |
+| `logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) | your logo (**Settings → Logo**), if you uploaded one |
 | `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | countries and networks databases you added or downloaded, and threat lists |
 
 **How long data is kept**: flow detail 30 days, summaries (overview and long
@@ -1048,7 +1056,7 @@ about 22 million rows per hour: one host over 1 hour takes under 1 s, a
 and shrinks with more cores.
 
 Disk for 30 days at 5,000 flows/s is therefore about 360 GB; scale it with
-your flow rate (shown on **Sources**) and `-retention-days`.
+your flow rate (shown on **Settings**) and `-retention-days`.
 
 Memory: `-memory` (default 10% of RAM, at least 256 MB) limits the
 database cache, and the rest of the program gets a soft limit of the same
@@ -1070,11 +1078,11 @@ traffic66 then restarts instead of the machine running out of memory.
 
 | Symptom | Cause and fix |
 |---|---|
-| Device missing from **Sources** | Packets do not arrive: see [Check that flows arrive](#5-check-that-flows-arrive) |
+| Device missing from **Settings** | Packets do not arrive: see [Check that flows arrive](#5-check-that-flows-arrive) |
 | "waiting for the sampling rate" | The device has not sent its sampler options yet; most resend within minutes. If it never does, export them (`option sampler-table` on Cisco) or mark it `unsampled` in Names if it really is 1:1 |
 | Numbers lower than the interface counters | See **Interface check**: loss on the way, interfaces not sampled, or flows still in the device cache (active timeout longer than 60 s) |
 | Numbers higher than the interface counters | The same traffic sampled on two interfaces or two devices |
-| No countries or networks ("Unknown") | No database loaded: upload one on **Sources**, see [Countries](#8-countries-networks-and-threat-lists) |
+| No countries or networks ("Unknown") | No database loaded: upload one on **Settings**, see [Countries](#8-countries-networks-and-threat-lists) |
 | "The database reached its memory limit" on a page | Choose a shorter time range, or start with a larger `-memory`; details are in the log |
 | Forgot the password | `traffic66 passwd` on the traffic66 machine (add `-data` if traffic66 runs with it) |
 | `Conflicting lock is held` | Another traffic66 already uses this data directory |
