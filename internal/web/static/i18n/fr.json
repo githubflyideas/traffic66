@@ -500,5 +500,14 @@
 "ov.bw_out": "Bande passante sortante, par application",
 "src.manual": "fixé à la main",
 "src.templates": "Modèles reçus (ids de champ ; s = portée) :",
-"src.stale": "Arrêtés (l’équipement envoie désormais autrement) :"
+"src.stale": "Arrêtés (l’équipement envoie désormais autrement) :",
+"if.picker": "Interface",
+"if.all": "Toutes les interfaces",
+"if.set_default": "Définir par défaut (les pages s’ouvrent dessus)",
+"if.is_default": "Par défaut : les pages s’ouvrent dessus",
+"if.rename": "Nom et étiquette",
+"if.name_ph": "Nom de l’interface",
+"if.tag_ph": "Étiquette, ex. uplink",
+"if.save": "Enregistrer",
+"ov.if_sub": "Entrant et sortant de cette interface (sens de l’interface)"
 }

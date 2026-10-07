@@ -500,5 +500,14 @@
 "ov.bw_out": "Outbound bandwidth, by application",
 "src.manual": "set by hand",
 "src.templates": "Templates received (field ids; s = scope):",
-"src.stale": "Stopped (the device now sends otherwise):"
+"src.stale": "Stopped (the device now sends otherwise):",
+"if.picker": "Interface",
+"if.all": "All interfaces",
+"if.set_default": "Set as default (the pages open on it)",
+"if.is_default": "The default: the pages open on it",
+"if.rename": "Name and tag",
+"if.name_ph": "Interface name",
+"if.tag_ph": "Tag, e.g. uplink",
+"if.save": "Save",
+"ov.if_sub": "In and out as the interface sees it"
 }

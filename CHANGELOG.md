@@ -3,6 +3,25 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.2.3
+
+Interfaces
+- **Interface** at the top of the traffic pages (Overview, Top 66, Traffic
+  details, Flow paths, Geo & networks, Flow records, detail): all
+  interfaces, or one, and the pages show only the traffic through it. It
+  starts on the default interface and is kept in the link. Findings,
+  Threat intel, Interface check and Settings stay on all traffic. One
+  interface over 7 or 30 days is read from the flow records (slower,
+  as far back as they are kept).
+- Interface check: each interface can be named and tagged (✎) and one made
+  the default (★); saved to its iface line in Names as tag=… and default.
+  The page opens on the default interface.
+- Interface check: the bits/s and packets/s charts are full width, one
+  above the other.
+- Overview: the bandwidth of the chosen (or default, or busiest) interface
+  in bits/s, ingress green and egress blue, above the bandwidth by
+  application.
+
 ## 1.2.2
 
 NetFlow and IPFIX sampling

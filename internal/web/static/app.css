@@ -349,3 +349,15 @@ label.btn.disabled{opacity:.5;cursor:not-allowed!important}
 .lic.trial_over b{color:var(--crit)}
 .lic.licensed b{color:var(--good);font-weight:600}
 .lic .muted{margin-inline-start:8px;font-size:12px}
+.ifsel{display:flex;align-items:center;gap:6px;margin-inline-start:auto;font-size:13px;color:var(--ink-3)}
+.ifsel select{border:1px solid var(--line-2);border-radius:7px;padding:5px 8px;background:var(--surface);color:var(--ink);max-width:220px;text-overflow:ellipsis;font-weight:600}
+.ifsel:not([hidden])+.range{margin-inline-start:0}
+.iftag{display:inline-block;margin-inline-start:6px;padding:0 6px;border-radius:9px;background:var(--accent-soft);color:var(--accent-ink);font-size:11.5px;font-weight:600;line-height:18px;vertical-align:1px}
+.iflist .ifrow{display:flex;align-items:center;gap:6px}
+.iflist .ifrow>button:first-child{flex:1}
+.ifstar,.ifedit{border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:15px;padding:4px 6px;border-radius:6px}
+.ifstar.on{color:#e6a700}
+.ifstar:hover,.ifedit:hover{background:var(--surface-2);color:var(--ink)}
+.ifform{display:grid;grid-template-columns:1fr 120px auto auto;gap:6px;padding:8px 10px;background:var(--surface-2);border-radius:8px;margin:2px 0 6px}
+.ifform input{border:1px solid var(--line-2);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--ink);min-width:0}
+.iflist .ifstar,.iflist .ifedit,.iflist .ifform button{width:auto;flex:none;justify-content:center}
