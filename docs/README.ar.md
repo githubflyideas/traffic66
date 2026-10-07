@@ -4,408 +4,154 @@
 
 # traffic66
 
-تحليل تدفقات sFlow وNetFlow وIPFIX في برنامج واحد. يستقبل traffic66
-التدفقات المُصدَّرة من المبدّلات والموجّهات والجدران النارية، ويخزّنها في
-قاعدة بيانات مدمجة، ويعرض من يستهلك عرض النطاق، وإلى أين تذهب الحركة، وهل
-تتطابق الأرقام مع عدّادات الواجهات في الأجهزة نفسها — في واجهة ويب وفي
-واجهة طرفية.
+تحليل تدفقات sFlow وNetFlow وIPFIX في برنامج واحد: من يستهلك عرض النطاق،
+وإلى أين تذهب الحركة، وهل تتطابق الأرقام مع عدّادات الواجهات في الأجهزة
+نفسها، في واجهة ويب وواجهة طرفية.
 
-- ملف تنفيذي واحد لأنظمة Windows وLinux وmacOS. لا قاعدة بيانات تحتاج إلى
-  تثبيت، ولا بيئة تشغيل، ويعمل دون اتصال بالإنترنت.
-- sFlow v5 وNetFlow v5 وNetFlow v9 وIPFIX على أي منفذ UDP؛ مع التقاط محلي
-  اختياري من واجهة شبكة أو منفذ مرآة.
-- يقارن أرقامه بعدّادات الواجهات (عدّادات sFlow أو SNMP) ويشرح سبب
-  الاختلاف حين يقع.
-- يكتشف في التدفقات عمليات المسح وتخمين كلمات المرور والتحرك الجانبي وعمليات
-  الرفع غير المعتادة والإغراق وحركة قوائم التهديدات، حتى عبر أخذ العينات،
-  ويعرضها اكتشافاتٍ تحتاج إلى معالجة.
-- قوائم أعلى 66، ومن يتواصل مع من في مخططات حلقية (الخوادم وعملاؤها،
-  والخدمات وخوادمها)، والحركة عبر الزمن حسب الواجهة والشبكة (AS)، ومسارات
-  الحركة، والدول على خريطة العالم، والتطابقات مع قوائم التهديدات، وسجلات
-  التدفق، والتغليف (GRE وIPIP وVXLAN وGENEVE وMPLS).
-- يفتح `traffic66 capture.pcap` حتى 3 ملفات التقاط (3 GB إجمالاً) في واجهة الويب: التدفقات والاكتشافات والدول وسجلات التدفق لكامل الالتقاط، دون أي إعداد.
-- 13 لغة في واجهة الويب والواجهة الطرفية.
-- متاح المصدر: مجاني للتقييم وللمؤسسات التي يقل عدد أفرادها عن 100 شخص؛
-  وتسجّل المؤسسات الأكبر بعد 30 يومًا من الاستخدام الإنتاجي. ولا يُعطَّل أي
-  شيء أبدًا (انظر [التجربة والترخيص](#trial-and-licence)).
+- ملف تنفيذي واحد لأنظمة Windows وLinux وmacOS؛ لا قاعدة بيانات تحتاج إلى تثبيت، ويعمل دون اتصال بالإنترنت.
+- sFlow v5 وNetFlow v5/v9 وIPFIX على أي منفذ UDP، أو التقاط محلي من واجهة.
+- يقارن أرقامه بعدّادات الواجهات (sFlow أو SNMP) ويشرح سبب الاختلاف.
+- يكتشف عمليات المسح وتخمين كلمات المرور والتحرك الجانبي وعمليات الرفع غير المعتادة والإغراق وحركة قوائم التهديدات، حتى عبر أخذ العينات.
+- يحلّل `traffic66 capture.pcap` ملفات التقاط الحزم دون أي إعداد.
+- 13 لغة. مجاني للتقييم وللمؤسسات التي يقل عدد أفرادها عن 100 شخص ([الترخيص](#licence)).
 
 ![نظرة عامة: الاكتشافات المفتوحة، واستهلاك عرض النطاق حسب التطبيق مقارنةً بالوقت نفسه أمس، وأبرز العملاء والخدمات](images/overview.png)
 
-<sub>جميع لقطات الشاشة مأخوذة من `traffic66 demo`، وهي شبكة شركة محاكاة يمكنك تشغيلها بنفسك (انظر [جرّب العرض التوضيحي](#1-try-the-demo)).</sub>
+<sub>جميع لقطات الشاشة مأخوذة من `traffic66 demo`، وهي شبكة شركة محاكاة.</sub>
 
 <a id="contents"></a>
 
 ## المحتويات
 
 1. [جرّب العرض التوضيحي](#1-try-the-demo)
-2. [التثبيت](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
+2. [التثبيت](#2-install)
 3. [المستخدمون وكلمات المرور](#3-users-and-passwords)
 4. [إرسال التدفقات من أجهزتك](#4-send-flows-from-your-devices)
 5. [التحقق من وصول التدفقات](#5-check-that-flows-arrive)
-6. [مطابقة الأرقام مع عدّادات الواجهات](#6-make-the-numbers-match-the-interface-counters)
-7. [الأسماء وSNMP وشبكاتك الخاصة](#7-names-snmp-and-your-own-networks)
-8. [الدول والشبكات وقوائم التهديدات](#8-countries-networks-and-threat-lists)
-9. [استخدام واجهة الويب](#9-using-the-web-ui)
-10. [الواجهة الطرفية](#10-terminal-ui)
-11. [الالتقاط المحلي](#11-local-capture)
-12. [الخيارات](#12-options)
-13. [البيانات والنسخ الاحتياطي والترقية وإزالة التثبيت](#13-data-backup-upgrade-uninstall)
-14. [الأمان](#14-security)
-15. [تقدير الموارد](#15-sizing)
-16. [استكشاف الأخطاء وإصلاحها](#16-troubleshooting)
-17. [البناء من المصدر](#17-build-from-source)
+6. [الواجهات والعدّادات](#6-interfaces-and-counters)
+7. [الأسماء والدول وقوائم التهديدات](#7-names-countries-and-threat-lists)
+8. [استخدام واجهة الويب](#8-using-the-web-ui)
+9. [تحليل pcap دون اتصال، الواجهة الطرفية، الالتقاط المحلي](#9-offline-pcap-terminal-ui-local-capture)
+10. [الخيارات والبيانات](#10-options-and-data)
+11. [الأمان، تقدير الموارد، استكشاف الأخطاء](#11-security-sizing-troubleshooting)
 
 <a id="1-try-the-demo"></a>
 
 ## 1. جرّب العرض التوضيحي
 
 نزّل الأرشيف المناسب لنظامك من
-[صفحة الإصدارات](https://github.com/githubflyideas/traffic66/releases):
-
-| النظام | الأرشيف |
-|---|---|
-| Windows 10/11 وServer 2016 أو أحدث (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64: أي توزيعة بنواة 3.2 أو أحدث، بما فيها CentOS 7 وAlpine | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64: التوزيعات نفسها | `traffic66-linux-arm64.tar.gz` |
-| macOS 11 أو أحدث بمعالج Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS 11 أو أحدث بمعالج Intel | `traffic66-darwin-amd64.tar.gz` |
-
-Linux:
+[صفحة الإصدارات](https://github.com/githubflyideas/traffic66/releases)
+(Windows x64، وLinux x86-64/ARM64 بنواة 3.2+، وmacOS 11+)، وفكّ ضغطه وشغّل:
 
 ```
-tar xzf traffic66-linux-amd64.tar.gz
-cd traffic66-linux-amd64
-./traffic66 demo -password try66
+./traffic66 demo -password try66          # Linux, macOS
+.\traffic66.exe demo -password try66      # Windows
 ```
 
-macOS (السطر الثاني يسمح لنظام macOS بتشغيل برنامج نُزّل من الإنترنت وليس
-من App Store):
-
-```
-tar xzf traffic66-darwin-arm64.tar.gz
-xattr -dr com.apple.quarantine traffic66-darwin-arm64
-cd traffic66-darwin-arm64
-./traffic66 demo -password try66
-```
-
-Windows (PowerShell):
-
-```
-Expand-Archive traffic66-windows-amd64.zip .
-cd traffic66-windows-amd64
-.\traffic66.exe demo -password try66
-```
-
-افتح http://127.0.0.1:8066 وسجّل الدخول باسم `admin` وكلمة المرور `try66`.
-ينشئ العرض التوضيحي شبكة شركة صغيرة بسجلّ يوم كامل وحركة حية من أربعة أجهزة
-محاكاة، وفيها هجوم: تعرض **الاكتشافات** كل خطوة منه (مسح، ومسح للمنافذ، وتخمين
-لكلمات المرور، وتحرك جانبي، ورفع إلى خادم تحكم) وإغراقًا على الموقع العام.
-انقر **التفاصيل** على أحد الاكتشافات، أو ابدأ من **نظرة عامة**، وانقر على مضيف
-في **أكثر العملاء**، واختر **عرض التفاصيل**، ثم تابع النقر من هناك. أوقفه بـ
-Ctrl+C. تُحفظ بيانات العرض في
-`traffic66-demo` بجوار البرنامج؛ احذف هذا المجلد لتبدأ العرض من جديد.
-
-يستخدم العرض التوضيحي المنافذ نفسها التي يستخدمها التثبيت الفعلي (8066،
-وUDP 6343 و2055 و4739). لتشغيله بجانب تثبيت فعلي، امنحه منافذ أخرى:
-`traffic66 demo -password try66 -addr :8067 -listen ""`.
-
-على Windows يمكنك أيضًا ببساطة النقر المزدوج على `traffic66.exe`. يؤدي ذلك
-إلى تشغيل traffic66 فعليًا (وليس العرض التوضيحي) وفتح واجهة الويب في متصفحك؛
-تظهر كلمة مرور التشغيل الأول في النافذة السوداء، وإغلاق النافذة يوقف traffic66.
-إذا عرض Windows الرسالة "Windows protected your PC" (حمى Windows جهازك)،
-فانقر **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال).
+على macOS شغّل أولًا `xattr -dr com.apple.quarantine <folder>`. افتح
+http://127.0.0.1:8066 وسجّل الدخول بـ `admin` / `try66`: سجلّ يوم كامل وحركة
+حية من أربعة أجهزة محاكاة، ومنها هجوم يُعرض خطوةً خطوة في **الاكتشافات**. يوقفه
+Ctrl+C؛ احذف `traffic66-demo` لتبدأ من جديد. لتشغيله بجوار تثبيت حقيقي:
+`-addr :8067 -listen ""`.
 
 <a id="2-install"></a>
 
 ## 2. التثبيت
 
-traffic66 ملف واحد. التثبيت يعني وضعه في مكان ما، واختيار دليل للبيانات،
-وتعيين كلمة مرور، وفتح الجدار الناري، وتشغيله عند الإقلاع. تستخدم الأمثلة
-`192.0.2.50` لجهاز traffic66 و`192.0.2.1` لموجّه؛ استبدلهما بعناوينك.
+traffic66 ملف واحد. المنافذ: UDP 6343 (sFlow)، و2055 (NetFlow)، و4739
+(IPFIX)، وTCP 8066 (واجهة الويب)؛ وكل منفذ UDP يقبل كل البروتوكولات.
 
-المنافذ:
-
-| المنفذ | الاستخدام |
-|---|---|
-| UDP 6343 | sFlow (افتراضي) |
-| UDP 2055 | NetFlow (افتراضي) |
-| UDP 4739 | IPFIX (افتراضي) |
-| TCP 8066 | واجهة الويب وواجهة API |
-
-كل منفذ UDP يقبل كل البروتوكولات، فيمكن للجهاز إرسال NetFlow إلى 6343 إن
-كان ذلك أسهل. غيّر المنافذ أو أضف غيرها باستخدام `-listen`.
-
-<a id="linux"></a>
-
-### Linux
+**Linux** (systemd):
 
 ```
-sudo mkdir -p /opt/traffic66
-sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
 ```
 
-يطلب الأمر الأخير كلمة مرور المستخدم `admin`.
-
-أنشئ `/etc/systemd/system/traffic66.service`:
+`/etc/systemd/system/traffic66.service`:
 
 ```
 [Unit]
 Description=traffic66 flow analytics
 After=network-online.target
-Wants=network-online.target
 
 [Service]
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
-# hard memory limit for the whole process (see Sizing)
 MemoryMax=2G
-# only needed for local capture (-capture):
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-شغّله، واسمح بمخازن UDP مؤقتة أكبر حتى لا تضيع الحزم عند الذروات:
-
 ```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf
-sudo sysctl --system
-sudo systemctl daemon-reload
-sudo systemctl enable --now traffic66
-sudo systemctl status traffic66
-journalctl -u traffic66 -f
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
 ```
 
-الجدار الناري باستخدام firewalld (RHEL وRocky وAlma وFedora):
+**Windows** (PowerShell بصلاحيات المسؤول): فكّ الضغط إلى `C:\traffic66`،
+وشغّل `C:\traffic66\traffic66.exe passwd`، وافتح المنافذ، واجعله يبدأ مع
+الإقلاع:
 
 ```
-sudo firewall-cmd --permanent --add-port=6343/udp --add-port=2055/udp --add-port=4739/udp --add-port=8066/tcp
-sudo firewall-cmd --reload
-```
-
-أو باستخدام ufw (Ubuntu وDebian):
-
-```
-sudo ufw allow 6343,2055,4739/udp
-sudo ufw allow 8066/tcp
-```
-
-<a id="windows"></a>
-
-### Windows
-
-فك الضغط إلى `C:\traffic66` وعيّن كلمة المرور (PowerShell بصلاحيات
-المسؤول):
-
-```
-Expand-Archive traffic66-windows-amd64.zip C:\
-Rename-Item C:\traffic66-windows-amd64 C:\traffic66
-C:\traffic66\traffic66.exe passwd
-```
-
-تُحفظ البيانات في `C:\traffic66\traffic66-data` بجوار البرنامج.
-
-افتح الجدار الناري:
-
-```
-New-NetFirewallRule -DisplayName "traffic66 flows" -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName "traffic66 web" -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-لتجربته في الواجهة الأمامية، شغّل `C:\traffic66\traffic66.exe` وأوقفه
-بـ Ctrl+C. ولتشغيله في الخلفية منذ الإقلاع دون أن يكون أحد مسجّلًا الدخول،
-سجّله مهمةً عند بدء التشغيل:
-
-```
-$action   = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$trigger  = New-ScheduledTaskTrigger -AtStartup
-$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-Register-ScheduledTask -TaskName traffic66 -Action $action -Trigger $trigger -Settings $settings -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-الخيار `-ExecutionTimeLimit ([TimeSpan]::Zero)` ضروري: من دونه يوقف Windows
-المهمة بعد ثلاثة أيام. أوقفها بـ `Stop-ScheduledTask -TaskName
-traffic66`، واحذفها بـ `Unregister-ScheduledTask -TaskName traffic66`.
+النقر المزدوج على `traffic66.exe` يعمل أيضًا: يفتح واجهة الويب ويعرض كلمة
+المرور الأولى في نافذته.
 
-<a id="macos"></a>
-
-### macOS
-
-```
-sudo mkdir -p /usr/local/traffic66
-sudo tar xzf traffic66-darwin-arm64.tar.gz -C /usr/local/traffic66 --strip-components=1
-sudo xattr -dr com.apple.quarantine /usr/local/traffic66
-sudo /usr/local/traffic66/traffic66 passwd -data "/Library/Application Support/traffic66"
-```
-
-أنشئ `/Library/LaunchDaemons/traffic66.plist`:
-
-```
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>traffic66</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/usr/local/traffic66/traffic66</string>
-    <string>-data</string>
-    <string>/Library/Application Support/traffic66</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardErrorPath</key><string>/Library/Logs/traffic66.log</string>
-</dict>
-</plist>
-```
-
-التشغيل ثم الإيقاف:
-
-```
-sudo launchctl bootstrap system /Library/LaunchDaemons/traffic66.plist
-tail -f /Library/Logs/traffic66.log
-sudo launchctl bootout system/traffic66
-```
-
-إذا كان الجدار الناري في macOS مفعّلًا، فاسمح بالاتصالات الواردة لـ
-traffic66 من إعدادات النظام ← الشبكة ← جدار الحماية ← الخيارات.
+**macOS**: فكّ الضغط إلى `/usr/local/traffic66`، وأزل علامة الحجر،
+وشغّل `traffic66 passwd -data "/Library/Application Support/traffic66"`، ثم
+شغّله من LaunchDaemon تكون `ProgramArguments` فيه البرنامج و`-data` وذلك
+الدليل، مع `RunAtLoad` و`KeepAlive`.
 
 <a id="3-users-and-passwords"></a>
 
 ## 3. المستخدمون وكلمات المرور
 
-**باختصار:** يُحفظ المستخدمون وكلمات مرورهم في ملف واحد، `password`، داخل دليل
-البيانات. لا تعدّله يدويًا أبدًا: الأمر `traffic66 passwd` يضيف المستخدمين
-ويغيّرهم ويعرض قائمتهم ويحذفهم. افتح `http://<traffic66 machine>:8066` وسجّل
-الدخول بأحدهم.
-
-<a id="the-first-sign-in"></a>
-
-### تسجيل الدخول الأول
-
-عند التشغيل الأول يُنشئ traffic66 المستخدم `admin` بكلمة مرور عشوائية ويعرضها
-مرة واحدة:
-
-```
-first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
-```
-
-- عند التشغيل بالنقر المزدوج على Windows: في النافذة السوداء.
-- عند التشغيل من الطرفية: في الطرفية نفسها.
-- خدمة Linux: `journalctl -u traffic66 | grep "first start"`
-- خدمة macOS: `grep "first start" /Library/Logs/traffic66.log`
-
-فاتتك؟ عيّن كلمة جديدة بالأمر `traffic66 passwd` (أدناه). إذا عيّنت كلمة مرور
-بالأمر `traffic66 passwd` قبل التشغيل الأول، كما تفعل خطوات التثبيت أعلاه، فلا
-تُولَّد أي كلمة.
-
-<a id="where-the-users-are-stored"></a>
-
-### أين يُخزَّن المستخدمون
-
-في الملف `password` داخل دليل البيانات:
-
-| طريقة تشغيل traffic66 | الملف |
-|---|---|
-| فُكّ ضغطه وشُغّل من مجلده (الافتراضي) | `traffic66-data/password` بجوار البرنامج |
-| خدمة Linux (القسم 2) | `/var/lib/traffic66/password` |
-| مهمة بدء التشغيل في Windows (القسم 2) | `C:\traffic66\traffic66-data\password` |
-| خدمة macOS (القسم 2) | `/Library/Application Support/traffic66/password` |
-| العرض التوضيحي | `traffic66-demo/password` بجوار البرنامج |
-
-سطر واحد لكل مستخدم. تُخزَّن كلمات المرور تجزئاتٍ مُملَّحة (salted hashes)، فلا
-يستطيع أحد استرجاعها من الملف، ولا حتى أنت؛ وإذا نُسيت كلمة مرور فعيّن كلمة
-جديدة. لا يقرأ الملف إلا مالكه.
-
-```
-# traffic66 login, one user per line; change with: traffic66 passwd
-admin:pbkdf2-sha256$210000$…
-alice:pbkdf2-sha256$210000$…
-```
-
-<a id="managing-users"></a>
-
-### إدارة المستخدمين
-
-نفّذ هذه الأوامر على جهاز traffic66:
+عند التشغيل الأول ينشئ traffic66 المستخدم `admin` بكلمة مرور عشوائية ويطبعها
+مرة واحدة (في النافذة، أو الطرفية، أو
+`journalctl -u traffic66 | grep "first start"`). يُحفظ المستخدمون بصيغة
+تجزئات مملّحة في `password` داخل دليل البيانات، ويُدارون بأمر واحد على جهاز
+traffic66 (أضف `-data …` إن كان traffic66 يعمل به):
 
 | المطلوب | الأمر |
 |---|---|
 | تغيير كلمة مرور `admin` | `traffic66 passwd` |
-| إضافة المستخدم `alice` أو تغيير كلمة مرورها | `traffic66 passwd -user alice` |
-| حذف المستخدم `alice` | `traffic66 passwd -user alice -delete` |
-| عرض قائمة المستخدمين | `traffic66 passwd -list` |
-| تعيين كلمة مرور عشوائية وطباعتها | `traffic66 passwd -generate` (مع `-user` لمستخدمين آخرين) |
+| إضافة `alice` أو تغيير كلمة مرورها | `traffic66 passwd -user alice` |
+| حذف `alice` | `traffic66 passwd -user alice -delete` |
+| عرض المستخدمين | `traffic66 passwd -list` |
 
-- يطلب الأمر كلمة المرور الجديدة مرتين ولا يعرض ما تكتبه. استخدم 8 أحرف على
-  الأقل.
-- إذا كان traffic66 يعمل مع `-data`، فأضف `-data` نفسه إلى الأمر. لخدمة Linux
-  من القسم 2:
-
-  ```
-  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
-  ```
-
-  على Windows (PowerShell بصلاحيات المسؤول):
-
-  ```
-  C:\traffic66\traffic66.exe passwd -user alice
-  ```
-
-- تسري التغييرات فورًا دون إعادة تشغيل: تعمل كلمة المرور الجديدة عند تسجيل
-  الدخول التالي، ويُسجَّل خروج المستخدم المحذوف من المتصفحات المفتوحة.
-- لا يمكن حذف آخر مستخدم متبقٍّ؛ أضف مستخدمًا آخر أولًا.
-- يرى جميع المستخدمين الأشياء نفسها ويمكنهم تغييرها؛ لا توجد أدوار.
-
-<a id="passwords-for-scripts-and-containers"></a>
-
-### كلمات المرور في السكربتات والحاويات
-
-يجعل `TRAFFIC66_PASSWORD=…` في متغيرات البيئة، أو `-password …` في سطر الأوامر،
-traffic66 يقبل مستخدمًا واحدًا فقط في هذا التشغيل: المستخدم المحدد بـ `-user`
-(الافتراضي `admin`) بكلمة المرور تلك. ويُتجاهَل الملف `password` حينها ولا
-يُغيَّر. فضّل متغير البيئة: فأسطر الأوامر مرئية لبقية مستخدمي الجهاز.
-
-```
-TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
-```
-
-بعد خمس محاولات خاطئة خلال دقيقة يُحظر العنوان لمدة دقيقة.
+تُطبَّق التغييرات فورًا. لجميع المستخدمين الصلاحيات نفسها. للسكربتات
+والحاويات، يقبل `TRAFFIC66_PASSWORD=…` (أو `-password`) المستخدم `-user` فقط
+بكلمة المرور تلك طوال ذلك التشغيل. خمس كلمات مرور خاطئة خلال دقيقة تحظر
+العنوان لمدة دقيقة.
 
 <a id="4-send-flows-from-your-devices"></a>
 
 ## 4. إرسال التدفقات من أجهزتك
 
-وجّه كل جهاز إلى جهاز traffic66. تختلف الأوامر بين الطرازات وإصدارات
-البرمجيات؛ راجع دليل جهازك. في جميع الأمثلة، `192.0.2.50` هو traffic66
-و`192.0.2.1` هو عنوان الجهاز نفسه.
-
-نصائح عامة:
-
-- اضبط مهلة التدفق النشط (active flow timeout) على 60 ثانية. المهل الأطول
-  تجعل الحركة تصل متأخرة على دفعات كبيرة.
-- إذا كان الجهاز يأخذ عينات NetFlow/IPFIX، فاجعله يُصدّر خيارات أخذ
-  العينات (sampler options) ليُعرف المعدّل. يحتجز traffic66 السجلات حتى
-  يصل المعدّل بدلًا من عدّها بنسبة 1:1.
-- خذ العينات إما على كل الواجهات أو على واجهات الأطراف فقط، وفي اتجاه
-  واحد. أخذ عينات الحركة نفسها عند الدخول وعند الخروج يعدّها مرتين؛ وصفحة
-  **مطابقة الواجهات** تنبّه إلى ذلك.
-- معدّل أخذ العينات في sFlow: نحو 1:1000 لروابط 1 Gb/s، و1:4096 لـ
-  10 Gb/s، و1:8192 لـ 40/100 Gb/s.
-
-Cisco IOS / IOS-XE (Flexible NetFlow):
+`192.0.2.50` هو traffic66، و`192.0.2.1` هو الجهاز. اضبط مهلة التدفق النشط على
+60 ثانية، ودع أجهزة NetFlow/IPFIX تصدّر خيارات أخذ العينات، وخذ العينات من
+**كل واجهة في اتجاه الدخول** (أو من واجهات الحافة فقط): بذلك تُحسب كل حزمة مرة
+واحدة. نسب sFlow: نحو 1:1000 لـ 1 Gb/s، و1:4096 لـ 10 Gb/s، و1:8192 لـ
+40/100 Gb/s.
 
 ```
+! Cisco IOS-XE, NetFlow v9
 flow exporter T66
  destination 192.0.2.50
  transport udp 2055
- export-protocol netflow-v9
  option sampler-table
 flow monitor T66
  exporter T66
@@ -415,39 +161,8 @@ interface GigabitEthernet0/0/0
  ip flow monitor T66 input
 ```
 
-Cisco NX-OS (sFlow):
-
 ```
-feature sflow
-sflow collector-ip 192.0.2.50 vrf default
-sflow collector-port 6343
-sflow agent-ip 192.0.2.1
-sflow sampling-rate 4096
-sflow counter-poll-interval 30
-sflow data-source interface ethernet 1/1
-```
-
-Arista EOS (sFlow):
-
-```
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow source-interface Management1
-sflow run
-```
-
-Juniper EX / QFX (sFlow):
-
-```
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow polling-interval 30
-set protocols sflow interfaces ge-0/0/0
-```
-
-Huawei CloudEngine (sFlow):
-
-```
+# Huawei CloudEngine, sFlow (H3C Comware is similar)
 sflow agent ip 192.0.2.1
 sflow collector 1 ip 192.0.2.50
 interface 10GE1/0/1
@@ -458,46 +173,22 @@ interface 10GE1/0/1
  sflow counter interval 30
 ```
 
-H3C Comware (sFlow):
-
 ```
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50 port 6343
-interface Ten-GigabitEthernet1/0/1
- sflow sampling-rate 4096
- sflow flow collector 1
- sflow counter interval 30
- sflow counter collector 1
-```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
 
-MikroTik RouterOS 7 (NetFlow v9 / IPFIX):
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
 
-```
+# MikroTik RouterOS 7
 /ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
 /ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-```
 
-FortiGate FortiOS 7.4.2 أو أحدث (NetFlow v9):
-
-```
-config system netflow
-    config collectors
-        edit 1
-            set collector-ip 192.0.2.50
-            set collector-port 2055
-        next
-    end
-end
-config system interface
-    edit port1
-        set netflow-sampler both
-    next
-end
-```
-
-خوادم ومضيفات Linux، باستخدام softflowd (NetFlow v9):
-
-```
+# Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
 
@@ -505,303 +196,107 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 ## 5. التحقق من وصول التدفقات
 
-افتح **الإعدادات**. يظهر كل جهاز يرسل أي شيء خلال ثوانٍ، مع البروتوكول ومعدّل
-أخذ العينات والفقد وآخر حزمة وحالته. إذا لم تكن الحالة خضراء، فالنص
-المجاور يوضّح الخلل وما يجب تغييره.
-
-**المفقود** يعدّ العينات أو السجلات التي لم تصل قط. في sFlow يوضّح النص أين
-فُقدت: في الطريق إلى هنا (فجوات في أرقام التسلسل: الشبكة، أو مخزن استقبال UDP
-المؤقت على هذا الجهاز؛ إذا أظهر `netstat -su` أخطاء مخزن الاستقبال تتزايد،
-فارفع `net.core.rmem_max`)، أو داخل الجهاز نفسه (يُبلغ sFlow عن العينات التي
-أسقطها الجهاز: تصدير sFlow فيه محدود المعدّل، لذا قلّل وتيرة أخذ العينات أو
-ارفع حدّ الجهاز). تُعوَّض المجاميع في الحالتين؛ أما التفاصيل لكل مضيف فلا.
+تسرد **الإعدادات** خلال ثوانٍ كل جهاز يرسل أي شيء: البروتوكول، ومعدّل أخذ
+العينات، والفقد، والواجهات التي يأخذ منها العينات، وما يجب إصلاحه حين لا تكون
+الحالة خضراء. يُقسَم فقد sFlow إلى فقد في الطريق (ارفع `net.core.rmem_max` إن
+أظهر `netstat -su` أخطاء في المخزن المؤقت) وعينات أسقطها الجهاز نفسه.
 
 ![الإعدادات: كل جهاز مع البروتوكول وأخذ العينات والفقد وما يجب إصلاحه](images/sources.png)
 
-إذا لم يظهر جهاز:
+جهاز مفقود؟ شغّل `sudo tcpdump -ni any udp port 6343 or udp port 2055
+or udp port 4739`: إن لم يظهر شيء فالمشكلة في التوجيه أو جدار ناري أو إعداد
+الجهاز؛ وإن ظهرت حزم ولا شيء في **الإعدادات** فالسبب الجدار الناري المحلي أو
+`-listen`. يختبر `traffic66 simulate -to 192.0.2.50` من جهاز آخر المسارَ
+بأجهزة محاكاة.
 
-1. راقب الحزم على جهاز traffic66 (Linux وmacOS):
-   `sudo tcpdump -ni any udp port 6343 or udp port 2055 or udp port 4739`.
-   إن لم يظهر شيء، فالحزم لا تصل إلى الجهاز: افحص إعدادات الجهاز المُرسِل
-   والتوجيه والجدران النارية على المسار.
-2. الحزم تصل لكن **الإعدادات** تبقى فارغة: الجدار الناري المحلي يُسقطها
-   (انظر [التثبيت](#2-install))، أو أن traffic66 يستمع على منافذ أخرى
-   (`-listen`).
-3. لاختبار المسار من جهاز آخر دون المساس بأي جهاز شبكي، شغّل هناك
-   `traffic66 simulate -to 192.0.2.50` لبضع ثوانٍ. يرسل هذا الأمر sFlow
-   وNetFlow وIPFIX من أجهزة محاكاة، فتظهر بعدها في **الإعدادات** وفي
-   البيانات؛ لذا يُفضَّل إجراؤه على تثبيت تجريبي.
+<a id="6-interfaces-and-counters"></a>
 
-<a id="6-make-the-numbers-match-the-interface-counters"></a>
+## 6. الواجهات والعدّادات
 
-## 6. مطابقة الأرقام مع عدّادات الواجهات
+أرقام التدفقات تقديرات (العينات × معدّل أخذ العينات). تقارنها **مطابقة الواجهات**
+بعدّادات واجهات الجهاز (عدّادات sFlow، أو SNMP عبر سطر `snmp` في الأسماء)
+وتشرح سبب الاختلاف: واجهات لا تؤخذ منها عينات، أو الحركة نفسها مأخوذة بالعينات
+مرتين، أو فقد في الطريق، أو معدّل أخذ عينات غير معروف. لكل واجهة مخطط bits/s
+ومخطط packets/s، الدخول بالأخضر والخروج بالأزرق، والعدّادات بخط متقطع.
 
-أرقام التدفقات تقديرية: عدد الحزم المأخوذة عينةً مضروبًا في معدّل أخذ
-العينات. يقارنها traffic66 بعدّادات الواجهات في الجهاز نفسه ويعرض الفرق في
-**مطابقة الواجهات**، مع السبب المرجّح حين يكون الفرق أكبر مما يفسّره أخذ
-العينات وحده. لكل واجهة مخطط بوحدة bits/s بعرض الصفحة كاملًا، وتحته مخطط بوحدة
-packets/s، فيهما الدخول (بالأخضر) والخروج (بالأزرق)؛ وتظهر عدّادات الجهاز نفسه
-خطوطًا متقطعة على مخطط bits/s. واختيار واجهة من القائمة يعرض مخططاتها.
+في كل صف، يضبط **✎** اسمًا ووسمًا قصيرًا (مثل *uplink*)، ويجعلها **☆** الواجهة
+الافتراضية (★) التي تُفتح عليها الصفحات.
 
-في كل صف من القائمة زرّان. يمنح **✎** الواجهة اسمًا ووسمًا قصيرًا (مثل *uplink*)
-يظهر بجوار اسمها في كل مكان. ويجعلها **☆** الواجهة الافتراضية (**★**)؛ وهناك
-واجهة افتراضية واحدة فقط. بعدها تُفتح الصفحات عليها (انظر خيار **الواجهة** في
-[استخدام واجهة الويب](#9-using-the-web-ui))، وتعرض النظرة العامة عرض نطاقها الترددي.
-ويُحفظ كلاهما فورًا في سطر `iface` في **الأسماء**.
-
-تذكر سجلات التدفق واجهتين: التي دخلت منها الحزمة والتي خرجت منها. لذلك يعرض
-الجهاز الذي يأخذ العينات من بعض واجهاته فقط الأطرافَ الأخرى لتدفقاتها أيضًا.
-تُدرَج **واجهات الطرف الآخر** هذه في الآخر، بخط أصغر رمادي، تحت عنوان خاص بها:
-فأرقامها لا تحوي إلا الحركة التي مرّت عبر واجهة مأخوذ منها العينات، لا كل
-حركتها. ولا تُعرض ضمن **الواجهة** فوق الصفحات. يعرف traffic66 الواجهة التي أُخذت
-منها عينة التدفق من مصدر بيانات sFlow، أو من الحقل flowDirection (IPFIX 61) في
-NetFlow v9 وIPFIX (ingress: واجهة الدخول، egress: واجهة الخروج). وبدون هذا
-الحقل، تُعدّ الواجهة الموجودة في 90% على الأقل من حركة الجهاز هي المأخوذ منها
-العينات؛ وإن لم توجد فلا تُعلَّم أي واجهة. وتعرض **الإعدادات** لكل جهاز الواجهات
-المأخوذ منها العينات (**العينات من**)، وهل تحمل قوالبه flowDirection (**مع
-flowDirection (61)**). ولرؤية كل حركة الجهاز، خذ العينات من كل واجهة في اتجاه
-الدخول (انظر [إرسال التدفقات من أجهزتك](#4-send-flows-from-your-devices)).
+الجهاز الذي يأخذ العينات من بعض الواجهات فقط يُظهر أيضًا الأطراف الأخرى لتلك
+التدفقات. تُدرَج **واجهات الطرف الآخر** هذه في الآخر بخط أصغر رمادي: لا تحمل إلا
+الحركة المارّة عبر الواجهة المأخوذ منها العينات. تُعرف الواجهة المأخوذ منها
+العينات من مصدر بيانات sFlow أو من الحقل flowDirection (IPFIX 61)؛ وبدونه،
+الواجهة الموجودة في 90% من حركة الجهاز.
 
 ![مطابقة الواجهات: حركة كل واجهة، وتقدير التدفقات بجوار عدّاد الجهاز](images/interfaces.png)
 
-للحصول على عدّادات للمقارنة:
+يستخدم traffic66 أصلًا المعدّل الذي طبّقه الجهاز، وينتظر المعدّلات غير
+المعروفة، ويعوّض فقد التصدير، ويوزّع التدفقات الطويلة على دقائقها، ويضيف 18 بايت
+لكل حزمة من حمل Ethernet الإضافي إلى NetFlow/IPFIX (`-l2-overhead`).
 
-- أجهزة sFlow ترسلها من تلقاء نفسها عند ضبط فاصل العدّادات
-  (`sflow counter interval 30` وما يماثله).
-- لأجهزة NetFlow وIPFIX، أضف سطر `snmp` في **الإعدادات ← الأسماء**
-  (انظر [الأسماء](#7-names-snmp-and-your-own-networks)). عندها يقرأ
-  traffic66 عدّادات الواجهات كل دقيقة.
+<a id="7-names-countries-and-threat-lists"></a>
 
-ما يفعله traffic66 أصلًا لتتطابق الأرقام: يستخدم معدّل أخذ العينات الذي
-طبّقه الجهاز فعلًا، ويحتجز سجلات NetFlow/IPFIX حتى يُعرف المعدّل، ويعوّض
-حزم التصدير المفقودة في الطريق، ويوزّع التدفقات الطويلة على الدقائق التي
-استغرقتها، ويضيف 18 بايت لكل حزمة كحمل Ethernet إضافي إلى عدد بايتات
-NetFlow/IPFIX (عدّادات الواجهات تتضمنه، وعدّ التدفقات على مستوى IP لا
-يتضمنه؛ يُغيَّر بـ `-l2-overhead`).
+## 7. الأسماء والدول وقوائم التهديدات
 
-الأسباب الشائعة لأي فرق متبقٍّ، وكلها تظهر في **مطابقة الواجهات**: بعض
-الواجهات لا تؤخذ منها عينات، أو تؤخذ عينات الحركة نفسها على واجهتين، أو
-تضيع حزم التصدير قبل وصولها إلى traffic66، أو أن معدّل أخذ العينات لم
-يُعرف بعد.
-
-<a id="7-names-snmp-and-your-own-networks"></a>
-
-## 7. الأسماء وSNMP وشبكاتك الخاصة
-
-أسرع طريقة لتسمية مضيف أو جهاز: انقر على عنوانه في أي صفحة واختر **تسمية…**.
-اكتب الاسم واضغط Enter؛ يُحفظ فورًا ويظهر في كل مكان بدلًا من العنوان المجرد.
-
-أما للشبكات والواجهات وSNMP، فاستخدم **الإعدادات ← الأسماء**: اختر النوع
-(مضيف، شبكة، جهاز، واجهة، SNMP)، واملأ العنوان والاسم، ثم انقر **إضافة**.
-يسرد الجدول أدناه كل الأسماء مع **تعديل** و**حذف**؛ وإضافة العنوان نفسه
-مرة أخرى تستبدل الإدخال القديم. يُتحقَّق من العناوين والشبكات قبل الحفظ.
-
-تُحفظ الأسماء باسم `inventory.txt` في دليل البيانات، إدخالًا واحدًا في كل
-سطر. يعرض **تعديل كنص (متقدم)** هذا الملف، ويمكنك أيضًا تعديله مباشرة
-(انظر `inventory.txt.example`). كل سطر اختياري.
+انقر على أي عنوان واختر **تسمية…**، أو استخدم **الإعدادات ← الأسماء**.
+تُحفظ الأسماء في `inventory.txt` داخل دليل البيانات:
 
 ```
-# your networks: traffic between them is "internal"
-net    10.10.0.0/16  Office LAN
-net    203.0.113.0/24  Public servers country=JP
-
-# device names; "unsampled" if it exports every packet (1:1),
-# sampling=N if it samples 1:N but does not say so in its export
-device 192.0.2.1     Core router
-device 192.0.2.9     Branch firewall unsampled
-device 192.0.2.20    Edge router sampling=1000
-
-# interface names, by device address and ifIndex; speed in bits per second,
-# tag= a short tag, default = the interface the pages open on (one only)
-iface  192.0.2.1 3   ISP uplink speed=1000000000 tag=uplink default
-
-# host names shown instead of addresses
-host   10.10.3.27    Finance PC
-
-# read interface counters over SNMPv2c (IF-MIB 64-bit counters)
-snmp   192.0.2.1     public
-snmp   192.0.2.9     s3cret  10.99.0.9:161
+net    10.10.0.0/16    Office LAN                  # your networks
+net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
+device 192.0.2.1       Core router
+device 192.0.2.9       Branch firewall unsampled    # exports every packet
+device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
+iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
+host   10.10.3.27      Finance PC
+snmp   192.0.2.1       public                       # read counters over SNMPv2c
+snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 ```
 
-- `net`: النطاقات الخاصة (10/8 و172.16/12 و192.168/16 و100.64/10) تُعدّ
-  دائمًا نطاقاتك. أضف نطاقاتك العامة كي تُحتسب الحركة منها وإليها لك أيضًا؛
-  ويظهر الاسم في **أعلى 66** عند التجميع حسب المقطع، وفي مسارات الحركة حسب
-  الشبكة. ويحدد `country=JP` (رمز دولة من حرفين) مكان الشبكة؛ فترسم خريطة
-  العالم عندها خطوطًا منها إلى الدول التي تتواصل معها.
-- `snmp <device> <community> [<management address>[:port]]`: الجهاز هو
-  العنوان الذي تأتي منه التدفقات. أضف عنوان الإدارة إذا كان الجهاز يجيب
-  على SNMP من عنوان آخر. تُستخدم أوصاف الواجهات المقروءة عبر SNMP أسماءً
-  لها ما لم تُسمِّ الواجهة بـ `iface`. اسمح لجهاز traffic66 في قائمة وصول
-  SNMP على الجهاز.
-- تُطبَّق التغييرات عند النقر على **حفظ**؛ لا حاجة إلى إعادة التشغيل.
+النطاقات الخاصة تُعدّ دائمًا لك. تُطبَّق التغييرات عند **حفظ**، دون إعادة تشغيل.
 
-<a id="8-countries-networks-and-threat-lists"></a>
-
-## 8. الدول والشبكات وقوائم التهديدات
-
-تعمل الدول والشبكات (AS) فوراً: يتضمن traffic66 قاعدتَي DB-IP المجانيتين **IP to Country Lite** و**IP to ASN Lite** (الترخيص [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)؛ "IP Geolocation by DB-IP"، [db-ip.com](https://db-ip.com)). تذكر الصفحات التي تعرض الدول والشبكات مصدر البيانات.
-
-النسخة المدمجة هي نسخة الإصدار الذي تشغّله. تنشر DB-IP نسخة جديدة كل شهر؛ و**الإعدادات ← قاعدة بيانات الدول والشبكات ← حدّث DB-IP Lite الآن** ينزّل أحدثها من db-ip.com (يحتاج الخادم الذي يشغّل traffic66 إلى الإنترنت، وتخبرك الواجهة إن فشل التنزيل).
-
-يمكنك أيضاً استخدام قاعدة مجانية أخرى. نزّلها ثم ارفعها في الصفحة نفسها عبر **رفع ملف قاعدة بيانات…**. يُفحص الملف ويُحفظ في مجلد البيانات ويُستخدم للحركة الجديدة فوراً دون إعادة تشغيل. تحتفظ الحركة المخزنة بالدولة التي حُفظت بها.
-
-| القاعدة | تعطي | الترخيص | من أين تحصل عليها |
-|---|---|---|---|
-| DB-IP Lite (مدمجة) | الدول؛ الشبكات | CC BY 4.0، بلا حساب | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country وASN، ‏`.mmdb` | الدول؛ الشبكات | GeoLite2 EULA، حساب مجاني | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IPinfo Lite، ‏`ipinfo_lite.mmdb` | الدول والشبكات في ملف واحد | CC BY-SA 4.0، حساب مجاني | [ipinfo.io/lite](https://ipinfo.io/lite) |
-| IPtoASN، ‏`ip2asn-combined.tsv.gz` | الشبكات ودولها | PDDL 1.0، بلا حساب | [iptoasn.com](https://iptoasn.com) |
-
-تُستخدم ملفاتك أولاً، وتجيب DB-IP Lite المدمجة عمّا لا تغطيه. يعيدك زر **إزالة** بجانب الملف إلى البقية. تعرض الصفحة ما هو مستخدم وتاريخ كل قاعدة.
-
-من دون واجهة الويب، انسخ الملف إلى مجلد البيانات باسم `country.mmdb` أو `asn.mmdb` أو `both.mmdb` (ملف فيه الدول والشبكات معاً مثل IPinfo Lite) أو `asn.tsv.gz` ثم أعد تشغيل traffic66.
-
-تعرض **الجغرافيا والشبكات** الحركة مع الدول الأخرى على خريطة العالم: كلما كان لون الدولة أغمق زادت الحركة. مرّر المؤشر على دولة لترى حركتها، وانقر عليها للتصفية أو لفتح سجلات التدفق. وحين تكون لشبكاتك دولة (`country=` في سطر `net`، انظر [الأسماء](#7-names-snmp-and-your-own-networks))، تمتد خطوط من تلك الدولة إلى الدول التي تتبادل معها الحركة، وكلما زادت الحركة زاد سمك الخط. حدود الدول من [Natural Earth](https://www.naturalearthdata.com) (ملكية عامة).
+تعمل الدول والشبكات (AS) فورًا بقاعدتَي DB-IP Lite المجانيتين
+([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)، "IP
+Geolocation by DB-IP"، [db-ip.com](https://db-ip.com))؛ وتحدّثهما **الإعدادات**،
+أو تقبل بدلًا منهما ملفات MaxMind GeoLite2 أو IPinfo Lite أو IPtoASN. حدود
+الخريطة: [Natural Earth](https://www.naturalearthdata.com).
 
 ![الجغرافيا والشبكات: الحركة الخارجية حسب الدولة على خريطة العالم](images/geo.png)
 
-قوائم التهديدات ملفات نصية عادية فيها عنوان أو شبكة في كل سطر (يُتجاهل
-النص بعد `#` أو `;`)، تُحفظ في `<data directory>/threats/<name>.txt`،
-مثلًا:
-
-```
-mkdir -p <data directory>/threats
-curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamhaus-drop.txt
-```
-
-أعد تشغيل traffic66 بعد إضافة القوائم أو تعديلها. تظهر التطابقات في
-**معلومات التهديدات** مصنّفة حسب اسم القائمة.
+قوائم التهديدات ملفات نصية فيها عنوان أو شبكة في كل سطر، في
+`<data>/threats/<name>.txt` (مثل Spamhaus DROP)؛ أعد التشغيل بعد تغييرها.
+تظهر التطابقات في **معلومات التهديدات**.
 
 ![معلومات التهديدات: مضيف داخلي يرسل بيانات إلى عنوان مدرج في قائمة تهديدات](images/threats.png)
 
-<a id="9-using-the-web-ui"></a>
+<a id="8-using-the-web-ui"></a>
 
-## 9. استخدام واجهة الويب
+## 8. استخدام واجهة الويب
 
-نادرًا ما ستحتاج إلى الكتابة. كل قيمة في كل صفحة — عنوان، منفذ، تطبيق،
-دولة، جهاز — قابلة للنقر:
+كل قيمة في كل صفحة قابلة للنقر: **اعرض هذا فقط** / **استبعد هذا** (تنطبق
+المرشّحات على كل الصفحات)، **اعرض سجلات تدفقه**، **عرض التفاصيل** (صفحة عن مضيف
+أو خدمة واحدة)، **تسمية…**، **ابحث عنه على الإنترنت**، **نسخ**.
 
-- **اعرض هذا فقط** / **استبعد هذا** يضيف مرشّحًا. تظهر المرشّحات أسفل
-  الشريط العلوي وتنطبق على كل الصفحات حتى تزيلها.
-- **اعرض سجلات تدفقه** يفتح التدفقات الفردية المطابقة.
-- **عرض التفاصيل** (المضيفات والأجهزة والخدمات) يفتح صفحة عن ذلك المضيف أو
-  الخدمة وحده: حركته عبر الزمن حسب التطبيق، ومن يتواصل معه، وأي خدمات أو
-  عملاء، والدول، وأحدث تدفقاته. كل قيمة هناك قابلة للنقر من جديد، فتستطيع
-  مواصلة التعمق؛ ويعيدك زر الرجوع في المتصفح.
-- **تسمية…** (المضيفات والأجهزة) تمنح العنوان اسمًا يظهر في كل مكان من بعدها.
-- **ابحث عنه على الإنترنت** يفتح العنوان أو AS في موقع استعلام عام.
-- **نسخ** ينسخ القيمة.
-
-الصفحات:
-
-| الصفحة | ما الذي تجيب عنه |
+| الصفحة | ما تعرضه |
 |---|---|
-| نظرة عامة | عرض النطاق الترددي للواجهة المختارة (أو الافتراضية، وإلا فالأكثر نشاطًا) بوحدة bits/s، الدخول والخروج كما تراهما الواجهة؛ حجم الحركة الآن حسب التطبيق (**الإجمالي**، أو حركة شبكاتك في اتجاه **وارد** أو **صادر** فقط)، مقارنةً بالوقت نفسه أمس (للنطاقات حتى يوم)، أو بالأسبوع الماضي (حتى أسبوع)، أو بالأيام السابقة (للنطاقات الأطول)، متى توفرت بيانات لتلك الفترة؛ الاكتشافات المفتوحة؛ الاتجاه والبروتوكول؛ أبرز العملاء والخدمات |
-| أعلى 66 | تُفتح على **جدول**، وهو جدول واحد لأعلى 66: افتراضيًا المحادثات (العميل والخادم والخدمة والدولة). كل عنوان عمود يفرز؛ والأعمدة الرقمية (حركة المرور، الحزم، متوسط الحزمة، التدفقات) تعيد اختيار أعلى 66 من كل حركة المرور في الفترة، لذا يكشف أصغر متوسط حزمة عمليات المسح والإغراق. ويبدّل **التجميع حسب** إلى التطبيقات والشبكات والمقاطع والأجهزة وأنواع التغليف وشبكات VLAN. أما **أكثر الأطراف نشاطًا** فيعرض أعلى 30 عميلًا وخادمًا جنبًا إلى جنب مع الحركة والحزم وسجلات التدفق، فوق صف لكل الحركة |
-| تفاصيل الحركة | مخططان حلقيان. **الخوادم والعملاء**: الحلقة الداخلية أكثر 8 خوادم نشاطًا، والخارجية عملاء كل منها؛ ويعكس **العملاء في الداخل** ذلك (العملاء في الداخل، والخوادم التي يستخدمها كل منهم في الخارج)، إذ كثيرًا ما يفسّر أحد الطرفين أكثر من الآخر. **الخدمات**: حلقة واحدة لأكثر الخدمات نشاطًا. مرّر المؤشر على جزء لترى حركته، وانقر عليه كأي قيمة |
-| مسارات الحركة | أي مضيف يستخدم أي تطبيق نحو أي دولة: أكثر 8 مضيفات نشاطًا، والباقي ضمن «أخرى». ويعرض **العميل ← الخادم** العميل ← الخدمة ← الخادم؛ ويعرض **حسب المقطع** الشبكات بدل المضيفات. تُختصر الأسماء الطويلة إلى 22 حرفًا؛ مرّر المؤشر على أحدها لترى الاسم كاملًا |
-| الاكتشافات | ما يستدعي الانتباه: عمليات المسح، وتخمين كلمات المرور، والتحرك الجانبي، وعمليات الرفع غير المعتادة، والإغراق، وحركة قوائم التهديدات ([المزيد](#findings)) |
-| معلومات التهديدات | المضيفات التي تواصلت مع عناوين في قوائم تهديداتك، وكم أرسلت |
-| الجغرافيا والشبكات | خريطة العالم للحركة حسب الدولة، مع خطوط من شبكاتك؛ الشبكات (AS) التي جاءت منها الحركة وذهبت إليها، عبر الزمن بوحدة bits/s وpackets/s؛ والحركة حسب الدولة وحسب الشبكة |
-| الإعدادات | الأجهزة، وأخذ العينات، والواجهات التي يأخذ منها كل جهاز العينات وهل يرسل flowDirection، والفقد، والمستقبِلات، وSNMP، وقاعدة بيانات الدول والشبكات، والشعار، و**الأسماء** |
-| مطابقة الواجهات | حركة كل واجهة عبر الزمن بوحدة bits/s، وتحتها packets/s، الدخول (بالأخضر) والخروج (بالأزرق)، مع عدّادات الجهاز خطوطًا متقطعة؛ ومدى ابتعاد أرقام التدفقات عن العدّادات، الأسوأ أولًا، مع الأسباب؛ واسم ووسم لكل واجهة، والواجهة الافتراضية |
-| سجلات التدفق | كم سجل تدفق كان هناك ومتى (شريط لكل فترة)، والسجلات نفسها، الأحدث أولًا، صفحةً صفحة، مع أعمدة قابلة للاختيار. تُفتح على آخر 15 دقيقة، وتُحدَّث كل 5 ثوانٍ؛ وإذا فُتحت من قيمة في صفحة أخرى (**اعرض سجلات تدفقه**) فإنها تحتفظ بالنطاق الزمني لتلك الصفحة، ويعيدك **العودة إلى البث المباشر** |
-| تنظيف البيانات | يحذف البيانات الأقدم من 120 أو 90 أو 60 أو 30 أو 7 أيام، أو كلها، مع مقدار ما يحرّره كل خيار ([المزيد](#13-data-backup-upgrade-uninstall)) |
-| تحليل pcap دون اتصال | تحليل ملفات التقاط الحزم (pcap وpcapng) بمعزل عن البيانات الحية ([المزيد](#تحليل-pcap-دون-اتصال)) |
+| نظرة عامة | عرض النطاق للواجهة المختارة؛ الحركة حسب التطبيق (الإجمالي أو الوارد أو الصادر) مقارنةً بأمس أو بالأسبوع الماضي؛ الاكتشافات المفتوحة؛ أبرز العملاء والخدمات |
+| أعلى 66 | أعلى 66 محادثة، قابلة للفرز حسب أي عمود، أو مجمّعة حسب التطبيق أو الشبكة أو المقطع أو الجهاز أو التغليف أو VLAN؛ أكثر 30 طرفًا نشاطًا |
+| تفاصيل الحركة | مخططات حلقية: الخوادم وعملاؤها (أو العكس)، والخدمات |
+| مسارات الحركة | مضيف ← تطبيق ← دولة، أو عميل ← خدمة ← خادم، أو حسب الشبكة |
+| مطابقة الواجهات | كل واجهة عبر الزمن مقابل عدّاداتها؛ الأسماء والوسوم والواجهة الافتراضية |
+| سجلات التدفق | التدفقات الفردية، مباشرةً كل 5 ثوانٍ أو لأي نطاق زمني |
+| الاكتشافات، معلومات التهديدات | ما يحتاج إلى انتباه ([أدناه](#findings))؛ الحركة مع العناوين المدرجة |
+| الجغرافيا والشبكات | خريطة العالم حسب الدولة، والشبكات (AS) عبر الزمن |
+| الإعدادات | الأجهزة، وأخذ العينات، والفقد، وSNMP، وقواعد البيانات، والشعار، والأسماء |
+| تحليل pcap دون اتصال، تنظيف البيانات | ملفات الالتقاط ([أدناه](#9-offline-pcap-terminal-ui-local-capture))؛ حذف البيانات القديمة |
 
-تعرض القائمة الجانبية الصفحات في أربع مجموعات: الحركة (نظرة عامة، أعلى 66،
-تفاصيل الحركة، مسارات الحركة، مطابقة الواجهات، سجلات التدفق)، والأمان
-(الاكتشافات، معلومات التهديدات، الجغرافيا والشبكات)، والإعدادات وتحليل pcap
-دون اتصال، وفي الأسفل تنظيف البيانات. وتحت الشعار يظهر الإصدار
-وتاريخ الخادم ووقته.
-
-فوق صفحات الحركة (نظرة عامة، أعلى 66، تفاصيل الحركة، مسارات الحركة، الجغرافيا
-والشبكات، سجلات التدفق، وتفاصيل أي قيمة) يوجد **الواجهة**: **كل الواجهات**، أو
-واجهة واحدة، فلا تعرض هذه الصفحات إلا الحركة المارّة عبرها (دخولًا أو خروجًا).
-ويسرد الواجهات المأخوذ منها العينات مجمّعةً حسب الجهاز، ويبدأ على
-الواجهة الافتراضية (★، تُضبط في **مطابقة الواجهات**)، والاختيار جزء من
-الرابط. أما الاكتشافات ومعلومات التهديدات ومطابقة الواجهات والإعدادات فتغطي
-دائمًا كل الحركة. ولواجهة واحدة على مدى 7 أو 30 يومًا تقرأ الصفحات سجلات التدفق
-بدل الملخصات الساعية واليومية، فتستغرق وقتًا أطول ولا تعود إلى الوراء إلا بقدر
-مدة الاحتفاظ بسجلات التدفق (30 يومًا افتراضيًا).
-
-فوق الصفحات: النطاق الزمني (من 15 دقيقة إلى 30 يومًا، أو **مخصص…** لأي
-بداية ونهاية، حتى أبعد من 30 يومًا)، وتحديث تلقائي كل 30 ثانية، و**نسخ
-الرابط** الذي ينسخ رابطًا إلى العرض الحالي بالضبط (الصفحة والنطاق الزمني
-والمرشّحات) لإرساله إلى زميل. وفي **أعلى 66** و**تفاصيل الحركة** يعرض
-**الجهاز** و**العميل** و**الخادم** و**الخدمة** أكثر القيم نشاطًا في
-النطاق الزمني: اختر قيمة أو اكتبها للتصفية؛ ثم ينطبق المرشّح على كل الصفحات
-حتى تفرغ المربع. تتبع اللغة إعدادات المتصفح؛ ويمكن تغييرها من أسفل القائمة،
-فوق **تسجيل الخروج**. ولا نطاق زمنيًا في **الإعدادات** و**سجلات التدفق** (أثناء
-البث المباشر) و**تنظيف البيانات** و**تحليل pcap دون اتصال**.
-
-وبجوار اللغة سمة الألوان، على غرار ألوان نظام iOS: **فاتح** (الافتراضية)،
-و**رمادي**، و**أسود** (لشاشات الجدران)، و**فيروزي**، و**برتقالي**. كل نقرة عليها
-تنتقل إلى السمة التالية؛ ويُحفظ الاختيار في المتصفح.
-
-تعرض المخططات عبر الزمن أكبر 8 قيم بألوان ثابتة والباقي ضمن «أخرى»؛ وتعطي
-وسيلة الإيضاح مجموع كل قيمة، ويمكن النقر عليها كأي قيمة أخرى. ولا ترسم مخططات
-العملاء والخوادم الباقي، لأنه مع آلاف المضيفات سيُسطّح أعلى 8؛ لكن وسيلة
-الإيضاح تبقى تعطي مجموعه.
-
-تنتهي المخططات حيث تكتمل البيانات: مع sFlow عند الدقيقة الحالية، ومع NetFlow
-وIPFIX قبل ذلك بقليل، بقدر ما تستغرقه الأجهزة لتصدير تدفقاتها (يقيس traffic66
-ذلك؛ دقيقتان على الأكثر).
-
-تبدأ النطاقات الأطول من 6 ساعات عند ساعة كاملة، كي يحسب كل رقم في الصفحة
-الفترة الزمنية نفسها تمامًا: يغطي "24 ساعة" آخر 24 ساعة كاملة إضافةً إلى
-الساعة الجارية. تُبنى صفحة أعلى 66 لهذه النطاقات من ملخّصات ساعية؛ والمرشّحات غير
-متاحة فيها، وتنبّه الصفحة إلى ذلك. اختر نطاقًا أقصر لتتمكن من التصفية. تقرأ المحادثات تفاصيل
-التدفقات دائمًا، لذا قد تستغرق بعض الوقت في النطاقات الطويلة عند معدلات
-التدفق العالية؛ ونطاق الساعة الواحدة هو الأسرع.
-
-تعرض القائمة الجانبية المساحة التي تشغلها البيانات على القرص والمساحة الحرة؛
-مرّر المؤشر فوق المساحة الحرة لترى ما تحتاجه أيام التفاصيل المحفوظة بالمعدل
-الحالي (يُقدَّر ذلك بعد توفر بيانات يوم كامل).
-
-لعرض شعارك في صفحة تسجيل الدخول وأعلى القائمة، استخدم
-**الإعدادات ← الشعار ← رفع شعار…**: PNG أو SVG أو JPEG أو WebP أو GIF، حتى 1 MB،
-وأفضل مقاس 272 × 92 بكسل (تُحجَّم المقاسات الأخرى لتلائم). ويعيد
-**العودة إلى الشعار المدمج** شعار traffic66.
-
-<a id="findings"></a>
-
-### الاكتشافات
-
-تسرد **الاكتشافات** ما وجده traffic66 في التدفقات، الأخطر أولًا. يفحص آخر 10
-دقائق كل 5 دقائق؛ والشيء الذي يستمر ساعة هو اكتشاف واحد يكبر، لا اكتشاف جديد
-عند كل فحص.
-
-| الاكتشاف | معناه | الخطورة |
-|---|---|---|
-| مسح | عنوان واحد أرسل مجسّات صغيرة إلى عناوين كثيرة على منفذ واحد (TCP أو ping) | عالية من داخل شبكتك، منخفضة من الإنترنت |
-| مسح المنافذ | عنوان واحد أرسل مجسّات صغيرة إلى منافذ كثيرة لمضيف واحد | عالية من الداخل، منخفضة من الإنترنت |
-| تخمين كلمات المرور | اتصالات قصيرة كثيرة بخدمة تسجيل دخول (SSH وRDP وSMB وقواعد البيانات وغيرها) | عالية من الداخل، منخفضة من الإنترنت |
-| تحرك جانبي | داخل شبكتك، جلسات مشاركة ملفات أو إدارة عن بُعد (SMB وRDP وSSH وWinRM وVNC) إلى مضيفات لم تقدّم تلك الخدمة من قبل | عالية |
-| رفع غير معتاد | مضيف داخلي أرسل أكثر بكثير مما استقبل (100 MB في 10 دقائق، ثلاثة أضعاف ما استقبله) إلى عنوان لم يتبادل معه بيانات من قبل | عالية |
-| إغراق | 20,000 حزمة صغيرة أو أكثر في الثانية إلى عنوان واحد، عشرة أضعاف معدله المعتاد | متوسطة |
-| قائمة التهديدات | حركة مع عنوان في إحدى قوائم التهديدات لديك | عالية حين اتصل مضيفك به، منخفضة حين طرق العنوان المدرج من الخارج |
-
-يبيّن كل اكتشاف من فعل ماذا بمن، ومتى، وكم استمر، مع الأرقام التي يستند إليها
-وطريقة أخذ عينات البيانات. يفتح **التفاصيل** صفحة المضيف، التي تسرد أيضًا
-الاكتشافات المتعلقة به. ويغلق **تمت المعالجة** الاكتشاف؛ وإن تكرر الأمر فُتح
-اكتشاف جديد. أما **ليست مشكلة** فيغلقه نهائيًا: لا يُبلَّغ عنه مرة أخرى أبدًا.
-ويعدّ الرقم الأحمر بجوار **الاكتشافات** في القائمة الجانبية الاكتشافات
-المفتوحة ذات الخطورة العالية والمتوسطة في آخر 24 ساعة.
-
-يحتاج التحرك الجانبي والرفع غير المعتاد إلى معرفة ما هو طبيعي، لذا لا يُبلَّغ
-عنهما إلا بعد توفر سجلّ يوم كامل. وعند التشغيل الأول يتعلّم traffic66 من
-السجلّ المتوفر لديه.
-
-مع البيانات المأخوذة بالعينات (sFlow وNetFlow بالعينات) تعدّ القواعد ما تُظهره
-العينات وتطلب عددًا أقل منها، لكن يجب حينها أن تبدو كل عينة مجسًّا قصيرًا
-واحدًا، كي لا تُطلقها المضيفات الطبيعية المزدحمة. ما يخفيه أخذ العينات لا يمكن
-اكتشافه: خلف أخذ عينات بنسبة 1:4096، يرسل مسحٌ لبضع عشرات من المضيفات حزمًا
-أقل من أن تُرى. يمر هجوم العرض التوضيحي عبر محوّل يأخذ العينات بنسبة 1:4096
-ويُكتشف بالكامل؛ ولا ينتج يوم من الحركة الطبيعية في العرض التوضيحي أي اكتشافات
-سوى الماسح القادم من الإنترنت الذي يطرق الموقع.
-
-![الاكتشافات: كل خطوة من هجوم، اكتُشفت عبر أخذ عينات sFlow بنسبة 1:4096](images/findings.png)
+فوق الصفحات: **الواجهة** (الكل، أو واجهة واحدة مأخوذ منها العينات؛ عندها لا
+تعرض صفحات الحركة إلا الحركة المارّة عبرها)، والنطاق الزمني (من 15 دقيقة إلى 30
+يومًا، أو مخصص)، وتحديث كل 30 ثانية، و**نسخ الرابط** للعرض الحالي بالضبط. اللغة
+وسمات الألوان الخمس في أسفل القائمة. تنتهي المخططات حيث تكتمل البيانات: مع
+NetFlow/IPFIX بقدر تأخر الأجهزة في التصدير (دقيقتان كحد أقصى). النطاقات التي
+تزيد على 6 ساعات تبدأ عند ساعة كاملة؛ واجهة واحدة على مدى 7 أو 30 يومًا تقرأ
+تفاصيل التدفقات، لذا فهي أبطأ ولا تمتد إلا بقدر ما تُحفظ التفاصيل.
 
 ![أعلى 66: أعلى 66 محادثة، مرتّبة حسب أي عمود](images/topn.png)
 
@@ -811,360 +306,114 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 ![مسارات الحركة: أي مضيف يستخدم أي تطبيق نحو أي دولة](images/paths.png)
 
-النظرة العامة نفسها باللغة الصينية؛ كل صفحة متاحة بـ 13 لغة:
-
 ![النظرة العامة باللغة الصينية](images/overview-zh.png)
 
-<a id="10-terminal-ui"></a>
+<a id="findings"></a>
 
-### تحليل pcap دون اتصال
+### الاكتشافات
 
-يعرض **تحليل pcap دون اتصال** ملفات التقاط Wireshark أو tcpdump بالصفحات نفسها المستخدمة للبيانات الحية، دون خلطها بها.
+يُفحص آخر 10 دقائق كل 5 دقائق؛ والشيء الذي يستمر ساعة هو اكتشاف واحد يكبر.
 
-يلخّص كل الحزم في تدفقات: من تحدث مع من، وكم، ومتى، وما الذي يبدو هجوماً. لا يفك ترميز البروتوكولات ولا يعرض محتوى الحزم؛ لحزمة واحدة أو تدفق TCP واحد استخدم Wireshark.
+| الاكتشاف | معناه |
+|---|---|
+| مسح، مسح المنافذ | مجسّات صغيرة إلى مضيفات كثيرة على منفذ واحد، أو إلى منافذ كثيرة لمضيف واحد |
+| تخمين كلمات المرور | اتصالات قصيرة كثيرة بخدمة تسجيل دخول |
+| تحرك جانبي | مشاركة ملفات أو إدارة عن بُعد إلى مضيفات داخلية لم تقدّم ذلك من قبل |
+| رفع غير معتاد | 100 MB في 10 دقائق إلى عنوان جديد، ثلاثة أضعاف ما عاد |
+| إغراق | أكثر من 20,000 حزمة صغيرة في الثانية إلى عنوان واحد، عشرة أضعاف معدله المعتاد |
+| قائمة التهديدات | حركة مع عنوان مدرج |
 
-من سطر الأوامر، دون أي إعداد:
+من داخل شبكتك تكون خطورتها عالية، ومن الإنترنت منخفضة. يغلق **تمت المعالجة**
+الاكتشاف، ويُسكته **ليست مشكلة** نهائيًا. يحتاج التحرك الجانبي والرفع إلى سجلّ
+يوم كامل. عبر أخذ عينات بنسبة 1:4096 يُكتشف هجوم العرض التوضيحي كاملًا؛ أما
+عمليات المسح الصغيرة جدًا فقد تختبئ خلف أخذ العينات.
 
-```
-traffic66 office.pcap
-traffic66 a.pcap b.pcapng c.pcap
-```
+![الاكتشافات: كل خطوة من هجوم، اكتُشفت عبر أخذ عينات sFlow بنسبة 1:4096](images/findings.png)
 
-يبدأ traffic66 على هذا الحاسوب فقط (127.0.0.1، منفذ متاح)، ويطبع العنوان وكلمة المرور ورابط دخول لمرة واحدة، ويفتح الالتقاط في المتصفح. حتى 3 ملفات، 3 GB إجمالاً؛ تُقرأ الملفات في مكانها ولا تُعدَّل أبداً. لا يُجمع شيء ولا يُرسل، ولا يُبحث عن أسماء المضيفين (يفعّلها `-dns`). يوقف Ctrl+C البرنامج ويحذف البيانات المستوردة. على جهاز ثنائي النواة يجهز التقاط بحجم 1 GB في نحو 5 ثوانٍ (1.2 مليون حزمة كاملة الحجم) إلى 30 ثانية (14 مليون حزمة صغيرة).
+<a id="9-offline-pcap-terminal-ui-local-capture"></a>
 
-```
-$ traffic66 office.pcap
+## 9. تحليل pcap دون اتصال، الواجهة الطرفية، الالتقاط المحلي
 
-traffic66 0.3.1: analysing 1 capture file(s); nothing is collected or sent
-  Web UI    http://127.0.0.1:38217  (port 38217, this computer only)
-  Sign in   user admin, password gfhfhbuutz2e
-  Open      http://127.0.0.1:38217/auto?t=b9388f…  (signs in once)
-  Stop      Ctrl+C; the imported data is deleted, your files are kept
-```
-
-في واجهة الويب لـ traffic66 قيد التشغيل:
-
-1. **رفع ملفات التقاط…**: ‎`.pcap` أو ‎`.pcapng` غير مضغوطة. حتى 3 ملفات، كل منها 50 MB كحد أقصى. تتحول الملفات إلى تدفقات في قاعدة بيانات خاصة بها (`<data>/sandbox/`)، فلا تتأثر البيانات الحية وأرقامها واكتشافاتها.
-2. **تحليل**: تعرض كل الصفحات (نظرة عامة، أعلى 66، تفاصيل الحركة، الاكتشافات، مسارات الحركة، الخريطة، سجلات التدفق) الملفات على امتداد وقتها كله. يذكر شريط برتقالي أسماء الملفات، و**العودة إلى البيانات الحية** يعيدك. يظهر كل ملف كجهاز، فيعرض مربع **الجهاز** ملفاً واحداً في كل مرة.
-3. تعمل قواعد الكشف على الالتقاط: تظهر عمليات المسح ومسح المنافذ وتخمين كلمات المرور في **الاكتشافات**. القواعد التي تحتاج إلى يوم من السجل (الحركة الجانبية، الرفع غير المعتاد) لا تنطبق على الالتقاط.
-4. **حذف** يحذف ملفاً وبياناته، و**حذف الكل** يحذف كل شيء.
-
-يتضمن العرض التجريبي ملف التقاط نموذجياً فيه هجوم.
+يعرض **تحليل pcap دون اتصال** ملفات التقاط الحزم (pcap وpcapng) بالصفحات نفسها،
+بمعزل عن البيانات الحية: يبدأ `traffic66 a.pcap b.pcapng` على 127.0.0.1 ويفتح
+المتصفح (حتى 3 ملفات، 3 GB؛ يحذف Ctrl+C البيانات المستوردة)، أو ارفع حتى 3
+ملفات بحجم 50 MB في تلك الصفحة. يعمل على التدفقات، لا على محتوى الحزم.
 
 ![التحليل دون اتصال: ملفات الالتقاط مع حزمها وتدفقاتها ووقتها](images/sandbox.png)
 
-## 10. الواجهة الطرفية
-
-```
-traffic66 tui                                     # traffic66 on this machine
-traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-traffic66 -tui                                    # collect and show the terminal UI in one process
-```
-
-على جهاز traffic66، يسجّل `traffic66 tui` الدخول تلقائيًا إذا استطاع قراءة
-دليل البيانات (مرّر `-data` إن لم يكن الدليل الافتراضي). إذا كان traffic66
-يعمل باسم مستخدم آخر، كما هو الحال مع الخدمة، فاستخدم `-user` و
-`-password` بدلًا من ذلك. يختار `-lang` اللغة (`en`، `zh`، `hi`،
-`es`، `ar`، `fr`، `bn`، `pt`، `ru`، `id`، `ur`، `ja`، `ko`).
-
-المفاتيح: 1–8 للصفحات، ↑↓ للتحديد، Enter لإجراءات القيمة المحددة، f لعرض
-هذا فقط، x للاستبعاد، / للبحث، t للنطاق الزمني، c لمسح المرشّحات، w لفتح
-العرض نفسه في المتصفح، q للخروج.
+**الواجهة الطرفية**: `traffic66 tui` على جهاز traffic66، أو
+`traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
+المفاتيح: 1–8 للصفحات، Enter للإجراءات، f لعرض هذا فقط، x للاستبعاد، t للنطاق
+الزمني، w للفتح في المتصفح، q للخروج؛ ويختار `-lang` اللغة.
 
 ![الواجهة الطرفية: نظرة عامة](images/tui-overview.png)
 
 ![الواجهة الطرفية: محادثات أعلى 66](images/tui-topn.png)
 
-<a id="11-local-capture"></a>
+**الالتقاط المحلي** يبني التدفقات من واجهة محلية، ويُفضَّل منفذ موصول بمنفذ
+المرآة في مبدّل: يسردها `traffic66 interfaces`، ويلتقط `-capture eth1` (أو اسم
+أو رقم في Windows). يحتاج Linux إلى root أو
+`setcap cap_net_raw,cap_net_admin+ep`، وmacOS إلى root، وWindows إلى
+[Npcap](https://npcap.com). تأتي التدفقات الملتقطة من الجهاز `127.0.0.1`.
 
-## 11. الالتقاط المحلي
+<a id="10-options-and-data"></a>
 
-إلى جانب استقبال التدفقات المُصدَّرة، يستطيع traffic66 تكوين التدفقات بنفسه
-من الحزم على واجهة شبكة في الجهاز الذي يعمل عليه. وما يراه يتوقف على
-الواجهة:
+## 10. الخيارات والبيانات
 
-| الواجهة | ما يراه traffic66 |
-|---|---|
-| منفذ شبكة احتياطي موصول بمنفذ المرآة (SPAN) في مبدّل | كل الحركة التي يعكسها المبدّل: شبكة كاملة أو وصلة صاعدة |
-| منفذ Ethernet أو Wi-Fi الخاص بالجهاز نفسه | حركة هذا الجهاز وحده فقط |
+يسرد `traffic66 -h` كل شيء. الأكثر استخدامًا:
 
-لا تستطيع بطاقات Wi-Fi رؤية حركة الأجهزة الأخرى. لرؤية شبكة Wi-Fi كاملة،
-اجعل الموجّه أو نقطة الوصول يصدّر التدفقات (القسم 4)، أو اعكس منفذ المبدّل
-الموصولة به نقطة الوصول.
-
-<a id="windows-1"></a>
-
-### Windows
-
-1. ثبّت [Npcap](https://npcap.com) بخياراته الافتراضية. إذا فعّلت الخيار
-   "Restrict Npcap driver's access to Administrators only" فشغّل traffic66
-   بصلاحيات المسؤول (Administrator).
-2. اعرض قائمة الواجهات (PowerShell):
-
-   ```
-   C:\traffic66\traffic66.exe interfaces
-   ```
-
-   ```
-   #   Name      Address          Adapter / device
-   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
-   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
-   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
-   ```
-
-   عمود Name هو اسم الاتصال في إعدادات الشبكة في Windows؛ والواجهة
-   المستخدمة فعلًا لها عنوان.
-3. التقط على Wi-Fi، بالاسم أو بالرقم:
-
-   ```
-   C:\traffic66\traffic66.exe -capture Wi-Fi
-   C:\traffic66\traffic66.exe -capture 2
-   ```
-
-   ضع الأسماء التي فيها مسافات بين علامتي اقتباس: `-capture "Ethernet 2"`.
-   كرّر `-capture` للالتقاط على عدة واجهات. أضف `-listen=` إذا أردت الالتقاط
-   وحده دون مستقبِلات التدفقات. ولمهمة بدء التشغيل في القسم 2، أضف الخيار
-   إلى `-Argument`:
-   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`.
-
-<a id="linux-1"></a>
-
-### Linux
-
-```
-traffic66 interfaces
-sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
-traffic66 -capture eth1
-```
-
-يتطلب الالتقاط صلاحيات root، أو القدرتين `CAP_NET_RAW` و`CAP_NET_ADMIN`:
-سطر `setcap` أعلاه، أو سطر `AmbientCapabilities` في وحدة systemd في القسم 2.
-تُسمّى واجهات Wi-Fi عادةً `wlan0` أو `wlp…`.
-
-<a id="macos-1"></a>
-
-### macOS
-
-```
-traffic66 interfaces
-sudo traffic66 -capture en0
-```
-
-يتطلب الالتقاط صلاحيات root؛ لا شيء يحتاج إلى تثبيت. في أجهزة MacBook تكون
-`en0` هي واجهة Wi-Fi.
-
-<a id="checking-that-it-works"></a>
-
-### التحقق من أن الالتقاط يعمل
-
-تعرض **الإعدادات** كل واجهة ملتقَطة مع طريقة الالتقاط وعدد الحزم التي رُصدت.
-تظهر التدفقات كأنها آتية من الجهاز `127.0.0.1` (هذا الجهاز)، في كل صفحة،
-مثل تدفقات أي جهاز آخر. الحزم التي تُرى مرتين (على منفذَي مرآة مثلًا) تُعدّ
-مرتين.
-
-<a id="12-options"></a>
-
-## 12. الخيارات
-
-يعرض `traffic66 -h` و`traffic66 <command> -h` كل الخيارات.
-
-الأوامر:
-
-| الأمر | |
-|---|---|
-| `traffic66` | جمع التدفقات وتقديم واجهة الويب |
-| `traffic66 demo` | الشيء نفسه مع شبكة محاكاة |
-| `traffic66 tui` | واجهة طرفية لنسخة traffic66 عاملة |
-| `traffic66 passwd` | إضافة المستخدمين أو تغييرهم أو عرض قائمتهم أو حذفهم (انظر [المستخدمون وكلمات المرور](#3-users-and-passwords)) |
-| `traffic66 simulate -to HOST` | إرسال تدفقات محاكاة إلى مستقبِل |
-| `traffic66 interfaces` | سرد الواجهات المتاحة للالتقاط المحلي |
-| `traffic66 version` | طباعة الإصدار |
-
-خيارات `traffic66` و`traffic66 demo`:
-
-| الخيار | القيمة الافتراضية | |
+| الخيار | الافتراضي | |
 |---|---|---|
-| `-addr` | `:8066` | عنوان واجهة الويب؛ `127.0.0.1:8066` لهذا الجهاز فقط |
 | `-data` | `traffic66-data` بجوار البرنامج | دليل البيانات |
-| `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | مستقبِلات UDP بصيغة `name=address` مفصولة بفواصل؛ القيمة الفارغة تعطّلها |
-| `-user` | `admin` | اسم المستخدم الذي يُنشأ عند التشغيل الأول، والمستخدم الذي ينطبق عليه `-password` |
-| `-password` | غير معيّن | قبول `-user` وحده بكلمة المرور هذه في هذا التشغيل، مع تجاهل الملف `password` (أو `TRAFFIC66_PASSWORD`) |
-| `-retention-days` | `30` | عدد أيام الاحتفاظ بتفاصيل التدفقات؛ تُحفظ الملخّصات 400 يوم |
-| `-memory` | `0.10` | حصة الذاكرة الفعلية للذاكرة المؤقتة لقاعدة البيانات، ومثلها حدًّا مرنًا لبقية البرنامج (كلٌّ منهما 256 MB على الأقل) |
-| `-l2-overhead` | `18` | بايتات تُضاف لكل حزمة إلى عدد بايتات NetFlow/IPFIX |
+| `-addr` | `:8066` | واجهة الويب؛ `127.0.0.1:8066` لهذا الجهاز فقط |
+| `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | مستقبِلات UDP؛ القيمة الفارغة تعطّلها |
+| `-retention-days` | `30` | أيام تفاصيل التدفقات؛ تُحفظ الملخصات 400 يوم |
+| `-memory` | `0.10` | حصة الذاكرة لذاكرة قاعدة البيانات المؤقتة |
 | `-sampling-wait` | `5m` | مدة انتظار السجلات لمعدّل أخذ العينات |
-| `-capture` | | الالتقاط على واجهة محلية (يمكن تكراره) |
-| `-inventory` | `<data>/inventory.txt` | ملف الأسماء |
-| `-asn` | `<data>/asn.tsv.gz` | جدول IP-to-ASN (ملفات `.mmdb`: ارفعها، أو `<data>/country.mmdb` و`<data>/asn.mmdb`, `<data>/both.mmdb`) |
-| `-threat` | `<data>/threats/*.txt` | قائمة تهديدات إضافية بصيغة `name=path` (يمكن تكراره) |
-| `-dns-upstream` | محلّل النظام | خادم DNS لعرض أسماء المضيفات |
-| `-dns-rate` | `20` | الحد الأقصى لاستعلامات DNS العكسية في الثانية |
-| `-dns-cache` | `2m` | مدة الاحتفاظ بأسماء المضيفات في الذاكرة المؤقتة |
-| `-no-dns` | | بلا استعلامات DNS عكسية |
-| `-tui` | | فتح الواجهة الطرفية أيضًا |
+| `-capture` | | واجهة محلية (قابل للتكرار) |
+| `-no-dns` | | بلا استعلامات عكسية |
 
-مثال: منفذ مستقبِل ثانٍ، وتفاصيل لمدة سنة، وواجهة الويب على الجهاز المحلي
-فقط:
+يحوي دليل البيانات `raw/` (التفاصيل، ملف لكل ساعة)، و`traffic66.duckdb`
+(الملخصات والعدّادات)، و`password`، و`inventory.txt`، و`license.json`، وشعارك
+وقواعد البيانات. للنسخ الاحتياطي أوقف traffic66 وانسخه؛ وللترقية استبدل ملف
+البرنامج. يحذف **تنظيف البيانات** البيانات الأقدم من 7–120 يومًا، أو كلها.
 
-```
-traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:4739,netflow=:9995" -retention-days 365 -addr 127.0.0.1:8066
-```
+<a id="licence"></a>
 
-<a id="13-data-backup-upgrade-uninstall"></a>
+### الترخيص
 
-## 13. البيانات والنسخ الاحتياطي والترقية وإزالة التثبيت
+متاح المصدر بموجب [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
+و[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (النص الإنجليزي
+هو الملزم): مجاني للتقييم وللمؤسسات التي يقل عدد أفرادها عن 100 شخص؛ وتسجّل
+المؤسسات الأكبر بعد 30 يومًا من الاستخدام الإنتاجي؛ ويحتاج البيع أو الاستضافة
+للآخرين أو المنتجات المنافسة إلى ترخيص تجاري. لا يُعطَّل أي شيء أبدًا. يعرض أسفل
+كل صفحة رقم التثبيت المكوّن من 8 أرقام؛ أرسله إلى المؤلف، وضع ملف
+`license.json` الذي تتلقاه في دليل البيانات. للتواصل:
+<https://github.com/githubflyideas/traffic66>.
 
-يحتوي دليل البيانات على كل شيء:
+<a id="11-security-sizing-troubleshooting"></a>
 
-| | |
+## 11. الأمان، تقدير الموارد، استكشاف الأخطاء
+
+واجهة الويب HTTP عادي: على الشبكات غير الموثوقة استخدم `-addr 127.0.0.1:8066`
+خلف وكيل TLS (`caddy reverse-proxy --from traffic66.example.com --to
+127.0.0.1:8066`) أو نفق SSH. اسمح بمنافذ UDP من أجهزتك فقط. تُخزَّن مجتمعات
+SNMP نصًا صريحًا؛ استخدم مجتمعات للقراءة فقط.
+
+عند 5,000 تدفق/ث على نواتين: نحو 12 GB من القرص لكل يوم من التفاصيل (360 GB
+لـ 30 يومًا)، وسدس نواة، و0.6–0.8 GB من الذاكرة. تستغرق النظرات العامة للنطاقات
+الطويلة أقل من 0.2 ثانية؛ وأعلى 66 لكل المحادثات لمدة ساعة نحو 9 ثوانٍ.
+
+| العَرَض | الحل |
 |---|---|
-| `raw/` | تفاصيل التدفقات، ملف مضغوط واحد لكل ساعة |
-| `traffic66.duckdb` | الملخّصات وعدّادات الواجهات والساعة الجارية |
-| `password` | كلمات مرور تسجيل الدخول (مُجزّأة) |
-| `inventory.txt` | الأسماء (**الإعدادات ← الأسماء**) |
-| `license.json` | رقم التثبيت والترخيص (انظر [التجربة والترخيص](#trial-and-licence)) |
-| `logo.png` (أو `.svg`، `.jpg`، `.webp`، `.gif`) | شعارك (**الإعدادات ← الشعار**)، إن كنت قد رفعته |
-| `country.mmdb`، `asn.mmdb`، `both.mmdb`، `asn.tsv.gz`، `dbip-country.mmdb`، `dbip-asn.mmdb`، `threats/`، `sandbox/` | قواعد بيانات الدول والشبكات وقوائم التهديدات التي أضفتها |
-
-**مدة الاحتفاظ بالبيانات**: تفاصيل التدفقات 30 يومًا، والملخصات (النظرة العامة والفترات الطويلة) 400 يوم.
-تُحذف البيانات الأقدم تلقائيًا، ويُفحص ذلك كل 5 دقائق؛ لا يُحذف شيء غير ذلك ولا يوجد حد آخر. غيّر مدة التفاصيل
-بـ `-retention-days`، أي عدد من الأيام، مثل `-retention-days 365`. ويزداد استخدام القرص معها: يصبح **متاح**
-في القائمة الجانبية أحمر عندما لا تتسع الأيام المحفوظة. إذا امتلأ القرص فلا يمكن حفظ تدفقات جديدة حتى تُحرَّر مساحة.
-
-يحذف **تنظيف البيانات** في القائمة الجانبية البيانات قبل أن تحتاج إلى ذلك:
-الأقدم من 120 أو 90 أو 60 أو 30 أو 7 أيام، أو كل البيانات. ويعرض لكل خيار
-عدد سجلات التدفق التي ستُحذف ومقدار المساحة التقريبي الذي يحرّره، ويطلب
-التأكيد قبل الحذف. تُحذف سجلات التدفق والملخّصات الساعية واليومية وعدّادات
-الواجهات والاكتشافات؛ وحذف كل البيانات يعيد أيضًا تعيين ما تعلّمته قواعد
-الكشف. لا يمكن التراجع عن ذلك.
-
-- **النسخ الاحتياطي**: أوقف traffic66 وانسخ الدليل. من دون إيقافه، انسخ
-  `raw/` و`password` و`inventory.txt`؛ وعندها لن تتضمن النسخة الساعة
-  الجارية ولا الملخّصات.
-- **النقل**: أوقف traffic66، وانقل الدليل، ثم شغّله مع `-data` مشيرًا إلى
-  المكان الجديد.
-- **الترقية**: أوقف traffic66، واستبدل ملف البرنامج، ثم شغّله مجددًا. تبقى
-  البيانات كما هي. مثلًا في Linux:
-
-  ```
-  sudo systemctl stop traffic66
-  sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
-  sudo systemctl start traffic66
-  ```
-
-- **إزالة التثبيت**: أوقف الخدمة أو مهمة بدء التشغيل واحذفها (انظر
-  [التثبيت](#2-install))، ثم احذف مجلد البرنامج ودليل البيانات.
-
-<a id="trial-and-licence"></a>
-
-### التجربة والترخيص
-
-traffic66 متاح المصدر بموجب
-[PolyForm Noncommercial License 1.0.0](../LICENSE.md)
-و[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)؛ والنص
-الإنجليزي لكليهما هو الملزم. باختصار:
-
-- **التقييم** والاختبار والتطوير والعروض التوضيحية: مجانًا للجميع، دون حد
-  زمني.
-- **الاستخدام الإنتاجي** (حركة حقيقية، لتشغيل أعمال مؤسسة) من قِبل مؤسسة
-  يقل عدد موظفيها والمتعاقدين معها عن 100: مجانًا.
-- الاستخدام الإنتاجي من قِبل **المؤسسات الأكبر**: مجانًا لمدة 30 يومًا، ثم
-  يلزم ترخيص تسجيل من المؤلف.
-- يجوز للمتعاقدين ومقدّمي الخدمات تشغيله لعميل، في نشر خاص بذلك العميل؛
-  والمعتبر حجم العميل.
-- غير مسموح دون ترخيص تجاري: بيعه أو دمجه في منتج، أو تقديمه للآخرين كخدمة
-  مستضافة أو متعددة المستأجرين، أو منتج منافس.
-
-تُحدَّد رسوم ترخيص التسجيل ونطاقه ومدته لكل حالة على حدة، وقد يكون مجانيًا.
-للتواصل: <https://github.com/githubflyideas/traffic66>.
-
-تعرض كل نسخة مثبتة التجربة، حتى حيث لا يلزم ترخيص. عند التشغيل الأول يكتب
-traffic66 الملف `license.json` في دليل البيانات مع رقم تثبيت من 8 أرقام. ويعرض أسفل كل صفحة عدد أيام
-التجربة المتبقية، ثم أن التجربة انتهت. ولا يتوقف شيء في الحالتين: تستمر كل
-الميزات في العمل.
-
-للتسجيل، أرسل إلى المؤلف رقم التثبيت (يظهر أيضًا أسفل كل صفحة). يصلك الترخيص
-في ملف `license.json` جديد؛ ضعه في دليل البيانات مكان القديم. يُفحص عند
-بدء traffic66 وكل 4 ساعات، فلا حاجة إلى إعادة التشغيل؛ ثم يعرض أسفل الصفحة
-لمن رُخِّص وكم يومًا بقي.
-
-<a id="14-security"></a>
-
-## 14. الأمان
-
-- تستخدم واجهة الويب HTTP عاديًا: تعبر كلمات المرور والبيانات الشبكة دون
-  تشفير. على الشبكات التي لا تثق بها تمامًا، استمع على هذا الجهاز فقط
-  (`-addr 127.0.0.1:8066`) وضع أمامه وكيلًا عكسيًا بـ TLS، مثلًا باستخدام
-  [Caddy](https://caddyserver.com):
-  `caddy reverse-proxy --from traffic66.example.com --to 127.0.0.1:8066`.
-  أو اتصل به عبر VPN أو نفق SSH:
-  `ssh -L 8066:127.0.0.1:8066 user@192.0.2.50`، ثم افتح
-  http://127.0.0.1:8066.
-- اسمح بمنافذ UDP الخاصة بالمستقبِلات من عناوين أجهزتك فقط.
-- تُخزَّن مجتمعات SNMP في `inventory.txt` نصًا صريحًا؛ استخدم مجتمعًا للقراءة
-  فقط.
-
-<a id="15-sizing"></a>
-
-## 15. تقدير الموارد
-
-القياس عند 5,000 تدفق في الثانية على جهاز بنواتين: تستهلك التفاصيل نحو
-12 GB من القرص يوميًا، إضافة إلى نحو 1.5 GB للساعة الجارية، ويستهلك البرنامج
-سدس نواة واحدة. تُبنى النظرات العامة للنطاقات
-الزمنية الطويلة من الملخّصات وتستغرق أقل من 0.2 ثانية. تمسح الاستعلامات على
-التفاصيل نحو 22 مليون صف لكل ساعة: مضيف واحد على مدى ساعة يستغرق أقل من
-ثانية، وأعلى 66 لكل المحادثات على مدى ساعة نحو 9 ثوانٍ؛ ويزداد الوقت مع
-طول النطاق ويقلّ بزيادة الأنوية.
-
-لذلك يحتاج 30 يومًا عند 5,000 تدفق/ثانية إلى نحو 360 GB من القرص؛ احسبها
-وفق معدّل التدفقات لديك (يظهر في **الإعدادات**) و`-retention-days`.
-
-الذاكرة: يحدّ `-memory` (افتراضيًا 10% من RAM، وبحدّ أدنى 256 MB) من الذاكرة
-المؤقتة لقاعدة البيانات، ويحصل باقي البرنامج على حدّ مرن بالحجم نفسه. عند
-5,000 تدفق في الثانية تشغل بيانات البرنامج نفسه (فك الترميز، وكشف التكرار،
-والدفعات) نحو 90 MB؛ وتوقّع إجمالًا 0.6–0.8 GB، لذا يكفي جهاز بذاكرة RAM
-سعتها 2 GB. جرى القياس خلال 10 دقائق من الجمع المتواصل (ذروة 0.58 GB على
-جهاز بذاكرة 8 GB) وأثناء تحميل ساعة من التدفقات بأحد عشر ضعف ذلك المعدّل
-ضمن حدود جهاز بذاكرة 2 GB (ذروة 0.74 GB).
-
-`-memory` ميزانية وليس حدًّا صارمًا: حدّ Go مرن، وقد تتجاوز قاعدة البيانات
-حصتها لفترة قصيرة. للحصول على حدّ صارم استخدم حدّ نظام التشغيل: `MemoryMax=`
-في وحدة systemd (القسم 2) أو حدّ ذاكرة الحاوية. خصّص نحو 2.5 ضعف حصة
-`-memory` وما لا يقل عن 1 GB؛ ويناسب `MemoryMax=2G` الأجهزة التي تصل ذاكرتها
-إلى 8 GB مع الحصة الافتراضية. عندها يُعاد تشغيل traffic66 بدلًا من نفاد ذاكرة
-الجهاز.
-
-<a id="16-troubleshooting"></a>
-
-## 16. استكشاف الأخطاء وإصلاحها
-
-| العَرَض | السبب والحل |
-|---|---|
-| الجهاز غير ظاهر في **الإعدادات** | الحزم لا تصل: انظر [التحقق من وصول التدفقات](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | لم يرسل الجهاز خيارات أخذ العينات بعد؛ ومعظم الأجهزة تعيد إرسالها خلال دقائق. إن لم يفعل أبدًا، فصدّرها (`option sampler-table` على Cisco) أو علّم الجهاز بـ `unsampled` في الأسماء إن كان يصدّر فعلًا بنسبة 1:1، أو حدّد نسبته بـ `sampling=N` في سطر `device` الخاص به. بعد ذلك تعرض **الإعدادات** القوالب التي أرسلها الجهاز، لمعرفة ما يصرّح به |
-| الأرقام أقل من عدّادات الواجهات | انظر **مطابقة الواجهات**: فقد في الطريق، أو واجهات لا تؤخذ منها عينات، أو تدفقات ما زالت في ذاكرة الجهاز المؤقتة (مهلة التدفق النشط أطول من 60 ثانية) |
-| الأرقام أعلى من عدّادات الواجهات | تؤخذ عينات الحركة نفسها على واجهتين أو جهازين |
-| لا توجد دول أو شبكات ("غير معروف") | لم تُحمَّل أي قاعدة بيانات: ارفع واحدة في **الإعدادات**، وانظر [الدول](#8-countries-networks-and-threat-lists) |
-| ظهور "بلغت قاعدة البيانات حد الذاكرة ولم تتمكن من الإجابة" في صفحة | اختر مدة أقصر، أو شغّل البرنامج بقيمة `-memory` أكبر؛ التفاصيل في السجل |
-| نسيت كلمة المرور | `traffic66 passwd` على جهاز traffic66 (أضف `-data` إذا كان traffic66 يعمل به) |
+| "waiting for the sampling rate" | صدّر خيارات أخذ العينات، أو `sampling=N` / `unsampled` في سطر الجهاز |
+| أقل من العدّادات | واجهات لا تؤخذ منها عينات، أو فقد، أو مهلة تدفق نشط أطول من 60 ثانية |
+| أعلى من العدّادات | الحركة نفسها مأخوذة بالعينات على واجهتين أو جهازين |
+| نسيت كلمة المرور | `traffic66 passwd` على جهاز traffic66 |
 | `Conflicting lock is held` | نسخة أخرى من traffic66 تستخدم دليل البيانات هذا |
-| `receive buffer is only … KB` | يحدّ Linux من مخازن UDP المؤقتة: اضبط `net.core.rmem_max=16777216` (انظر [Linux](#linux)) |
-| `cannot create the data directory` | مجلد البرنامج غير قابل للكتابة لهذا المستخدم: مرّر `-data` |
-| macOS: "cannot be opened" أو "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
-| Windows: "Windows protected your PC" (حمى Windows جهازك) | **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال)؛ البرنامج غير موقّع بعد |
-| الالتقاط في Windows: لم يُعثر على Npcap | ثبّت [Npcap](https://npcap.com) |
-| `address already in use` | برنامج آخر يستخدم المنفذ: اختر منافذ أخرى بـ `-addr` أو `-listen` |
+| `address already in use` | اختر منافذ أخرى بـ `-addr` أو `-listen` |
+| Windows "protected your PC" | **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال) |
 
-<a id="17-build-from-source"></a>
-
-## 17. البناء من المصدر
-
-Go 1.24 ومترجم C (gcc أو clang؛ وMinGW-w64 على Windows):
-
-```
-git clone https://github.com/githubflyideas/traffic66
-cd traffic66
-scripts/build.sh 0.1.0 traffic66
-```
+البناء من المصدر: Go 1.24 ومترجم C، ثم `scripts/build.sh 0.1.0 traffic66`.
 
 </div>
