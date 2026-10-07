@@ -745,7 +745,7 @@ function drawRings(el, d, inDim, outDim) {
   const draw = () => {
     const W = el.clientWidth; if (W < 200) return;
     // room for the outer labels on both sides
-    const SW = Math.min(W, 600), R = Math.max(80, Math.min(170, SW / 2 - 120)), SH = 2 * R + 60, c = SW / 2, cy = SH / 2, r0 = R * .38, r1 = R * .68;
+    const SW = Math.min(W, 600), R = Math.max(80, Math.min(170, SW / 2 - 120)), SH = 2 * R + 60, c = SW / 2, cy = SH / 2, r0 = R * .34, r1 = R * .70;
     const size = SW;
     const pt = (r, a) => [c + r * Math.sin(a), cy - r * Math.cos(a)];
     const arc = (ri, ro, a0, a1) => {
@@ -770,9 +770,17 @@ function drawRings(el, d, inDim, outDim) {
       const fill = col[g.ring ? g.p : g.k], op = g.ring ? (g.k === '__other__' ? .28 : (g.j % 2 ? .55 : .75)) : 1;
       s += `<path d="${arc(g.ring ? r1 : r0, g.ring ? R : r1, g.a0, g.a1)}" fill="${fill}" fill-opacity="${op}" stroke="var(--surface)" stroke-width="1" data-n="${n}"/>`;
       const mid = (g.a0 + g.a1) / 2, span = g.a1 - g.a0;
-      if (!g.ring && span > .45 && g.k !== '__other__') {
-        const [x, y] = pt((r0 + r1) / 2, mid);
-        labels += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" class="rgin">${esc(short(seriesLabel(inDim, g.k), 11))}</text>`;
+      // a horizontal label inside the inner ring: as wide as the band allows at that angle
+      // where in the segment the band is widest horizontally: its middle, or the top or bottom of the ring if it spans them
+      const rm = (r0 + r1) / 2, room = x => Math.min((r1 - r0) / Math.max(Math.abs(Math.sin(x)), .25), rm * 2 * Math.min(x - g.a0, g.a1 - x));
+      let la = mid;
+      for (const x of [0, Math.PI, 2 * Math.PI]) if (x > g.a0 + .25 && x < g.a1 - .25 && room(x) > room(la)) la = x;
+      const fit = Math.floor((room(la) - 6) / 6.2);
+      const inLab = g.ring ? '' : seriesLabel(inDim, g.k), nl = [...inLab].length;
+      // whole names only, or a long one cut to at least 8 characters; the legend has the rest
+      if (!g.ring && g.k !== '__other__' && (nl <= fit || fit >= 8)) {
+        const [x, y] = pt(rm, la);
+        labels += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" class="rgin">${esc(short(inLab, Math.min(fit, 16)))}</text>`;
       } else if (g.ring && span > .06 && g.k !== '__other__') {
         // outer labels go down each side; one that would overlap the previous is left to the tooltip
         const [x0, y0] = pt(R + 2, mid), [x1, y1] = pt(R + 14, mid), right = Math.sin(mid) >= 0, side = right ? 'r' : 'l';
@@ -1233,8 +1241,9 @@ views.ifaces = async (el) => {
   if (!list.length) { el.innerHTML = `<div class="panel"><div class="empty">${t('empty.nodata')}</div></div>`; return; }
   if (!state.ifc || !list.some(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex)) state.ifc = {exporter: list[0].exporter, ifindex: list[0].ifindex};
   const key = state.ifc.exporter + '/' + state.ifc.ifindex, sel = list.find(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex);
+  // one device's interface: count everything it saw, also traffic another device reported too
   const fil = [...state.f, {f: 'iface', v: key, neg: false}];
-  const [ri, ro, pi, po, rc] = await Promise.all([['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']].map(([by, measure]) => api('series', {by, measure, top: 20}, fil))
+  const [ri, ro, pi, po, rc] = await Promise.all([['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']].map(([by, measure]) => api('series', {by, measure, top: 20, dup: 1}, fil))
     .concat([api('recon', {exporter: state.ifc.exporter, ifindex: state.ifc.ifindex})]));
   const pick = s => { const i = (s.names || []).indexOf(key); return i < 0 ? (s.times || []).map(() => 0) : s.values[i]; };
   const sum = a => a.reduce((x, y) => x + y, 0);

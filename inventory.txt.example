@@ -3,7 +3,9 @@
 #
 # net    <prefix>            <name>          networks that are yours
 net 10.0.0.0/8 Internal
-net 192.168.0.0/16 Office
+net 192.168.0.0/16 Office country=JP
+# country=XX (two letters) places a network on the world map: lines are drawn
+# from that country to the countries it talks to
 #
 # device <exporter address>  <name> [unsampled]
 device 192.0.2.1 Core router

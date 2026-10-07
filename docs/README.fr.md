@@ -20,12 +20,15 @@ terminal.
   mouvements latéraux, les envois inhabituels, les inondations et le trafic
   des listes de menaces, y compris à travers l'échantillonnage, et les
   présente comme des détections à traiter.
-- Classements Top 66, trafic dans le temps par client, serveur, service,
-  interface et réseau (AS), chemins du trafic, pays, correspondances
-  avec des listes de menaces, enregistrements de flux, encapsulation (GRE,
-  IPIP, VXLAN, GENEVE, MPLS).
+- Classements Top 66, qui parle à qui en graphiques en anneaux (serveurs
+  et leurs clients, services et leurs serveurs), trafic dans le temps par
+  interface et réseau (AS), chemins du trafic, pays sur une carte du
+  monde, correspondances avec des listes de menaces, enregistrements de
+  flux, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - `traffic66 capture.pcap` ouvre jusqu'à 3 captures de paquets (3 Go au total) dans l'interface web : flux, détections, pays et enregistrements sur toute la capture, sans rien configurer.
 - 13 langues dans l'interface web et dans l'interface terminal.
+- Essai gratuit de 30 jours avec toutes les fonctions ; il continue de
+  fonctionner ensuite (voir [Essai et licence](#trial-and-licence)).
 
 ![Vue d'ensemble : détections ouvertes, bande passante par application comparée à la semaine dernière, principaux clients et services](images/overview.png)
 
@@ -555,7 +558,9 @@ Les chiffres de flux sont des estimations : paquets échantillonnés
 multipliés par le taux d'échantillonnage. traffic66 les compare aux
 compteurs d'interface de l'équipement et affiche l'écart dans
 **Contrôle des interfaces**, avec la cause probable quand il dépasse ce que
-l'échantillonnage seul explique.
+l'échantillonnage seul explique. Chaque interface a un graphique avec
+l'entrée (vert) et la sortie (bleu) ; choisir une interface dans la liste
+affiche ses graphiques.
 
 ![Contrôle des interfaces : trafic de chaque interface, et l'estimation des flux à côté du compteur de l'équipement](images/interfaces.png)
 
@@ -590,16 +595,22 @@ adresse sur n'importe quelle page et choisissez **Nommer…**. Tapez le nom
 et appuyez sur Entrée ; il est enregistré aussitôt et affiché partout à la
 place de l'adresse brute.
 
-Pour les réseaux, les interfaces et SNMP, **Sources → Noms** dans
-l'interface web accepte une entrée par ligne. Le
-contenu est enregistré sous `inventory.txt` dans le répertoire de données ;
-vous pouvez donc aussi éditer ce fichier (voir `inventory.txt.example`).
-Toutes les lignes sont facultatives.
+Pour les réseaux, les interfaces et SNMP, utilisez **Sources → Noms** :
+choisissez le type (hôte, réseau, équipement, interface, SNMP), saisissez
+l'adresse et le nom, puis cliquez sur **Ajouter**. Le tableau en dessous
+liste tous les noms avec **Modifier** et **Supprimer** ; ajouter de nouveau
+la même adresse remplace l'ancienne entrée. Les adresses et les réseaux
+sont vérifiés avant l'enregistrement.
+
+Les noms sont enregistrés sous `inventory.txt` dans le répertoire de
+données, une entrée par ligne. **Modifier en texte (avancé)** affiche ce
+fichier, et vous pouvez aussi l'éditer directement (voir
+`inventory.txt.example`). Toutes les lignes sont facultatives.
 
 ```
 # your networks: traffic between them is "internal"
 net    10.10.0.0/16  Office LAN
-net    203.0.113.0/24  Public servers
+net    203.0.113.0/24  Public servers country=JP
 
 # device names; "unsampled" if it exports every packet (1:1)
 device 192.0.2.1     Core router
@@ -620,7 +631,9 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
   toujours considérées comme les vôtres. Ajoutez vos plages publiques pour
   que le trafic vers et depuis elles compte aussi comme le vôtre ; le nom
   apparaît dans **Top 66** regroupé par segment et dans les chemins du
-  trafic par segment.
+  trafic par segment. `country=JP` (un code pays à deux lettres) indique
+  où se trouve le réseau ; la carte du monde trace alors des lignes depuis
+  ce pays vers les pays avec lesquels il communique.
 - `snmp <device> <community> [<management address>[:port]]` : l'équipement
   est l'adresse d'où proviennent les flux. Ajoutez l'adresse de gestion
   quand l'équipement répond en SNMP sur une autre adresse. Les descriptions
@@ -651,7 +664,7 @@ Vos fichiers sont utilisés en premier ; DB-IP Lite intégrée répond pour le r
 
 Sans l'interface web, copiez le fichier dans le répertoire de données sous le nom `country.mmdb`, `asn.mmdb`, `both.mmdb` (un fichier avec pays et réseaux, comme IPinfo Lite) ou `asn.tsv.gz`, puis redémarrez traffic66.
 
-**Géographie et réseaux** affiche sur une carte du monde le trafic avec les autres pays : plus un pays est foncé, plus il y a de trafic. Survolez un pays pour voir son trafic ; cliquez pour filtrer ou ouvrir ses enregistrements de flux. Les contours des pays viennent de [Natural Earth](https://www.naturalearthdata.com) (domaine public).
+**Géographie et réseaux** affiche sur une carte du monde le trafic avec les autres pays : plus un pays est foncé, plus il y a de trafic. Survolez un pays pour voir son trafic ; cliquez pour filtrer ou ouvrir ses enregistrements de flux. Quand vos réseaux ont un pays (`country=` sur une ligne `net`, voir [Noms](#7-names-snmp-and-your-own-networks)), des lignes vont de ce pays vers les pays avec lesquels ils échangent du trafic, d'autant plus épaisses que le trafic est important. Les contours des pays viennent de [Natural Earth](https://www.naturalearthdata.com) (domaine public).
 
 ![Géographie et réseaux : trafic distant par pays sur une carte du monde](images/geo.png)
 
@@ -698,25 +711,36 @@ Pages :
 | Page | À quoi elle répond |
 |---|---|
 | Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; détections ouvertes ; sens et protocole ; principaux clients et services |
-| Top 66 | S'ouvre sur **Interlocuteurs principaux** : trafic par service dans le temps, et les 30 premiers clients et serveurs côte à côte avec trafic, paquets et enregistrements de flux, au-dessus d'une ligne pour tout le trafic. **Tableau** est un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
-| Détails du trafic | Clients, serveurs et services dans le temps, en bits/s et en paquets/s : les 8 premiers de chaque, et combien il y en avait. S'ouvre sur **Serveurs** ; les onglets passent à **Clients**, **Les deux côtés** (côte à côte) et **Services** |
+| Top 66 | S'ouvre sur **Interlocuteurs principaux** : les 30 premiers clients et serveurs côte à côte avec trafic, paquets et enregistrements de flux, au-dessus d'une ligne pour tout le trafic. **Tableau** est un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
+| Détails du trafic | Deux graphiques en anneaux. **Serveurs et clients** : l'anneau intérieur montre les 8 serveurs les plus actifs, l'anneau extérieur les clients de chacun ; **Clients au centre** inverse le tout (clients au centre, à l'extérieur les serveurs utilisés par chacun), car un côté en explique souvent plus que l'autre. **Services et serveurs** : les services au centre et les serveurs qui les proposent à l'extérieur, ou l'inverse. Survolez un segment pour voir son trafic ; cliquez dessus comme sur n'importe quelle valeur |
+| Chemins du trafic | Quel hôte utilise quelle application vers quel pays : les 8 hôtes les plus actifs, le reste dans Autres. **Client → serveur** affiche client → service → serveur ; **Par segment** affiche les segments au lieu des hôtes. Les noms longs sont raccourcis à 22 caractères ; survolez-en un pour voir le nom complet |
 | Détections | Ce qui demande votre attention : scans, essais de mots de passe, mouvements latéraux, envois inhabituels, inondations et trafic des listes de menaces ([plus](#findings)) |
-| Chemins du trafic | Quel hôte utilise quelle application vers quel pays : les 8 hôtes les plus actifs, le reste dans Autres. **Client → serveur** affiche client → service → serveur ; **Par segment** affiche les segments au lieu des hôtes |
-| Géographie et réseaux | Une carte du monde du trafic par pays ; les réseaux (AS) d'où venait et où allait le trafic, dans le temps en bits/s et paquets/s ; trafic par pays et par réseau |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
-| Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix |
-| Analyse hors ligne de pcap | Captures de paquets (pcap, pcapng) analysées à part des données en direct ([plus](#analyse-hors-ligne-de-pcap)) |
-| Contrôle des interfaces | Trafic de chaque interface dans le temps (entrée et sortie, bits/s et paquets/s), et chiffres de flux à côté des compteurs d'interface, les pires en premier, avec les causes |
+| Géographie et réseaux | Une carte du monde du trafic par pays, avec des lignes depuis vos réseaux ; les réseaux (AS) d'où venait et où allait le trafic, dans le temps en bits/s et paquets/s ; trafic par pays et par réseau |
 | Sources | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
+| Contrôle des interfaces | Trafic de chaque interface dans le temps, entrée (vert) et sortie (bleu) dans un même graphique, en bits/s et paquets/s, et chiffres de flux à côté des compteurs d'interface, les pires en premier, avec les causes |
+| Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix |
+| Nettoyage des données | Supprime les données de plus de 120, 90, 60, 30 ou 7 jours, ou toutes, en indiquant ce que chaque choix libère ([plus](#13-data-backup-upgrade-uninstall)) |
+| Analyse hors ligne de pcap | Captures de paquets (pcap, pcapng) analysées à part des données en direct ([plus](#analyse-hors-ligne-de-pcap)) |
 
-Au-dessus des pages : la plage de temps (de 15 minutes à 30 jours), un
-champ de recherche facultatif, le rafraîchissement automatique toutes les
-30 secondes et **Copier le lien**, qui copie un lien vers la vue exacte
-(page, plage de temps et filtres) à envoyer à un collègue. En dessous,
-**Équipement**, **Client**, **Serveur** et **Service** listent les valeurs
-les plus actives de la plage : choisissez-en une, ou tapez-la, pour filtrer
-toutes les pages ; videz le champ pour retirer le filtre. La langue suit
-celle du navigateur ; on la change en bas du menu.
+Le menu latéral range les pages en quatre groupes : trafic (Vue
+d'ensemble, Top 66, Détails du trafic, Chemins du trafic), sécurité
+(Détections, Menaces, Géographie et réseaux), configuration et données
+(Sources, Contrôle des interfaces, Enregistrements de flux, Nettoyage des
+données) et Analyse hors ligne de pcap. Sous le logo figurent la version
+ainsi que la date et l'heure du serveur.
+
+Au-dessus des pages : la plage de temps (de 15 minutes à 30 jours, ou
+**Personnalisé…** pour n'importe quels début et fin, y compris au-delà de
+30 jours), le rafraîchissement automatique toutes les 30 secondes et
+**Copier le lien**, qui copie un lien vers la vue exacte (page, plage de
+temps et filtres) à envoyer à un collègue. Sur **Top 66** et **Détails du
+trafic**, un champ de recherche et **Équipement**, **Client**, **Serveur**
+et **Service** listent les valeurs les plus actives de la plage :
+choisissez-en une, ou tapez-la, pour filtrer ; le filtre s'applique alors
+à toutes les pages jusqu'à ce que vous vidiez le champ. La langue suit
+celle du navigateur ; on la change en bas du menu, au-dessus de
+**Se déconnecter**.
 
 Les graphiques dans le temps montrent les 8 plus grandes valeurs en couleurs
 fixes et le reste dans Autres ; la légende donne le total de chaque valeur
@@ -788,9 +812,9 @@ site web.
 
 ![Détections : chaque étape d'une attaque, trouvée à travers un échantillonnage sFlow 1:4096](images/findings.png)
 
-![Top 66, Interlocuteurs principaux : trafic par service, et les 30 premiers clients et serveurs avec une ligne pour tout le trafic](images/topn.png)
+![Top 66, Interlocuteurs principaux : les 30 premiers clients et serveurs avec une ligne pour tout le trafic](images/topn.png)
 
-![Détails du trafic : clients, serveurs et services dans le temps, en bits/s et paquets/s](images/traffic.png)
+![Détails du trafic : les serveurs avec leurs clients, et les services avec leurs serveurs, en graphiques en anneaux](images/traffic.png)
 
 ![Détails d'un hôte : les détections qui le concernent, son trafic, avec qui il communique, services, pays et derniers flux](images/detail.png)
 
@@ -1013,6 +1037,7 @@ Le répertoire de données contient tout :
 | `traffic66.duckdb` | agrégats, compteurs d'interface et heure en cours |
 | `password` | mots de passe de connexion (hachés) |
 | `inventory.txt` | noms (**Sources → Noms**) |
+| `license.json` | numéro d'installation et licence (voir [Essai et licence](#trial-and-licence)) |
 | `logo.png` (ou `.svg`, `.jpg`, `.webp`, `.gif`) | votre logo (**Sources → Logo**), si vous en avez importé un |
 | `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | bases de données pays et réseaux et listes de menaces que vous avez ajoutées |
 
@@ -1022,6 +1047,15 @@ supprimé et il n'y a aucune autre limite. Modifiez la durée du détail avec `-
 de jours, par exemple `-retention-days 365`. L'espace disque augmente d'autant : **Libre** dans le menu latéral passe
 au rouge quand les jours conservés ne tiennent pas. Si le disque est plein, les nouveaux flux ne peuvent pas être
 enregistrés tant que de l'espace n'est pas libéré.
+
+**Nettoyage des données** dans le menu latéral supprime des données avant
+que ce soit nécessaire : celles de plus de 120, 90, 60, 30 ou 7 jours, ou
+toutes. Pour chaque choix, il indique combien d'enregistrements de flux
+partent et environ combien d'espace disque est libéré, et demande
+confirmation avant de supprimer. Sont supprimés les enregistrements de
+flux, les résumés horaires et journaliers, les compteurs d'interface et
+les détections ; supprimer toutes les données réinitialise aussi ce que
+les règles de détection ont appris. C'est irréversible.
 
 - **Sauvegarde** : arrêtez traffic66 et copiez le répertoire. Sans
   l'arrêter, copiez `raw/`, `password` et `inventory.txt` ; l'heure en
@@ -1040,6 +1074,25 @@ enregistrés tant que de l'espace n'est pas libéré.
 - **Désinstallation** : arrêtez et supprimez le service ou la tâche de
   démarrage (voir [Installation](#2-install)), puis supprimez le dossier du
   programme et le répertoire de données.
+
+<a id="trial-and-licence"></a>
+
+### Essai et licence
+
+traffic66 peut être essayé pendant 30 jours. Au premier démarrage, il
+écrit `license.json` dans le répertoire de données avec un numéro
+d'installation à 8 chiffres. Le pied de chaque page indique combien de
+jours d'essai il reste, puis que l'essai est terminé. Rien n'est désactivé
+dans un cas comme dans l'autre : toutes les fonctions continuent de
+marcher.
+
+Pour vous enregistrer, envoyez à l'auteur le numéro d'installation
+(affiché aussi en pied de chaque page). La licence vous revient sous la
+forme d'un nouveau `license.json` ; placez-le dans le répertoire de
+données à la place de l'ancien. Elle est vérifiée au démarrage de
+traffic66 puis toutes les 4 heures, donc aucun redémarrage n'est
+nécessaire ; le pied de page indique alors à qui elle est attribuée et
+combien de jours il reste.
 
 <a id="14-security"></a>
 

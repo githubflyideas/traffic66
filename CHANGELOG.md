@@ -39,9 +39,40 @@ Fixes
   hours now uses 5-minute steps from the flows, 24 hours and longer hourly
   steps.
 
+- Interface check drew an interface's traffic too low where another device
+  reported the same traffic: those flows were left out as duplicates. A
+  query kept to one device or interface now counts all of that device's
+  flows (traffic across devices still counts once).
+- The demo no longer leaves a gap of a minute or two in the charts where
+  its live exporters take over from the generated history.
+
 Pages
-- Traffic details opens on servers only; tabs switch to clients, both ends
-  side by side, and services (13 languages).
+- Side menu in four groups: traffic (Overview, Top 66, Traffic details,
+  Flow paths), security (Findings, Threat intel, Geo & networks), setup and
+  data (Sources, Interface check, Flow records, Data cleanup) and Offline
+  pcap analysis; bolder, with icons. The version and the server's date and
+  time are under the logo; Log out has a line of its own.
+- The search box and the Device, Client, Server and Service boxes are only
+  on Top 66 and Traffic details, where they are used; a filter set there
+  still applies to every page.
+- Time range **Custom…**: any start and end, also further back than 30
+  days; copied links keep it.
+- Top 66 Talkers without the traffic-by-service chart: the two tables.
+- Traffic details is two ring charts: servers with their clients, and
+  services with their servers. A switch puts either side inside.
+- Flow paths shortens long names to 22 characters; the full name shows on
+  hover.
+- Interface check: ingress (green) and egress (blue) in one chart per
+  measure, for the interface picked in the list; the comparison with the
+  device counters shows both directions by default.
+- Names: a form (type, address, name) and a table with Edit and Delete,
+  with addresses and networks checked; adding the same address again
+  replaces it. The text file is still there under Edit as text (advanced).
+- `net` lines take `country=XX`; the world map then draws lines from that
+  country to the countries your networks talk to.
+- New page **Data cleanup**: delete data older than 120, 90, 60, 30 or 7
+  days, or all, with how much each frees. Summaries, interface counters and
+  findings go with it.
 
 ## 0.3.0
 

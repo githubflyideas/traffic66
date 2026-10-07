@@ -17,12 +17,15 @@ equipamentos, em uma interface web e em uma interface de terminal.
 - Encontra nos fluxos varreduras, tentativas de senhas, movimento lateral,
   envios incomuns, inundações e tráfego de listas de ameaças, inclusive
   através da amostragem, e os lista como detecções a tratar.
-- Listas Top 66, tráfego ao longo do tempo por cliente, servidor, serviço,
-  interface e rede (AS), caminhos do tráfego, países, ocorrências em listas
-  de ameaças, registros de fluxo, encapsulamento (GRE, IPIP, VXLAN, GENEVE,
-  MPLS).
+- Listas Top 66, quem fala com quem em gráficos de anéis (servidores e
+  seus clientes, serviços e seus servidores), tráfego ao longo do tempo por
+  interface e rede (AS), caminhos do tráfego, países num mapa-múndi,
+  ocorrências em listas de ameaças, registros de fluxo, encapsulamento
+  (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - `traffic66 captura.pcap` abre até 3 capturas de pacotes (3 GB no total) na interface web: fluxos, detecções, países e registros de toda a captura, sem configurar nada.
 - 13 idiomas na interface web e na interface de terminal.
+- Teste gratuito de 30 dias com todos os recursos; depois disso continua
+  funcionando (veja [Teste e licença](#trial-and-licence)).
 
 ![Visão geral: detecções abertas, banda por aplicação em comparação com a semana passada, principais clientes e serviços](images/overview.png)
 
@@ -539,7 +542,8 @@ Os números de fluxo são estimativas: pacotes amostrados vezes a taxa de
 amostragem. O traffic66 os compara com os contadores de interface do
 próprio equipamento e mostra a diferença em **Conferência de interfaces**,
 com a causa provável quando ela é maior do que a amostragem sozinha
-explica.
+explica. Cada interface tem um gráfico com a entrada (verde) e a saída
+(azul); escolher uma interface na lista mostra os gráficos dela.
 
 ![Conferência de interfaces: tráfego de cada interface, e a estimativa de fluxo ao lado do contador do equipamento](images/interfaces.png)
 
@@ -575,16 +579,21 @@ dele em qualquer página e escolha **Dar um nome…**. Digite o nome e tecle
 Enter; ele é salvo na hora e mostrado em todo lugar no lugar do endereço
 puro.
 
-Para redes, interfaces e SNMP, **Fontes → Nomes** na interface web aceita
-uma entrada por linha. O
-conteúdo é salvo como `inventory.txt` no diretório de dados, então você
-também pode editar esse arquivo (veja `inventory.txt.example`). Todas as
-linhas são opcionais.
+Para redes, interfaces e SNMP, use **Fontes → Nomes**: escolha o tipo
+(host, rede, dispositivo, interface, SNMP), preencha o endereço e o nome e
+clique em **Adicionar**. A tabela abaixo lista todos os nomes com
+**Editar** e **Apagar**; adicionar o mesmo endereço de novo substitui a
+entrada anterior. Endereços e redes são verificados antes de salvar.
+
+Os nomes são salvos como `inventory.txt` no diretório de dados, uma
+entrada por linha. **Editar como texto (avançado)** mostra esse arquivo, e
+você também pode editá-lo diretamente (veja `inventory.txt.example`).
+Todas as linhas são opcionais.
 
 ```
 # your networks: traffic between them is "internal"
 net    10.10.0.0/16  Office LAN
-net    203.0.113.0/24  Public servers
+net    203.0.113.0/24  Public servers country=JP
 
 # device names; "unsampled" if it exports every packet (1:1)
 device 192.0.2.1     Core router
@@ -605,6 +614,9 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
   sempre consideradas suas. Adicione suas faixas públicas para que o
   tráfego de e para elas também conte como seu; o nome aparece em
   **Top 66** agrupado por segmento e nos caminhos do tráfego por segmento.
+  `country=JP` (um código de país de duas letras) diz onde a rede fica; o
+  mapa-múndi então traça linhas dela até os países com que ela se
+  comunica.
 - `snmp <device> <community> [<management address>[:port]]`: o equipamento
   é o endereço de onde vêm os fluxos. Adicione o endereço de gerência
   quando o equipamento responder SNMP em outro endereço. As descrições de
@@ -635,7 +647,7 @@ Seus arquivos são usados primeiro; o que eles não cobrem vem da DB-IP Lite emb
 
 Sem a interface web, copie o arquivo para o diretório de dados como `country.mmdb`, `asn.mmdb`, `both.mmdb` (um arquivo com países e redes, como o IPinfo Lite) ou `asn.tsv.gz` e reinicie o traffic66.
 
-**Geografia e redes** mostra num mapa-múndi o tráfego com outros países: quanto mais escuro, mais tráfego. Passe o mouse sobre um país para ver o tráfego; clique para filtrar ou abrir os registros de fluxo. Os contornos dos países vêm do [Natural Earth](https://www.naturalearthdata.com) (domínio público).
+**Geografia e redes** mostra num mapa-múndi o tráfego com outros países: quanto mais escuro, mais tráfego. Passe o mouse sobre um país para ver o tráfego; clique para filtrar ou abrir os registros de fluxo. Quando suas redes têm um país (`country=` numa linha `net`, veja [Nomes](#7-names-snmp-and-your-own-networks)), linhas vão desse país até os países com que elas trocam tráfego, mais grossas quanto mais tráfego. Os contornos dos países vêm do [Natural Earth](https://www.naturalearthdata.com) (domínio público).
 
 ![Geografia e redes: tráfego remoto por país num mapa-múndi](images/geo.png)
 
@@ -680,25 +692,34 @@ Páginas:
 | Página | O que responde |
 |---|---|
 | Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; detecções abertas; direção e protocolo; principais clientes e serviços |
-| Top 66 | Abre em **Principais interlocutores**: tráfego por serviço ao longo do tempo, e os 30 maiores clientes e servidores lado a lado com tráfego, pacotes e registros de fluxo, acima de uma linha para todo o tráfego. **Tabela** é uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
-| Detalhes do tráfego | Clientes, servidores e serviços ao longo do tempo, em bits/s e em pacotes/s: os 8 maiores de cada, e quantos havia. Abre em **Servidores**; as abas trocam para **Clientes**, **Ambas as pontas** (lado a lado) e **Serviços** |
+| Top 66 | Abre em **Principais interlocutores**: os 30 maiores clientes e servidores lado a lado com tráfego, pacotes e registros de fluxo, acima de uma linha para todo o tráfego. **Tabela** é uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
+| Detalhes do tráfego | Dois gráficos de anéis. **Servidores e clientes**: o anel interno são os 8 servidores com mais tráfego, o externo os clientes de cada um; **Clientes dentro** inverte (clientes dentro, fora os servidores que cada um usa), já que muitas vezes um lado explica mais que o outro. **Serviços e servidores**: serviços dentro e fora os servidores que os oferecem, ou o contrário. Passe o mouse sobre um segmento para ver o tráfego; clique nele como em qualquer valor |
+| Caminhos do tráfego | Qual host usa qual aplicação para qual país: os 8 hosts com mais tráfego, o resto como Outros. **Cliente → servidor** mostra cliente → serviço → servidor; **Por segmento** mostra segmentos em vez de hosts. Nomes longos são encurtados para 22 caracteres; passe o mouse sobre um para ver o nome completo |
 | Detecções | O que precisa de atenção: varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças ([mais](#findings)) |
-| Caminhos do tráfego | Qual host usa qual aplicação para qual país: os 8 hosts com mais tráfego, o resto como Outros. **Cliente → servidor** mostra cliente → serviço → servidor; **Por segmento** mostra segmentos em vez de hosts |
-| Geografia e redes | Um mapa-múndi do tráfego por país; as redes (AS) de onde o tráfego veio e para onde foi, ao longo do tempo em bits/s e pacotes/s; tráfego por país e por rede |
 | Ameaças | Hosts que se comunicaram com endereços das suas listas de ameaças, e quanto enviaram |
-| Registros de fluxo | Quantos registros de fluxo houve e quando (uma barra por intervalo), e os próprios registros, dos mais recentes para os mais antigos, página a página, com colunas selecionáveis |
-| Análise offline de pcap | Capturas de pacotes (pcap, pcapng) analisadas separadas dos dados ao vivo ([mais](#análise-offline-de-pcap)) |
-| Conferência de interfaces | Tráfego de cada interface ao longo do tempo (entrada e saída, bits/s e pacotes/s), e números de fluxo ao lado dos contadores de interface, piores primeiro, com os motivos |
+| Geografia e redes | Um mapa-múndi do tráfego por país, com linhas a partir das suas redes; as redes (AS) de onde o tráfego veio e para onde foi, ao longo do tempo em bits/s e pacotes/s; tráfego por país e por rede |
 | Fontes | Equipamentos, amostragem, perdas, coletores, SNMP, o banco de dados de países e redes, o logotipo e **Nomes** |
+| Conferência de interfaces | Tráfego de cada interface ao longo do tempo, entrada (verde) e saída (azul) num mesmo gráfico, em bits/s e pacotes/s, e números de fluxo ao lado dos contadores de interface, piores primeiro, com os motivos |
+| Registros de fluxo | Quantos registros de fluxo houve e quando (uma barra por intervalo), e os próprios registros, dos mais recentes para os mais antigos, página a página, com colunas selecionáveis |
+| Limpeza de dados | Apaga dados com mais de 120, 90, 60, 30 ou 7 dias, ou todos, mostrando quanto cada opção libera ([mais](#13-data-backup-upgrade-uninstall)) |
+| Análise offline de pcap | Capturas de pacotes (pcap, pcapng) analisadas separadas dos dados ao vivo ([mais](#análise-offline-de-pcap)) |
 
-Acima das páginas: intervalo de tempo (de 15 minutos a 30 dias), uma caixa
-de busca opcional, atualização automática a cada 30 segundos e
-**Copiar link**, que copia um link para exatamente a visão atual (página,
-intervalo de tempo e filtros) para mandar a um colega. Abaixo deles,
-**Equipamento**, **Cliente**, **Servidor** e **Serviço** listam os valores
-com mais tráfego do intervalo: escolha um, ou digite um, para filtrar todas
-as páginas; esvazie a caixa para remover o filtro. O idioma segue o do
-navegador; dá para trocar no fim do menu.
+O menu lateral organiza as páginas em quatro grupos: tráfego (Visão geral,
+Top 66, Detalhes do tráfego, Caminhos do tráfego), segurança (Detecções,
+Ameaças, Geografia e redes), configuração e dados (Fontes, Conferência de
+interfaces, Registros de fluxo, Limpeza de dados) e Análise offline de
+pcap. Abaixo do logotipo ficam a versão e a data e hora do servidor.
+
+Acima das páginas: intervalo de tempo (de 15 minutos a 30 dias, ou
+**Personalizado…** para qualquer início e fim, inclusive antes dos últimos
+30 dias), atualização automática a cada 30 segundos e **Copiar link**, que
+copia um link para exatamente a visão atual (página, intervalo de tempo e
+filtros) para mandar a um colega. Em **Top 66** e **Detalhes do tráfego**,
+uma caixa de busca e **Equipamento**, **Cliente**, **Servidor** e
+**Serviço** listam os valores com mais tráfego do intervalo: escolha um, ou
+digite um, para filtrar; o filtro passa então a valer em todas as páginas
+até você esvaziar a caixa. O idioma segue o do navegador; dá para trocar no
+fim do menu, acima de **Sair**.
 
 Os gráficos ao longo do tempo mostram os 8 maiores valores em cores fixas e
 o resto como Outros; a legenda dá o total de cada valor e pode ser clicada
@@ -764,9 +785,9 @@ nenhuma detecção, exceto o scanner da internet batendo no site.
 
 ![Detecções: cada etapa de um ataque, encontrada através de amostragem sFlow 1:4096](images/findings.png)
 
-![Top 66, Principais interlocutores: tráfego por serviço, e os 30 maiores clientes e servidores com uma linha para todo o tráfego](images/topn.png)
+![Top 66, Principais interlocutores: os 30 maiores clientes e servidores com uma linha para todo o tráfego](images/topn.png)
 
-![Detalhes do tráfego: clientes, servidores e serviços ao longo do tempo, em bits/s e pacotes/s](images/traffic.png)
+![Detalhes do tráfego: servidores com seus clientes, e serviços com seus servidores, em gráficos de anéis](images/traffic.png)
 
 ![Detalhes de um host: as detecções sobre ele, o tráfego, com quem fala, serviços, países e fluxos mais recentes](images/detail.png)
 
@@ -984,6 +1005,7 @@ O diretório de dados guarda tudo:
 | `traffic66.duckdb` | resumos, contadores de interface e a hora atual |
 | `password` | senhas de login (em hash) |
 | `inventory.txt` | nomes (**Fontes → Nomes**) |
+| `license.json` | número de instalação e licença (veja [Teste e licença](#trial-and-licence)) |
 | `logo.png` (ou `.svg`, `.jpg`, `.webp`, `.gif`) | seu logotipo (**Fontes → Logotipo**), se você enviou um |
 | `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | bancos de dados de países e redes e listas de ameaças que você adicionou |
 
@@ -992,6 +1014,14 @@ O diretório de dados guarda tudo:
 não há outro limite. Altere o período do detalhe com `-retention-days`, qualquer número de dias, por exemplo
 `-retention-days 365`. O uso de disco cresce junto: **Livre** no menu lateral fica vermelho quando os dias guardados
 não cabem. Se o disco encher, novos fluxos não podem ser gravados até liberar espaço.
+
+**Limpeza de dados** no menu lateral apaga dados antes que seja preciso:
+os com mais de 120, 90, 60, 30 ou 7 dias, ou todos. Para cada opção mostra
+quantos registros de fluxo saem e quanto disco, aproximadamente, é
+liberado, e pede confirmação antes de apagar. São apagados os registros de
+fluxo, os resumos por hora e por dia, os contadores de interface e as
+detecções; apagar todos os dados também zera o que as regras de detecção
+aprenderam. Não dá para desfazer.
 
 - **Backup**: pare o traffic66 e copie o diretório. Sem parar, copie
   `raw/`, `password` e `inventory.txt`; nesse caso ficam faltando a hora
@@ -1010,6 +1040,23 @@ não cabem. Se o disco encher, novos fluxos não podem ser gravados até liberar
 - **Desinstalação**: pare e remova o serviço ou a tarefa de inicialização
   (veja [Instalação](#2-install)) e depois apague a pasta do programa e o
   diretório de dados.
+
+<a id="trial-and-licence"></a>
+
+### Teste e licença
+
+O traffic66 pode ser testado por 30 dias. Na primeira inicialização ele
+grava `license.json` no diretório de dados com um número de instalação de
+8 dígitos. O rodapé de cada página mostra quantos dias de teste faltam e,
+depois, que o teste terminou. Nada é desligado em nenhum dos casos: todos
+os recursos continuam funcionando.
+
+Para registrar, envie ao autor o número de instalação (mostrado também no
+rodapé de cada página). A licença volta como um novo `license.json`;
+coloque-o no diretório de dados no lugar do antigo. Ela é verificada
+quando o traffic66 inicia e a cada 4 horas, então não é preciso
+reiniciar; o rodapé da página passa a mostrar para quem está licenciado e
+quantos dias faltam.
 
 <a id="14-security"></a>
 
