@@ -1,8 +1,10 @@
 [English](../README.md) | **中文** | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-# traffic66
+# traffic66 — NetFlow、sFlow 和 IPFIX 采集器与流量分析器
 
 一个程序搞定 sFlow、NetFlow 和 IPFIX 流量分析：谁在占用带宽、流量去了哪里、统计结果与设备自身的接口计数器是否对得上，在 Web 界面和终端界面中展示。
+
+可自托管的 ntopng、ElastiFlow、pmacct 加 Grafana，或 PRTG 和 SolarWinds NTA 流量分析模块的替代方案，用于网络监控（network monitoring）、带宽监控（bandwidth monitoring）、流量大户排行（top talkers）、DDoS 与扫描检测以及 pcap 分析，无需 Elasticsearch、Kafka 或单独的数据库。
 
 - Windows、Linux、macOS 都只有一个可执行文件；无需安装数据库，可离线使用。
 - 任意 UDP 端口均可接收 sFlow v5、NetFlow v5/v9 和 IPFIX，也可在本机网卡上直接抓包。

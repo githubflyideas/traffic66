@@ -2,11 +2,17 @@
 
 <div dir="rtl">
 
-# traffic66
+# traffic66 — مُجمِّع ومحلّل حركة NetFlow وsFlow وIPFIX
 
 تحليل تدفقات sFlow وNetFlow وIPFIX في برنامج واحد: من يستهلك عرض النطاق،
 وإلى أين تذهب الحركة، وهل تتطابق الأرقام مع عدّادات الواجهات في الأجهزة
 نفسها، في واجهة ويب وواجهة طرفية.
+
+بديل ذاتي الاستضافة لـ ntopng وElastiFlow وpmacct مع Grafana، أو لوحدات
+تحليل التدفقات في PRTG وSolarWinds NTA، لمراقبة الشبكة (network monitoring)
+ومراقبة عرض النطاق (bandwidth monitoring) وأكثر المضيفين استهلاكًا
+(top talkers) واكتشاف DDoS والمسح وتحليل ملفات pcap، دون Elasticsearch أو
+Kafka أو قاعدة بيانات منفصلة.
 
 - ملف تنفيذي واحد لأنظمة Windows وLinux وmacOS؛ لا قاعدة بيانات تحتاج إلى تثبيت، ويعمل دون اتصال بالإنترنت.
 - sFlow v5 وNetFlow v5/v9 وIPFIX على أي منفذ UDP، أو التقاط محلي من واجهة.

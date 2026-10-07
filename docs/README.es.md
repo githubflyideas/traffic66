@@ -1,11 +1,18 @@
 [English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | **Español** | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-# traffic66
+# traffic66 — colector y analizador de tráfico NetFlow, sFlow e IPFIX
 
 Análisis de flujos sFlow, NetFlow e IPFIX en un solo programa: quién consume
 el ancho de banda, adónde va el tráfico y si las cifras cuadran con los
 contadores de interfaz de los propios equipos, en una interfaz web y en una
 interfaz de terminal.
+
+Una alternativa autoalojada a ntopng, ElastiFlow, pmacct con Grafana o los
+módulos de flujos de PRTG y SolarWinds NTA, para monitorización de red
+(network monitoring), monitorización del ancho de banda
+(bandwidth monitoring), principales consumidores (top talkers), detección de
+DDoS y escaneos y análisis de pcap, sin Elasticsearch, Kafka ni una base de
+datos aparte.
 
 - Un solo ejecutable para Windows, Linux y macOS; sin base de datos que instalar, funciona sin conexión.
 - sFlow v5, NetFlow v5/v9 e IPFIX en cualquier puerto UDP, o captura local desde una interfaz.

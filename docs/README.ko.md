@@ -1,8 +1,10 @@
 [English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | **한국어**
 
-# traffic66
+# traffic66 — NetFlow, sFlow, IPFIX 수집기 및 트래픽 분석기
 
 sFlow, NetFlow, IPFIX 플로 분석을 하나의 프로그램으로 처리합니다. 누가 대역폭을 쓰는지, 트래픽이 어디로 가는지, 그 수치가 장비 자체의 인터페이스 카운터와 맞는지를 웹 UI와 터미널 UI로 보여 줍니다.
+
+ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 플로 모듈을 대신하는 셀프 호스팅 대안입니다. 네트워크 모니터링(network monitoring), 대역폭 모니터링(bandwidth monitoring), 상위 트래픽 사용자(top talkers), DDoS 및 스캔 탐지, pcap 분석에 쓸 수 있으며, Elasticsearch, Kafka나 별도의 데이터베이스가 필요 없습니다.
 
 - Windows, Linux, macOS 모두 실행 파일 하나입니다. 설치할 데이터베이스가 없고, 오프라인에서도 동작합니다.
 - 어떤 UDP 포트로든 sFlow v5, NetFlow v5/v9, IPFIX를 받으며, 인터페이스에서 로컬 캡처도 할 수 있습니다.

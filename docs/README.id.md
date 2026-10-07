@@ -1,11 +1,17 @@
 [English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | **Bahasa Indonesia** | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-# traffic66
+# traffic66 — kolektor dan penganalisis trafik NetFlow, sFlow, dan IPFIX
 
 Analitik flow untuk sFlow, NetFlow, dan IPFIX dalam satu program: siapa yang
 memakai bandwidth, ke mana trafik mengalir, dan apakah angkanya cocok dengan
 counter interface di perangkat itu sendiri, lewat antarmuka web maupun
 antarmuka terminal.
+
+Alternatif self-hosted untuk ntopng, ElastiFlow, pmacct dengan Grafana, atau
+modul flow di PRTG dan SolarWinds NTA, untuk pemantauan jaringan
+(network monitoring), pemantauan bandwidth (bandwidth monitoring), pemakai
+trafik terbesar (top talkers), deteksi DDoS dan pemindaian, serta analisis
+pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 
 - Satu file executable untuk Windows, Linux, dan macOS; tanpa database yang perlu dipasang, bisa berjalan offline.
 - sFlow v5, NetFlow v5/v9, dan IPFIX di port UDP mana pun, atau capture lokal dari sebuah interface.

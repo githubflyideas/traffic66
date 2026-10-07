@@ -1,10 +1,16 @@
 [English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | **বাংলা** | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-# traffic66
+# traffic66 — NetFlow, sFlow ও IPFIX কালেক্টর এবং ট্রাফিক অ্যানালাইজার
 
 sFlow, NetFlow ও IPFIX-এর জন্য flow analytics, একটিমাত্র প্রোগ্রামে: কে
 bandwidth ব্যবহার করছে, ট্রাফিক কোথায় যাচ্ছে, আর সংখ্যাগুলো ডিভাইসের নিজের
 interface counter-এর সাথে মেলে কি না — web UI ও terminal UI-তে।
+
+ntopng, ElastiFlow, Grafana-সহ pmacct, অথবা PRTG ও SolarWinds NTA-এর flow
+module-এর একটি self-hosted বিকল্প — নেটওয়ার্ক মনিটরিং (network monitoring),
+bandwidth মনিটরিং (bandwidth monitoring), সবচেয়ে বেশি ট্রাফিকের host
+(top talkers), DDoS ও scan শনাক্তকরণ এবং pcap বিশ্লেষণের জন্য,
+Elasticsearch, Kafka বা আলাদা database ছাড়াই।
 
 - Windows, Linux ও macOS-এর জন্য একটিই executable; কোনো database ইনস্টল করতে হয় না, offline-এও চলে।
 - যেকোনো UDP port-এ sFlow v5, NetFlow v5/v9 ও IPFIX, অথবা কোনো interface থেকে local capture।

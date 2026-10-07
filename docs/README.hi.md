@@ -1,10 +1,16 @@
 [English](../README.md) | [中文](README.zh.md) | **हिन्दी** | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-# traffic66
+# traffic66 — NetFlow, sFlow और IPFIX कलेक्टर तथा ट्रैफ़िक एनालाइज़र
 
 sFlow, NetFlow और IPFIX के लिए flow analytics, एक ही प्रोग्राम में: bandwidth
 कौन इस्तेमाल कर रहा है, ट्रैफ़िक कहाँ जा रहा है, और क्या आँकड़े डिवाइसों के
 अपने interface counters से मेल खाते हैं — web UI में भी और terminal UI में भी।
+
+ntopng, ElastiFlow, Grafana के साथ pmacct, या PRTG और SolarWinds NTA के flow
+modules का self-hosted विकल्प — नेटवर्क मॉनिटरिंग (network monitoring),
+bandwidth मॉनिटरिंग (bandwidth monitoring), सबसे ज़्यादा ट्रैफ़िक वाले hosts
+(top talkers), DDoS और scan की पहचान, और pcap विश्लेषण के लिए, बिना
+Elasticsearch, Kafka या अलग database के।
 
 - Windows, Linux और macOS के लिए एक ही executable; कोई database इंस्टॉल नहीं करना, offline भी चलता है।
 - किसी भी UDP port पर sFlow v5, NetFlow v5/v9 और IPFIX, या किसी interface से local capture।
