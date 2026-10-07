@@ -29,7 +29,7 @@ equipamentos, em uma interface web e em uma interface de terminal.
   de uso em produção. Nada é desligado, nunca (veja
   [Teste e licença](#trial-and-licence)).
 
-![Visão geral: detecções abertas, banda por aplicação em comparação com a semana passada, principais clientes e serviços](images/overview.png)
+![Visão geral: detecções abertas, banda por aplicação em comparação com o mesmo horário de ontem, principais clientes e serviços](images/overview.png)
 
 <sub>Todas as capturas de tela vêm do `traffic66 demo`, uma rede corporativa simulada que você mesmo pode executar (veja [Testar a demo](#1-try-the-demo)).</sub>
 
@@ -519,6 +519,16 @@ protocolo, taxa de amostragem, perdas, último pacote e um status. Quando o
 status não está verde, o texto ao lado diz o que está errado e o que
 mudar.
 
+**Perdidos** conta as amostras ou registros que nunca chegaram. Para sFlow
+o texto diz onde eles se perderam: no caminho (saltos nos números de
+sequência: a rede, ou o buffer de recepção UDP desta máquina; se
+`netstat -su` mostrar erros de buffer de recepção aumentando, aumente
+`net.core.rmem_max`), ou no próprio equipamento (o sFlow informa as
+amostras que o equipamento descartou: a exportação sFlow dele tem limite
+de taxa, então amostre com menos frequência ou aumente o limite do
+equipamento). Os totais são compensados nos dois casos; o detalhe por host
+não.
+
 ![Configurações: cada equipamento com protocolo, amostragem, perdas e o que corrigir](images/sources.png)
 
 Se um equipamento não aparecer:
@@ -695,9 +705,9 @@ Páginas:
 
 | Página | O que responde |
 |---|---|
-| Visão geral | Quanto tráfego há agora e em comparação com a semana passada, por aplicação; detecções abertas; direção e protocolo; principais clientes e serviços |
-| Top 66 | Abre em **Principais interlocutores**: os 30 maiores clientes e servidores lado a lado com tráfego, pacotes e registros de fluxo, acima de uma linha para todo o tráfego. **Tabela** é uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN |
-| Detalhes do tráfego | Dois gráficos de anéis. **Servidores e clientes**: o anel interno são os 8 servidores com mais tráfego, o externo os clientes de cada um; **Clientes dentro** inverte (clientes dentro, fora os servidores que cada um usa), já que muitas vezes um lado explica mais que o outro. **Serviços e servidores**: serviços dentro e fora os servidores que os oferecem, ou o contrário. Passe o mouse sobre um segmento para ver o tráfego; clique nele como em qualquer valor |
+| Visão geral | Quanto tráfego há agora, por aplicação, em comparação com o mesmo horário de ontem (intervalos de até um dia), a semana passada (até uma semana) ou os dias anteriores (intervalos mais longos), quando há dados daquela época; detecções abertas; direção e protocolo; principais clientes e serviços |
+| Top 66 | Abre em **Tabela**, uma única tabela dos 66 maiores: por padrão, conversas (cliente, servidor, serviço, país). Qualquer cabeçalho ordena; as colunas numéricas (tráfego, pacotes, pacote médio, fluxos) classificam todo o tráfego do período, então o menor pacote médio revela varreduras e inundações. **Agrupar por** muda para aplicações, redes, segmentos, equipamentos, encapsulamento e VLAN. **Principais interlocutores** mostra os 30 maiores clientes e servidores lado a lado com tráfego, pacotes e registros de fluxo, acima de uma linha para todo o tráfego |
+| Detalhes do tráfego | Dois gráficos de anéis. **Servidores e clientes**: o anel interno são os 8 servidores com mais tráfego, o externo os clientes de cada um; **Clientes dentro** inverte (clientes dentro, fora os servidores que cada um usa), já que muitas vezes um lado explica mais que o outro. **Serviços**: um anel com os serviços com mais tráfego. Passe o mouse sobre um segmento para ver o tráfego; clique nele como em qualquer valor |
 | Caminhos do tráfego | Qual host usa qual aplicação para qual país: os 8 hosts com mais tráfego, o resto como Outros. **Cliente → servidor** mostra cliente → serviço → servidor; **Por segmento** mostra segmentos em vez de hosts. Nomes longos são encurtados para 22 caracteres; passe o mouse sobre um para ver o nome completo |
 | Detecções | O que precisa de atenção: varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças ([mais](#findings)) |
 | Ameaças | Hosts que se comunicaram com endereços das suas listas de ameaças, e quanto enviaram |
@@ -709,18 +719,17 @@ Páginas:
 | Análise offline de pcap | Capturas de pacotes (pcap, pcapng) analisadas separadas dos dados ao vivo ([mais](#análise-offline-de-pcap)) |
 
 O menu lateral organiza as páginas em quatro grupos: tráfego (Visão geral,
-Top 66, Detalhes do tráfego, Caminhos do tráfego), segurança (Detecções,
-Ameaças, Geografia e redes), configuração e dados (Configurações, Conferência de
-interfaces, Registros de fluxo, Limpeza de dados) e Análise offline de
-pcap. Abaixo do logotipo ficam a versão e a data e hora do servidor.
+Top 66, Detalhes do tráfego, Caminhos do tráfego, Conferência de
+interfaces), segurança (Detecções, Ameaças, Geografia e redes),
+configuração e dados (Configurações, Registros de fluxo, Limpeza de dados)
+e Análise offline de pcap. Abaixo do logotipo ficam a versão e a data e hora do servidor.
 
 Acima das páginas: intervalo de tempo (de 15 minutos a 30 dias, ou
 **Personalizado…** para qualquer início e fim, inclusive antes dos últimos
 30 dias), atualização automática a cada 30 segundos e **Copiar link**, que
 copia um link para exatamente a visão atual (página, intervalo de tempo e
 filtros) para mandar a um colega. Em **Top 66** e **Detalhes do tráfego**,
-uma caixa de busca e **Equipamento**, **Cliente**, **Servidor** e
-**Serviço** listam os valores com mais tráfego do intervalo: escolha um, ou
+**Equipamento**, **Cliente**, **Servidor** e **Serviço** listam os valores com mais tráfego do intervalo: escolha um, ou
 digite um, para filtrar; o filtro passa então a valer em todas as páginas
 até você esvaziar a caixa. O idioma segue o do navegador; dá para trocar no
 fim do menu, acima de **Sair**. Configurações, Registros de fluxo (em
@@ -728,10 +737,9 @@ tempo real), Limpeza de dados e Análise offline de pcap não têm intervalo de
 tempo.
 
 Ao lado do idioma fica o tema de cores, inspirado nas cores do sistema do
-iOS: **Claro** (o padrão), **Brilhante** (branco, contraste mais forte),
-**Cinza**, **Escurecido**, **Escuro** (preto, para telas de parede) ou
-**Seguir o sistema**, que alterna entre claro e escuro junto com o
-computador. A escolha fica guardada no navegador.
+iOS: **Claro** (o padrão), **Cinza**, **Preto** (para telas de parede),
+**Verde-azulado** e **Laranja**. Cada clique passa para o próximo; a
+escolha fica guardada no navegador.
 
 Os gráficos ao longo do tempo mostram os 8 maiores valores em cores fixas e
 o resto como Outros; a legenda dá o total de cada valor e pode ser clicada
@@ -797,7 +805,7 @@ nenhuma detecção, exceto o scanner da internet batendo no site.
 
 ![Detecções: cada etapa de um ataque, encontrada através de amostragem sFlow 1:4096](images/findings.png)
 
-![Top 66, Principais interlocutores: os 30 maiores clientes e servidores com uma linha para todo o tráfego](images/topn.png)
+![Top 66: as 66 maiores conversas, ordenáveis por qualquer coluna](images/topn.png)
 
 ![Detalhes do tráfego: servidores com seus clientes, e serviços com seus servidores, em gráficos de anéis](images/traffic.png)
 

@@ -12,53 +12,46 @@
   --sb-bg:#fff4e0; --sb-line:#f0c27a; --sb-ink:#8a4b00;
   --shadow:rgba(20,30,50,.16);
 }
-/* Bright: pure white, black text and stronger lines and colours (iOS increased contrast) */
-:root[data-theme=bright]{
-  --bg:#ffffff; --surface:#ffffff; --surface-2:#f2f2f7; --line:#d1d1d6; --line-2:#aeaeb2;
-  --ink:#000000; --ink-2:#1c1c1e; --ink-3:#48484a;
-  --accent:#0040dd; --accent-soft:#e0e8ff; --accent-ink:#0030a8;
-  --side:#e5e5ea; --side-hover:#d1d1d6; --side-line:#aeaeb2;
-  --c1:#0040dd; --c2:#c93400; --c3:#248a3d; --c4:#b25000; --c5:#d30f45; --c6:#007d8a; --c7:#3634a3; --c8:#d70015; --other:#aeaeb2; --map-none:#f2f2f7;
-  --m1:#c7d6ff; --m2:#7b9cff; --m3:#2f62f0; --m4:#0040dd; --m5:#001f73;
-  --good:#248a3d; --crit:#d70015;
-}
-/* Grey: graphite, muted accent, for long sessions */
+/* Grey: graphite, a muted accent, for long sessions */
 :root[data-theme=gray]{
-  --bg:#d8d8dd; --surface:#f2f2f5; --surface-2:#e5e5ea; --line:#c7c7cc; --line-2:#aeaeb2;
+  --bg:#d9dade; --surface:#f4f4f6; --surface-2:#e6e7ea; --line:#cacbd0; --line-2:#b3b4ba;
   --ink:#1c1c1e; --ink-2:#3a3a3c; --ink-3:#5c5c61;
   --accent:#4a5160; --accent-soft:#dcdde2; --accent-ink:#2c313b;
-  --side:#c4c4ca; --side-hover:#b5b5bb; --side-line:#aeaeb2;
-  --c1:#3a7bd5; --c2:#e08a2e; --c3:#3fa66b; --c4:#c9a227; --c5:#d4567a; --c6:#2f7d4f; --c7:#6a62c7; --c8:#d2463d; --other:#aeaeb2; --map-none:#e5e5ea;
+  --side:#c3c4ca; --side-hover:#b3b4bb; --side-line:#adaeb5;
+  --c1:#3a7bd5; --c2:#e08a2e; --c3:#3fa66b; --c4:#c9a227; --c5:#d4567a; --c6:#2f7d4f; --c7:#6a62c7; --c8:#d2463d; --other:#aeaeb2; --map-none:#e6e7ea;
   --m1:#d5dbe5; --m2:#a6b4c8; --m3:#6f86a6; --m4:#465d80; --m5:#26364f;
   --sb-bg:#ece4d6; --sb-line:#cbb48c;
 }
-/* Dim: dark grey, softer than black (iOS elevated dark) */
-:root[data-theme=dim]{
-  color-scheme:dark;
-  --bg:#1c1c1e; --surface:#2c2c2e; --surface-2:#3a3a3c; --line:#3a3a3c; --line-2:#545458;
-  --ink:#f2f2f7; --ink-2:#c7c7cc; --ink-3:#98989d;
-  --accent:#0a84ff; --accent-soft:rgba(10,132,255,.2); --accent-ink:#6cb4ff;
-  --side:#141416; --side-hover:#2c2c2e; --side-line:#2c2c2e;
-  --c1:#0a84ff; --c2:#ff9f0a; --c3:#30d158; --c4:#ffd60a; --c5:#ff375f; --c6:#63e6e2; --c7:#7d7aff; --c8:#ff453a; --other:#636366; --map-none:#3a3a3c;
-  --m1:#1d3557; --m2:#1f5aa6; --m3:#2f85f0; --m4:#78b6ff; --m5:#cfe5ff;
-  --base:#8e8e93;
-  --good:#30d158; --warn:#ffd60a; --crit:#ff453a; --warn-ink:#ffd60a; --crit-soft:rgba(255,69,58,.18);
-  --sb-bg:rgba(255,159,10,.14); --sb-line:rgba(255,159,10,.45); --sb-ink:#ffb340;
-  --shadow:rgba(0,0,0,.5);
-}
-/* Dark: black background (iOS dark mode, OLED and wall screens) */
-:root[data-theme=dark]{
+/* Black: iOS dark mode, black background (wall screens, OLED) */
+:root[data-theme=black]{
   color-scheme:dark;
   --bg:#000000; --surface:#1c1c1e; --surface-2:#2c2c2e; --line:#2c2c2e; --line-2:#48484a;
   --ink:#ffffff; --ink-2:#d1d1d6; --ink-3:#8e8e93;
   --accent:#0a84ff; --accent-soft:rgba(10,132,255,.22); --accent-ink:#6cb4ff;
-  --side:#0e0e10; --side-hover:#1c1c1e; --side-line:#1c1c1e;
+  --side:#121214; --side-hover:#1c1c1e; --side-line:#232326;
   --c1:#0a84ff; --c2:#ff9f0a; --c3:#30d158; --c4:#ffd60a; --c5:#ff375f; --c6:#63e6e2; --c7:#7d7aff; --c8:#ff453a; --other:#636366; --map-none:#2c2c2e;
   --m1:#14284a; --m2:#1f5aa6; --m3:#2f85f0; --m4:#78b6ff; --m5:#cfe5ff;
   --base:#8e8e93;
   --good:#30d158; --warn:#ffd60a; --crit:#ff453a; --warn-ink:#ffd60a; --crit-soft:rgba(255,69,58,.2);
   --sb-bg:rgba(255,159,10,.14); --sb-line:rgba(255,159,10,.45); --sb-ink:#ffb340;
   --shadow:rgba(0,0,0,.6);
+}
+/* Teal: light, with iOS teal for the accent and a teal-tinted side menu */
+:root[data-theme=teal]{
+  --bg:#edf5f6; --surface:#ffffff; --surface-2:#e9f3f4; --line:#d6e6e8; --line-2:#bcd6d9;
+  --accent:#0e8a9d; --accent-soft:#d9f0f3; --accent-ink:#0a6a79;
+  --side:#cfe6e9; --side-hover:#bcdcdf; --side-line:#b6d4d8;
+  --c1:#0e8a9d; --c2:#ff9500; --c3:#34c759; --c4:#e6b000; --c5:#ff2d55; --c6:#007aff; --c7:#5856d6; --c8:#ff3b30;
+  --m1:#d3eef1; --m2:#8fd2db; --m3:#3fb0c0; --m4:#0e8a9d; --m5:#07505b;
+}
+/* Orange: warm light, with iOS orange for the accent and a warm side menu */
+:root[data-theme=orange]{
+  --bg:#faf4ec; --surface:#ffffff; --surface-2:#f7eee2; --line:#eedfcc; --line-2:#e0c8a8;
+  --accent:#d96a00; --accent-soft:#fde9d3; --accent-ink:#a34f00;
+  --side:#f2dfc6; --side-hover:#ead0ae; --side-line:#e3c8a4;
+  --c1:#e07000; --c2:#007aff; --c3:#34c759; --c4:#c9a000; --c5:#ff2d55; --c6:#248a3d; --c7:#5856d6; --c8:#c62828;
+  --m1:#fde3c4; --m2:#f9b56a; --m3:#ef8a1f; --m4:#c45f00; --m5:#7a3a00;
+  --sb-bg:#fff0dc;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);
@@ -94,7 +87,9 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
 .self .live i{width:8px;height:8px;border-radius:50%;background:currentColor}
 .self .live.ok{color:var(--good)}.self .live.idle{color:var(--ink-3)}
 .foot{display:flex;flex-direction:column;gap:8px;padding:0 16px 14px}
-.foot .pick{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.foot .pick{display:grid;grid-template-columns:1fr auto;gap:6px}
+#theme{display:flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:6px;padding:4px 10px;background:var(--surface);color:var(--ink);cursor:pointer;font-size:13px;white-space:nowrap}
+#theme i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:inset 0 0 0 2px var(--surface),0 0 0 1px var(--line-2)}
 .foot select{width:100%;min-width:0;color:var(--ink);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px;background:var(--surface);font-size:13px}
 .linkbtn{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:12.5px;padding:2px;white-space:nowrap}
 #logout{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;padding:6px 4px;border-radius:6px}
@@ -105,11 +100,6 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
 .topbar{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
 .row1{display:flex;align-items:center;gap:12px;padding:10px 20px;flex-wrap:wrap}
 .row1 h1{font-size:17px;font-weight:650;margin:0 8px 0 0}
-.search{flex:1;min-width:180px;max-width:420px;position:relative}
-.search input{width:100%;border:1px solid var(--line-2);border-radius:7px;padding:6px 10px 6px 30px;background:var(--surface)}
-[dir=rtl] .search input{padding:6px 30px 6px 10px}
-.search input::placeholder{color:var(--ink-3)}
-.search svg{position:absolute;inset-inline-start:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--ink-3)}
 .range{display:flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;margin-inline-start:auto}
 .range button{border:0;border-inline-start:1px solid var(--line);background:var(--surface);padding:5px 11px;cursor:pointer;color:var(--ink-2);white-space:nowrap}
 .range button:first-child{border-inline-start:0}

@@ -23,16 +23,16 @@ async function loadLang(code) {
   try { localStorage.setItem('t66.lang', code); } catch (e) {}
   regionNames = null;
   document.querySelectorAll('[data-i]').forEach(el => { el.textContent = t(el.dataset.i); });
-  $('#q').placeholder = t('top.search');
   $('#refresh').textContent = t('top.refresh');
-  const th = $('#theme');
-  if (th) {
-    th.setAttribute('aria-label', t('theme.label'));
-    th.innerHTML = THEMES.map(k => `<option value="${k}">${esc(t('theme.' + k))}</option>`).join('');
-    th.value = window.t66Theme ? t66Theme.get() : 'light';
-  }
+  themeLabel();
 }
-const THEMES = ['light', 'bright', 'gray', 'dim', 'dark', 'auto'];
+// the theme button shows the current theme; a click goes to the next one
+function themeLabel() {
+  const b = $('#theme'), cur = window.t66Theme ? t66Theme.get() : 'light';
+  b.querySelector('span').textContent = t('theme.' + cur);
+  b.title = t('theme.label') + ': ' + t('theme.' + cur) + ' · ' + t('theme.next');
+  b.setAttribute('aria-label', b.title);
+}
 function pickLang() {
   let saved = null;
   try { saved = localStorage.getItem('t66.lang'); } catch (e) {}
@@ -156,10 +156,9 @@ function readHash() {
   if (RANGES.includes(p.get('r'))) state.r = p.get('r');
   if (p.get('r') === 'custom' && +p.get('from') > 0 && +p.get('to') > +p.get('from')) { state.r = 'custom'; state.cf = +p.get('from'); state.ct = +p.get('to'); }
   if (p.get('dim')) state.dim = p.get('dim');
-  state.tm = p.get('tm') === 'table' || (p.get('v') === 'topn' && p.get('dim')) ? 'table' : 'talkers';
+  state.tm = p.get('tm') === 'talkers' ? 'talkers' : 'table';  // Top 66 opens on the table
   state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
   state.ra = p.get('ra') === 'client' ? 'client' : 'server';
-  state.rb = p.get('rb') === 'server' ? 'server' : 'service';
   state.ds = p.get('ds') === 'sb' ? 'sb' : '';
   state.rl = p.get('live') === '1';
   const dd = p.get('d'); if (dd && dd.includes(':')) state.det = {f: dd.slice(0, dd.indexOf(':')), v: dd.slice(dd.indexOf(':') + 1)};
@@ -173,10 +172,10 @@ function writeHash(push) {
   const p = new URLSearchParams({v: state.v, r: state.r});
   if (state.r === 'custom') { p.set('from', state.cf); p.set('to', state.ct); }
   if (state.ds) p.set('ds', state.ds);
-  if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
+  if (state.v === 'topn') { if (state.tm === 'talkers') p.set('tm', 'talkers'); else p.set('dim', state.dim); }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
   if (state.v === 'records' && state.rl) p.set('live', '1');
-  if (state.v === 'traffic') { if (state.ra === 'client') p.set('ra', 'client'); if (state.rb === 'server') p.set('rb', 'server'); }
+  if (state.v === 'traffic') { if (state.ra === 'client') p.set('ra', 'client'); }
   if (state.v === 'detail' && state.det) p.set('d', state.det.f + ':' + state.det.v);
   if (state.f.length) p.set('f', state.f.map(x => (x.neg ? '!' : '') + encodeURIComponent(x.f) + ':' + encodeURIComponent(x.v)).join(','));
   const h = '#' + p.toString();
@@ -448,7 +447,6 @@ const FBAR_VIEWS = new Set(['topn', 'traffic']);
 function renderFbar() {
   const bar = $('#fbar'), on = FBAR_VIEWS.has(state.v);
   bar.hidden = !on;
-  $('.search').hidden = !on;
   $('#filters').hidden = !on && !state.f.length;
   if (bar.hidden) return;
   bar.innerHTML = FBAR.map(([f, lab]) => {
@@ -479,19 +477,6 @@ function renderFbar() {
     inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); apply(); } };
   });
 }
-// search box: guess the field from what was typed
-$('#q').addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  const v = e.target.value.trim(); if (!v) return;
-  let f = 'app', val = v;
-  if (/^[0-9a-f:.]+(\/\d+)?$/i.test(v) && (v.includes('.') || v.includes(':'))) f = 'ip';
-  else if (/^as\d+$/i.test(v)) { f = 'asn'; val = v.slice(2); }
-  else if (/^\d+(\/(tcp|udp))?$/i.test(v)) f = 'port';
-  else if (/^[a-z]{2}$/i.test(v)) { f = 'country'; val = v.toUpperCase(); }
-  state.f.push({f, v: val, neg: false});
-  e.target.value = '';
-  render();
-});
 
 // ------------------------------------------------------------ views
 const views = {};
@@ -507,10 +492,16 @@ function errMsg(err) {
 }
 function errorBox(err) { return `<div class="panel"><div class="empty">${esc(errMsg(err))}</div></div>`; }
 
+// what the dashed line and the change compare with: the same time
+// yesterday (up to a day), last week (up to a week), or the days before
+const baseText = (d, kind) => {
+  const k = {day: 'day', week: 'week', prev: 'prev'}[d.basis];
+  return k ? t({line: 'base.', kpi: 'kpi.vs_', sub: 'ov.bw_sub_'}[kind] + k, {n: d.base_days || ''}) : '';
+};
 views.overview = async (el) => {
   const [d, ifs, fd] = await Promise.all([api('overview'), api('ifaces').catch(() => null), api('findings', {limit: 3}).catch(() => null)]);
   const tot = d.totals, base = d.base_totals, basis = d.basis;
-  const change = base.wire > 0 ? (tot.wire - base.wire) / base.wire : null;
+  const change = basis && base.wire > 0 ? (tot.wire - base.wire) / base.wire : null;
   // accuracy: worst interface deviation relative to its statistical error
   let acc = {n: '—', d: t('kpi.no_counters'), kind: null};
   const withCtr = (ifs?.ifaces || []).filter(f => f.has_counters);
@@ -522,7 +513,7 @@ views.overview = async (el) => {
   const peakTxt = d.peak_at ? t('kpi.peak', {v: fmtBps(d.peak_bps), t: fmtTime(d.peak_at, spanMs())}) : '';
   const series = d.series || {times: [], names: [], values: []};
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
-  const lines = d.baseline ? [{name: t(basis === 'week' ? 'last_week' : 'prev_period'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
+  const lines = d.baseline && basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
   const dirParts = (d.dir || []).map((p, i) => ({n: t('dir.' + p.key), v: p.wire, c: color(i), val: DIRS[p.key]}));
   const protoParts = (d.proto || []).map((p, i) => ({n: p.key === '__other__' ? t('other') : proto(+p.key), v: p.wire, c: color(i, p.key), val: p.key === '__other__' ? null : p.key}));
   const cl = d.top_clients || [], cmax = Math.max(1, ...cl.map(r => r.wire));
@@ -530,13 +521,13 @@ views.overview = async (el) => {
   el.innerHTML = `<div class="grid">
     <div class="panel c12"><div class="kpis">
       ${inSB() ? `<div class="kpi"><div class="lab">${t('sb.avg')}</div><div class="n">${fmtBps(tot.wire * 8 / (spanMs() / 1000))}</div><div class="d muted">&nbsp;</div></div>`
-        : `<div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(t(basis === 'week' ? 'kpi.vs_week' : 'kpi.vs_prev', {p: fmtPct(change, 0)}))}</div></div>`}
+        : `<div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(baseText(d, 'kpi').split('{p}').join(fmtPct(change, 0)))}</div></div>`}
       <div class="kpi"><div class="lab">${t('kpi.total', {r: rangeLabel()})}</div><div class="n">${fmtBytes(tot.wire)}</div><div class="d muted">${esc(peakTxt)}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.hosts')}</div><div class="n">${nf(tot.hosts)}</div><div class="d muted">&nbsp;</div></div>
       <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.accuracy')}</div><div class="n">${acc.n}</div><div class="d">${acc.kind ? status(acc.kind, acc.d) : `<span class="muted">${esc(acc.d)}</span>`}</div></div>
     </div></div>
-    <div class="panel c12"><div class="ph"><h2>${t('ov.bw_title')}</h2><span class="sub">${lines.length ? t(basis === 'week' ? 'ov.bw_sub_week' : 'ov.bw_sub_prev') : ''}</span></div>
+    <div class="panel c12"><div class="ph"><h2>${t('ov.bw_title')}</h2><span class="sub">${lines.length ? esc(baseText(d, 'sub')) : ''}</span></div>
       <div class="chart" id="chStack" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}${lines.length ? `<span><i class="dash"></i>${esc(lines[0].name)}</span>` : ''}</div></div>
     ${fd ? findingsPanel(fd) : ''}
@@ -735,26 +726,24 @@ const RING_FIELD = {server: 'server', client: 'client', service: 'port'};
 const ringVal = (dim, k) => dim === 'service' ? k.split('\t')[0] : k;
 views.traffic = async (el) => {
   const ra = state.ra === 'client' ? ['client', 'server'] : ['server', 'client'];
-  const rb = state.rb === 'server' ? ['server', 'service'] : ['service', 'server'];
-  const [da, db] = await Promise.all([api('rings', {inner: ra[0], outer: ra[1]}), api('rings', {inner: rb[0], outer: rb[1]})]);
+  const [da, db] = await Promise.all([api('rings', {inner: ra[0], outer: ra[1]}), api('rings', {inner: 'service', outer: 'server'})]);
   await lookupNames([...da.inner, ...da.outer, ...db.inner, ...db.outer].map(r => r.k).filter(k => /^[0-9a-f.:]+$/i.test(k)));
   const swap = (id, cur, opts) => `<div class="seg" role="group">${opts.map(([v, lab]) => `<button data-${id}="${v}" aria-pressed="${cur === v}">${esc(lab)}</button>`).join('')}</div>`;
   el.innerHTML = `<div class="grid">
     <div class="panel c6"><div class="ph"><h2>${t('rg.hosts')}</h2><div class="tools" style="margin-inline-start:auto">${swap('ra', ra[0], [['server', t('rg.in_server')], ['client', t('rg.in_client')]])}</div></div>
       <div class="sub" style="margin:-4px 0 6px">${esc(t(ra[0] === 'server' ? 'rg.hosts_sub_s' : 'rg.hosts_sub_c'))}</div><div class="rings" id="rgA"></div></div>
-    <div class="panel c6"><div class="ph"><h2>${t('rg.services')}</h2><div class="tools" style="margin-inline-start:auto">${swap('rb', rb[0], [['service', t('rg.in_service')], ['server', t('rg.in_server')]])}</div></div>
-      <div class="sub" style="margin:-4px 0 6px">${esc(t(rb[0] === 'service' ? 'rg.svc_sub_v' : 'rg.svc_sub_s'))}</div><div class="rings" id="rgB"></div></div></div>`;
+    <div class="panel c6"><div class="ph"><h2>${t('rg.svc_title')}</h2></div>
+      <div class="sub" style="margin:-4px 0 6px">${esc(t('rg.svc_one'))}</div><div class="rings" id="rgB"></div></div></div>`;
   el.querySelectorAll('[data-ra]').forEach(b => b.onclick = () => { state.ra = b.dataset.ra; render(); });
-  el.querySelectorAll('[data-rb]').forEach(b => b.onclick = () => { state.rb = b.dataset.rb; render(); });
   drawRings($('#rgA'), da, ra[0], ra[1]);
-  drawRings($('#rgB'), db, rb[0], rb[1]);
+  drawRings($('#rgB'), db, 'service', null);  // one ring: the services
 };
 function drawRings(el, d, inDim, outDim) {
   if (!d.total) { el.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
   const draw = () => {
     const W = el.clientWidth; if (W < 200) return;
     // room for the outer labels on both sides
-    const SW = Math.min(W, 600), R = Math.max(80, Math.min(170, SW / 2 - 120)), SH = 2 * R + 60, c = SW / 2, cy = SH / 2, r0 = R * .34, r1 = R * .70;
+    const SW = Math.min(W, 600), R = Math.max(80, Math.min(170, SW / 2 - 120)), SH = 2 * R + 60, c = SW / 2, cy = SH / 2, r0 = outDim ? R * .34 : R * .5, r1 = outDim ? R * .70 : R;
     const size = SW;
     const pt = (r, a) => [c + r * Math.sin(a), cy - r * Math.cos(a)];
     const arc = (ri, ro, a0, a1) => {
@@ -772,7 +761,7 @@ function drawRings(el, d, inDim, outDim) {
       const a1 = a + r.v / tot * Math.PI * 2;
       segs.push({ring: 0, k: r.k, p: '', v: r.v, a0: a, a1});
       let b = a;
-      d.outer.filter(o => o.p === r.k).forEach((o, j) => { const b1 = b + o.v / tot * Math.PI * 2; segs.push({ring: 1, k: o.k, p: r.k, v: o.v, a0: b, a1: b1, j}); b = b1; });
+      if (outDim) d.outer.filter(o => o.p === r.k).forEach((o, j) => { const b1 = b + o.v / tot * Math.PI * 2; segs.push({ring: 1, k: o.k, p: r.k, v: o.v, a0: b, a1: b1, j}); b = b1; });
       a = a1;
     });
     segs.forEach((g, n) => {
@@ -830,11 +819,11 @@ const TEXT_OF = {client: ['key'], server: ['key', 'extra'], conv: ['key', 'key2'
 // top 30 clients and servers side by side with bytes, packets and flow
 // records, over a total row for all traffic. "Table" is the single
 // regroupable table of the top 66.
-const modeSeg = () => `<div class="seg" role="group"><button data-tm="talkers" aria-pressed="${state.tm !== 'table'}">${t('topn.talkers')}</button><button data-tm="table" aria-pressed="${state.tm === 'table'}">${t('topn.table')}</button></div>`;
+const modeSeg = () => `<div class="seg" role="group"><button data-tm="table" aria-pressed="${state.tm !== 'talkers'}">${t('topn.table')}</button><button data-tm="talkers" aria-pressed="${state.tm === 'talkers'}">${t('topn.talkers')}</button></div>`;
 function bindMode(el) { el.querySelectorAll('[data-tm]').forEach(b => b.onclick = () => { state.tm = b.dataset.tm; render(); }); }
 views.topn = el => {
   if (!DIMS.includes(state.dim)) state.dim = 'conv';
-  return state.tm === 'table' ? topTable(el, state.dim) : talkers(el);
+  return state.tm === 'talkers' ? talkers(el) : topTable(el, state.dim);
 };
 async function talkers(el) {
   const [cl, srv, ov] = await Promise.all([api('topn', {dim: 'client', limit: 30}), api('topn', {dim: 'server', limit: 30}), api('overview')]);
@@ -923,7 +912,7 @@ views.sankey = async (el) => {
   const title = t({host: 'sankey.title_host', segment: 'sankey.title', conv: 'sankey.title_conv'}[mode]);
   el.innerHTML = `<div class="panel"><div class="ph"><h2>${title}</h2><span class="sub">${t('sankey.hint')}</span>
       <div class="tools" style="margin-inline-start:auto"><div class="seg" role="group">${['host', 'conv', 'segment'].map(m => `<button data-sk="${m}" aria-pressed="${m === mode}">${t({host: 'sankey.by_host', conv: 'sankey.by_conv', segment: 'sankey.by_seg'}[m])}</button>`).join('')}</div></div></div>
-    <div class="chart sankey" id="chSankey" style="height:${mode === 'segment' ? 440 : 520}px" aria-label="${esc(title)}"></div></div>`;
+    <div class="chart sankey" id="chSankey" style="height:${mode === 'segment' ? 550 : 650}px" aria-label="${esc(title)}"></div></div>`;
   el.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { state.sk = b.dataset.sk; render(); });
   const sEl = $('#chSankey');
   if (!(d.seg_app || []).length) { sEl.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
@@ -939,7 +928,9 @@ views.sankey = async (el) => {
   const draw = () => {
     const W = sEl.clientWidth, H = sEl.clientHeight; if (W < 300) return;
     const rtl = document.documentElement.dir === 'rtl';
-    const nodeW = 12, pad = 14, lw = mode === 'segment' ? 118 : 200, rw = conv ? 200 : 130, colX = rtl ? [W - lw - 12, Math.round(W / 2 - 6), rw - 12] : [lw, Math.round(W / 2 - 6), W - rw];
+    const nodeW = 12, pad = 14, lw = mode === 'segment' ? 118 : 200, rw = conv ? 200 : 130, colX = rtl ? [W - lw - 12, 0, rw - 12] : [lw, 0, W - rw];
+    // the middle column (service, port) belongs to the server side: two thirds of the way across
+    colX[1] = Math.round(colX[0] + (colX[2] - colX[0]) * 0.68);
     const nv = n => Math.max(n.in, n.out);
     const k = Math.min(...cols.map(c => (H - pad * (c.length - 1)) / Math.max(1, c.reduce((s, n) => s + nv(n), 0))));
     cols.forEach((c, ci) => { let yy = 0; c.forEach((n, i) => { n.ci = ci; n.x = colX[ci]; n.y = yy; n.h = nv(n) * k; n.o = 0; n.i = 0; n.color = ci === 0 ? color(i, n.k) : 'var(--ink-2)'; yy += n.h + pad; }); });
@@ -1302,7 +1293,7 @@ views.sources = async (el) => {
     ['IPtoASN', 'geo.f_iptoasn', 'PDDL 1.0', 'https://iptoasn.com']];
   const freeRows = FREE.map(([n, k, lic, url]) => `<tr><td class="nw"><a href="${url}" target="_blank" rel="noopener">${n}</a></td><td>${esc(t(k))}</td><td class="nw muted">${lic}</td></tr>`).join('');
   const srcs = d.sources || [];
-  const issueText = (code, s) => t('issue.' + code, {n: nf(s.pending), p: nf(s.lost_pct, 1) + '%', s: Math.round(Math.abs(s.clock_skew_ns) / 1e9) + ' s'});
+  const issueText = (code, s) => t('issue.' + code, {n: nf(s.pending), p: nf(code === 'agent_drops' ? s.drop_pct : code === 'loss' ? (s.transit_pct ?? s.lost_pct) : s.lost_pct, 1) + '%', s: Math.round(Math.abs(s.clock_skew_ns) / 1e9) + ' s'});
   const rows = srcs.map(s => {
     const kind = s.status;
     return `<tr class="${s.issues?.length ? 'has-fix' : ''}"><td>${s.name ? esc(s.name) + ' ' : ''}<span class="muted" style="font-size:12.5px">${esc(s.exporter)}${s.domain ? ' / ' + s.domain : ''}</span></td>
@@ -1373,7 +1364,7 @@ snmp   192.168.1.1     public</pre></div><textarea class="inv" id="inv" spellche
   };
   const logoDone = (ok, text) => {
     const m = $('#logoMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text;
-    if (ok) { const v = Date.now(), dk = /^(dark|dim)$/.test(document.documentElement.dataset.theme || '') ? 1 : 0; $('#logoPrev').src = '/logo?v=' + v; document.querySelectorAll('img.logo').forEach(i => i.src = `/logo?dark=${dk}&v=${v}`); }
+    if (ok) { const v = Date.now(), dk = document.documentElement.dataset.theme === 'black' ? 1 : 0; $('#logoPrev').src = '/logo?v=' + v; document.querySelectorAll('img.logo').forEach(i => i.src = `/logo?dark=${dk}&v=${v}`); }
   };
   $('#logoFile').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -1483,7 +1474,7 @@ views.detail = async (el) => {
   $('#title').textContent = t('nav.detail') + ': ' + (isIP ? (names.get(det.v) || det.v) : det.v);
   const tot = d.totals, series = d.series || {times: [], names: [], values: []};
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
-  const lines = d.baseline ? [{name: t(d.basis === 'week' ? 'last_week' : 'prev_period'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
+  const lines = d.baseline && d.basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
   const table = (rows, heads, cell) => { const m = Math.max(1, ...rows.map(r => r.wire)); return `<table><tr><th></th>${heads.map(h => `<th>${t(h)}</th>`).join('')}<th class="num">${t('col.traffic')}</th><th style="width:26%">${t('col.share')}</th></tr>
     ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, m)}</td></tr>`).join('') || `<tr><td colspan="${heads.length + 3}" class="empty">${t('empty.nodata')}</td></tr>`}</table>`; };
   const s1 = side1.rows || [], s2 = side2.rows || [], cv = conv.rows || [], rr = rec.rows || [];
@@ -1497,7 +1488,7 @@ views.detail = async (el) => {
         <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       </div></div>
     ${fd && (fd.findings || []).length ? panel('c12', t('det.findings'), '', `<table class="fd">${findingRows(fd.findings, true, det.v)}</table>`) : ''}
-    <div class="panel c12"><div class="ph"><h2>${t('ov.bw_title')}</h2><span class="sub">${lines.length ? t(d.basis === 'week' ? 'ov.bw_sub_week' : 'ov.bw_sub_prev') : ''}</span></div>
+    <div class="panel c12"><div class="ph"><h2>${t('ov.bw_title')}</h2><span class="sub">${lines.length ? esc(baseText(d, 'sub')) : ''}</span></div>
       <div class="chart" id="chDet" style="height:220px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}</div></div>
     ${panel('c12', t('det.conv'), '', table(cv, ['col.client', 'col.server', 'col.service', 'col.country'], r => [ipCell(r.key), ipCell(r.key2), V('port', r.key3, r.key3), esc(country(r.extra))]))}
@@ -1640,7 +1631,7 @@ async function init() {
   const lang = pickLang();
   await loadLang(lang);
   $('#lang').value = lang;
-  $('#theme').onchange = () => { window.t66Theme && t66Theme.set($('#theme').value); render(); };
+  $('#theme').onclick = () => { if (window.t66Theme) t66Theme.next(); themeLabel(); render(); };
   $('#lang').onchange = async () => {
     await loadLang($('#lang').value);
     loadStatus(); render();

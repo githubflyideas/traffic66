@@ -107,14 +107,22 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 	}
 	out["totals"] = tot
 
-	// baseline: same window last week, else the previous window
-	basis := "week"
-	qb := shift(q, -7*24*time.Hour)
+	// baseline, named so it is clear: up to a day the same time yesterday,
+	// up to a week the same time last week, longer ranges the days before.
+	// Without data then there is no comparison (no fallback to something else).
+	// (ranges over 6 hours start on a whole hour, so allow for that hour)
+	basis, back := "day", 24*time.Hour
+	switch {
+	case span > 7*24*time.Hour+time.Hour:
+		basis, back = "prev", span
+		out["base_days"] = int(span.Round(24*time.Hour) / (24 * time.Hour))
+	case span > 25*time.Hour:
+		basis, back = "week", 7*24*time.Hour
+	}
+	qb := shift(q, -back)
 	btot, _ := s.Store.Totals(qb)
 	if btot.Wire == 0 {
-		basis = "prev"
-		qb = shift(q, -span)
-		btot, _ = s.Store.Totals(qb)
+		basis = ""
 	}
 	out["basis"] = basis
 	out["base_totals"] = btot
@@ -149,7 +157,7 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 			if len(vals) > len(se.Times) {
 				vals = vals[:len(se.Times)]
 			}
-			// no traffic at all a week ago means no data then (before the
+			// no traffic at all then means no data then (before the
 			// installation, or a gap): leave the line out instead of drawing zero
 			bl := make([]any, len(vals))
 			for i, v := range vals {
@@ -184,7 +192,10 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 	out["proto"] = donut("proto", 2)
 	out["country"] = donut("country", 3)
 	if cl, err := s.Store.TopN(q, "client", 10); err == nil {
-		out["top_clients"] = s.withBase(cl, qb, "client")
+		if basis != "" {
+			cl = s.withBase(cl, qb, "client")
+		}
+		out["top_clients"] = cl
 	}
 	if sv, err := s.Store.TopN(q, "service", 10); err == nil {
 		out["top_services"] = sv
@@ -495,8 +506,11 @@ func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
 		case "assumed1":
 			issue("warn", "assumed_unsampled")
 		}
-		if si.LostPct >= 1 {
+		if si.TransitPct >= 1 {
 			issue("warn", "loss")
+		}
+		if si.DropPct >= 1 {
+			issue("warn", "agent_drops")
 		}
 		if si.NoTemplate > 0 && si.Templates == 0 {
 			issue("warn", "no_template")

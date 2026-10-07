@@ -286,13 +286,17 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) {
 
 // SourceInfo summarises one exporter for the UI.
 type SourceInfo struct {
-	Exporter      string        `json:"exporter"`
-	Proto         string        `json:"proto"`
-	Domain        uint32        `json:"domain"`
-	Packets       uint64        `json:"packets"`
-	Records       uint64        `json:"records"`
-	LostPct       float64       `json:"lost_pct"`
-	LostRecords   uint64        `json:"lost_records"`
+	Exporter    string  `json:"exporter"`
+	Proto       string  `json:"proto"`
+	Domain      uint32  `json:"domain"`
+	Packets     uint64  `json:"packets"`
+	Records     uint64  `json:"records"`
+	LostPct     float64 `json:"lost_pct"`
+	LostRecords uint64  `json:"lost_records"`
+	// the loss split by where it happened: on the way (gaps in sequence
+	// numbers) and in the device itself (sFlow's own drop counter)
+	TransitPct    float64       `json:"transit_pct"`
+	DropPct       float64       `json:"drop_pct"`
 	Sampling      string        `json:"sampling"`
 	SamplingState string        `json:"sampling_state"`
 	Effective     float64       `json:"effective,omitempty"`
@@ -330,7 +334,7 @@ func (c *Collector) Sources() []SourceInfo {
 		}
 		out = append(out, SourceInfo{
 			Exporter: s.Exporter.Unmap().String(), Proto: s.Source.String(), Domain: s.Domain,
-			Packets: s.Packets, Records: s.Records, LostPct: lost, LostRecords: s.LostRecords,
+			Packets: s.Packets, Records: s.Records, LostPct: lost, LostRecords: s.LostRecords, TransitPct: lost,
 			Sampling: samp, SamplingState: s.SamplingState, Pending: s.Pending, NoTemplate: s.NoTemplate,
 			Templates: s.Templates, LastSeen: s.LastSeen, ClockSkew: s.ClockSkew, LossComp: s.LossComp,
 		})
@@ -357,6 +361,8 @@ func (c *Collector) Sources() []SourceInfo {
 		si.LostRecords = lost + drops
 		if t := ag.samples + si.LostRecords; t > 0 {
 			si.LostPct = float64(si.LostRecords) / float64(t) * 100
+			si.TransitPct = float64(lost) / float64(t) * 100
+			si.DropPct = float64(drops) / float64(t) * 100
 		}
 		var rs []int
 		for r := range rates {
