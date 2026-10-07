@@ -68,9 +68,12 @@ jobs:
           # GNU ld on Windows crashes linking DuckDB with full debug info
           [[ "${{ runner.os }}" == Windows ]] && flags='-ldflags=-s -w'
           go test -count=1 ${flags:+"$flags"} ./... 2>&1 | tee test.log || {
+            # a grep without matches must not end the step before the annotations
+            set +e
             { grep -B6 'collect2' test.log | grep -iE 'undefined|ld(\.lld|\.exe)?:|error|warning' | grep -v 'collect2' | sed 's#.*go-link-[0-9]*##' | cut -c1-300 | sort -u | head -8
               grep -E -- '--- FAIL|^\s+\S+_test\.go:[0-9]+:|panic:' test.log | head -4
               grep -vE '^(ok|\?) ' test.log | tail -8 | cut -c1-300; } | while IFS= read -r l; do echo "::error::${l:0:400}"; done
+            { echo '### Failed tests'; echo '```'; grep -vE '^(ok|\?) ' test.log | tail -60; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           }
       - name: Build
