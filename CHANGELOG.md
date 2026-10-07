@@ -3,6 +3,21 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.2.4
+
+Interfaces
+- The interfaces a device samples are told from the ones only seen as the
+  other end of its flows: by the sFlow data source, by flowDirection
+  (IPFIX 61) in NetFlow v9 and IPFIX, or else, without that field, as the
+  interface on at least 90% of the device's traffic.
+- Interface check lists those other interfaces last, in smaller grey type,
+  under "Peer interfaces": their numbers hold only the traffic through the
+  sampled interface. Their charts say so.
+- **Interface** above the pages lists only sampled interfaces, grouped by
+  device.
+- Settings shows for each device the interfaces it samples, and whether its
+  NetFlow/IPFIX templates carry flowDirection.
+
 ## 1.2.3
 
 Interfaces

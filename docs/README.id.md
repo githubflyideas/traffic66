@@ -568,6 +568,24 @@ bawaan. Halaman lalu dibuka pada interface itu (lihat pilihan **Antarmuka**
 di [Memakai antarmuka web](#9-using-the-web-ui)), dan Ringkasan menampilkan
 bandwidth-nya. Keduanya langsung disimpan ke baris `iface` di Nama.
 
+Catatan flow menyebut dua interface: interface tempat paket masuk dan
+interface tempat paket keluar. Karena itu, perangkat yang hanya menyampel
+sebagian interface juga menampilkan ujung lain dari flow-nya. **Antarmuka
+lawan** itu dicantumkan paling akhir, dengan huruf abu-abu yang lebih
+kecil, di bawah judulnya sendiri: angkanya hanya berisi trafik yang lewat
+interface yang disampel, bukan seluruh trafiknya. Interface ini tidak
+ditawarkan di **Antarmuka** di atas halaman. traffic66 mengetahui
+interface mana yang menyampel sebuah flow dari sumber data sFlow, atau dari
+field flowDirection (IPFIX 61) pada NetFlow v9 dan IPFIX (ingress:
+interface masuk, egress: interface keluar). Tanpa field itu, interface yang
+ada pada sedikitnya 90% trafik sebuah perangkat dianggap sebagai yang
+disampel; jika tidak ada, tidak ada interface yang ditandai.
+**Pengaturan** menampilkan, untuk setiap perangkat, interface yang disampel
+(**Disampel di:**) dan apakah template-nya membawa flowDirection
+(**dengan flowDirection (61)**). Untuk melihat seluruh trafik sebuah
+perangkat, sampel setiap interface pada arah masuk (lihat [Kirim flow dari
+perangkat Anda](#4-send-flows-from-your-devices)).
+
 ![Pencocokan antarmuka: trafik setiap interface, dan estimasi flow di samping counter perangkat](images/interfaces.png)
 
 Agar ada counter untuk dibandingkan:
@@ -719,7 +737,7 @@ Halaman:
 | Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
 | Geografi & jaringan | Peta dunia trafik per negara, dengan garis dari jaringan Anda; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
-| Pengaturan | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
+| Pengaturan | Perangkat, sampling, interface yang disampel setiap perangkat dan apakah perangkat mengirim flowDirection, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
 | Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu dalam bit/s dan, di bawahnya, paket/s, ingress (hijau) dan egress (biru), dengan counter perangkat sebagai garis putus-putus; seberapa jauh angka flow dari counter, yang paling buruk di atas, beserta alasannya; nama, label, dan bawaan untuk setiap interface |
 | Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih. Terbuka pada 15 menit terakhir, diperbarui setiap 5 detik; bila dibuka dari sebuah nilai di halaman lain (**Lihat catatan flow-nya**), rentang waktu halaman itu dipertahankan, dan **Kembali ke waktu nyata** mengembalikannya |
 | Pembersihan data | Menghapus data yang lebih lama dari 120, 90, 60, 30, atau 7 hari, atau semuanya, beserta berapa banyak ruang yang dibebaskan masing-masing ([selengkapnya](#13-data-backup-upgrade-uninstall)) |
@@ -734,7 +752,8 @@ tanggal dan jam server.
 Di atas halaman trafik (Ringkasan, Top 66, Detail trafik, Jalur trafik,
 Geografi & jaringan, Catatan flow, dan detail sebuah nilai) ada
 **Antarmuka**: **Semua antarmuka**, atau satu interface, sehingga halaman
-ini hanya menampilkan trafik yang melewatinya (masuk atau keluar). Awalnya
+ini hanya menampilkan trafik yang melewatinya (masuk atau keluar). Isinya
+interface yang disampel, dikelompokkan per perangkat, dan awalnya
 berada di interface bawaan (★, diatur di **Pencocokan antarmuka**) dan
 pilihannya ikut tersimpan di tautan. Temuan, Intel ancaman, Pencocokan
 antarmuka, dan Pengaturan selalu mencakup semua trafik. Untuk satu

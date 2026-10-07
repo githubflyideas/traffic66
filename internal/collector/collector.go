@@ -311,6 +311,8 @@ type SourceInfo struct {
 	// NetFlow/IPFIX: the templates received (id and field ids), shown when
 	// the sampling rate is not declared
 	TemplateInfo []string `json:"template_info,omitempty"`
+	// NetFlow/IPFIX: whether the templates carry flowDirection ("yes"/"no")
+	DirField string `json:"dir_field,omitempty"`
 }
 
 // Sources lists every exporter seen.
@@ -340,7 +342,7 @@ func (c *Collector) Sources() []SourceInfo {
 			Packets: s.Packets, Records: s.Records, LostPct: lost, LostRecords: s.LostRecords, TransitPct: lost,
 			Sampling: samp, SamplingState: s.SamplingState, Pending: s.Pending, NoTemplate: s.NoTemplate,
 			Templates: s.Templates, LastSeen: s.LastSeen, ClockSkew: s.ClockSkew, LossComp: s.LossComp,
-			TemplateInfo: s.TemplateInfo,
+			TemplateInfo: s.TemplateInfo, DirField: s.DirField,
 		})
 	}
 	c.mu.Lock()

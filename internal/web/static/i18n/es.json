@@ -509,5 +509,10 @@
 "if.name_ph": "Nombre de la interfaz",
 "if.tag_ph": "Etiqueta, p. ej. uplink",
 "if.save": "Guardar",
-"ov.if_sub": "Entrada y salida de esta interfaz (sentido de la interfaz)"
+"ov.if_sub": "Entrada y salida de esta interfaz (sentido de la interfaz)",
+"if.peers": "Interfaces del otro extremo (sin muestreo; solo el tráfico por la interfaz muestreada)",
+"if.peer_note": "Interfaz del otro extremo: sin muestreo, solo el tráfico por la interfaz muestreada de este equipo",
+"src.sampled_if": "Muestreo en: {v}",
+"src.dir_yes": "con flowDirection (61)",
+"src.dir_no": "sin flowDirection (61): interfaz muestreada deducida del tráfico"
 }

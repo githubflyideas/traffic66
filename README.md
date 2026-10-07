@@ -528,6 +528,21 @@ makes it the default interface (**★**); there is one default. The pages
 then open on it (see the **Interface** choice under [Using the web UI](#9-using-the-web-ui)), and the overview shows its
 bandwidth. Both are saved at once to the `iface` line in Names.
 
+Flow records name two interfaces: the one a packet came in on and the one
+it left by. A device that samples only some interfaces therefore shows
+the other ends of their flows too. Those **peer interfaces** are listed
+last, in smaller grey type, under their own heading: their numbers hold
+only the traffic that went through a sampled interface, not all of their
+traffic. They are not offered under **Interface** above the pages.
+traffic66 knows which interface sampled a flow from the sFlow data source,
+or from the flowDirection field (IPFIX 61) of NetFlow v9 and IPFIX (ingress:
+the input interface, egress: the output interface). Without that field, an
+interface on at least 90% of a device's traffic is taken as the sampled
+one; when there is none, no interface is marked. **Settings** shows, for
+each device, the sampled interfaces and whether its templates carry
+flowDirection. To see all of a device's traffic, sample every interface
+inbound (see [Send flows from your devices](#4-send-flows-from-your-devices)).
+
 ![Interface check: traffic of every interface, and the flow estimate next to the device counter](docs/images/interfaces.png)
 
 To get counters to compare with:
@@ -688,7 +703,7 @@ Pages:
 | Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
 | Geo & networks | A world map of traffic by country, with lines from your networks; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
-| Settings | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
+| Settings | Devices, sampling, the interfaces each device samples and whether it sends flowDirection, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
 | Interface check | Traffic of every interface over time in bits/s and, below, packets/s, ingress (green) and egress (blue), with the device counters as dashed lines; how far the flow numbers are from the counters, worst first, with reasons; a name, a tag and the default for each interface |
 | Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns. Opens on the last 15 minutes, updated every 5 seconds; opened from a value on another page (**Show its flow records**) it keeps that page's time range, and **Back to live** returns |
 | Data cleanup | Deletes data older than 120, 90, 60, 30 or 7 days, or all of it, with how much each frees ([more](#13-data-backup-upgrade-uninstall)) |
@@ -703,8 +718,9 @@ server's date and time.
 Above the traffic pages (Overview, Top 66, Traffic details, Flow paths,
 Geo & networks, Flow records and the detail of a value) is **Interface**:
 **All interfaces**, or one interface, so that these pages show only the
-traffic through it (in or out). It starts on the default interface (★,
-set on **Interface check**) and the choice is part of the link. Findings,
+traffic through it (in or out). It lists the sampled interfaces, grouped
+by device, and starts on the default interface (★, set on **Interface
+check**) and the choice is part of the link. Findings,
 Threat intel, Interface check and Settings always cover all traffic. For
 one interface over 7 or 30 days the pages read the flow records rather
 than the hourly and daily summaries, so they take longer and reach back

@@ -509,5 +509,10 @@
 "if.name_ph": "Interface name",
 "if.tag_ph": "Tag, e.g. uplink",
 "if.save": "Save",
-"ov.if_sub": "In and out as the interface sees it"
+"ov.if_sub": "In and out as the interface sees it",
+"if.peers": "Peer interfaces (not sampled; only the traffic through the sampled interface)",
+"if.peer_note": "Peer interface: not sampled, only the traffic through the sampled interface of this device",
+"src.sampled_if": "Sampled on: {v}",
+"src.dir_yes": "with flowDirection (61)",
+"src.dir_no": "without flowDirection (61): sampled interface inferred from traffic"
 }

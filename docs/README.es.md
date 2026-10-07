@@ -568,6 +568,23 @@ una. Las páginas se abren entonces en ella (vea la opción **Interfaz** en
 [Uso de la interfaz web](#9-using-the-web-ui)), y el resumen muestra su
 ancho de banda. Ambos se guardan al momento en la línea `iface` de Nombres.
 
+Los registros de flujo nombran dos interfaces: aquella por la que entró un
+paquete y aquella por la que salió. Por eso, un equipo que muestrea solo
+algunas interfaces muestra también los otros extremos de sus flujos. Esas
+**Interfaces del otro extremo** aparecen al final, en letra gris más
+pequeña, bajo su propio encabezado: sus cifras contienen solo el tráfico
+que pasó por una interfaz muestreada, no todo su tráfico. No se ofrecen en
+**Interfaz** encima de las páginas. traffic66 sabe qué interfaz muestreó un
+flujo por la fuente de datos de sFlow, o por el campo flowDirection (IPFIX
+61) de NetFlow v9 e IPFIX (ingress: la interfaz de entrada, egress: la
+interfaz de salida). Sin ese campo, una interfaz presente en al menos el
+90 % del tráfico de un equipo se toma como la muestreada; si no hay
+ninguna, no se marca ninguna interfaz. **Configuración** muestra, para cada
+equipo, las interfaces muestreadas (**Muestreo en:**) y si sus plantillas
+llevan flowDirection (**con flowDirection (61)**). Para ver todo el tráfico
+de un equipo, muestree cada interfaz en entrada (vea [Enviar flujos desde
+los equipos](#4-send-flows-from-your-devices)).
+
 ![Verificación de interfaces: tráfico de cada interfaz, y la estimación de flujos junto al contador del equipo](images/interfaces.png)
 
 Para disponer de contadores con los que comparar:
@@ -722,7 +739,7 @@ Páginas:
 | Hallazgos | Qué requiere atención: escaneos, adivinación de contraseñas, movimiento lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas ([más](#findings)) |
 | Inteligencia de amenazas | Hosts que hablaron con direcciones de sus listas de amenazas y cuánto enviaron |
 | Geografía y redes | Un mapa del mundo del tráfico por país, con líneas desde sus redes; las redes (AS) de las que vino y a las que fue el tráfico, en el tiempo en bits/s y paquetes/s; tráfico por país y por red |
-| Configuración | Equipos, muestreo, pérdidas, colectores, SNMP, la base de datos de países y redes, el logotipo y **Nombres** |
+| Configuración | Equipos, muestreo, las interfaces que muestrea cada equipo y si envía flowDirection, pérdidas, colectores, SNMP, la base de datos de países y redes, el logotipo y **Nombres** |
 | Verificación de interfaces | Tráfico de cada interfaz en el tiempo en bits/s y, debajo, paquetes/s, entrada (verde) y salida (azul), con los contadores del equipo como líneas discontinuas; cuánto se alejan las cifras de flujo de los contadores, de peor a mejor, con motivos; un nombre, una etiqueta y la predeterminada para cada interfaz |
 | Registros de flujo | Cuántos registros de flujo hubo y cuándo (una barra por intervalo), y los registros mismos, del más reciente al más antiguo, página a página, con columnas seleccionables. Se abre en los últimos 15 minutos, actualizados cada 5 segundos; abierta desde un valor de otra página (**Ver sus registros de flujo**) conserva el rango de tiempo de esa página, y **Volver a tiempo real** regresa |
 | Limpieza de datos | Borra los datos de más de 120, 90, 60, 30 o 7 días, o todos, indicando cuánto libera cada opción ([más](#13-data-backup-upgrade-uninstall)) |
@@ -739,8 +756,9 @@ Encima de las páginas de tráfico (Resumen, Top 66, Detalles del tráfico,
 Rutas de tráfico, Geografía y redes, Registros de flujo y el detalle de un
 valor) está **Interfaz**: **Todas las interfaces**, o una interfaz, para que
 estas páginas muestren solo el tráfico que pasa por ella (de entrada o de
-salida). Empieza en la interfaz predeterminada (★, fijada en
-**Verificación de interfaces**) y la elección forma parte del enlace.
+salida). Lista las interfaces muestreadas, agrupadas por equipo, y empieza
+en la interfaz predeterminada (★, fijada en **Verificación de
+interfaces**) y la elección forma parte del enlace.
 Hallazgos, Inteligencia de amenazas, Verificación de interfaces y
 Configuración siempre abarcan todo el tráfico. Para una interfaz en 7 o 30
 días las páginas leen los registros de flujo en lugar de los resúmenes por

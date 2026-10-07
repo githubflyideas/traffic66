@@ -566,6 +566,23 @@ abrem nela (veja a opção **Interface** em [Usando a interface
 web](#9-using-the-web-ui)), e a visão geral mostra a banda dela. Os dois
 são salvos na hora na linha `iface` de Nomes.
 
+Os registros de fluxo nomeiam duas interfaces: aquela por onde um pacote
+entrou e aquela por onde saiu. Por isso, um equipamento que amostra só
+algumas interfaces mostra também as outras pontas dos fluxos delas. Essas
+**Interfaces do outro lado** aparecem por último, em letra cinza menor, sob
+um título próprio: os números delas contêm só o tráfego que passou por uma
+interface amostrada, não todo o tráfego delas. Elas não são oferecidas em
+**Interface** acima das páginas. O traffic66 sabe qual interface amostrou
+um fluxo pela fonte de dados do sFlow, ou pelo campo flowDirection (IPFIX
+61) do NetFlow v9 e do IPFIX (ingress: a interface de entrada, egress: a
+interface de saída). Sem esse campo, uma interface presente em pelo menos
+90% do tráfego de um equipamento é tomada como a amostrada; se não houver
+nenhuma, nenhuma interface é marcada. **Configurações** mostra, para cada
+equipamento, as interfaces amostradas (**Amostragem em:**) e se os modelos
+dele trazem flowDirection (**com flowDirection (61)**). Para ver todo o
+tráfego de um equipamento, amostre cada interface na entrada (veja [Enviar
+fluxos dos seus equipamentos](#4-send-flows-from-your-devices)).
+
 ![Conferência de interfaces: tráfego de cada interface, e a estimativa de fluxo ao lado do contador do equipamento](images/interfaces.png)
 
 Para ter contadores com que comparar:
@@ -722,7 +739,7 @@ Páginas:
 | Detecções | O que precisa de atenção: varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças ([mais](#findings)) |
 | Ameaças | Hosts que se comunicaram com endereços das suas listas de ameaças, e quanto enviaram |
 | Geografia e redes | Um mapa-múndi do tráfego por país, com linhas a partir das suas redes; as redes (AS) de onde o tráfego veio e para onde foi, ao longo do tempo em bits/s e pacotes/s; tráfego por país e por rede |
-| Configurações | Equipamentos, amostragem, perdas, coletores, SNMP, o banco de dados de países e redes, o logotipo e **Nomes** |
+| Configurações | Equipamentos, amostragem, as interfaces que cada equipamento amostra e se ele envia flowDirection, perdas, coletores, SNMP, o banco de dados de países e redes, o logotipo e **Nomes** |
 | Conferência de interfaces | Tráfego de cada interface ao longo do tempo em bits/s e, abaixo, pacotes/s, entrada (verde) e saída (azul), com os contadores do equipamento como linhas tracejadas; quanto os números de fluxo se afastam dos contadores, piores primeiro, com os motivos; um nome, um rótulo e a padrão para cada interface |
 | Registros de fluxo | Quantos registros de fluxo houve e quando (uma barra por intervalo), e os próprios registros, dos mais recentes para os mais antigos, página a página, com colunas selecionáveis. Abre nos últimos 15 minutos, atualizados a cada 5 segundos; aberta a partir de um valor em outra página (**Ver os registros de fluxo**), mantém o intervalo de tempo daquela página, e **Voltar ao tempo real** volta |
 | Limpeza de dados | Apaga dados com mais de 120, 90, 60, 30 ou 7 dias, ou todos, mostrando quanto cada opção libera ([mais](#13-data-backup-upgrade-uninstall)) |
@@ -738,7 +755,8 @@ Acima das páginas de tráfego (Visão geral, Top 66, Detalhes do tráfego,
 Caminhos do tráfego, Geografia e redes, Registros de fluxo e o detalhe de
 um valor) fica **Interface**: **Todas as interfaces**, ou uma interface,
 para que essas páginas mostrem só o tráfego que passa por ela (entrando ou
-saindo). Começa na interface padrão (★, definida em **Conferência de
+saindo). Lista as interfaces amostradas, agrupadas por equipamento, e
+começa na interface padrão (★, definida em **Conferência de
 interfaces**) e a escolha faz parte do link. Detecções, Ameaças,
 Conferência de interfaces e Configurações sempre cobrem todo o tráfego.
 Para uma interface em 7 ou 30 dias, as páginas leem os registros de fluxo

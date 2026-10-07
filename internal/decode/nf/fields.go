@@ -545,6 +545,14 @@ func (s *session) describe(id uint16, t *template) {
 	}
 	if s.tmplDesc == nil {
 		s.tmplDesc = map[uint16]string{}
+		s.tmplDir = map[uint16]bool{}
 	}
 	s.tmplDesc[id] = b.String()
+	if !t.options {
+		dir := false
+		for _, f := range t.fields {
+			dir = dir || f.ent == 0 && f.id == ieDirection
+		}
+		s.tmplDir[id] = dir
+	}
 }

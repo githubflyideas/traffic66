@@ -509,5 +509,10 @@
 "if.name_ph": "Nom de l’interface",
 "if.tag_ph": "Étiquette, ex. uplink",
 "if.save": "Enregistrer",
-"ov.if_sub": "Entrant et sortant de cette interface (sens de l’interface)"
+"ov.if_sub": "Entrant et sortant de cette interface (sens de l’interface)",
+"if.peers": "Interfaces d’en face (non échantillonnées ; seulement le trafic de l’interface échantillonnée)",
+"if.peer_note": "Interface d’en face : non échantillonnée, seulement le trafic passé par l’interface échantillonnée de cet équipement",
+"src.sampled_if": "Échantillonné sur : {v}",
+"src.dir_yes": "avec flowDirection (61)",
+"src.dir_no": "sans flowDirection (61) : interface échantillonnée déduite du trafic"
 }
