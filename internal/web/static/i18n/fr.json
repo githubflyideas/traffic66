@@ -377,7 +377,7 @@
 "geo.data_from": "Pays et réseaux :",
 "geo.map_from": "Carte :",
 "td.both": "Les deux côtés",
-"nav.sandbox": "Analyse hors ligne",
+"nav.sandbox": "Analyse hors ligne de pcap",
 "sb.title": "Fichiers de capture",
 "sb.sub": "Analyser des fichiers pcap à part des données en direct",
 "sb.explain": "Importez des captures Wireshark ou tcpdump. Elles vont dans une base séparée : les données en direct, leurs chiffres et détections ne sont pas touchés. Analyser affiche les fichiers sur toutes les pages (vue d'ensemble, Top 66, détections, chemins, carte, enregistrements) ; Supprimer efface les fichiers et leurs données.",

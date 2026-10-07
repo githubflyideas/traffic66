@@ -653,7 +653,7 @@ Pages:
 | Geo & networks | A world map of traffic by country; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
 | Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns |
-| Offline analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-analysis)) |
+| Offline pcap analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-pcap-analysis)) |
 | Interface check | Traffic of every interface over time (ingress and egress, bits/s and packets/s), and flow numbers next to the interface counters, worst first, with reasons |
 | Sources | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
 
@@ -736,9 +736,9 @@ The same overview in Chinese; every page is available in 13 languages:
 
 ![Overview in Chinese](docs/images/overview-zh.png)
 
-### Offline analysis
+### Offline pcap analysis
 
-**Offline analysis** looks at packet captures from Wireshark or tcpdump with the same pages as the live data, without mixing them in.
+**Offline pcap analysis** looks at packet captures from Wireshark or tcpdump with the same pages as the live data, without mixing them in.
 
 It summarizes all the packets into flows: who talked to whom, how much, when, and what looks like an attack. It does not decode protocols or show packet contents; for one packet or one TCP stream, use Wireshark.
 

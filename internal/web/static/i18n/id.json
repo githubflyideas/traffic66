@@ -377,7 +377,7 @@
 "geo.data_from": "Negara dan jaringan:",
 "geo.map_from": "Peta:",
 "td.both": "Kedua sisi",
-"nav.sandbox": "Analisis offline",
+"nav.sandbox": "Analisis pcap offline",
 "sb.title": "File tangkapan",
 "sb.sub": "Analisis file pcap terpisah dari data langsung",
 "sb.explain": "Unggah tangkapan paket dari Wireshark atau tcpdump. File masuk ke basis data terpisah: data langsung, angkanya, dan temuannya tidak tersentuh. Analisis menampilkan file di semua halaman (ringkasan, Top 66, temuan, jalur, peta, catatan flow); Hapus menghapus file dan datanya.",

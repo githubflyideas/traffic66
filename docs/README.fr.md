@@ -705,7 +705,7 @@ Pages :
 | Géographie et réseaux | Une carte du monde du trafic par pays ; les réseaux (AS) d'où venait et où allait le trafic, dans le temps en bits/s et paquets/s ; trafic par pays et par réseau |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
 | Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix |
-| Analyse hors ligne | Captures de paquets (pcap, pcapng) analysées à part des données en direct ([plus](#analyse-hors-ligne)) |
+| Analyse hors ligne de pcap | Captures de paquets (pcap, pcapng) analysées à part des données en direct ([plus](#analyse-hors-ligne-de-pcap)) |
 | Contrôle des interfaces | Trafic de chaque interface dans le temps (entrée et sortie, bits/s et paquets/s), et chiffres de flux à côté des compteurs d'interface, les pires en premier, avec les causes |
 | Sources | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
 
@@ -802,9 +802,9 @@ La même vue d'ensemble en chinois ; toutes les pages sont disponibles en 13 lan
 
 <a id="10-terminal-ui"></a>
 
-### Analyse hors ligne
+### Analyse hors ligne de pcap
 
-**Analyse hors ligne** affiche des captures Wireshark ou tcpdump avec les mêmes pages que les données en direct, sans les mélanger.
+**Analyse hors ligne de pcap** affiche des captures Wireshark ou tcpdump avec les mêmes pages que les données en direct, sans les mélanger.
 
 Il résume tous les paquets en flux : qui a parlé à qui, combien, quand, et ce qui ressemble à une attaque. Il ne décode pas les protocoles et ne montre pas le contenu des paquets ; pour un paquet ou un flux TCP, utilisez Wireshark.
 

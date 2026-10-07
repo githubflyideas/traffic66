@@ -377,7 +377,7 @@
 "geo.data_from": "国家和运营商数据：",
 "geo.map_from": "地图：",
 "td.both": "两端",
-"nav.sandbox": "离线分析",
+"nav.sandbox": "离线 pcap 分析",
 "sb.title": "抓包文件",
 "sb.sub": "在实时数据之外分析 pcap 文件",
 "sb.explain": "上传 Wireshark 或 tcpdump 的抓包文件。它们进入一个单独的数据库，不影响实时数据、统计和发现。点“分析”后，所有页面（概览、Top 66、发现、流向、地图、流记录）都显示这些文件的内容；“删除”会删除文件及其数据。",

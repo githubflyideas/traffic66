@@ -687,7 +687,7 @@ Páginas:
 | Geografia e redes | Um mapa-múndi do tráfego por país; as redes (AS) de onde o tráfego veio e para onde foi, ao longo do tempo em bits/s e pacotes/s; tráfego por país e por rede |
 | Ameaças | Hosts que se comunicaram com endereços das suas listas de ameaças, e quanto enviaram |
 | Registros de fluxo | Quantos registros de fluxo houve e quando (uma barra por intervalo), e os próprios registros, dos mais recentes para os mais antigos, página a página, com colunas selecionáveis |
-| Análise offline | Capturas de pacotes (pcap, pcapng) analisadas separadas dos dados ao vivo ([mais](#análise-offline)) |
+| Análise offline de pcap | Capturas de pacotes (pcap, pcapng) analisadas separadas dos dados ao vivo ([mais](#análise-offline-de-pcap)) |
 | Conferência de interfaces | Tráfego de cada interface ao longo do tempo (entrada e saída, bits/s e pacotes/s), e números de fluxo ao lado dos contadores de interface, piores primeiro, com os motivos |
 | Fontes | Equipamentos, amostragem, perdas, coletores, SNMP, o banco de dados de países e redes, o logotipo e **Nomes** |
 
@@ -778,9 +778,9 @@ A mesma visão geral em chinês; todas as páginas estão disponíveis em 13 idi
 
 <a id="10-terminal-ui"></a>
 
-### Análise offline
+### Análise offline de pcap
 
-**Análise offline** mostra capturas do Wireshark ou tcpdump com as mesmas páginas dos dados ao vivo, sem misturá-las.
+**Análise offline de pcap** mostra capturas do Wireshark ou tcpdump com as mesmas páginas dos dados ao vivo, sem misturá-las.
 
 Ele resume todos os pacotes em fluxos: quem falou com quem, quanto, quando e o que parece um ataque. Não decodifica protocolos nem mostra o conteúdo dos pacotes; para um pacote ou um fluxo TCP, use o Wireshark.
 

@@ -6,7 +6,7 @@ heading is the version number.
 ## 0.3.1
 
 Offline analysis
-- New page **Offline analysis**: upload packet captures (.pcap, .pcapng
+- New page **Offline pcap analysis**: upload packet captures (.pcap, .pcapng
   from Wireshark or tcpdump; up to 3 files of at most 50 MB). They are
   turned into flows in a database of their own, apart from the live data.
   **Analyse** shows them on every page (overview, Top 66, traffic details,
