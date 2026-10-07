@@ -43,8 +43,9 @@ Fixes
   reported the same traffic: those flows were left out as duplicates. A
   query kept to one device or interface now counts all of that device's
   flows (traffic across devices still counts once).
-- The demo no longer leaves a gap of a minute or two in the charts where
-  its live exporters take over from the generated history.
+- The demo no longer leaves a gap in the charts where its live exporters
+  take over from the generated history, and restarting it fills the time
+  it was stopped.
 
 Pages
 - Side menu in four groups: traffic (Overview, Top 66, Traffic details,

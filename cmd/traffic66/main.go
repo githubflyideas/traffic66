@@ -552,11 +552,27 @@ func demoSample(dir string, sb *sandbox.Sandbox) {
 func backfillDemo(pipe *pipeline.Pipeline, st *store.Store) {
 	var n int64
 	st.DB.QueryRow(`SELECT (SELECT count(*) FROM hot) + (SELECT count(*) FROM segments)`).Scan(&n)
+	now := time.Now()
 	if n > 0 {
-		log.Printf("demo: existing data found, skipping backfill")
+		// fill the time the demo was stopped, so restarting it leaves no gap
+		var last time.Time
+		if st.DB.QueryRow(`SELECT max(ts) FROM hot`).Scan(&last) != nil || last.IsZero() || now.Sub(last) > 24*time.Hour {
+			log.Printf("demo: existing data found, skipping backfill")
+			return
+		}
+		s := sim.New(now, 67)
+		from := last.Add(time.Minute).Truncate(time.Minute)
+		for to := now.Truncate(time.Minute); from.Before(to); from, to = to, time.Now().Truncate(time.Minute) {
+			s.Backfill(from, to, true, func(r []flow.Record, c []flow.IfCounters) {
+				pipe.Ingest(r)
+				pipe.IngestCounters(c)
+			})
+		}
+		pipe.FlushRows()
+		pipe.FlushRollups()
+		log.Printf("demo: filled the time since %s", last.Local().Format("15:04"))
 		return
 	}
-	now := time.Now()
 	s := sim.New(now, 66)
 	emit := func(recs []flow.Record, ctrs []flow.IfCounters) {
 		pipe.Ingest(recs)

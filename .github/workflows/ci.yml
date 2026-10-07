@@ -45,8 +45,8 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.24"
       - name: Static C libraries (Linux)
@@ -128,7 +128,7 @@ jobs:
           cd dist
           if [[ "${{ runner.os }}" == Windows ]]; then 7z a "traffic66-${{ matrix.target }}.zip" "traffic66-${{ matrix.target }}" >/dev/null
           else tar czf "traffic66-${{ matrix.target }}.tar.gz" "traffic66-${{ matrix.target }}"; fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: traffic66-${{ matrix.target }}
           path: dist/traffic66-${{ matrix.target }}.*
@@ -147,7 +147,7 @@ jobs:
             target: linux-arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: traffic66-${{ matrix.target }}
       - name: Run on CentOS 7 and Alpine
@@ -172,7 +172,7 @@ jobs:
   release:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
     needs: [build, old-linux]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Version must be new
         if: github.event_name == 'workflow_dispatch'
@@ -182,7 +182,7 @@ jobs:
         run: |
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::version must look like 0.1.1"; exit 1; }
           if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then echo "::error::$TAG already exists; choose a higher version"; exit 1; fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           path: src
       - name: Release notes from CHANGELOG.md
@@ -194,13 +194,13 @@ jobs:
           if [[ -s notes.md ]]; then echo "found notes for $v"; else echo "::warning::no section '## $v' in CHANGELOG.md"; fi
           echo "" >> notes.md
           echo "Downloads and installation: see the README." >> notes.md
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           path: dist
           merge-multiple: true
       # a tag push attaches the archives to that tag's release; a manual run
       # creates the tag on the commit it built and publishes the release
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
           target_commitish: ${{ github.sha }}
@@ -212,7 +212,7 @@ jobs:
     # a manual run also deletes branches that are merged or abandoned: every
     # branch except main, the default branch, and branches of open pull requests
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Delete old branches
         env:
