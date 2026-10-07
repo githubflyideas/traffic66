@@ -70,6 +70,7 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 		step = time.Hour
 	}
 	q.From = q.From.UTC().Truncate(step)
+	q.To = liveTo(q.To, rollup)
 	bucket := fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts)", int64(step.Seconds()))
 	var inner string
 	var args []any

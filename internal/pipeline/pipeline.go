@@ -29,11 +29,13 @@ type Config struct {
 
 // Pipeline is safe for concurrent Submit calls.
 type Pipeline struct {
-	cfg Config
-	st  *store.Store
-	Inv *enrich.Inventory
-	ASN *enrich.ASNDB
-	Thr *enrich.Threats
+	dmu    sync.Mutex
+	delays delayHist // how late data arrives
+	cfg    Config
+	st     *store.Store
+	Inv    *enrich.Inventory
+	ASN    *enrich.ASNDB
+	Thr    *enrich.Threats
 
 	in  chan []flow.Record
 	ctr chan []flow.IfCounters
@@ -145,6 +147,7 @@ func (p *Pipeline) Run(ctx context.Context) {
 			p.FlushRollups()
 			return
 		case recs := <-p.in:
+			p.noteDelay(recs, time.Now())
 			p.mu.Lock()
 			for i := range recs {
 				p.process(&recs[i])
@@ -162,8 +165,9 @@ func (p *Pipeline) Run(ctx context.Context) {
 			}
 		case <-rowTick.C:
 			p.FlushRows()
-		case <-rollTick.C:
+		case now := <-rollTick.C:
 			p.FlushRollups()
+			p.updateSettle(now)
 		case now := <-sealTick.C:
 			p.FlushRows()
 			if err := p.st.Seal(now); err != nil {
@@ -486,4 +490,59 @@ func (p *Pipeline) rollup(r *store.Row, hasPeer bool) {
 		add(p.rDim, k)
 	}
 	_ = hasPeer
+}
+
+// The pipeline tracks how late data arrives: the time from the start of a
+// flow to its arrival here, weighted by its bytes. Until a flow is exported
+// the minutes it covers are incomplete. sFlow arrives at once; NetFlow and
+// IPFIX after the device's active timeout. The delay used is the one by
+// which 97% of the bytes have arrived, over the last two minutes.
+var delayEdges = []time.Duration{2 * time.Second, 5 * time.Second, 10 * time.Second, 20 * time.Second, 30 * time.Second,
+	45 * time.Second, time.Minute, 90 * time.Second, 2 * time.Minute}
+
+const maxSettle = 2 * time.Minute
+
+type delayHist struct{ cur, prev [10]float64 }
+
+func (p *Pipeline) noteDelay(recs []flow.Record, now time.Time) {
+	p.dmu.Lock()
+	defer p.dmu.Unlock()
+	for i := range recs {
+		r := &recs[i]
+		d, b := now.Sub(r.Start), float64(r.Bytes)*max(r.Mult, 1)
+		k := len(delayEdges)
+		for j, e := range delayEdges {
+			if d <= e {
+				k = j
+				break
+			}
+		}
+		p.delays.cur[k] += max(b, 1)
+	}
+}
+
+// updateSettle tells the store how far back data is complete.
+func (p *Pipeline) updateSettle(time.Time) {
+	p.dmu.Lock()
+	h := p.delays
+	p.delays.prev, p.delays.cur = p.delays.cur, [10]float64{}
+	p.dmu.Unlock()
+	var sum [10]float64
+	tot := 0.0
+	for k := range sum {
+		sum[k] = h.cur[k] + h.prev[k]
+		tot += sum[k]
+	}
+	if tot == 0 {
+		return
+	}
+	s, acc := maxSettle, 0.0
+	for k, e := range delayEdges {
+		acc += sum[k]
+		if acc >= 0.97*tot {
+			s = e
+			break
+		}
+	}
+	store.SetSettle(s + time.Second)
 }

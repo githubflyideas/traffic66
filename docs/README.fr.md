@@ -723,7 +723,7 @@ Pages :
 
 | Page | À quoi elle répond |
 |---|---|
-| Vue d'ensemble | Combien de trafic maintenant, par application, par rapport à la même heure hier (périodes jusqu'à un jour), à la semaine dernière (jusqu'à une semaine) ou aux jours précédents (périodes plus longues), quand il y a des données à ce moment-là ; détections ouvertes ; sens et protocole ; principaux clients et services |
+| Vue d'ensemble | Combien de trafic maintenant, par application (**Total**, ou seulement le trafic **Entrant** ou **Sortant** de vos réseaux), par rapport à la même heure hier (périodes jusqu'à un jour), à la semaine dernière (jusqu'à une semaine) ou aux jours précédents (périodes plus longues), quand il y a des données à ce moment-là ; détections ouvertes ; sens et protocole ; principaux clients et services |
 | Top 66 | S'ouvre sur **Tableau**, un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN. **Interlocuteurs principaux** montre les 30 premiers clients et serveurs côte à côte avec trafic, paquets et enregistrements de flux, au-dessus d'une ligne pour tout le trafic |
 | Détails du trafic | Deux graphiques en anneaux. **Serveurs et clients** : l'anneau intérieur montre les 8 serveurs les plus actifs, l'anneau extérieur les clients de chacun ; **Clients au centre** inverse le tout (clients au centre, à l'extérieur les serveurs utilisés par chacun), car un côté en explique souvent plus que l'autre. **Services** : un seul anneau des services les plus chargés. Survolez un segment pour voir son trafic ; cliquez dessus comme sur n'importe quelle valeur |
 | Chemins du trafic | Quel hôte utilise quelle application vers quel pays : les 8 hôtes les plus actifs, le reste dans Autres. **Client → serveur** affiche client → service → serveur ; **Par segment** affiche les segments au lieu des hôtes. Les noms longs sont raccourcis à 22 caractères ; survolez-en un pour voir le nom complet |
@@ -767,6 +767,11 @@ fixes et le reste dans Autres ; la légende donne le total de chaque valeur
 et se clique comme n'importe quelle autre valeur. Les graphiques des clients
 et des serveurs ne dessinent pas le reste, car avec des milliers d'hôtes il
 écraserait les 8 premiers ; la légende en donne toujours le total.
+
+Les graphiques s'arrêtent là où les données sont complètes : avec sFlow à la
+minute en cours, avec NetFlow et IPFIX un peu plus tôt, du temps que mettent
+les équipements à exporter leurs flux (traffic66 le mesure ; 2 minutes au
+plus).
 
 Les plages de plus de 6 heures commencent à une heure pile, si bien que
 chaque chiffre de la page porte exactement sur la même durée : "24 heures"

@@ -705,7 +705,7 @@ Páginas:
 
 | Página | Qué responde |
 |---|---|
-| Resumen | Cuánto tráfico hay ahora, por aplicación, frente a la misma hora de ayer (periodos de hasta un día), la semana pasada (hasta una semana) o los días anteriores (periodos más largos), cuando hay datos de entonces; hallazgos abiertos; dirección y protocolo; principales clientes y servicios |
+| Resumen | Cuánto tráfico hay ahora, por aplicación (**Total**, o solo el tráfico **Entrante** o **Saliente** de sus redes), frente a la misma hora de ayer (periodos de hasta un día), la semana pasada (hasta una semana) o los días anteriores (periodos más largos), cuando hay datos de entonces; hallazgos abiertos; dirección y protocolo; principales clientes y servicios |
 | Top 66 | Se abre en **Tabla**, una sola tabla de los 66 primeros: por defecto, conversaciones (cliente, servidor, servicio, país). Cualquier encabezado ordena; las columnas numéricas (tráfico, paquetes, paquete medio, flujos) clasifican todo el tráfico del periodo, así el menor paquete medio revela escaneos e inundaciones. **Agrupar por** cambia a aplicaciones, redes, segmentos, equipos, encapsulación y VLAN. **Interlocutores principales** muestra los 30 primeros clientes y servidores lado a lado con tráfico, paquetes y registros de flujo, sobre una fila para todo el tráfico |
 | Detalles del tráfico | Dos gráficos de anillos. **Servidores y clientes**: el anillo interior son los 8 servidores con más tráfico, el exterior los clientes de cada uno; **Clientes dentro** le da la vuelta (clientes dentro, fuera los servidores que usa cada uno), ya que a menudo un lado explica más que el otro. **Servicios**: un anillo con los servicios con más tráfico. Al pasar el ratón sobre un segmento se ve su tráfico; se hace clic en él como en cualquier valor |
 | Rutas de tráfico | Qué host usa qué aplicación hacia qué país: los 8 hosts con más tráfico, el resto como Otros. **Cliente → servidor** muestra cliente → servicio → servidor; **Por segmento** muestra segmentos en lugar de hosts. Los nombres largos se acortan a 22 caracteres; al pasar el ratón se ve el nombre completo |
@@ -748,6 +748,10 @@ el resto como Otros; la leyenda da el total de cada valor y se puede hacer
 clic en ella como en cualquier otro valor. Los gráficos de clientes y
 servidores dejan el resto fuera del dibujo, ya que con miles de hosts
 aplanaría a los 8 primeros; la leyenda sigue dando su total.
+
+Los gráficos terminan donde los datos están completos: con sFlow en el minuto
+actual, con NetFlow e IPFIX un poco antes, tanto como tarden los dispositivos
+en exportar sus flujos (traffic66 lo mide; como máximo 2 minutos).
 
 Los rangos de más de 6 horas empiezan en una hora en punto, de modo que
 todas las cifras de la página cuentan exactamente el mismo tiempo: "24 horas"

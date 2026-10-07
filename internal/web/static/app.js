@@ -499,7 +499,9 @@ const baseText = (d, kind) => {
   return k ? t({line: 'base.', kpi: 'kpi.vs_', sub: 'ov.bw_sub_'}[kind] + k, {n: d.base_days || ''}) : '';
 };
 views.overview = async (el) => {
-  const [d, ifs, fd] = await Promise.all([api('overview'), api('ifaces').catch(() => null), api('findings', {limit: 3}).catch(() => null)]);
+  // total, or only inbound or only outbound traffic (direction from your networks' point of view)
+  const od = ['inbound', 'outbound'].includes(state.od) ? state.od : '';
+  const [d, ifs, fd] = await Promise.all([api('overview', {}, od ? [...state.f, {f: 'dir', v: od, neg: false}] : state.f), api('ifaces').catch(() => null), api('findings', {limit: 3}).catch(() => null)]);
   const tot = d.totals, base = d.base_totals, basis = d.basis;
   const change = basis && base.wire > 0 ? (tot.wire - base.wire) / base.wire : null;
   // accuracy: worst interface deviation relative to its statistical error
@@ -527,18 +529,20 @@ views.overview = async (el) => {
       <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.accuracy')}</div><div class="n">${acc.n}</div><div class="d">${acc.kind ? status(acc.kind, acc.d) : `<span class="muted">${esc(acc.d)}</span>`}</div></div>
     </div></div>
-    <div class="panel c12"><div class="ph"><h2>${t('ov.bw_title')}</h2><span class="sub">${lines.length ? esc(baseText(d, 'sub')) : ''}</span></div>
+    <div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[od])}</h2><span class="sub">${lines.length ? esc(baseText(d, 'sub')) : ''}</span>
+      <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'dir.2'], ['outbound', 'dir.1']].map(([k, l]) => `<button data-od="${k}" aria-pressed="${od === k}">${t(l)}</button>`).join('')}</div></div>
       <div class="chart" id="chStack" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}${lines.length ? `<span><i class="dash"></i>${esc(lines[0].name)}</span>` : ''}</div></div>
-    ${fd ? findingsPanel(fd) : ''}
     ${panel('c6', t('ov.dir'), '', '<div class="donut" id="dDir"></div>')}
     ${panel('c6', t('ov.proto'), '', '<div class="donut" id="dProto"></div>')}
     ${panel('c6', t('ov.top_clients'), t('ov.top_clients_sub'), `<table><tr><th></th><th>${t('col.client')}</th><th class="num">${t('col.traffic')}</th><th style="width:34%">${t('col.share')}</th></tr>
       ${cl.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
     ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
       ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
+    ${fd ? findingsPanel(fd) : ''}
   </div>`;
   tsChart($('#chStack'), {times: series.times, areas, lines});
+  el.querySelectorAll('[data-od]').forEach(b => b.onclick = () => { state.od = b.dataset.od; render(); });
   bindFindings(el);
   donut($('#dDir'), dirParts, 'dir');
   donut($('#dProto'), protoParts, 'proto');

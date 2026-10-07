@@ -586,7 +586,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		names[ip] = n
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"version": s.Version, "now": time.Now().UnixMilli(), "license": s.licenseState(), "demo": s.Demo, "uptime": int64(time.Since(s.Started).Seconds()),
+		"version": s.Version, "now": time.Now().UnixMilli(), "license": s.licenseState(), "settle_s": store.Settle().Seconds(), "demo": s.Demo, "uptime": int64(time.Since(s.Started).Seconds()),
 		"records_per_sec": rec, "rows_per_sec": rows, "dropped": s.Pipe.Dropped.Load(), "dup_rows": s.Pipe.DupRows.Load(), "dedup_full": s.Pipe.DedupFull.Load(),
 		"write_errors": s.Pipe.WriteErrs.Load(), "last_error": s.Pipe.LastError(),
 		"disk_bytes": u.DiskBytes, "disk_free": free, "disk_need": need, "retention_days": s.Store.RetentionDays(), "oldest": u.Oldest.UnixMilli(),

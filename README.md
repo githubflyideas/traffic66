@@ -672,7 +672,7 @@ Pages:
 
 | Page | What it answers |
 |---|---|
-| Overview | How much traffic now, by application, compared with the same time yesterday (ranges up to a day), last week (up to a week) or the days before (longer ranges), when there is data then; open findings; direction and protocol; top clients and services |
+| Overview | How much traffic now, by application (**Total**, or only **Inbound** or **Outbound** traffic of your networks), compared with the same time yesterday (ranges up to a day), last week (up to a week) or the days before (longer ranges), when there is data then; open findings; direction and protocol; top clients and services |
 | Top 66 | Opens on **Table**, one table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN. **Talkers** shows the top 30 clients and servers side by side with traffic, packets and flow records, above a row for all traffic |
 | Traffic details | Two ring charts. **Servers and clients**: the inner ring is the 8 busiest servers, the outer ring the clients of each; **Clients inside** turns it round (clients inside, the servers each uses outside), since one side often explains more than the other. **Services**: one ring of the busiest services. Point at a segment for its traffic; click it like any value |
 | Flow paths | Which host uses which application towards which country: the 8 busiest hosts, the rest as Other. **Client → server** shows client → service → server; **By network** shows networks instead of hosts. Long names are shortened to 22 characters; point at one for the full name |
@@ -712,6 +712,10 @@ Other; the legend gives each value's total and can be clicked like any
 other value. Charts of clients and servers leave the rest out of the
 drawing, since with thousands of hosts it would flatten the top 8; the
 legend still gives its total.
+
+Charts end where the data is complete: with sFlow at the current minute,
+with NetFlow and IPFIX a little earlier, by as long as the devices take to
+export their flows (traffic66 measures this; at most 2 minutes).
 
 Ranges longer than 6 hours start on a whole hour, so every number on the
 page counts exactly the same time: "24 hours" covers the last 24 whole

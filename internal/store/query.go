@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -446,25 +447,53 @@ type Series struct {
 	Distinct int       `json:"distinct,omitempty"`
 }
 
-// StepFor picks a bucket size giving at most ~300 points.
-// settle is how long flows of a minute keep arriving after it: export
-// intervals, active timeouts and batching.
-const settle = time.Minute
+// settle is how long the data of a moment keeps arriving after it. The
+// pipeline measures it from the flows themselves: about a second for sFlow,
+// up to the active timeout for NetFlow and IPFIX (capped at 2 minutes).
+var settleNs atomic.Int64
 
-// bucketCount is the number of buckets to draw from start to to. When the
-// range ends now, short buckets (up to 15 minutes) that are not complete
-// yet are left out: drawn, they would show a drop that is only data still
-// on its way. Longer buckets stay, averaged over the time they cover.
+func init() { settleNs.Store(int64(time.Minute)) }
+
+// SetSettle records the current delay of incoming data.
+func SetSettle(d time.Duration) { settleNs.Store(int64(d)) }
+
+// Settle is the current delay of incoming data.
+func Settle() time.Duration { return time.Duration(settleNs.Load()) }
+
+// liveTo moves the end of a range that ends now back to where the data is
+// complete, so charts stop there instead of dropping. Rows are kept per
+// minute: with data that arrives at once (sFlow) the current minute is read
+// as far as it goes; with delayed data (NetFlow, IPFIX) only the minutes
+// that are complete. Summaries are written once a minute, a minute later.
+func liveTo(to time.Time, rollup bool) time.Time {
+	now, s := time.Now(), Settle()
+	if rollup {
+		s += time.Minute
+	}
+	if now.Sub(to) > s+2*time.Minute {
+		return to // a range in the past
+	}
+	e := now
+	if s > 5*time.Second {
+		e = now.Add(-s).Truncate(time.Minute)
+	}
+	if e.Before(to) {
+		return e
+	}
+	return to
+}
+
+// bucketCount is the number of buckets from start up to to; a last bucket
+// that would cover less than 15 seconds is left out.
 func bucketCount(start, to time.Time, step time.Duration) int {
 	n := int(to.Sub(start)/step) + 1
-	if step <= 15*time.Minute && time.Since(to) < settle {
-		for n > 1 && start.Add(time.Duration(n)*step).After(time.Now().Add(-settle)) {
-			n--
-		}
+	if n > 1 && to.Sub(start.Add(time.Duration(n-1)*step)) < 15*time.Second {
+		n--
 	}
 	return n
 }
 
+// StepFor picks a bucket size giving at most ~300 points.
 func StepFor(span time.Duration) time.Duration {
 	for _, s := range []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute, time.Hour, 3 * time.Hour, 6 * time.Hour, 24 * time.Hour} {
 		if span/s <= 300 {
@@ -478,6 +507,7 @@ func StepFor(span time.Duration) time.Duration {
 func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 	step := StepFor(q.span())
 	q.From = q.From.UTC().Truncate(step)
+	q.To = liveTo(q.To, q.usesRollup())
 	var rows *sql.Rows
 	var err error
 	bucket := fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts)", int64(step.Seconds()))

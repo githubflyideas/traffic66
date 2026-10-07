@@ -493,5 +493,9 @@
 "theme.black": "Hitam",
 "theme.teal": "Hijau toska",
 "theme.orange": "Jingga",
-"theme.next": "klik untuk tema berikutnya"
+"theme.next": "klik untuk tema berikutnya",
+"ov.dir_total": "Total",
+"ov.bw_all": "Bandwidth (masuk + keluar), per aplikasi",
+"ov.bw_in": "Bandwidth masuk, per aplikasi",
+"ov.bw_out": "Bandwidth keluar, per aplikasi"
 }

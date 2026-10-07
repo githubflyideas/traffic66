@@ -1,10 +1,12 @@
 :root{
-  /* Light (default): iOS system grey background, white cards, the side menu one step darker */
+  /* Light (default): white pages and cards (one colour, cards set off by a
+     thin line), the side menu one step darker. Every theme but Black keeps
+     the page and the cards the same colour. */
   color-scheme:light;
-  --bg:#f2f2f7; --surface:#ffffff; --surface-2:#f2f2f7; --line:#e5e5ea; --line-2:#d1d1d6;
+  --bg:#ffffff; --surface:#ffffff; --surface-2:#f2f2f7; --line:#e3e3e8; --line-2:#d1d1d6;
   --ink:#1c1c1e; --ink-2:#48484a; --ink-3:#6e6e73;
   --accent:#007aff; --accent-soft:#e3efff; --accent-ink:#0062cc; --on-accent:#ffffff;
-  --side:#e4e4ea; --side-hover:#d6d6dc; --side-line:#d1d1d6;
+  --side:#e9e9ee; --side-hover:#dcdce2; --side-line:#d8d8de;
   --c1:#007aff; --c2:#ff9500; --c3:#34c759; --c4:#e6b000; --c5:#ff2d55; --c6:#248a3d; --c7:#5856d6; --c8:#ff3b30; --other:#c7c7cc; --map-none:#e5e5ea;
   --m1:#cfe3ff; --m2:#8cbcff; --m3:#3d8eff; --m4:#0062cc; --m5:#003a7a;
   --base:#8e8e93;
@@ -14,10 +16,10 @@
 }
 /* Grey: graphite, a muted accent, for long sessions */
 :root[data-theme=gray]{
-  --bg:#d9dade; --surface:#f4f4f6; --surface-2:#e6e7ea; --line:#cacbd0; --line-2:#b3b4ba;
+  --bg:#e8e9ec; --surface:#e8e9ec; --surface-2:#dcdde1; --line:#c9cacf; --line-2:#b3b4ba;
   --ink:#1c1c1e; --ink-2:#3a3a3c; --ink-3:#5c5c61;
   --accent:#4a5160; --accent-soft:#dcdde2; --accent-ink:#2c313b;
-  --side:#c3c4ca; --side-hover:#b3b4bb; --side-line:#adaeb5;
+  --side:#cfd0d5; --side-hover:#c1c2c8; --side-line:#bbbcc2;
   --c1:#3a7bd5; --c2:#e08a2e; --c3:#3fa66b; --c4:#c9a227; --c5:#d4567a; --c6:#2f7d4f; --c7:#6a62c7; --c8:#d2463d; --other:#aeaeb2; --map-none:#e6e7ea;
   --m1:#d5dbe5; --m2:#a6b4c8; --m3:#6f86a6; --m4:#465d80; --m5:#26364f;
   --sb-bg:#ece4d6; --sb-line:#cbb48c;
@@ -38,17 +40,17 @@
 }
 /* Teal: light, with iOS teal for the accent and a teal-tinted side menu */
 :root[data-theme=teal]{
-  --bg:#edf5f6; --surface:#ffffff; --surface-2:#e9f3f4; --line:#d6e6e8; --line-2:#bcd6d9;
+  --bg:#eaf5f6; --surface:#eaf5f6; --surface-2:#dcedef; --line:#c6dfe2; --line-2:#aacfd3;
   --accent:#0e8a9d; --accent-soft:#d9f0f3; --accent-ink:#0a6a79;
-  --side:#cfe6e9; --side-hover:#bcdcdf; --side-line:#b6d4d8;
+  --side:#cde5e8; --side-hover:#bcdbdf; --side-line:#b4d3d7;
   --c1:#0e8a9d; --c2:#ff9500; --c3:#34c759; --c4:#e6b000; --c5:#ff2d55; --c6:#007aff; --c7:#5856d6; --c8:#ff3b30;
   --m1:#d3eef1; --m2:#8fd2db; --m3:#3fb0c0; --m4:#0e8a9d; --m5:#07505b;
 }
 /* Orange: warm light, with iOS orange for the accent and a warm side menu */
 :root[data-theme=orange]{
-  --bg:#faf4ec; --surface:#ffffff; --surface-2:#f7eee2; --line:#eedfcc; --line-2:#e0c8a8;
+  --bg:#fcf4ea; --surface:#fcf4ea; --surface-2:#f5e8d6; --line:#ead7bd; --line-2:#dcc19c;
   --accent:#d96a00; --accent-soft:#fde9d3; --accent-ink:#a34f00;
-  --side:#f2dfc6; --side-hover:#ead0ae; --side-line:#e3c8a4;
+  --side:#f1ddc2; --side-hover:#e9cfac; --side-line:#e2c7a2;
   --c1:#e07000; --c2:#007aff; --c3:#34c759; --c4:#c9a000; --c5:#ff2d55; --c6:#248a3d; --c7:#5856d6; --c8:#c62828;
   --m1:#fde3c4; --m2:#f9b56a; --m3:#ef8a1f; --m4:#c45f00; --m5:#7a3a00;
   --sb-bg:#fff0dc;

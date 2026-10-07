@@ -3,6 +3,23 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.0.4
+
+Pages
+- Overview: **Total**, **Inbound** and **Outbound** above the bandwidth
+  chart; the title says which (total is inbound plus outbound, so it is the
+  sum of an uplink's two directions on Interface check). The numbers above
+  follow the choice.
+- Findings are at the foot of the overview.
+- Themes: the pages and the cards are one colour (white, grey, teal or
+  cream), set off by thin lines; Black stays as it was.
+
+Fixes
+- Charts lagged 2 to 4 minutes behind the clock. They now end where the
+  data is complete, measured from the flows: with sFlow at the current
+  minute, with NetFlow and IPFIX as long as the devices take to export
+  (at most 2 minutes).
+
 ## 1.0.3
 
 Pages

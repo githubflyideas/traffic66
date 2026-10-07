@@ -493,5 +493,9 @@
 "theme.black": "Noir",
 "theme.teal": "Sarcelle",
 "theme.orange": "Orange",
-"theme.next": "cliquer pour le thème suivant"
+"theme.next": "cliquer pour le thème suivant",
+"ov.dir_total": "Total",
+"ov.bw_all": "Bande passante (entrant + sortant), par application",
+"ov.bw_in": "Bande passante entrante, par application",
+"ov.bw_out": "Bande passante sortante, par application"
 }
