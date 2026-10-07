@@ -161,6 +161,7 @@ function readHash() {
   state.ra = p.get('ra') === 'client' ? 'client' : 'server';
   state.ds = p.get('ds') === 'sb' ? 'sb' : '';
   state.rl = p.get('live') === '1';
+  if (p.get('if')) state.ifv = p.get('if');
   const dd = p.get('d'); if (dd && dd.includes(':')) state.det = {f: dd.slice(0, dd.indexOf(':')), v: dd.slice(dd.indexOf(':') + 1)};
   state.f = (p.get('f') || '').split(',').filter(Boolean).map(s => {
     const neg = s[0] === '!'; if (neg) s = s.slice(1);
@@ -175,6 +176,7 @@ function writeHash(push) {
   if (state.v === 'topn') { if (state.tm === 'talkers') p.set('tm', 'talkers'); else p.set('dim', state.dim); }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
   if (state.v === 'records' && state.rl) p.set('live', '1');
+  if (state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state.v)) p.set('if', state.ifv);
   if (state.v === 'traffic') { if (state.ra === 'client') p.set('ra', 'client'); }
   if (state.v === 'detail' && state.det) p.set('d', state.det.f + ':' + state.det.v);
   if (state.f.length) p.set('f', state.f.map(x => (x.neg ? '!' : '') + encodeURIComponent(x.f) + ':' + encodeURIComponent(x.v)).join(','));
@@ -193,9 +195,39 @@ function tickClock() {
   try { $('#clock').textContent = new Intl.DateTimeFormat(LANG, {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(Date.now() + clockSkew)); } catch (e) {}
 }
 setInterval(tickClock, 1000);
+// The interface picked at the top (or the one marked default) limits the
+// traffic pages to the flows through it; findings, threat intel, interface
+// check and settings stay as they are.
+const IFV_VIEWS = new Set(['overview', 'topn', 'traffic', 'sankey', 'geo', 'records', 'detail']);
+const IFV_DATA = new Set(['overview', 'topn', 'series', 'sankey', 'records', 'rings', 'geolines']);
+const ifScoped = path => state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state.v) && IFV_DATA.has(path) && !inSB();
+let ifList = null, ifListKey = '';
+// the interfaces of the range (busiest first) and the default one, cached a minute
+async function loadIfaces() {
+  const k = state.r + (state.r === 'custom' ? state.cf + '-' + state.ct : '') + Math.floor(Date.now() / 6e4);
+  if (ifList && ifListKey === k) return ifList;
+  try { ifList = await api('ifaces'); ifListKey = k; } catch (e) { ifList = ifList || {ifaces: []}; }
+  return ifList;
+}
+async function renderIfsel() {
+  const w = $('#ifselWrap'), show = IFV_VIEWS.has(state.v) && !inSB() && !offlineMode;
+  w.hidden = !show;
+  if (!show) return;
+  const d = await loadIfaces(), list = d.ifaces || [];
+  if (state.ifv === undefined) state.ifv = d.default || 'all';
+  const key = f => f.exporter + '/' + f.ifindex;
+  const opts = [['all', t('if.all')], ...list.map(f => [key(f), (f.default ? '★ ' : '') + ifName(f) + (f.tag ? ' [' + f.tag + ']' : ''), (f.device || f.exporter) + ' · ' + f.ifindex])];
+  if (state.ifv !== 'all' && !list.some(f => key(f) === state.ifv)) opts.push([state.ifv, state.ifv]);
+  const sel = $('#ifsel');
+  sel.innerHTML = opts.map(([v, l, tt]) => `<option value="${esc(v)}"${tt ? ` title="${esc(tt)}"` : ''}>${esc(l)}</option>`).join('');
+  sel.value = state.ifv;
+  sel.classList.toggle('on', state.ifv !== 'all');
+  sel.title = sel.selectedOptions[0]?.title || '';
+}
 async function api(path, extra = {}, filters = state.f) {
   if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
   const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : extra.range ? extra : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
+  if (ifScoped(path) && !filters.some(x => x.f === 'iface')) filters = [...filters, {f: 'iface', v: state.ifv, neg: false}];
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
   const res = await fetch('/api/' + path + '?' + p);
   if (res.status === 401) { showLogin(); throw new Error('login'); }
@@ -501,7 +533,12 @@ const baseText = (d, kind) => {
 views.overview = async (el) => {
   // total, or only inbound or only outbound traffic (direction from your networks' point of view)
   const od = ['inbound', 'outbound'].includes(state.od) ? state.od : '';
-  const [d, ifs, fd] = await Promise.all([api('overview', {}, od ? [...state.f, {f: 'dir', v: od, neg: false}] : state.f), api('ifaces').catch(() => null), api('findings', {limit: 3}).catch(() => null)]);
+  const [d, ifs, fd] = await Promise.all([api('overview', {}, od ? [...state.f, {f: 'dir', v: od, neg: false}] : state.f), inSB() ? null : loadIfaces(), api('findings', {limit: 3}).catch(() => null)]);
+  // the interface chart: the interface picked at the top, else the default, else the busiest
+  const ifl = ifs?.ifaces || [], ikey = f => f.exporter + '/' + f.ifindex;
+  const ifk = state.ifv && state.ifv !== 'all' ? state.ifv : (ifs?.default || (ifl[0] ? ikey(ifl[0]) : ''));
+  const ifSel = ifl.find(f => ikey(f) === ifk);
+  const [iIn, iOut] = ifk && !inSB() ? await Promise.all(['if_in', 'if_out'].map(by => api('series', {by, measure: 'wire', top: 20, dup: 1}, [...state.f, {f: 'iface', v: ifk, neg: false}]).catch(() => null))) : [null, null];
   const tot = d.totals, base = d.base_totals, basis = d.basis;
   const change = basis && base.wire > 0 ? (tot.wire - base.wire) / base.wire : null;
   // accuracy: worst interface deviation relative to its statistical error
@@ -529,6 +566,9 @@ views.overview = async (el) => {
       <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.accuracy')}</div><div class="n">${acc.n}</div><div class="d">${acc.kind ? status(acc.kind, acc.d) : `<span class="muted">${esc(acc.d)}</span>`}</div></div>
     </div></div>
+    ${iIn ? `<div class="panel c12"><div class="ph"><h2>${t('if.bw')} · ${esc(ifSel ? ifName(ifSel) : ifk)}${ifSel?.tag ? `<span class="iftag">${esc(ifSel.tag)}</span>` : ''}</h2><span class="sub">${esc(t('ov.if_sub'))}</span></div>
+      <div class="chart" id="chIf" style="height:220px" aria-label="${esc(t('if.bw'))}"></div>
+      <div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div></div>` : ''}
     <div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[od])}</h2><span class="sub">${lines.length ? esc(baseText(d, 'sub')) : ''}</span>
       <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'dir.2'], ['outbound', 'dir.1']].map(([k, l]) => `<button data-od="${k}" aria-pressed="${od === k}">${t(l)}</button>`).join('')}</div></div>
       <div class="chart" id="chStack" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
@@ -542,6 +582,10 @@ views.overview = async (el) => {
     ${fd ? findingsPanel(fd) : ''}
   </div>`;
   tsChart($('#chStack'), {times: series.times, areas, lines});
+  if (iIn) {
+    const pk = s => { const i = (s?.names || []).indexOf(ifk); return i < 0 ? (s?.times || []).map(() => 0) : s.values[i]; };
+    tsChart($('#chIf'), {times: iIn.times, lines: [{name: t('if.in'), color: IF_IN, data: pk(iIn), fill: true}, {name: t('if.out'), color: IF_OUT, data: pk(iOut), fill: true}]});
+  }
   el.querySelectorAll('[data-od]').forEach(b => b.onclick = () => { state.od = b.dataset.od; render(); });
   bindFindings(el);
   donut($('#dDir'), dirParts, 'dir');
@@ -1245,7 +1289,7 @@ views.ifaces = async (el) => {
   (d.ifaces || []).forEach(f => ifaceNames.set(f.exporter + '/' + f.ifindex, ifName(f) + ' · ' + (f.device || f.exporter)));
   const list = (d.ifaces || []).slice().sort((a, b) => (!!b.has_counters - !!a.has_counters) || ((devKind(b) === 'warn') - (devKind(a) === 'warn')));
   if (!list.length) { el.innerHTML = `<div class="panel"><div class="empty">${t('empty.nodata')}</div></div>`; return; }
-  if (!state.ifc || !list.some(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex)) state.ifc = {exporter: list[0].exporter, ifindex: list[0].ifindex};
+  if (!state.ifc || !list.some(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex)) { const d = list.find(f => f.default) || list[0]; state.ifc = {exporter: d.exporter, ifindex: d.ifindex}; }
   const key = state.ifc.exporter + '/' + state.ifc.ifindex, sel = list.find(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex);
   // one device's interface: count everything it saw, also traffic another device reported too
   const fil = [...state.f, {f: 'iface', v: key, neg: false}];
@@ -1256,12 +1300,14 @@ views.ifaces = async (el) => {
   const r = rc.recon || {}, ctr = !!r.has_counters;
   const leg = withCtr => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span>${withCtr ? `<span><i class="line dash" style="border-top:2px dashed var(--ink-2);background:none"></i>${t('if.counter')}</span>` : ''}</div>`;
   el.innerHTML = `<div class="grid" style="margin-bottom:16px">
-    ${panel('c6', `${esc(name)} · ${t('ch.bps')}`, '', `<div class="chart" id="ifB" style="height:220px" aria-label="${esc(t('ch.bps'))}"></div>${leg(ctr)}`)}
-    ${panel('c6', `${esc(name)} · ${t('ch.pps')}`, '', `<div class="chart" id="ifP" style="height:220px" aria-label="${esc(t('ch.pps'))}"></div>${leg(false)}`)}</div>
+    ${panel('c12', `${esc(name)} · ${t('ch.bps')}`, '', `<div class="chart" id="ifB" style="height:270px" aria-label="${esc(t('ch.bps'))}"></div>${leg(ctr)}`)}
+    ${panel('c12', `${esc(name)} · ${t('ch.pps')}`, '', `<div class="chart" id="ifP" style="height:270px" aria-label="${esc(t('ch.pps'))}"></div>${leg(false)}`)}</div>
     <div class="grid">
     ${panel('c4', t('if.title'), t('if.sub'), `<div class="iflist">${list.map(f => {
-      const k = devKind(f), cur = f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex;
-      return `<button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>`;
+      const k = devKind(f), cur = f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex, id = esc(f.exporter + '/' + f.ifindex);
+      return `<div class="ifrow"><button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}${f.tag ? `<span class="iftag">${esc(f.tag)}</span>` : ''}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>
+        <button class="ifstar ${f.default ? 'on' : ''}" data-star="${id}" title="${esc(t(f.default ? 'if.is_default' : 'if.set_default'))}" aria-label="${esc(t('if.set_default'))}">${f.default ? '★' : '☆'}</button><button class="ifedit" data-edit="${id}" title="${esc(t('if.rename'))}" aria-label="${esc(t('if.rename'))}">✎</button></div>
+        <form class="ifform" data-form="${id}" hidden><input name="name" value="${esc(f.name || '')}" placeholder="${esc(t('if.name_ph'))}"><input name="tag" value="${esc(f.tag || '')}" placeholder="${esc(t('if.tag_ph'))}"><button class="btn primary" type="submit">${t('if.save')}</button><button class="btn" type="button" data-cancel>${t('nm.cancel')}</button></form>`;
     }).join('')}</div>`)}
     <div class="panel c8" id="recon"></div></div>`;
   // the device counters as dashed lines over the flow estimate: each counter
@@ -1272,7 +1318,21 @@ views.ifaces = async (el) => {
     {name: t('if.out') + ' · ' + t('if.counter'), color: IF_OUT, dash: true, data: onTimes(ri.times, r.out_counter)});
   tsChart($('#ifB'), {times: ri.times, lines: lb});
   tsChart($('#ifP'), {times: pi.times, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
-  el.querySelectorAll('.iflist button').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
+  el.querySelectorAll('.iflist button[data-e]').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
+  // name, tag and default: written to the names (iface line) at once
+  const saveIf = async (id, body) => {
+    const [exporter, idx] = [id.slice(0, id.lastIndexOf('/')), +id.slice(id.lastIndexOf('/') + 1)];
+    const res = await fetch('/api/iface', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({exporter, ifindex: idx, ...body})});
+    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || res.statusText); return; }
+    ifList = null; render();
+  };
+  const ifOf = id => list.find(f => f.exporter + '/' + f.ifindex === id) || {};
+  el.querySelectorAll('[data-star]').forEach(b => b.onclick = () => { const f = ifOf(b.dataset.star); saveIf(b.dataset.star, {name: f.name || '', tag: f.tag || '', default: !f.default}); });
+  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { const fm = el.querySelector(`[data-form="${b.dataset.edit}"]`); fm.hidden = !fm.hidden; if (!fm.hidden) fm.name.focus(); });
+  el.querySelectorAll('[data-form]').forEach(fm => {
+    fm.querySelector('[data-cancel]').onclick = () => { fm.hidden = true; };
+    fm.onsubmit = e => { e.preventDefault(); const f = ifOf(fm.dataset.form); saveIf(fm.dataset.form, {name: fm.name.value, tag: fm.tag.value, default: !!f.default}); };
+  });
 
   const vin = ifVerdict(r, rc, true), vout = ifVerdict(r, rc, false);
   const head = v => ctr ? t('if.dev', {v: fmtPct(v.dev)}) : '—';
@@ -1554,6 +1614,8 @@ async function render(push) {
   document.title = t('nav.' + state.v) + ' · traffic66';
   document.querySelectorAll('#nav button').forEach(b => b.dataset.v === state.v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   renderRange();
+  await renderIfsel();
+  writeHash(false);
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + state.v));
   const el = $('#v-' + state.v), seq = ++loadSeq;
   try {
@@ -1636,6 +1698,7 @@ async function init() {
   const lang = pickLang();
   await loadLang(lang);
   $('#lang').value = lang;
+  $('#ifsel').onchange = () => { state.ifv = $('#ifsel').value; render(); };
   $('#theme').onclick = () => { if (window.t66Theme) t66Theme.next(); themeLabel(); render(); };
   $('#lang').onchange = async () => {
     await loadLang($('#lang').value);

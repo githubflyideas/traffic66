@@ -517,10 +517,16 @@ If a device does not appear:
 Flow numbers are estimates: sampled packets times the sampling rate.
 traffic66 compares them with the device's own interface counters and shows
 the difference on **Interface check**, with the likely cause when it is
-larger than sampling alone explains. Each interface has a bits/s and a
-packets/s chart with ingress (green) and egress (blue); the device's own
-counters are dashed lines on the bits/s chart. Picking an interface in the
-list shows its charts.
+larger than sampling alone explains. Each interface has a full-width
+bits/s chart and, under it, a packets/s chart, with ingress (green) and
+egress (blue); the device's own counters are dashed lines on the bits/s
+chart. Picking an interface in the list shows its charts.
+
+Each row of the list has two buttons. **✎** gives the interface a name and
+a short tag (such as *uplink*), shown next to its name everywhere. **☆**
+makes it the default interface (**★**); there is one default. The pages
+then open on it (see the **Interface** choice under [Using the web UI](#9-using-the-web-ui)), and the overview shows its
+bandwidth. Both are saved at once to the `iface` line in Names.
 
 ![Interface check: traffic of every interface, and the flow estimate next to the device counter](docs/images/interfaces.png)
 
@@ -571,8 +577,9 @@ device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
 device 192.0.2.20    Edge router sampling=1000
 
-# interface names, by device address and ifIndex; speed in bits per second
-iface  192.0.2.1 3   ISP uplink speed=1000000000
+# interface names, by device address and ifIndex; speed in bits per second,
+# tag= a short tag, default = the interface the pages open on (one only)
+iface  192.0.2.1 3   ISP uplink speed=1000000000 tag=uplink default
 
 # host names shown instead of addresses
 host   10.10.3.27    Finance PC
@@ -674,7 +681,7 @@ Pages:
 
 | Page | What it answers |
 |---|---|
-| Overview | How much traffic now, by application (**Total**, or only **Inbound** or **Outbound** traffic of your networks), compared with the same time yesterday (ranges up to a day), last week (up to a week) or the days before (longer ranges), when there is data then; open findings; direction and protocol; top clients and services |
+| Overview | The bandwidth of the chosen interface (or the default, or else the busiest) in bits/s, ingress and egress as seen by the interface; how much traffic now, by application (**Total**, or only **Inbound** or **Outbound** traffic of your networks), compared with the same time yesterday (ranges up to a day), last week (up to a week) or the days before (longer ranges), when there is data then; open findings; direction and protocol; top clients and services |
 | Top 66 | Opens on **Table**, one table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN. **Talkers** shows the top 30 clients and servers side by side with traffic, packets and flow records, above a row for all traffic |
 | Traffic details | Two ring charts. **Servers and clients**: the inner ring is the 8 busiest servers, the outer ring the clients of each; **Clients inside** turns it round (clients inside, the servers each uses outside), since one side often explains more than the other. **Services**: one ring of the busiest services. Point at a segment for its traffic; click it like any value |
 | Flow paths | Which host uses which application towards which country: the 8 busiest hosts, the rest as Other. **Client → server** shows client → service → server; **By network** shows networks instead of hosts. Long names are shortened to 22 characters; point at one for the full name |
@@ -682,7 +689,7 @@ Pages:
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
 | Geo & networks | A world map of traffic by country, with lines from your networks; the networks (AS) traffic came from and went to, over time in bits/s and packets/s; traffic by country and by network |
 | Settings | Devices, sampling, loss, collectors, SNMP, the countries and networks database, the logo, and **Names** |
-| Interface check | Traffic of every interface over time in bits/s and packets/s, ingress (green) and egress (blue), with the device counters as dashed lines; how far the flow numbers are from the counters, worst first, with reasons |
+| Interface check | Traffic of every interface over time in bits/s and, below, packets/s, ingress (green) and egress (blue), with the device counters as dashed lines; how far the flow numbers are from the counters, worst first, with reasons; a name, a tag and the default for each interface |
 | Flow records | How many flow records there were and when (a bar per interval), and the records themselves, newest first, page by page, with selectable columns. Opens on the last 15 minutes, updated every 5 seconds; opened from a value on another page (**Show its flow records**) it keeps that page's time range, and **Back to live** returns |
 | Data cleanup | Deletes data older than 120, 90, 60, 30 or 7 days, or all of it, with how much each frees ([more](#13-data-backup-upgrade-uninstall)) |
 | Offline pcap analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-pcap-analysis)) |
@@ -692,6 +699,16 @@ Traffic details, Flow paths, Interface check), security (Findings, Threat
 intel, Geo & networks), setup and data (Settings, Flow records, Data
 cleanup) and Offline pcap analysis. Under the logo are the version and the
 server's date and time.
+
+Above the traffic pages (Overview, Top 66, Traffic details, Flow paths,
+Geo & networks, Flow records and the detail of a value) is **Interface**:
+**All interfaces**, or one interface, so that these pages show only the
+traffic through it (in or out). It starts on the default interface (★,
+set on **Interface check**) and the choice is part of the link. Findings,
+Threat intel, Interface check and Settings always cover all traffic. For
+one interface over 7 or 30 days the pages read the flow records rather
+than the hourly and daily summaries, so they take longer and reach back
+as far as flow records are kept (30 days by default).
 
 Above the pages: time range (15 minutes to 30 days, or **Custom…** for any
 start and end, also further back than 30 days), automatic refresh every 30

@@ -500,5 +500,14 @@
 "ov.bw_out": "Ancho de banda saliente, por aplicación",
 "src.manual": "fijado a mano",
 "src.templates": "Plantillas recibidas (ids de campo; s = ámbito):",
-"src.stale": "Detenidos (el equipo ahora envía de otra forma):"
+"src.stale": "Detenidos (el equipo ahora envía de otra forma):",
+"if.picker": "Interfaz",
+"if.all": "Todas las interfaces",
+"if.set_default": "Predeterminar (las páginas abren en ella)",
+"if.is_default": "Predeterminada: las páginas abren en ella",
+"if.rename": "Nombre y etiqueta",
+"if.name_ph": "Nombre de la interfaz",
+"if.tag_ph": "Etiqueta, p. ej. uplink",
+"if.save": "Guardar",
+"ov.if_sub": "Entrada y salida de esta interfaz (sentido de la interfaz)"
 }

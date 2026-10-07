@@ -377,12 +377,14 @@ func (s *Server) ifaces(w http.ResponseWriter, r *http.Request) {
 	}
 	type item struct {
 		store.IfaceInfo
-		Name   string  `json:"name"`
-		Device string  `json:"device"`
-		InDev  float64 `json:"in_dev"`
-		OutDev float64 `json:"out_dev"`
-		Err    float64 `json:"stat_err"`
-		HasCtr bool    `json:"has_counters"`
+		Name    string  `json:"name"`
+		Tag     string  `json:"tag,omitempty"`
+		Default bool    `json:"default,omitempty"`
+		Device  string  `json:"device"`
+		InDev   float64 `json:"in_dev"`
+		OutDev  float64 `json:"out_dev"`
+		Err     float64 `json:"stat_err"`
+		HasCtr  bool    `json:"has_counters"`
 	}
 	var out []item
 	for i, f := range list {
@@ -393,7 +395,7 @@ func (s *Server) ifaces(w http.ResponseWriter, r *http.Request) {
 		if a, err := netip.ParseAddr(f.Exporter); err == nil {
 			it.Device = s.Inv.Device(a)
 			ifc := s.Inv.Iface(a, f.IfIndex)
-			it.Name = ifc.Name
+			it.Name, it.Tag, it.Default = ifc.Name, ifc.Tag, ifc.Default
 			if it.Speed == 0 {
 				it.Speed = ifc.Speed
 			}
@@ -405,7 +407,7 @@ func (s *Server) ifaces(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, it)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ifaces": out})
+	writeJSON(w, http.StatusOK, map[string]any{"ifaces": out, "default": s.Inv.DefaultIface()})
 }
 
 func (s *Server) recon(w http.ResponseWriter, r *http.Request) {
@@ -683,4 +685,29 @@ func (s *Server) licenseState() any {
 		return nil
 	}
 	return s.License.State()
+}
+
+// putIface names, tags or marks one interface as the default.
+func (s *Server) putIface(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Exporter string `json:"exporter"`
+		IfIndex  uint32 `json:"ifindex"`
+		Name     string `json:"name"`
+		Tag      string `json:"tag"`
+		Default  bool   `json:"default"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&in); err != nil {
+		fail(w, err)
+		return
+	}
+	a, err := netip.ParseAddr(in.Exporter)
+	if err != nil || in.IfIndex == 0 {
+		fail(w, errors.New("bad interface"))
+		return
+	}
+	if err := s.Inv.SetIface(a, in.IfIndex, in.Name, in.Tag, in.Default); err != nil {
+		fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"ok": "saved"})
 }

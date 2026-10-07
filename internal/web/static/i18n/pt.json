@@ -500,5 +500,14 @@
 "ov.bw_out": "Largura de banda de saída, por aplicação",
 "src.manual": "definido à mão",
 "src.templates": "Modelos recebidos (ids de campo; s = escopo):",
-"src.stale": "Parados (o equipamento agora envia de outra forma):"
+"src.stale": "Parados (o equipamento agora envia de outra forma):",
+"if.picker": "Interface",
+"if.all": "Todas as interfaces",
+"if.set_default": "Definir como padrão (as páginas abrem nela)",
+"if.is_default": "Padrão: as páginas abrem nela",
+"if.rename": "Nome e rótulo",
+"if.name_ph": "Nome da interface",
+"if.tag_ph": "Rótulo, ex. uplink",
+"if.save": "Salvar",
+"ov.if_sub": "Entrada e saída desta interface (sentido da interface)"
 }

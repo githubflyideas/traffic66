@@ -556,10 +556,17 @@ Angka flow adalah estimasi: jumlah paket sampel dikali sampling rate.
 traffic66 membandingkannya dengan counter interface milik perangkat dan
 menampilkan selisihnya di **Pencocokan antarmuka**, beserta kemungkinan
 penyebabnya bila selisih itu lebih besar daripada yang bisa dijelaskan oleh
-sampling saja. Setiap interface punya grafik bit/s dan grafik paket/s berisi
-ingress (hijau) dan egress (biru); counter milik perangkat sendiri berupa garis
-putus-putus di grafik bit/s. Memilih interface di daftar menampilkan
-grafiknya.
+sampling saja. Setiap interface punya grafik bit/s selebar halaman dan, di
+bawahnya, grafik paket/s, berisi ingress (hijau) dan egress (biru); counter
+milik perangkat sendiri berupa garis putus-putus di grafik bit/s. Memilih
+interface di daftar menampilkan grafiknya.
+
+Setiap baris daftar punya dua tombol. **✎** memberi interface sebuah nama
+dan label pendek (misalnya *uplink*), yang ditampilkan di samping namanya di
+mana-mana. **☆** menjadikannya interface bawaan (**★**); hanya ada satu
+bawaan. Halaman lalu dibuka pada interface itu (lihat pilihan **Antarmuka**
+di [Memakai antarmuka web](#9-using-the-web-ui)), dan Ringkasan menampilkan
+bandwidth-nya. Keduanya langsung disimpan ke baris `iface` di Nama.
 
 ![Pencocokan antarmuka: trafik setiap interface, dan estimasi flow di samping counter perangkat](images/interfaces.png)
 
@@ -614,8 +621,9 @@ device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
 device 192.0.2.20    Edge router sampling=1000
 
-# interface names, by device address and ifIndex; speed in bits per second
-iface  192.0.2.1 3   ISP uplink speed=1000000000
+# interface names, by device address and ifIndex; speed in bits per second,
+# tag= a short tag, default = the interface the pages open on (one only)
+iface  192.0.2.1 3   ISP uplink speed=1000000000 tag=uplink default
 
 # host names shown instead of addresses
 host   10.10.3.27    Finance PC
@@ -704,7 +712,7 @@ Halaman:
 
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
-| Ringkasan | Berapa trafik sekarang, per aplikasi (**Total**, atau hanya trafik **Masuk** atau **Keluar** dari jaringan Anda), dibanding waktu yang sama kemarin (rentang hingga satu hari), minggu lalu (hingga satu minggu), atau hari-hari sebelumnya (rentang lebih panjang), bila ada data saat itu; temuan terbuka; arah dan protokol; klien dan layanan teratas |
+| Ringkasan | Bandwidth interface yang dipilih (atau yang bawaan, atau kalau tidak ada, yang paling sibuk) dalam bit/s, ingress dan egress dilihat dari interface itu; berapa trafik sekarang, per aplikasi (**Total**, atau hanya trafik **Masuk** atau **Keluar** dari jaringan Anda), dibanding waktu yang sama kemarin (rentang hingga satu hari), minggu lalu (hingga satu minggu), atau hari-hari sebelumnya (rentang lebih panjang), bila ada data saat itu; temuan terbuka; arah dan protokol; klien dan layanan teratas |
 | Top 66 | Terbuka di **Tabel**, satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN. **Pihak teratas** menampilkan 30 klien dan server teratas berdampingan dengan trafik, paket, dan catatan flow, di atas satu baris untuk semua trafik |
 | Detail trafik | Dua diagram cincin. **Server dan klien**: cincin dalam berisi 8 server tersibuk, cincin luar klien masing-masing; **Klien di dalam** membaliknya (klien di dalam, server yang dipakai masing-masing di luar), karena sering satu sisi lebih menjelaskan daripada sisi lainnya. **Layanan**: satu cincin berisi layanan tersibuk. Arahkan kursor ke segmen untuk melihat trafiknya; klik seperti nilai mana pun |
 | Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 8 host tersibuk, sisanya sebagai Lainnya. **Klien → server** menampilkan klien → layanan → server; **Per segmen** menampilkan jaringan, bukan host. Nama panjang dipendekkan menjadi 22 karakter; arahkan kursor ke nama untuk melihatnya utuh |
@@ -712,7 +720,7 @@ Halaman:
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
 | Geografi & jaringan | Peta dunia trafik per negara, dengan garis dari jaringan Anda; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
 | Pengaturan | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
-| Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu dalam bit/s dan paket/s, ingress (hijau) dan egress (biru), dengan counter perangkat sebagai garis putus-putus; seberapa jauh angka flow dari counter, yang paling buruk di atas, beserta alasannya |
+| Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu dalam bit/s dan, di bawahnya, paket/s, ingress (hijau) dan egress (biru), dengan counter perangkat sebagai garis putus-putus; seberapa jauh angka flow dari counter, yang paling buruk di atas, beserta alasannya; nama, label, dan bawaan untuk setiap interface |
 | Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih. Terbuka pada 15 menit terakhir, diperbarui setiap 5 detik; bila dibuka dari sebuah nilai di halaman lain (**Lihat catatan flow-nya**), rentang waktu halaman itu dipertahankan, dan **Kembali ke waktu nyata** mengembalikannya |
 | Pembersihan data | Menghapus data yang lebih lama dari 120, 90, 60, 30, atau 7 hari, atau semuanya, beserta berapa banyak ruang yang dibebaskan masing-masing ([selengkapnya](#13-data-backup-upgrade-uninstall)) |
 | Analisis pcap offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-pcap-offline)) |
@@ -722,6 +730,17 @@ Detail trafik, Jalur trafik, Pencocokan antarmuka), keamanan (Temuan, Intel
 ancaman, Geografi & jaringan), pengaturan dan data (Pengaturan, Catatan flow,
 Pembersihan data), dan Analisis pcap offline. Di bawah logo ada versi serta
 tanggal dan jam server.
+
+Di atas halaman trafik (Ringkasan, Top 66, Detail trafik, Jalur trafik,
+Geografi & jaringan, Catatan flow, dan detail sebuah nilai) ada
+**Antarmuka**: **Semua antarmuka**, atau satu interface, sehingga halaman
+ini hanya menampilkan trafik yang melewatinya (masuk atau keluar). Awalnya
+berada di interface bawaan (★, diatur di **Pencocokan antarmuka**) dan
+pilihannya ikut tersimpan di tautan. Temuan, Intel ancaman, Pencocokan
+antarmuka, dan Pengaturan selalu mencakup semua trafik. Untuk satu
+interface selama 7 atau 30 hari, halaman membaca catatan flow, bukan
+ringkasan per jam dan per hari, sehingga lebih lama dan hanya menjangkau
+sejauh catatan flow disimpan (default 30 hari).
 
 Di atas halaman: rentang waktu (15 menit sampai 30 hari, atau **Kustom…**
 untuk awal dan akhir mana pun, juga lebih lama dari 30 hari ke belakang),

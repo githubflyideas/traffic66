@@ -556,10 +556,17 @@ Las cifras de flujo son estimaciones: paquetes muestreados por la tasa de
 muestreo. traffic66 las compara con los contadores de interfaz del propio
 equipo y muestra la diferencia en **Verificación de interfaces**, con la
 causa probable cuando es mayor de lo que explica el propio muestreo. Cada
-interfaz tiene un gráfico en bits/s y otro en paquetes/s con la entrada
-(verde) y la salida (azul); los contadores del propio equipo aparecen como
-líneas discontinuas en el gráfico de bits/s. Al elegir una interfaz en la
-lista se muestran sus gráficos.
+interfaz tiene un gráfico en bits/s a todo el ancho y, debajo, otro en
+paquetes/s, con la entrada (verde) y la salida (azul); los contadores del
+propio equipo aparecen como líneas discontinuas en el gráfico de bits/s. Al
+elegir una interfaz en la lista se muestran sus gráficos.
+
+Cada fila de la lista tiene dos botones. **✎** da a la interfaz un nombre y
+una etiqueta corta (como *uplink*), que aparece junto a su nombre en todas
+partes. **☆** la convierte en la interfaz predeterminada (**★**); solo hay
+una. Las páginas se abren entonces en ella (vea la opción **Interfaz** en
+[Uso de la interfaz web](#9-using-the-web-ui)), y el resumen muestra su
+ancho de banda. Ambos se guardan al momento en la línea `iface` de Nombres.
 
 ![Verificación de interfaces: tráfico de cada interfaz, y la estimación de flujos junto al contador del equipo](images/interfaces.png)
 
@@ -615,8 +622,9 @@ device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
 device 192.0.2.20    Edge router sampling=1000
 
-# interface names, by device address and ifIndex; speed in bits per second
-iface  192.0.2.1 3   ISP uplink speed=1000000000
+# interface names, by device address and ifIndex; speed in bits per second,
+# tag= a short tag, default = the interface the pages open on (one only)
+iface  192.0.2.1 3   ISP uplink speed=1000000000 tag=uplink default
 
 # host names shown instead of addresses
 host   10.10.3.27    Finance PC
@@ -707,7 +715,7 @@ Páginas:
 
 | Página | Qué responde |
 |---|---|
-| Resumen | Cuánto tráfico hay ahora, por aplicación (**Total**, o solo el tráfico **Entrante** o **Saliente** de sus redes), frente a la misma hora de ayer (periodos de hasta un día), la semana pasada (hasta una semana) o los días anteriores (periodos más largos), cuando hay datos de entonces; hallazgos abiertos; dirección y protocolo; principales clientes y servicios |
+| Resumen | El ancho de banda de la interfaz elegida (o de la predeterminada, o si no de la de más tráfico) en bits/s, entrada y salida vistas desde la interfaz; cuánto tráfico hay ahora, por aplicación (**Total**, o solo el tráfico **Entrante** o **Saliente** de sus redes), frente a la misma hora de ayer (periodos de hasta un día), la semana pasada (hasta una semana) o los días anteriores (periodos más largos), cuando hay datos de entonces; hallazgos abiertos; dirección y protocolo; principales clientes y servicios |
 | Top 66 | Se abre en **Tabla**, una sola tabla de los 66 primeros: por defecto, conversaciones (cliente, servidor, servicio, país). Cualquier encabezado ordena; las columnas numéricas (tráfico, paquetes, paquete medio, flujos) clasifican todo el tráfico del periodo, así el menor paquete medio revela escaneos e inundaciones. **Agrupar por** cambia a aplicaciones, redes, segmentos, equipos, encapsulación y VLAN. **Interlocutores principales** muestra los 30 primeros clientes y servidores lado a lado con tráfico, paquetes y registros de flujo, sobre una fila para todo el tráfico |
 | Detalles del tráfico | Dos gráficos de anillos. **Servidores y clientes**: el anillo interior son los 8 servidores con más tráfico, el exterior los clientes de cada uno; **Clientes dentro** le da la vuelta (clientes dentro, fuera los servidores que usa cada uno), ya que a menudo un lado explica más que el otro. **Servicios**: un anillo con los servicios con más tráfico. Al pasar el ratón sobre un segmento se ve su tráfico; se hace clic en él como en cualquier valor |
 | Rutas de tráfico | Qué host usa qué aplicación hacia qué país: los 8 hosts con más tráfico, el resto como Otros. **Cliente → servidor** muestra cliente → servicio → servidor; **Por segmento** muestra segmentos en lugar de hosts. Los nombres largos se acortan a 22 caracteres; al pasar el ratón se ve el nombre completo |
@@ -715,7 +723,7 @@ Páginas:
 | Inteligencia de amenazas | Hosts que hablaron con direcciones de sus listas de amenazas y cuánto enviaron |
 | Geografía y redes | Un mapa del mundo del tráfico por país, con líneas desde sus redes; las redes (AS) de las que vino y a las que fue el tráfico, en el tiempo en bits/s y paquetes/s; tráfico por país y por red |
 | Configuración | Equipos, muestreo, pérdidas, colectores, SNMP, la base de datos de países y redes, el logotipo y **Nombres** |
-| Verificación de interfaces | Tráfico de cada interfaz en el tiempo en bits/s y paquetes/s, entrada (verde) y salida (azul), con los contadores del equipo como líneas discontinuas; cuánto se alejan las cifras de flujo de los contadores, de peor a mejor, con motivos |
+| Verificación de interfaces | Tráfico de cada interfaz en el tiempo en bits/s y, debajo, paquetes/s, entrada (verde) y salida (azul), con los contadores del equipo como líneas discontinuas; cuánto se alejan las cifras de flujo de los contadores, de peor a mejor, con motivos; un nombre, una etiqueta y la predeterminada para cada interfaz |
 | Registros de flujo | Cuántos registros de flujo hubo y cuándo (una barra por intervalo), y los registros mismos, del más reciente al más antiguo, página a página, con columnas seleccionables. Se abre en los últimos 15 minutos, actualizados cada 5 segundos; abierta desde un valor de otra página (**Ver sus registros de flujo**) conserva el rango de tiempo de esa página, y **Volver a tiempo real** regresa |
 | Limpieza de datos | Borra los datos de más de 120, 90, 60, 30 o 7 días, o todos, indicando cuánto libera cada opción ([más](#13-data-backup-upgrade-uninstall)) |
 | Análisis offline de pcap | Capturas de paquetes (pcap, pcapng) analizadas aparte de los datos en vivo ([más](#análisis-offline-de-pcap)) |
@@ -726,6 +734,18 @@ interfaces), seguridad (Hallazgos, Inteligencia de amenazas, Geografía y
 redes), configuración y datos (Configuración, Registros de flujo, Limpieza
 de datos) y Análisis offline de pcap. Bajo el logotipo aparecen la versión y
 la fecha y hora del servidor.
+
+Encima de las páginas de tráfico (Resumen, Top 66, Detalles del tráfico,
+Rutas de tráfico, Geografía y redes, Registros de flujo y el detalle de un
+valor) está **Interfaz**: **Todas las interfaces**, o una interfaz, para que
+estas páginas muestren solo el tráfico que pasa por ella (de entrada o de
+salida). Empieza en la interfaz predeterminada (★, fijada en
+**Verificación de interfaces**) y la elección forma parte del enlace.
+Hallazgos, Inteligencia de amenazas, Verificación de interfaces y
+Configuración siempre abarcan todo el tráfico. Para una interfaz en 7 o 30
+días las páginas leen los registros de flujo en lugar de los resúmenes por
+hora y por día, así que tardan más y llegan hasta donde se conservan los
+registros de flujo (30 días por defecto).
 
 Encima de las páginas: rango de tiempo (de 15 minutos a 30 días, o
 **Personalizado…** para cualquier inicio y fin, también más allá de 30

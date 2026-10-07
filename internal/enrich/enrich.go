@@ -48,8 +48,10 @@ type Network struct {
 
 // Iface is a named interface of an exporter.
 type Iface struct {
-	Name  string
-	Speed uint64 // bits per second, 0 if unknown
+	Name    string
+	Speed   uint64 // bits per second, 0 if unknown
+	Tag     string // a short label such as "uplink" (tag=)
+	Default bool   // the interface the pages show by default (default)
 }
 
 // Inventory holds operator-provided names. All fields are optional.
@@ -193,6 +195,14 @@ func (inv *Inventory) Parse(text string) error {
 					it.Speed, _ = strconv.ParseUint(strings.TrimPrefix(w, "speed="), 10, 64)
 					continue
 				}
+				if strings.HasPrefix(w, "tag=") {
+					it.Tag = strings.TrimPrefix(w, "tag=")
+					continue
+				}
+				if w == "default" {
+					it.Default = true
+					continue
+				}
 				words = append(words, w)
 			}
 			it.Name = strings.Join(words, " ")
@@ -246,6 +256,80 @@ func (inv *Inventory) Save(text string) error {
 		return nil
 	}
 	return os.WriteFile(inv.path, []byte(text), 0o644)
+}
+
+// DefaultIface is the interface marked default, as "exporter/ifindex".
+func (inv *Inventory) DefaultIface() string {
+	inv.mu.RLock()
+	defer inv.mu.RUnlock()
+	for k, it := range inv.ifaces {
+		if it.Default {
+			return k
+		}
+	}
+	return ""
+}
+
+// SetIface names, tags or marks as default one interface, editing its
+// iface line in the names (or adding one). Only one interface is default.
+func (inv *Inventory) SetIface(exporter netip.Addr, idx uint32, name, tag string, def bool) error {
+	name = strings.Join(strings.Fields(name), " ")
+	tag = strings.Join(strings.Fields(tag), "_")
+	if name == "" {
+		name = fmt.Sprintf("#%d", idx)
+	}
+	lines := strings.Split(strings.TrimRight(inv.Text(), "\n"), "\n")
+	if len(lines) == 1 && lines[0] == "" {
+		lines = nil
+	}
+	isIface := func(f []string) bool {
+		return len(f) >= 3 && f[0] == "iface" && f[1] == exporter.String() && f[2] == strconv.FormatUint(uint64(idx), 10)
+	}
+	var speed string
+	out := make([]string, 0, len(lines)+1)
+	at := -1
+	for _, ln := range lines {
+		var f []string
+		if t := strings.TrimSpace(ln); !strings.HasPrefix(t, "#") {
+			f = strings.Fields(t)
+		}
+		if isIface(f) {
+			for _, w := range f[3:] {
+				if strings.HasPrefix(w, "speed=") {
+					speed = w
+				}
+			}
+			if at < 0 {
+				at = len(out)
+				out = append(out, "")
+			}
+			continue
+		}
+		if def && len(f) > 0 && f[0] == "iface" {
+			// only one default: take it off the other interfaces
+			if strings.Contains(" "+ln+" ", " default ") {
+				ln = strings.Replace(" "+ln+" ", " default ", " ", 1)
+				ln = strings.TrimSpace(ln)
+			}
+		}
+		out = append(out, ln)
+	}
+	line := fmt.Sprintf("iface %s %d %s", exporter, idx, name)
+	if speed != "" {
+		line += " " + speed
+	}
+	if tag != "" {
+		line += " tag=" + tag
+	}
+	if def {
+		line += " default"
+	}
+	if at < 0 {
+		out = append(out, line)
+	} else {
+		out[at] = line
+	}
+	return inv.Save(strings.Join(out, "\n") + "\n")
 }
 
 func (inv *Inventory) Text() string {

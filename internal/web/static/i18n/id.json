@@ -500,5 +500,14 @@
 "ov.bw_out": "Bandwidth keluar, per aplikasi",
 "src.manual": "diatur manual",
 "src.templates": "Template yang diterima (id field; s = scope):",
-"src.stale": "Berhenti (perangkat kini mengirim dengan cara lain):"
+"src.stale": "Berhenti (perangkat kini mengirim dengan cara lain):",
+"if.picker": "Antarmuka",
+"if.all": "Semua antarmuka",
+"if.set_default": "Jadikan bawaan (halaman dibuka di sini)",
+"if.is_default": "Bawaan: halaman dibuka di sini",
+"if.rename": "Nama dan label",
+"if.name_ph": "Nama antarmuka",
+"if.tag_ph": "Label, mis. uplink",
+"if.save": "Simpan",
+"ov.if_sub": "Masuk dan keluar antarmuka ini (arah antarmuka)"
 }

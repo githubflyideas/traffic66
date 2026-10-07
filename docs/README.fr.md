@@ -571,9 +571,18 @@ multipliés par le taux d'échantillonnage. traffic66 les compare aux
 compteurs d'interface de l'équipement et affiche l'écart dans
 **Contrôle des interfaces**, avec la cause probable quand il dépasse ce que
 l'échantillonnage seul explique. Chaque interface a un graphique en bits/s
-et un en paquets/s avec l'entrée (vert) et la sortie (bleu) ; les compteurs
-de l'équipement sont en pointillés sur le graphique en bits/s. Choisir une
-interface dans la liste affiche ses graphiques.
+sur toute la largeur et, en dessous, un en paquets/s, avec l'entrée (vert)
+et la sortie (bleu) ; les compteurs de l'équipement sont en pointillés sur
+le graphique en bits/s. Choisir une interface dans la liste affiche ses
+graphiques.
+
+Chaque ligne de la liste a deux boutons. **✎** donne à l'interface un nom
+et une courte étiquette (par exemple *uplink*), affichée partout à côté de
+son nom. **☆** en fait l'interface par défaut (**★**) ; il n'y en a
+qu'une. Les pages s'ouvrent alors sur elle (voir le choix **Interface**
+dans [Utiliser l'interface web](#9-using-the-web-ui)), et la vue
+d'ensemble affiche sa bande passante. Les deux sont enregistrés aussitôt
+dans la ligne `iface` de Noms.
 
 ![Contrôle des interfaces : trafic de chaque interface, et l'estimation des flux à côté du compteur de l'équipement](images/interfaces.png)
 
@@ -631,8 +640,9 @@ device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
 device 192.0.2.20    Edge router sampling=1000
 
-# interface names, by device address and ifIndex; speed in bits per second
-iface  192.0.2.1 3   ISP uplink speed=1000000000
+# interface names, by device address and ifIndex; speed in bits per second,
+# tag= a short tag, default = the interface the pages open on (one only)
+iface  192.0.2.1 3   ISP uplink speed=1000000000 tag=uplink default
 
 # host names shown instead of addresses
 host   10.10.3.27    Finance PC
@@ -725,7 +735,7 @@ Pages :
 
 | Page | À quoi elle répond |
 |---|---|
-| Vue d'ensemble | Combien de trafic maintenant, par application (**Total**, ou seulement le trafic **Entrant** ou **Sortant** de vos réseaux), par rapport à la même heure hier (périodes jusqu'à un jour), à la semaine dernière (jusqu'à une semaine) ou aux jours précédents (périodes plus longues), quand il y a des données à ce moment-là ; détections ouvertes ; sens et protocole ; principaux clients et services |
+| Vue d'ensemble | La bande passante de l'interface choisie (ou de celle par défaut, ou sinon de la plus chargée) en bits/s, entrée et sortie vues par l'interface ; combien de trafic maintenant, par application (**Total**, ou seulement le trafic **Entrant** ou **Sortant** de vos réseaux), par rapport à la même heure hier (périodes jusqu'à un jour), à la semaine dernière (jusqu'à une semaine) ou aux jours précédents (périodes plus longues), quand il y a des données à ce moment-là ; détections ouvertes ; sens et protocole ; principaux clients et services |
 | Top 66 | S'ouvre sur **Tableau**, un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN. **Interlocuteurs principaux** montre les 30 premiers clients et serveurs côte à côte avec trafic, paquets et enregistrements de flux, au-dessus d'une ligne pour tout le trafic |
 | Détails du trafic | Deux graphiques en anneaux. **Serveurs et clients** : l'anneau intérieur montre les 8 serveurs les plus actifs, l'anneau extérieur les clients de chacun ; **Clients au centre** inverse le tout (clients au centre, à l'extérieur les serveurs utilisés par chacun), car un côté en explique souvent plus que l'autre. **Services** : un seul anneau des services les plus chargés. Survolez un segment pour voir son trafic ; cliquez dessus comme sur n'importe quelle valeur |
 | Chemins du trafic | Quel hôte utilise quelle application vers quel pays : les 8 hôtes les plus actifs, le reste dans Autres. **Client → serveur** affiche client → service → serveur ; **Par segment** affiche les segments au lieu des hôtes. Les noms longs sont raccourcis à 22 caractères ; survolez-en un pour voir le nom complet |
@@ -733,7 +743,7 @@ Pages :
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
 | Géographie et réseaux | Une carte du monde du trafic par pays, avec des lignes depuis vos réseaux ; les réseaux (AS) d'où venait et où allait le trafic, dans le temps en bits/s et paquets/s ; trafic par pays et par réseau |
 | Paramètres | Équipements, échantillonnage, pertes, collecteurs, SNMP, la base de données pays et réseaux, le logo et **Noms** |
-| Contrôle des interfaces | Trafic de chaque interface dans le temps en bits/s et paquets/s, entrée (vert) et sortie (bleu), avec les compteurs de l'équipement en pointillés ; l'écart entre les chiffres de flux et les compteurs, les pires en premier, avec les causes |
+| Contrôle des interfaces | Trafic de chaque interface dans le temps en bits/s et, en dessous, en paquets/s, entrée (vert) et sortie (bleu), avec les compteurs de l'équipement en pointillés ; l'écart entre les chiffres de flux et les compteurs, les pires en premier, avec les causes ; un nom, une étiquette et l'interface par défaut pour chaque interface |
 | Enregistrements de flux | Combien d'enregistrements de flux il y a eu et quand (une barre par intervalle), et les enregistrements eux-mêmes, du plus récent au plus ancien, page par page, avec colonnes au choix. S'ouvre sur les 15 dernières minutes, mises à jour toutes les 5 secondes ; ouverte depuis une valeur d'une autre page (**Voir ses enregistrements de flux**), elle garde la plage de temps de cette page, et **Revenir au temps réel** y revient |
 | Nettoyage des données | Supprime les données de plus de 120, 90, 60, 30 ou 7 jours, ou toutes, en indiquant ce que chaque choix libère ([plus](#13-data-backup-upgrade-uninstall)) |
 | Analyse hors ligne de pcap | Captures de paquets (pcap, pcapng) analysées à part des données en direct ([plus](#analyse-hors-ligne-de-pcap)) |
@@ -744,6 +754,19 @@ interfaces), sécurité (Détections, Menaces, Géographie et réseaux),
 configuration et données (Paramètres, Enregistrements de flux, Nettoyage
 des données) et Analyse hors ligne de pcap. Sous le logo figurent la version
 ainsi que la date et l'heure du serveur.
+
+Au-dessus des pages de trafic (Vue d'ensemble, Top 66, Détails du trafic,
+Chemins du trafic, Géographie et réseaux, Enregistrements de flux et le
+détail d'une valeur) se trouve **Interface** : **Toutes les interfaces**,
+ou une seule interface, pour que ces pages ne montrent que le trafic qui
+la traverse (en entrée ou en sortie). Il démarre sur l'interface par
+défaut (★, définie dans **Contrôle des interfaces**) et le choix fait
+partie du lien. Détections, Menaces, Contrôle des interfaces et Paramètres
+couvrent toujours tout le trafic. Pour une interface sur 7 ou 30 jours,
+les pages lisent les enregistrements de flux plutôt que les résumés
+horaires et journaliers ; elles mettent donc plus de temps et remontent
+aussi loin que les enregistrements de flux sont conservés (30 jours par
+défaut).
 
 Au-dessus des pages : la plage de temps (de 15 minutes à 30 jours, ou
 **Personnalisé…** pour n'importe quels début et fin, y compris au-delà de

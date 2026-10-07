@@ -500,5 +500,14 @@
 "ov.bw_out": "出站带宽，按应用",
 "src.manual": "手动指定",
 "src.templates": "收到的模板（字段编号，s 表示作用域）：",
-"src.stale": "已停用（同一设备现在用别的方式在发）："
+"src.stale": "已停用（同一设备现在用别的方式在发）：",
+"if.picker": "接口",
+"if.all": "全部接口",
+"if.set_default": "设为默认（各页面默认看它）",
+"if.is_default": "默认接口：各页面默认看它",
+"if.rename": "命名和标识",
+"if.name_ph": "接口名称",
+"if.tag_ph": "标识，如 上联",
+"if.save": "保存",
+"ov.if_sub": "按接口方向：从这个口进 / 出"
 }
