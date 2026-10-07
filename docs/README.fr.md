@@ -625,9 +625,11 @@ fichier, et vous pouvez aussi l'éditer directement (voir
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1202,7 +1204,7 @@ lieu que la machine manque de mémoire.
 | Symptôme | Cause et solution |
 |---|---|
 | Équipement absent de **Paramètres** | Les paquets n'arrivent pas : voir [Vérifier que les flux arrivent](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | L'équipement n'a pas encore envoyé ses options de sampler ; la plupart les renvoient en quelques minutes. S'il ne le fait jamais, exportez-les (`option sampler-table` sur Cisco) ou marquez-le `unsampled` dans Noms s'il est réellement en 1:1 |
+| "waiting for the sampling rate" | L'équipement n'a pas encore envoyé ses options de sampler ; la plupart les renvoient en quelques minutes. S'il ne le fait jamais, exportez-les (`option sampler-table` sur Cisco) ou marquez-le `unsampled` dans Noms s'il est réellement en 1:1, ou indiquez son taux avec `sampling=N` sur sa ligne `device`. **Paramètres** liste alors les templates envoyés par l'équipement, pour voir ce qu'il déclare |
 | Chiffres inférieurs aux compteurs d'interface | Voir **Contrôle des interfaces** : pertes en route, interfaces non échantillonnées, ou flux encore dans le cache de l'équipement (timeout actif supérieur à 60 s) |
 | Chiffres supérieurs aux compteurs d'interface | Le même trafic est échantillonné sur deux interfaces ou deux équipements |
 | Pas de pays ni de réseaux ("Inconnu") | Aucune base de données chargée : importez-en une dans **Paramètres**, voir [Pays](#8-countries-networks-and-threat-lists) |

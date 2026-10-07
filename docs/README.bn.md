@@ -595,9 +595,11 @@ entry। **টেক্সট হিসেবে সম্পাদনা (উ�
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1123,7 +1125,7 @@ container-এর memory limit। `-memory`-র ভাগের প্রায�
 | লক্ষণ | কারণ ও সমাধান |
 |---|---|
 | ডিভাইস **সেটিংস**-এ নেই | packet পৌঁছাচ্ছে না: [flow পৌঁছাচ্ছে কি না দেখুন](#5-check-that-flows-arrive) দেখুন |
-| "waiting for the sampling rate" | ডিভাইস এখনও sampler options পাঠায়নি; বেশিরভাগই কয়েক মিনিটের মধ্যে আবার পাঠায়। কখনো না পাঠালে সেগুলো export করান (Cisco-তে `option sampler-table`) অথবা সত্যিই 1:1 হলে নাম-এ সেটিকে `unsampled` চিহ্নিত করুন |
+| "waiting for the sampling rate" | ডিভাইস এখনও sampler options পাঠায়নি; বেশিরভাগই কয়েক মিনিটের মধ্যে আবার পাঠায়। কখনো না পাঠালে সেগুলো export করান (Cisco-তে `option sampler-table`) অথবা সত্যিই 1:1 হলে নাম-এ সেটিকে `unsampled` চিহ্নিত করুন, অথবা তার `device` লাইনে `sampling=N` দিয়ে rate দিন। তারপর **সেটিংস**-এ ডিভাইসের পাঠানো template-গুলো দেখা যায়, যাতে বোঝা যায় সেটি কী ঘোষণা করছে |
 | সংখ্যা interface counter-এর চেয়ে কম | **ইন্টারফেস মিলানো** দেখুন: পথে loss, interface sample হচ্ছে না, অথবা flow এখনও ডিভাইসের cache-এ (active timeout 60 s-এর বেশি) |
 | সংখ্যা interface counter-এর চেয়ে বেশি | একই ট্রাফিক দুটি interface বা দুটি ডিভাইসে sample হচ্ছে |
 | কোনো দেশ বা নেটওয়ার্ক নেই ("অজানা") | কোনো database লোড করা নেই: **সেটিংস**-এ একটি আপলোড করুন, [দেশ](#8-countries-networks-and-threat-lists) দেখুন |

@@ -595,9 +595,11 @@ edit कर सकते हैं (`inventory.txt.example` देखें)। 
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1128,7 +1130,7 @@ restart हो जाता है।
 | लक्षण | कारण और समाधान |
 |---|---|
 | डिवाइस **सेटिंग्स** में नहीं है | Packets नहीं पहुँच रहे: [जाँचें कि flows पहुँच रहे हैं](#5-check-that-flows-arrive) देखें |
-| "waiting for the sampling rate" | डिवाइस ने अभी तक अपने sampler options नहीं भेजे; ज़्यादातर कुछ मिनटों में दोबारा भेज देते हैं। अगर कभी न भेजे, तो उन्हें export करवाएँ (Cisco पर `option sampler-table`) या अगर वह सच में 1:1 है तो नाम में उसे `unsampled` लिखें |
+| "waiting for the sampling rate" | डिवाइस ने अभी तक अपने sampler options नहीं भेजे; ज़्यादातर कुछ मिनटों में दोबारा भेज देते हैं। अगर कभी न भेजे, तो उन्हें export करवाएँ (Cisco पर `option sampler-table`) या अगर वह सच में 1:1 है तो नाम में उसे `unsampled` लिखें, या उसकी `device` line पर `sampling=N` से rate दें। फिर **सेटिंग्स** में डिवाइस द्वारा भेजे गए templates दिखते हैं, जिससे पता चलता है कि वह क्या घोषित करता है |
 | आँकड़े interface counters से कम | **इंटरफ़ेस मिलान** देखें: रास्ते में loss, interfaces sample नहीं हो रहे, या flows अभी डिवाइस के cache में हैं (active timeout 60 s से लंबा) |
 | आँकड़े interface counters से ज़्यादा | वही ट्रैफ़िक दो interfaces या दो डिवाइसों पर sample हो रहा है |
 | कोई देश या नेटवर्क नहीं ("अज्ञात") | कोई database लोड नहीं है: **सेटिंग्स** पर एक अपलोड करें, [देश](#8-countries-networks-and-threat-lists) देखें |

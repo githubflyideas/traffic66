@@ -488,9 +488,11 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -873,7 +875,7 @@ traffic66 は [PolyForm Noncommercial License 1.0.0](../LICENSE.md) と [Traffic
 | 症状 | 原因と対処 |
 |---|---|
 | **設定** に機器が表示されない | パケットが届いていません：[フローの受信を確認する](#5-check-that-flows-arrive) を参照 |
-| "waiting for the sampling rate" | 機器がまだサンプラーオプションを送っていません。多くの機器は数分以内に再送します。いつまでも送られない場合はエクスポートを設定する（Cisco では `option sampler-table`）か、本当に 1:1 なら名前で `unsampled` を付けます |
+| "waiting for the sampling rate" | 機器がまだサンプラーオプションを送っていません。多くの機器は数分以内に再送します。いつまでも送られない場合はエクスポートを設定する（Cisco では `option sampler-table`）か、本当に 1:1 なら名前で `unsampled` を付けるか、`device` 行に `sampling=N` でレートを指定します。その後 **設定** に機器が送ったテンプレートが一覧表示されるので、何を宣言しているか確認できます |
 | 数値がインターフェースカウンターより小さい | **インターフェース照合** を確認：途中でのロス、サンプリングされていないインターフェース、またはフローがまだ機器のキャッシュ内にある（アクティブタイムアウトが 60 秒より長い） |
 | 数値がインターフェースカウンターより大きい | 同じトラフィックを 2 つのインターフェースまたは 2 台の機器でサンプリングしています |
 | 国やネットワークが表示されない（"不明"） | データベースが読み込まれていません。**設定** でアップロードしてください：[国](#8-countries-networks-and-threat-lists) を参照 |

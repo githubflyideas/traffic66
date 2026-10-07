@@ -7,7 +7,8 @@ net 192.168.0.0/16 Office country=JP
 # country=XX (two letters) places a network on the world map: lines are drawn
 # from that country to the countries it talks to
 #
-# device <exporter address>  <name> [unsampled]
+# device <exporter address>  <name> [unsampled] [sampling=N]
+# (sampling=N: the device samples 1:N but does not declare it in its export)
 device 192.0.2.1 Core router
 #
 # iface  <exporter address> <ifIndex> <name> [speed=<bits per second>]

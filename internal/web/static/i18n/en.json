@@ -197,7 +197,7 @@
 "st.bad": "Not receiving",
 "issue.silent": "Nothing received for more than 2 minutes. Check the export destination on the device and that UDP is allowed through firewalls.",
 "issue.waiting_sampling": "Templates received but no sampling rate yet. {n} records are held and will be scaled when it arrives, not counted as 1:1. Devices usually resend it within a few minutes.",
-"issue.assumed_unsampled": "This device never declared a sampling rate, so its records are counted 1:1. If it samples, make it export sampler options, or mark it 'unsampled' in Names.",
+"issue.assumed_unsampled": "This device has not declared its sampling rate, so its flows count 1:1. If it samples, have it export its sampler options, or give the rate under Settings → Names, e.g. device {a} name sampling=1000. If it exports every packet, add unsampled to that line.",
 "issue.loss": "{p} of the export packets were lost on the way here (gaps in their sequence numbers). Totals are compensated; per-host detail cannot be. If “netstat -su” on this machine shows receive buffer errors rising, raise net.core.rmem_max; otherwise check the network path.",
 "issue.no_template": "Data is arriving but its template has not. It is held and decoded as soon as the template arrives.",
 "issue.clock_skew": "The device clock is off by {s}. Times were corrected to arrival time.",
@@ -497,5 +497,8 @@
 "ov.dir_total": "Total",
 "ov.bw_all": "Bandwidth (in + out), by application",
 "ov.bw_in": "Inbound bandwidth, by application",
-"ov.bw_out": "Outbound bandwidth, by application"
+"ov.bw_out": "Outbound bandwidth, by application",
+"src.manual": "set by hand",
+"src.templates": "Templates received (field ids; s = scope):",
+"src.stale": "Stopped (the device now sends otherwise):"
 }

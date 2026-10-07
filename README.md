@@ -565,9 +565,11 @@ directly (see `inventory.txt.example`). Every line is optional.
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1091,7 +1093,7 @@ traffic66 then restarts instead of the machine running out of memory.
 | Symptom | Cause and fix |
 |---|---|
 | Device missing from **Settings** | Packets do not arrive: see [Check that flows arrive](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | The device has not sent its sampler options yet; most resend within minutes. If it never does, export them (`option sampler-table` on Cisco) or mark it `unsampled` in Names if it really is 1:1 |
+| "waiting for the sampling rate" | The device has not sent its sampler options yet; most resend within minutes. If it never does, export them (`option sampler-table` on Cisco) or mark it `unsampled` in Names if it really is 1:1, or give its rate with `sampling=N` on its `device` line. **Settings** then lists the templates the device sent, to see what it declares |
 | Numbers lower than the interface counters | See **Interface check**: loss on the way, interfaces not sampled, or flows still in the device cache (active timeout longer than 60 s) |
 | Numbers higher than the interface counters | The same traffic sampled on two interfaces or two devices |
 | No countries or networks ("Unknown") | No database loaded: upload one on **Settings**, see [Countries](#8-countries-networks-and-threat-lists) |

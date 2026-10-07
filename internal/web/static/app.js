@@ -1297,15 +1297,15 @@ views.sources = async (el) => {
     ['IPtoASN', 'geo.f_iptoasn', 'PDDL 1.0', 'https://iptoasn.com']];
   const freeRows = FREE.map(([n, k, lic, url]) => `<tr><td class="nw"><a href="${url}" target="_blank" rel="noopener">${n}</a></td><td>${esc(t(k))}</td><td class="nw muted">${lic}</td></tr>`).join('');
   const srcs = d.sources || [];
-  const issueText = (code, s) => t('issue.' + code, {n: nf(s.pending), p: nf(code === 'agent_drops' ? s.drop_pct : code === 'loss' ? (s.transit_pct ?? s.lost_pct) : s.lost_pct, 1) + '%', s: Math.round(Math.abs(s.clock_skew_ns) / 1e9) + ' s'});
+  const issueText = (code, s) => t('issue.' + code, {a: s.exporter, n: nf(s.pending), p: nf(code === 'agent_drops' ? s.drop_pct : code === 'loss' ? (s.transit_pct ?? s.lost_pct) : s.lost_pct, 1) + '%', s: Math.round(Math.abs(s.clock_skew_ns) / 1e9) + ' s'});
   const rows = srcs.map(s => {
     const kind = s.status;
     return `<tr class="${s.issues?.length ? 'has-fix' : ''}"><td>${s.name ? esc(s.name) + ' ' : ''}<span class="muted" style="font-size:12.5px">${esc(s.exporter)}${s.domain ? ' / ' + s.domain : ''}</span></td>
       <td class="nw">${esc(s.proto)}</td><td class="num">${nf(s.rec_per_sec, 1)}</td>
-      <td class="nw">${s.sampling ? esc(s.sampling) : (s.sampling_state === 'waiting' ? '<span class="muted">?</span>' : '1:1')}${s.effective ? ` <span class="muted">(${esc(t('src.effective', {v: '1:' + nf(s.effective)}))})</span>` : ''}</td>
+      <td class="nw">${s.sampling ? esc(s.sampling) : (s.sampling_state === 'waiting' ? '<span class="muted">?</span>' : '1:1')}${s.sampling_state === 'manual' ? ` <span class="muted">(${esc(t('src.manual'))})</span>` : ''}${s.effective ? ` <span class="muted">(${esc(t('src.effective', {v: '1:' + nf(s.effective)}))})</span>` : ''}</td>
       <td class="num">${nf(s.lost_pct, 2)}%</td><td class="nw muted">${s.last_seen ? ago(Date.parse(s.last_seen)) : ''}</td>
       <td>${status(kind, t('st.' + kind))}</td></tr>
-      ${s.issues?.length ? `<tr><td colspan="7" style="padding-top:0">${s.issues.map(c => `<div class="issue">${esc(issueText(c, s))}</div>`).join('')}</td></tr>` : ''}`;
+      ${s.issues?.length ? `<tr><td colspan="7" style="padding-top:0">${s.issues.map(c => `<div class="issue">${esc(issueText(c, s))}</div>`).join('')}${['assumed1', 'waiting', 'manual'].includes(s.sampling_state) && s.template_info?.length ? `<div class="issue muted" style="font-family:ui-monospace,monospace;font-size:12px">${esc(t('src.templates'))} ${s.template_info.map(esc).join(' · ')}</div>` : ''}</td></tr>` : ''}`;
   }).join('');
   const lis = (d.listeners || []).map(l => `<span class="tag">UDP ${esc(l.addr)} · ${esc(l.proto)} · ${nf(l.packets)}</span>`).join(' ');
   const caps = (d.captures || []).map(c => `<span class="tag">${esc(c.iface)} · ${esc(c.method)} · ${nf(c.packets)}${c.error ? ' · ' + esc(c.error) : ''}</span>`).join(' ');
@@ -1316,6 +1316,7 @@ views.sources = async (el) => {
     ${panel('c12', t('src.title'), t('src.sub'), `<table><tr><th>${t('col.device')}</th><th>${t('col.proto')}</th><th class="num">${t('col.rate')}</th><th>${t('col.sampling')}</th><th class="num">${t('col.lost')}</th><th>${t('col.last')}</th><th>${t('col.status')}</th></tr>
       ${rows || `<tr><td colspan="7" class="empty">${t('empty.first')}</td></tr>`}</table>
       <p style="margin:12px 0 0;font-size:12.5px"><span class="muted">${t('src.listeners')}</span> ${lis || '—'} ${caps}</p>
+      ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
     ${panel('c12', t('geo.title'), t('geo.sub'), `<table><tr><th>${t('geo.col_holds')}</th><th>${t('geo.col_db')}</th><th>${t('geo.col_built')}</th><th>${t('geo.col_use')}</th><th></th></tr>${geoRows}</table>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="primary" id="geoDbip">${t('geo.update')}</button><label class="btn" style="cursor:pointer">${t('geo.upload')}<input type="file" id="geoFile" accept=".mmdb,.tsv,.gz,.txt,.csv" hidden></label><span id="geoMsg" class="muted" style="font-size:13px"></span></div>

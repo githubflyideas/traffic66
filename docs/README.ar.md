@@ -586,9 +586,11 @@ NetFlow/IPFIX (عدّادات الواجهات تتضمنه، وعدّ التد�
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1109,7 +1111,7 @@ traffic66 الملف `license.json` في دليل البيانات مع رقم �
 | العَرَض | السبب والحل |
 |---|---|
 | الجهاز غير ظاهر في **الإعدادات** | الحزم لا تصل: انظر [التحقق من وصول التدفقات](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | لم يرسل الجهاز خيارات أخذ العينات بعد؛ ومعظم الأجهزة تعيد إرسالها خلال دقائق. إن لم يفعل أبدًا، فصدّرها (`option sampler-table` على Cisco) أو علّم الجهاز بـ `unsampled` في الأسماء إن كان يصدّر فعلًا بنسبة 1:1 |
+| "waiting for the sampling rate" | لم يرسل الجهاز خيارات أخذ العينات بعد؛ ومعظم الأجهزة تعيد إرسالها خلال دقائق. إن لم يفعل أبدًا، فصدّرها (`option sampler-table` على Cisco) أو علّم الجهاز بـ `unsampled` في الأسماء إن كان يصدّر فعلًا بنسبة 1:1، أو حدّد نسبته بـ `sampling=N` في سطر `device` الخاص به. بعد ذلك تعرض **الإعدادات** القوالب التي أرسلها الجهاز، لمعرفة ما يصرّح به |
 | الأرقام أقل من عدّادات الواجهات | انظر **مطابقة الواجهات**: فقد في الطريق، أو واجهات لا تؤخذ منها عينات، أو تدفقات ما زالت في ذاكرة الجهاز المؤقتة (مهلة التدفق النشط أطول من 60 ثانية) |
 | الأرقام أعلى من عدّادات الواجهات | تؤخذ عينات الحركة نفسها على واجهتين أو جهازين |
 | لا توجد دول أو شبكات ("غير معروف") | لم تُحمَّل أي قاعدة بيانات: ارفع واحدة في **الإعدادات**، وانظر [الدول](#8-countries-networks-and-threat-lists) |

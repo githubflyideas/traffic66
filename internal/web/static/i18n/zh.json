@@ -197,7 +197,7 @@
 "st.bad": "没有收到",
 "issue.silent": "超过 2 分钟没有收到数据。检查设备上的导出地址，以及防火墙有没有放行 UDP。",
 "issue.waiting_sampling": "模板收到了，但采样率还没收到。{n} 条流已暂存，收到采样率后自动换算入库，不会按 1:1 算。设备一般几分钟内会重发。",
-"issue.assumed_unsampled": "这台设备一直没有声明采样率，它的流按 1:1 计算。如果它开了采样，请让它导出采样器选项，或者在「名称」里把它标成 unsampled。",
+"issue.assumed_unsampled": "这台设备一直没有声明采样率，它的流按 1:1 计算。如果它开了采样，请让它导出采样器选项，或者在「设定 → 名称」里手动写上，例如 device {a} 名称 sampling=1000。如果它不采样，在那一行加 unsampled。",
 "issue.loss": "导出包在路上丢了 {p}（序号有缺口）。总量已经补偿，但每台主机的明细无法找回。如果本机 “netstat -su” 里的 receive buffer errors 在增长，请调大 net.core.rmem_max；否则请检查网络链路。",
 "issue.no_template": "数据在进来，但模板还没到。数据已暂存，模板一到就解码。",
 "issue.clock_skew": "设备时钟偏差 {s}，时间已按收到的时刻校正。",
@@ -497,5 +497,8 @@
 "ov.dir_total": "合计",
 "ov.bw_all": "带宽（入 + 出），按应用",
 "ov.bw_in": "入站带宽，按应用",
-"ov.bw_out": "出站带宽，按应用"
+"ov.bw_out": "出站带宽，按应用",
+"src.manual": "手动指定",
+"src.templates": "收到的模板（字段编号，s 表示作用域）：",
+"src.stale": "已停用（同一设备现在用别的方式在发）："
 }

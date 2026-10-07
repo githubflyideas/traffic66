@@ -296,7 +296,7 @@ func serve(args []string, demo bool) {
 	pipe := pipeline.New(pipeline.Config{L2Overhead: f.l2}, st, inv, asn, thr)
 	col := collector.New(pipe)
 	col.NF.HoldFor = f.hold
-	col.NF.SetUnsampled(inv.Unsampled())
+	col.SetSampling(inv.Unsampled(), inv.Sampling())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

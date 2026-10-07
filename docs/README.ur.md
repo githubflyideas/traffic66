@@ -596,9 +596,11 @@ entry۔ **متن کے طور پر ترمیم (ایڈوانسڈ)** وہ فائل 
 net    10.10.0.0/16  Office LAN
 net    203.0.113.0/24  Public servers country=JP
 
-# device names; "unsampled" if it exports every packet (1:1)
+# device names; "unsampled" if it exports every packet (1:1),
+# sampling=N if it samples 1:N but does not say so in its export
 device 192.0.2.1     Core router
 device 192.0.2.9     Branch firewall unsampled
+device 192.0.2.20    Edge router sampling=1000
 
 # interface names, by device address and ifIndex; speed in bits per second
 iface  192.0.2.1 3   ISP uplink speed=1000000000
@@ -1124,7 +1126,7 @@ container کی memory limit۔ `-memory` والے حصے کا تقریباً 2.5 
 | علامت | وجہ اور حل |
 |---|---|
 | ڈیوائس **ترتیبات** میں نہیں | packets نہیں پہنچ رہے: [جانچیں کہ flows پہنچ رہے ہیں](#5-check-that-flows-arrive) دیکھیں |
-| "waiting for the sampling rate" | ڈیوائس نے ابھی تک اپنے sampler options نہیں بھیجے؛ زیادہ تر چند منٹ میں دوبارہ بھیج دیتی ہیں۔ اگر کبھی نہ بھیجے تو انہیں export کروائیں (Cisco پر `option sampler-table`) یا اگر وہ واقعی 1:1 ہے تو نام میں اسے `unsampled` لکھیں |
+| "waiting for the sampling rate" | ڈیوائس نے ابھی تک اپنے sampler options نہیں بھیجے؛ زیادہ تر چند منٹ میں دوبارہ بھیج دیتی ہیں۔ اگر کبھی نہ بھیجے تو انہیں export کروائیں (Cisco پر `option sampler-table`) یا اگر وہ واقعی 1:1 ہے تو نام میں اسے `unsampled` لکھیں، یا اس کی `device` لائن پر `sampling=N` سے rate دیں۔ پھر **ترتیبات** میں ڈیوائس کے بھیجے ہوئے templates نظر آتے ہیں، جن سے پتا چلتا ہے کہ وہ کیا declare کرتی ہے |
 | اعداد interface counters سے کم | **انٹرفیس جانچ** دیکھیں: راستے میں loss، interfaces sample نہیں ہو رہے، یا flows ابھی ڈیوائس کی cache میں ہیں (active timeout 60 s سے لمبا) |
 | اعداد interface counters سے زیادہ | ایک ہی ٹریفک دو interfaces یا دو ڈیوائسز پر sample ہو رہی ہے |
 | کوئی ملک یا نیٹ ورک نہیں ("نامعلوم") | کوئی database لوڈ نہیں: **ترتیبات** پر ایک اپ لوڈ کریں، [ممالک](#8-countries-networks-and-threat-lists) دیکھیں |

@@ -197,7 +197,7 @@
 "st.bad": "Sem recebimento",
 "issue.silent": "Nada recebido há mais de 2 minutos. Confira o destino de exportação no equipamento e se os firewalls liberam UDP.",
 "issue.waiting_sampling": "Os modelos chegaram, mas a taxa de amostragem ainda não. {n} registros estão retidos e serão escalados quando ela chegar, sem contar como 1:1. Os equipamentos costumam reenviá-la em poucos minutos.",
-"issue.assumed_unsampled": "Este equipamento nunca declarou uma taxa de amostragem, então seus registros contam como 1:1. Se ele amostra, configure a exportação das opções do amostrador ou marque-o como 'unsampled' em Nomes.",
+"issue.assumed_unsampled": "Este equipamento não declarou sua taxa de amostragem, então seus fluxos contam 1:1. Se ele amostra, faça-o exportar as opções do amostrador ou informe a taxa em Configurações → Nomes, ex. device {a} nome sampling=1000. Se exporta todos os pacotes, adicione unsampled a essa linha.",
 "issue.loss": "{p} dos pacotes exportados se perderam no caminho (lacunas nos números de sequência). Os totais são compensados; o detalhe por host, não. Se “netstat -su” nesta máquina mostrar receive buffer errors aumentando, aumente net.core.rmem_max; senão, verifique o caminho de rede.",
 "issue.no_template": "Os dados estão chegando, mas o modelo ainda não. Eles ficam retidos e são decodificados assim que o modelo chegar.",
 "issue.clock_skew": "O relógio do equipamento está {s} fora. Os horários foram corrigidos para a hora de chegada.",
@@ -497,5 +497,8 @@
 "ov.dir_total": "Total",
 "ov.bw_all": "Largura de banda (entrada + saída), por aplicação",
 "ov.bw_in": "Largura de banda de entrada, por aplicação",
-"ov.bw_out": "Largura de banda de saída, por aplicação"
+"ov.bw_out": "Largura de banda de saída, por aplicação",
+"src.manual": "definido à mão",
+"src.templates": "Modelos recebidos (ids de campo; s = escopo):",
+"src.stale": "Parados (o equipamento agora envia de outra forma):"
 }

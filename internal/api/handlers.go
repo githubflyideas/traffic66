@@ -485,7 +485,15 @@ func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	s.mu.Lock()
 	var out []sourceOut
-	for _, si := range s.Col.Sources() {
+	var stale []map[string]any
+	srcs := s.Col.Sources()
+	active := map[string]bool{}
+	for _, si := range srcs {
+		if now.Sub(si.LastSeen) < 2*time.Minute {
+			active[si.Exporter] = true
+		}
+	}
+	for _, si := range srcs {
 		o := sourceOut{SourceInfo: si, Status: "ok"}
 		o.RecPS = srcRate.ps[srcKey(si)]
 		if a, err := netip.ParseAddr(si.Exporter); err == nil {
@@ -521,6 +529,12 @@ func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
 		if si.DecodeErrors > 0 && si.DecodeErrors*100 > si.Packets {
 			issue("warn", "decode_errors")
 		}
+		// silent for an hour while the same device sends otherwise (a
+		// changed export version or domain): listed apart, not as a fault
+		if now.Sub(si.LastSeen) > time.Hour && active[si.Exporter] {
+			stale = append(stale, map[string]any{"exporter": si.Exporter, "proto": si.Proto, "domain": si.Domain, "last_seen": si.LastSeen, "name": o.Name})
+			continue
+		}
 		out = append(out, o)
 	}
 	s.mu.Unlock()
@@ -528,7 +542,7 @@ func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
 	for _, l := range s.Col.Listeners {
 		ls = append(ls, map[string]any{"addr": l.Addr, "proto": l.Proto, "packets": l.Packets.Load(), "undecoded": l.Undecoded.Load(), "rcvbuf": l.RcvBuf})
 	}
-	res := map[string]any{"sources": out, "listeners": ls}
+	res := map[string]any{"sources": out, "listeners": ls, "stale": stale}
 	if s.Capture != nil {
 		res["captures"] = s.Capture()
 	}
@@ -638,7 +652,7 @@ func (s *Server) putInventory(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	s.Col.NF.SetUnsampled(s.Inv.Unsampled())
+	s.Col.SetSampling(s.Inv.Unsampled(), s.Inv.Sampling())
 	writeJSON(w, http.StatusOK, map[string]string{"ok": "saved"})
 }
 

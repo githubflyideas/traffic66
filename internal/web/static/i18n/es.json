@@ -197,7 +197,7 @@
 "st.bad": "Sin recibir",
 "issue.silent": "No se ha recibido nada en más de 2 minutos. Revise el destino de exportación del dispositivo y que los cortafuegos permitan UDP.",
 "issue.waiting_sampling": "Se recibieron plantillas pero aún no la tasa de muestreo. Hay {n} registros en espera; se escalarán cuando llegue y no se contarán como 1:1. Los dispositivos suelen reenviarla en pocos minutos.",
-"issue.assumed_unsampled": "Este dispositivo nunca declaró una tasa de muestreo, así que sus registros se cuentan 1:1. Si muestrea, configúrelo para exportar las opciones del muestreador o márquelo como 'unsampled' en Nombres.",
+"issue.assumed_unsampled": "Este equipo no ha declarado su tasa de muestreo, así que sus flujos cuentan 1:1. Si muestrea, haga que exporte las opciones del muestreador o indique la tasa en Configuración → Nombres, p. ej. device {a} nombre sampling=1000. Si exporta todos los paquetes, añada unsampled a esa línea.",
 "issue.loss": "Se perdió un {p} de los paquetes exportados por el camino (huecos en los números de secuencia). Los totales están compensados; el detalle por host no. Si “netstat -su” en esta máquina muestra receive buffer errors en aumento, suba net.core.rmem_max; si no, revise la ruta de red.",
 "issue.no_template": "Llegan datos pero aún no su plantilla. Se guardan y se decodifican en cuanto llegue la plantilla.",
 "issue.clock_skew": "El reloj del dispositivo tiene un desfase de {s}. Las horas se corrigieron a la hora de llegada.",
@@ -497,5 +497,8 @@
 "ov.dir_total": "Total",
 "ov.bw_all": "Ancho de banda (entrada + salida), por aplicación",
 "ov.bw_in": "Ancho de banda entrante, por aplicación",
-"ov.bw_out": "Ancho de banda saliente, por aplicación"
+"ov.bw_out": "Ancho de banda saliente, por aplicación",
+"src.manual": "fijado a mano",
+"src.templates": "Plantillas recibidas (ids de campo; s = ámbito):",
+"src.stale": "Detenidos (el equipo ahora envía de otra forma):"
 }
