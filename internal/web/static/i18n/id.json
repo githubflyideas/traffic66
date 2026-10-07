@@ -477,5 +477,6 @@
 "lic.over": "Masa uji Traffic66 telah berakhir. Silakan minta lisensi pendaftaran kepada pembuatnya.",
 "lic.free": "Sebelum terdaftar, semua fitur tetap bisa dipakai.",
 "lic.ok": "Dilisensikan untuk {c}: tinggal {n} hari",
-"lic.id": "Instalasi {id}"
+"lic.id": "Instalasi {id}",
+"if.bw": "Bandwidth antarmuka"
 }

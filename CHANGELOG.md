@@ -72,8 +72,9 @@ Pages
   services with their servers. A switch puts either side inside.
 - Flow paths shortens long names to 22 characters; the full name shows on
   hover.
-- Interface check: ingress (green) and egress (blue) in one chart per
-  measure, for the interface picked in the list; the comparison with the
+- Interface check: one chart, **Interface bandwidth**, with ingress
+  (green) and egress (blue) and a bits/s | packets/s switch, for the
+  interface picked in the list; the comparison with the
   device counters shows both directions by default.
 - Names: a form (type, address, name) and a table with Edit and Delete,
   with addresses and networks checked; adding the same address again
