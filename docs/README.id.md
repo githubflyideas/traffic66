@@ -744,9 +744,9 @@ Halaman:
 | Analisis pcap offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-pcap-offline)) |
 
 Menu samping mengelompokkan halaman menjadi empat: trafik (Ringkasan, Top 66,
-Detail trafik, Jalur trafik, Pencocokan antarmuka), keamanan (Temuan, Intel
-ancaman, Geografi & jaringan), pengaturan dan data (Pengaturan, Catatan flow,
-Pembersihan data), dan Analisis pcap offline. Di bawah logo ada versi serta
+Detail trafik, Jalur trafik, Pencocokan antarmuka, Catatan flow), keamanan
+(Temuan, Intel ancaman, Geografi & jaringan), Pengaturan dan Analisis pcap
+offline, serta Pembersihan data di paling bawah. Di bawah logo ada versi serta
 tanggal dan jam server.
 
 Di atas halaman trafik (Ringkasan, Top 66, Detail trafik, Jalur trafik,

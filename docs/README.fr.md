@@ -769,9 +769,9 @@ Pages :
 
 Le menu latéral range les pages en quatre groupes : trafic (Vue
 d'ensemble, Top 66, Détails du trafic, Chemins du trafic, Contrôle des
-interfaces), sécurité (Détections, Menaces, Géographie et réseaux),
-configuration et données (Paramètres, Enregistrements de flux, Nettoyage
-des données) et Analyse hors ligne de pcap. Sous le logo figurent la version
+interfaces, Enregistrements de flux), sécurité (Détections, Menaces,
+Géographie et réseaux), Paramètres et Analyse hors ligne de pcap, et
+Nettoyage des données tout en bas. Sous le logo figurent la version
 ainsi que la date et l'heure du serveur.
 
 Au-dessus des pages de trafic (Vue d'ensemble, Top 66, Détails du trafic,

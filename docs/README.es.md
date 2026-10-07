@@ -747,9 +747,9 @@ Páginas:
 
 El menú lateral agrupa las páginas en cuatro bloques: tráfico (Resumen,
 Top 66, Detalles del tráfico, Rutas de tráfico, Verificación de
-interfaces), seguridad (Hallazgos, Inteligencia de amenazas, Geografía y
-redes), configuración y datos (Configuración, Registros de flujo, Limpieza
-de datos) y Análisis offline de pcap. Bajo el logotipo aparecen la versión y
+interfaces, Registros de flujo), seguridad (Hallazgos, Inteligencia de
+amenazas, Geografía y redes), Configuración y Análisis offline de pcap, y
+Limpieza de datos al final. Bajo el logotipo aparecen la versión y
 la fecha y hora del servidor.
 
 Encima de las páginas de tráfico (Resumen, Top 66, Detalles del tráfico,
