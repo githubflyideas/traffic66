@@ -461,5 +461,16 @@
 "nm.save_edit": "Save changes",
 "nm.bad_addr": "{a} is not an IP address",
 "nm.bad_net": "{a} is not a network such as 192.168.3.0/24",
-"nm.bad_index": "{x} is not an interface number"
+"nm.bad_index": "{x} is not an interface number",
+"rg.hosts": "Servers and clients",
+"rg.services": "Services and servers",
+"rg.in_server": "Servers inside",
+"rg.in_client": "Clients inside",
+"rg.in_service": "Services inside",
+"rg.hosts_sub_s": "Inner ring: the busiest servers; outer ring: the clients of each",
+"rg.hosts_sub_c": "Inner ring: the busiest clients; outer ring: the servers each one uses",
+"rg.svc_sub_v": "Inner ring: the busiest services; outer ring: the servers offering each",
+"rg.svc_sub_s": "Inner ring: the busiest servers; outer ring: the services of each",
+"geo.lines_hint": "Set a country for your internal networks (Sources → Names, Network) to see lines from them to the countries they talk to.",
+"nm.country_none": "country (optional)"
 }

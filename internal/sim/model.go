@@ -96,11 +96,11 @@ func ThreatList() (c2, scanners string) {
 // Inventory returns the demo inventory text.
 func Inventory() string {
 	return `# traffic66 demo inventory
-net 10.10.0.0/16 Office LAN
-net 10.20.0.0/24 Server zone
-net 10.30.0.0/16 Guest Wi-Fi
-net 10.40.0.0/16 Branch office
-net 203.0.113.0/28 DMZ
+net 10.10.0.0/16 Office LAN country=JP
+net 10.20.0.0/24 Server zone country=JP
+net 10.30.0.0/16 Guest Wi-Fi country=JP
+net 10.40.0.0/16 Branch office country=SG
+net 203.0.113.0/28 DMZ country=JP
 device 10.0.0.1 Core router
 device 10.0.0.2 Aggregation switch
 device 10.0.0.3 Edge firewall

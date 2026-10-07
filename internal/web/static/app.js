@@ -151,7 +151,8 @@ function readHash() {
   if (p.get('dim')) state.dim = p.get('dim');
   state.tm = p.get('tm') === 'table' || (p.get('v') === 'topn' && p.get('dim')) ? 'table' : 'talkers';
   state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
-  state.side = ['client', 'both', 'service'].includes(p.get('side')) ? p.get('side') : 'server';
+  state.ra = p.get('ra') === 'client' ? 'client' : 'server';
+  state.rb = p.get('rb') === 'server' ? 'server' : 'service';
   state.ds = p.get('ds') === 'sb' ? 'sb' : '';
   const dd = p.get('d'); if (dd && dd.includes(':')) state.det = {f: dd.slice(0, dd.indexOf(':')), v: dd.slice(dd.indexOf(':') + 1)};
   state.f = (p.get('f') || '').split(',').filter(Boolean).map(s => {
@@ -166,14 +167,14 @@ function writeHash(push) {
   if (state.ds) p.set('ds', state.ds);
   if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
-  if (state.v === 'traffic' && state.side !== 'server') p.set('side', state.side);
+  if (state.v === 'traffic') { if (state.ra === 'client') p.set('ra', 'client'); if (state.rb === 'server') p.set('rb', 'server'); }
   if (state.v === 'detail' && state.det) p.set('d', state.det.f + ':' + state.det.v);
   if (state.f.length) p.set('f', state.f.map(x => (x.neg ? '!' : '') + encodeURIComponent(x.f) + ':' + encodeURIComponent(x.v)).join(','));
   const h = '#' + p.toString();
   if (push && h !== location.hash) history.pushState(null, '', h); else history.replaceState(null, '', h);
 }
 // pages whose data can come from the sandbox (uploaded capture files)
-const SB_DATA = new Set(['overview', 'topn', 'sankey', 'series', 'records', 'threats', 'findings']);
+const SB_DATA = new Set(['overview', 'topn', 'sankey', 'series', 'records', 'threats', 'findings', 'rings', 'geolines']);
 const inSB = () => state.ds === 'sb' && sbInfo.ready;
 let sbInfo = {files: [], ready: false};
 // started as "traffic66 file.pcap": there is no live data, only the files
@@ -717,23 +718,87 @@ function barChart(el, times, values, fmtV) {
 
 // Traffic details: clients, servers and services over time, in bits and
 // packets per second.
-// Traffic details: servers by default; tabs switch to clients, both ends
-// side by side, or services. Each shows bits/s and packets/s.
-const TD = {client: ['td.clients', 'td.n_clients'], server: ['td.servers', 'td.n_servers'], service: ['td.services', 'td.n_services']};
+// Traffic details: two two-ring charts. Servers and their clients (or,
+// swapped, clients and the servers they use), and services and their
+// servers (or servers and their services). Seen from either side, like
+// pull and push.
+const RING_FIELD = {server: 'server', client: 'client', service: 'port'};
+const ringVal = (dim, k) => dim === 'service' ? k.split('\t')[0] : k;
 views.traffic = async (el) => {
-  const side = state.side || 'server';
-  const groups = side === 'both' ? ['server', 'client'] : [side];
-  const data = await Promise.all(groups.flatMap(by => [seriesData(by, 'wire'), seriesData(by, 'pkts')]));
-  const tab = k => `<button data-side="${k}" aria-pressed="${side === k}">${t(k === 'both' ? 'td.both' : TD[k][0])}</button>`;
-  // both ends: servers and clients next to each other, bits/s over packets/s
-  const cls = side === 'both' ? 'c6' : 'c12';
-  const panels = side === 'both'
-    ? ['w', 'p'].flatMap(m => groups.map((by, gi) => seriesPanel(`td-${by}-${m}`, cls, `${t(TD[by][0])} · ${t(m === 'w' ? 'ch.bps' : 'ch.pps')}`, m === 'w' ? esc(t(TD[by][1], {n: nf(data[gi * 2].distinct || 0)})) : '')))
-    : groups.flatMap((by, gi) => [seriesPanel(`td-${by}-w`, cls, `${t(TD[by][0])} · ${t('ch.bps')}`, esc(t(TD[by][1], {n: nf(data[gi * 2].distinct || 0)}))), seriesPanel(`td-${by}-p`, cls, `${t(TD[by][0])} · ${t('ch.pps')}`)]);
-  el.innerHTML = `<div class="seg" role="group" style="margin-bottom:14px;display:inline-flex">${['server', 'client', 'both', 'service'].map(tab).join('')}</div><div class="grid">${panels.join('')}</div>`;
-  el.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { state.side = b.dataset.side; render(); });
-  groups.forEach((by, gi) => { fillSeries('td-' + by + '-w', data[gi * 2], by, 'wire'); fillSeries('td-' + by + '-p', data[gi * 2 + 1], by, 'pkts'); });
+  const ra = state.ra === 'client' ? ['client', 'server'] : ['server', 'client'];
+  const rb = state.rb === 'server' ? ['server', 'service'] : ['service', 'server'];
+  const [da, db] = await Promise.all([api('rings', {inner: ra[0], outer: ra[1]}), api('rings', {inner: rb[0], outer: rb[1]})]);
+  await lookupNames([...da.inner, ...da.outer, ...db.inner, ...db.outer].map(r => r.k).filter(k => /^[0-9a-f.:]+$/i.test(k)));
+  const swap = (id, cur, opts) => `<div class="seg" role="group">${opts.map(([v, lab]) => `<button data-${id}="${v}" aria-pressed="${cur === v}">${esc(lab)}</button>`).join('')}</div>`;
+  el.innerHTML = `<div class="grid">
+    <div class="panel c6"><div class="ph"><h2>${t('rg.hosts')}</h2><div class="tools" style="margin-inline-start:auto">${swap('ra', ra[0], [['server', t('rg.in_server')], ['client', t('rg.in_client')]])}</div></div>
+      <div class="sub" style="margin:-4px 0 6px">${esc(t(ra[0] === 'server' ? 'rg.hosts_sub_s' : 'rg.hosts_sub_c'))}</div><div class="rings" id="rgA"></div></div>
+    <div class="panel c6"><div class="ph"><h2>${t('rg.services')}</h2><div class="tools" style="margin-inline-start:auto">${swap('rb', rb[0], [['service', t('rg.in_service')], ['server', t('rg.in_server')]])}</div></div>
+      <div class="sub" style="margin:-4px 0 6px">${esc(t(rb[0] === 'service' ? 'rg.svc_sub_v' : 'rg.svc_sub_s'))}</div><div class="rings" id="rgB"></div></div></div>`;
+  el.querySelectorAll('[data-ra]').forEach(b => b.onclick = () => { state.ra = b.dataset.ra; render(); });
+  el.querySelectorAll('[data-rb]').forEach(b => b.onclick = () => { state.rb = b.dataset.rb; render(); });
+  drawRings($('#rgA'), da, ra[0], ra[1]);
+  drawRings($('#rgB'), db, rb[0], rb[1]);
 };
+function drawRings(el, d, inDim, outDim) {
+  if (!d.total) { el.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  const draw = () => {
+    const W = el.clientWidth; if (W < 200) return;
+    // room for the outer labels on both sides
+    const SW = Math.min(W, 600), R = Math.max(80, Math.min(170, SW / 2 - 120)), SH = 2 * R + 60, c = SW / 2, cy = SH / 2, r0 = R * .38, r1 = R * .68;
+    const size = SW;
+    const pt = (r, a) => [c + r * Math.sin(a), cy - r * Math.cos(a)];
+    const arc = (ri, ro, a0, a1) => {
+      a1 = Math.min(a1, a0 + Math.PI * 2 - 1e-4);
+      const big = a1 - a0 > Math.PI ? 1 : 0, [x0, y0] = pt(ro, a0), [x1, y1] = pt(ro, a1), [x2, y2] = pt(ri, a1), [x3, y3] = pt(ri, a0);
+      return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${ro} ${ro} 0 ${big} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}A${ri} ${ri} 0 ${big} 0 ${x3.toFixed(2)} ${y3.toFixed(2)}Z`;
+    };
+    const short = (v, n) => { const a = [...v]; return a.length > n ? a.slice(0, n - 1).join('') + '…' : v; };
+    const col = {}, tot = d.total;
+    d.inner.forEach((r, i) => col[r.k] = r.k === '__other__' ? 'var(--other)' : color(i, r.k));
+    let s = `<svg viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" role="img">`, a = 0, labels = '';
+    const lastY = {l: -1e9, r: -1e9};
+    const segs = [];
+    d.inner.forEach(r => {
+      const a1 = a + r.v / tot * Math.PI * 2;
+      segs.push({ring: 0, k: r.k, p: '', v: r.v, a0: a, a1});
+      let b = a;
+      d.outer.filter(o => o.p === r.k).forEach((o, j) => { const b1 = b + o.v / tot * Math.PI * 2; segs.push({ring: 1, k: o.k, p: r.k, v: o.v, a0: b, a1: b1, j}); b = b1; });
+      a = a1;
+    });
+    segs.forEach((g, n) => {
+      const fill = col[g.ring ? g.p : g.k], op = g.ring ? (g.k === '__other__' ? .28 : (g.j % 2 ? .55 : .75)) : 1;
+      s += `<path d="${arc(g.ring ? r1 : r0, g.ring ? R : r1, g.a0, g.a1)}" fill="${fill}" fill-opacity="${op}" stroke="var(--surface)" stroke-width="1" data-n="${n}"/>`;
+      const mid = (g.a0 + g.a1) / 2, span = g.a1 - g.a0;
+      if (!g.ring && span > .45 && g.k !== '__other__') {
+        const [x, y] = pt((r0 + r1) / 2, mid);
+        labels += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" class="rgin">${esc(short(seriesLabel(inDim, g.k), 11))}</text>`;
+      } else if (g.ring && span > .06 && g.k !== '__other__') {
+        // outer labels go down each side; one that would overlap the previous is left to the tooltip
+        const [x0, y0] = pt(R + 2, mid), [x1, y1] = pt(R + 14, mid), right = Math.sin(mid) >= 0, side = right ? 'r' : 'l';
+        if (Math.abs(y1 - lastY[side]) >= 13) {
+          lastY[side] = y1;
+          const x2 = x1 + (right ? 6 : -6);
+          labels += `<path d="M${x0} ${y0}L${x1} ${y1}L${x2} ${y1}" class="rgline"/><text x="${x2 + (right ? 3 : -3)}" y="${y1}" text-anchor="${right ? 'start' : 'end'}" dominant-baseline="middle" class="rgout">${esc(short(seriesLabel(outDim, g.k), 16))}</text>`;
+        }
+      }
+    });
+    s += labels + `<text x="${c}" y="${cy - 4}" text-anchor="middle" class="rgtot">${fmtBytes(tot)}</text><text x="${c}" y="${cy + 14}" text-anchor="middle" class="rgsub">${esc(t('col.traffic'))}</text></svg>`;
+    const legend = d.inner.map(r => `<div class="rgleg"><i style="background:${col[r.k]}"></i>${r.k === '__other__' ? `<span>${t('other')}</span>` : V(RING_FIELD[inDim], ringVal(inDim, r.k), seriesLabel(inDim, r.k))}<b>${fmtBytes(r.v)}</b><span class="muted">${nf(100 * r.v / tot, 1)}%</span></div>`).join('');
+    el.innerHTML = `<div class="rgwrap">${s}<div class="rglegs">${legend}</div></div>`;
+    el.querySelectorAll('path[data-n]').forEach(p => {
+      const g = segs[+p.dataset.n];
+      p.onmousemove = e => showTip(e, g.ring
+        ? `<div class="t">${esc(seriesLabel(inDim, g.p))} → ${esc(seriesLabel(outDim, g.k))}</div><b>${fmtBytes(g.v)}</b> <span class="muted">${nf(100 * g.v / tot, 1)}%</span>`
+        : `<div class="t">${esc(seriesLabel(inDim, g.k))}</div><b>${fmtBytes(g.v)}</b> <span class="muted">${nf(100 * g.v / tot, 1)}%</span>`);
+      p.onmouseleave = hideTip;
+      const dim = g.ring ? outDim : inDim;
+      if (g.k !== '__other__') p.onclick = e => { e.stopPropagation(); hideTip(); openPop({k: RING_FIELD[dim], v: ringVal(dim, g.k), label: seriesLabel(dim, g.k)}, {left: e.clientX, right: e.clientX, top: e.clientY, bottom: e.clientY}); };
+    });
+  };
+  draw();
+  if (!el._ro) { el._ro = new ResizeObserver(() => draw()); el._ro.observe(el); }
+}
 
 const DIMS = ['conv', 'client', 'server', 'app', 'port', 'country', 'asn', 'segment', 'exporter', 'encap', 'vlan'];
 // Top-N is one table. It starts with conversations (client, server,
@@ -907,14 +972,14 @@ function mapBins(vals) {
   return MAP_STEPS.slice(1).map((_, i) => Math.pow(10, lo + (hi - lo) * (i + 1) / MAP_STEPS.length));
 }
 const mapStep = (v, edges) => { let i = 0; while (i < edges.length && v >= edges[i]) i++; return i; };
-function drawMap(el, w, rows) {
+function drawMap(el, w, rows, gl) {
   const by = new Map(rows.map(r => [r.key, r.wire]));
   const edges = mapBins(rows.map(r => r.wire));
   const fill = cc => by.get(cc) > 0 ? MAP_STEPS[mapStep(by.get(cc), edges)] : 'var(--map-none)';
   const dots = Object.entries(w.s).filter(([cc]) => by.get(cc) > 0);
   el.innerHTML = `<svg viewBox="0 0 ${w.w} ${w.h}" class="wmap" role="img" aria-label="${esc(t('geo.map'))}">
     ${Object.entries(w.c).map(([cc, d]) => `<path d="${d}" data-cc="${cc}" fill="${fill(cc)}"/>`).join('')}
-    ${dots.map(([cc, [x, y]]) => `<circle cx="${x}" cy="${y}" r="4" data-cc="${cc}" fill="${fill(cc)}"/>`).join('')}</svg>
+    ${dots.map(([cc, [x, y]]) => `<circle cx="${x}" cy="${y}" r="4" data-cc="${cc}" fill="${fill(cc)}"/>`).join('')}${mapLines(w, gl)}</svg>
     <div class="maplegend">${edges.length ? `<span class="muted">${t('geo.map_less')}</span>${MAP_STEPS.map((c, i) => `<i style="background:${c}" title="${esc(i ? '≥ ' + fmtBytes(edges[i - 1]) : '< ' + fmtBytes(edges[0]))}"></i>`).join('')}<span class="muted">${t('geo.map_more')}</span>
       <span class="muted" style="margin-inline-start:12px">${esc(fmtBytes(Math.min(...rows.map(r => r.wire).filter(x => x > 0))))} – ${esc(fmtBytes(Math.max(...rows.map(r => r.wire))))}</span>` : ''}
       <span style="margin-inline-start:12px"><i style="background:var(--map-none)"></i> <span class="muted">${t('geo.map_none')}</span></span></div>`;
@@ -926,6 +991,30 @@ function drawMap(el, w, rows) {
     if (v) p.onclick = e => { e.stopPropagation(); hideTip(); openPop({k: 'country', v: cc, label: country(cc)}, {left: e.clientX, right: e.clientX, top: e.clientY, bottom: e.clientY}); };
     else p.style.cursor = 'default';
   });
+  el.querySelectorAll('.mlines path').forEach(p => {
+    p.onmousemove = e => showTip(e, `<div class="t">${esc(country(p.dataset.from))} ↔ ${esc(country(p.dataset.to))}</div><b>${fmtBytes(+p.dataset.v)}</b>`);
+    p.onmouseleave = hideTip;
+  });
+  if (gl && !(gl.origins || []).length) el.insertAdjacentHTML('beforeend', `<p class="muted maphint">${esc(t('geo.lines_hint'))}</p>`);
+}
+// Lines from the countries of the internal networks to the remote
+// countries, thicker for more traffic.
+function mapLines(w, gl) {
+  const lines = (gl && gl.lines || []).filter(l => w.p[l.from] && w.p[l.to]).slice(0, 60);
+  if (!lines.length) return '';
+  const max = Math.max(...lines.map(l => l.v)), min = Math.min(...lines.map(l => l.v));
+  const k = v => max === min ? 1 : Math.log(v / min) / Math.log(max / min);
+  let s = '<g class="mlines">';
+  [...lines].reverse().forEach(l => {
+    const [x0, y0] = w.p[l.from], [x1, y1] = w.p[l.to], dx = x1 - x0, dy = y1 - y0, dist = Math.hypot(dx, dy);
+    // bend each line upwards by a fifth of its length
+    const mx = (x0 + x1) / 2 + dy * .2 * Math.sign(dx || 1) * -1, my = (y0 + y1) / 2 - Math.abs(dx) * .2 - dist * .05;
+    const f = k(l.v);
+    s += `<path d="M${x0} ${y0}Q${mx.toFixed(1)} ${my.toFixed(1)} ${x1} ${y1}" stroke-width="${(2 + 7 * f).toFixed(2)}" stroke-opacity="${(0.55 + 0.4 * f).toFixed(2)}" data-from="${l.from}" data-to="${l.to}" data-v="${l.v}"/>`;
+    s += `<circle cx="${x1}" cy="${y1}" r="${(2.5 + 2.5 * f).toFixed(1)}" class="mend"/>`;
+  });
+  (gl.origins || []).filter(cc => w.p[cc]).forEach(cc => { const [x, y] = w.p[cc]; s += `<circle cx="${x}" cy="${y}" r="9" class="morigin-ring"/><circle cx="${x}" cy="${y}" r="5" class="morigin"/>`; });
+  return s + '</g>';
 }
 const ATTRIB = {
   dbip: '<a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>',
@@ -937,7 +1026,7 @@ const attribution = srcs => [...new Set((srcs || []).map(g => g.vendor).filter(v
 
 views.geo = async (el) => {
   const asCharts = [['asn_src', 'wire'], ['asn_dst', 'wire'], ['asn_src', 'pkts'], ['asn_dst', 'pkts']];
-  const [c, a, gd, w, ...ad] = await Promise.all([api('topn', {dim: 'country', limit: 300}), api('topn', {dim: 'asn', limit: 66}), api('geo').catch(() => ({})), worldMap().catch(() => null), ...asCharts.map(([by, m]) => seriesData(by, m))]);
+  const [c, a, gd, w, gl, ...ad] = await Promise.all([api('topn', {dim: 'country', limit: 300}), api('topn', {dim: 'asn', limit: 66}), api('geo').catch(() => ({})), worldMap().catch(() => null), api('geolines').catch(() => null), ...asCharts.map(([by, m]) => seriesData(by, m))]);
   const all = (c.rows || []).filter(r => r.key !== '__internal__' && r.key), cr = all.slice(0, 66), ar = a.rows || [];
   const cm = Math.max(1, ...cr.map(r => r.wire)), am = Math.max(1, ...ar.map(r => r.wire));
   const attr = attribution(gd.sources);
@@ -950,7 +1039,7 @@ views.geo = async (el) => {
     ${panel('c6', t('geo.as'), '', `<table><tr><th></th><th>${t('col.asn')}</th><th>${t('col.org')}</th><th class="num">${t('col.traffic')}</th><th style="width:32%">${t('col.share')}</th></tr>
       ${ar.map((r, i) => `<tr><td class="rank">${i + 1}</td><td class="nw">${r.key === '0' ? `<span class="muted">${t('unknown')}</span>` : V('asn', r.key, 'AS' + r.key)}</td><td>${esc(r.extra)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, am)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
   </div>`;
-  if (w) drawMap($('#wmap'), w, all); else $('#wmap').innerHTML = `<div class="empty">${t('empty.nodata')}</div>`;
+  if (w) drawMap($('#wmap'), w, all, gl); else $('#wmap').innerHTML = `<div class="empty">${t('empty.nodata')}</div>`;
   asCharts.forEach(([by, m], i) => fillSeries('asr' + i, ad[i], by, m));
 };
 
@@ -1230,7 +1319,7 @@ views.sources = async (el) => {
     ${panel('c12', t('src.names'), t('src.names_sub'), `<div class="nmform" id="nmForm">
         <select id="nmK">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
         <input id="nmA" autocomplete="off" spellcheck="false"><input id="nmI" autocomplete="off" inputmode="numeric" placeholder="${esc(t('nm.ifindex'))}" hidden>
-        <input id="nmN" autocomplete="off" spellcheck="false">
+        <input id="nmN" autocomplete="off" spellcheck="false"><select id="nmC" hidden></select>
         <button class="primary" id="nmAdd">${t('nm.add')}</button><button class="btn" id="nmCancel" hidden>${t('nm.cancel')}</button></div>
       <div id="nmMsg" style="font-size:13px;min-height:1.2em;margin:4px 0 6px"></div>
       <table class="nmtab" id="nmTab"></table>
@@ -1299,10 +1388,12 @@ function nmParse(text) {
   return text.split('\n').map((line, i) => {
     const f = line.trim().split(/\s+/), k = (f[0] || '').toLowerCase();
     if (!NM_KINDS.includes(k)) return null;
-    return {i, k, a: f[1] || '', x: k === 'iface' ? (f[2] || '') : '', n: f.slice(k === 'iface' ? 3 : 2).join(' ')};
+    let words = f.slice(k === 'iface' ? 3 : 2), c = '';
+    if (k === 'net') words = words.filter(w => { const m = /^country=(\w\w)$/i.exec(w); if (m) c = m[1].toUpperCase(); return !m; });
+    return {i, k, a: f[1] || '', x: k === 'iface' ? (f[2] || '') : '', n: words.join(' '), c};
   }).filter(Boolean);
 }
-const nmLine = r => [r.k, r.a, r.k === 'iface' ? r.x : '', r.n].filter(Boolean).join(' ');
+const nmLine = r => [r.k, r.a, r.k === 'iface' ? r.x : '', r.n, r.k === 'net' && r.c ? 'country=' + r.c : ''].filter(Boolean).join(' ');
 function namesForm() {
   const tab = $('#nmTab'); if (!tab) return;
   let editing = null;
@@ -1312,9 +1403,16 @@ function namesForm() {
     $('#nmI').hidden = k !== 'iface';
     $('#nmA').placeholder = t(k === 'net' ? 'nm.ph_net' : 'nm.ph_addr');
     $('#nmN').placeholder = t(k === 'snmp' ? 'nm.community' : 'nm.name');
+    $('#nmC').hidden = k !== 'net';
   };
+  // countries for networks, named in the reader's language
+  worldMap().then(w => {
+    const cur = $('#nmC').value;
+    $('#nmC').innerHTML = `<option value="">${esc(t('nm.country_none'))}</option>` + Object.keys(w.c).map(cc => [cc, country(cc)]).sort((x, y) => x[1].localeCompare(y[1], LANG)).map(([cc, n]) => `<option value="${cc}">${esc(n)}</option>`).join('');
+    $('#nmC').value = cur;
+  }).catch(() => {});
   tab.innerHTML = `<tr><th>${t('nm.type')}</th><th>${t('nm.address')}</th><th>${t('nm.name')}</th><th></th></tr>` + (rows.map(r => `<tr><td class="nw">${t('nm.k_' + r.k)}</td>
-      <td class="nw"><code>${esc(r.a)}${r.k === 'iface' ? ' #' + esc(r.x) : ''}</code></td><td>${r.k === 'snmp' ? `<span class="muted">${esc(t('nm.community'))}:</span> ` : ''}${esc(r.n.replace(/\s*\bspeed=\d+/, ''))}${/\bspeed=(\d+)/.test(r.n) ? ` <span class="muted">${fmtBps(+r.n.match(/\bspeed=(\d+)/)[1])}</span>` : ''}</td>
+      <td class="nw"><code>${esc(r.a)}${r.k === 'iface' ? ' #' + esc(r.x) : ''}</code></td><td>${r.c ? `<span class="tag">${esc(country(r.c))}</span> ` : ''}${r.k === 'snmp' ? `<span class="muted">${esc(t('nm.community'))}:</span> ` : ''}${esc(r.n.replace(/\s*\bspeed=\d+/, ''))}${/\bspeed=(\d+)/.test(r.n) ? ` <span class="muted">${fmtBps(+r.n.match(/\bspeed=(\d+)/)[1])}</span>` : ''}</td>
       <td class="nw" style="text-align:end"><button class="btn" data-nme="${r.i}">${t('nm.edit')}</button> <button class="btn" data-nmd="${r.i}">${t('nm.delete')}</button></td></tr>`).join('') ||
     `<tr><td colspan="4" class="empty">${t('nm.empty')}</td></tr>`);
   const msg = (ok, text) => { const m = $('#nmMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
@@ -1326,11 +1424,11 @@ function namesForm() {
     $('#inv').value = text; msg(true, t('src.saved')); loadStatus(); namesForm(); return true;
   };
   const lines = () => $('#inv').value.split('\n');
-  const reset = () => { editing = null; $('#nmAdd').textContent = t('nm.add'); $('#nmCancel').hidden = true; ['#nmA', '#nmI', '#nmN'].forEach(x => $(x).value = ''); };
+  const reset = () => { editing = null; $('#nmAdd').textContent = t('nm.add'); $('#nmCancel').hidden = true; ['#nmA', '#nmI', '#nmN', '#nmC'].forEach(x => $(x).value = ''); };
   $('#nmK').onchange = sync; sync();
   $('#nmCancel').onclick = reset;
   $('#nmAdd').onclick = async () => {
-    const r = {k: $('#nmK').value, a: $('#nmA').value.trim(), x: $('#nmI').value.trim(), n: $('#nmN').value.trim().replace(/\s+/g, ' ')};
+    const r = {k: $('#nmK').value, a: $('#nmA').value.trim(), x: $('#nmI').value.trim(), n: $('#nmN').value.trim().replace(/\s+/g, ' '), c: $('#nmC').value};
     if (!r.a || !r.n || (r.k === 'iface' && !r.x)) { msg(false, t('nm.missing')); return; }
     const ip = /^(\d{1,3}(\.\d{1,3}){3}|[0-9a-fA-F:]*:[0-9a-fA-F:.]*)$/;
     if (r.k === 'net' ? !(r.a.includes('/') && ip.test(r.a.split('/')[0]) && /^\d{1,3}$/.test(r.a.split('/')[1])) : !ip.test(r.a)) { msg(false, t(r.k === 'net' ? 'nm.bad_net' : 'nm.bad_addr', {a: r.a})); return; }
@@ -1351,7 +1449,7 @@ function namesForm() {
   tab.querySelectorAll('[data-nme]').forEach(b => b.onclick = () => {
     const r = rows.find(x => x.i === +b.dataset.nme);
     editing = r.i; $('#nmK').value = r.k; sync();
-    $('#nmA').value = r.a; $('#nmI').value = r.x; $('#nmN').value = r.n;
+    $('#nmA').value = r.a; $('#nmI').value = r.x; $('#nmN').value = r.n; $('#nmC').value = r.c || '';
     $('#nmAdd').textContent = t('nm.save_edit'); $('#nmCancel').hidden = false; $('#nmA').focus();
   });
 }

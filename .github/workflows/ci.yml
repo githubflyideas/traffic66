@@ -119,7 +119,9 @@ jobs:
             "$exe" demo -data "$RUNNER_TEMP/demo" -password ci -addr 127.0.0.1:18066 -listen "" &
           fi
           for i in $(seq 1 90); do curl -sf -u admin:ci http://127.0.0.1:18066/api/status >/dev/null && break; sleep 2; done
-          curl -sf -u admin:ci "http://127.0.0.1:18066/api/topn?dim=client&limit=66" | head -c 300
+          # to a file first: piping into head can cut curl off (exit 23)
+          curl -sf -u admin:ci "http://127.0.0.1:18066/api/topn?dim=client&limit=66" -o "$RUNNER_TEMP/topn.json"
+          head -c 300 "$RUNNER_TEMP/topn.json"
           kill %1 || true
       - name: Package
         run: |

@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"net/netip"
+	"strings"
 	"testing"
 	"time"
 
@@ -538,5 +539,63 @@ func TestPurge(t *testing.T) {
 		if n := count(`SELECT count(*) FROM ` + tb); n != 0 {
 			t.Errorf("%s: %d rows after deleting all", tb, n)
 		}
+	}
+}
+
+// Two-ring charts: the top inner values with their outer values, the rest
+// as Other; and traffic between named networks with a country and remote
+// countries.
+func TestRingsAndSegmentCountries(t *testing.T) {
+	p, st := setup(t)
+	p.Inv.Parse("net 10.1.0.0/16 Tokyo country=JP\n")
+	p.ASN.Load(strings.NewReader("198.51.100.0\t198.51.100.255\t64500\tUS\tExample\n"))
+	now := time.Now().UTC().Truncate(time.Minute)
+	exp := netip.MustParseAddr("10.0.0.1")
+	var recs []flow.Record
+	add := func(cli, srv string, port uint16, bytes uint64) {
+		recs = append(recs, flow.Record{Start: now.Add(-10 * time.Minute), End: now.Add(-9 * time.Minute), Src: netip.MustParseAddr(cli), Dst: netip.MustParseAddr(srv),
+			SrcPort: 50000, DstPort: port, Proto: 6, TCPFlags: 0x02, Bytes: bytes, Packets: 1, Mult: 1, SamplingKnown: true, Exporter: exp, Source: flow.SrcNetFlow9})
+	}
+	add("10.1.1.1", "198.51.100.1", 443, 9000)
+	add("10.1.1.2", "198.51.100.1", 443, 3000)
+	add("10.1.1.1", "198.51.100.2", 22, 1000)
+	p.Ingest(recs)
+	p.FlushRows()
+	q := store.Query{From: now.Add(-time.Hour), To: now}
+	rs, err := st.Rings(q, "server", "client", 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rs.Inner) != 2 || rs.Inner[0].Key != "198.51.100.1" || rs.Inner[1].Key != "__other__" {
+		t.Fatalf("inner %+v", rs.Inner)
+	}
+	// the top server's two clients: the bigger, and the rest as Other
+	var outer []string
+	for _, o := range rs.Outer {
+		if o.Parent == "198.51.100.1" {
+			outer = append(outer, o.Key)
+		}
+	}
+	if len(outer) != 2 || outer[0] != "10.1.1.1" || outer[1] != "__other__" {
+		t.Errorf("outer %v", outer)
+	}
+	if _, err := st.Rings(q, "service", "server", 8, 12); err != nil {
+		t.Error(err)
+	}
+	if _, err := st.Rings(q, "server", "server", 8, 12); err == nil {
+		t.Error("same dimension twice accepted")
+	}
+	sc, err := st.SegmentCountries(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sc) == 0 || sc[0].Segment != "Tokyo" || sc[0].Country != "US" {
+		t.Errorf("segment countries %+v", sc)
+	}
+	if p.Inv.SegmentCountries()["Tokyo"] != "JP" {
+		t.Error("country of the network not parsed")
+	}
+	if err := p.Inv.Parse("net 10.1.0.0/16 Tokyo country=JPN\n"); err == nil {
+		t.Error("three-letter country accepted")
 	}
 }

@@ -461,5 +461,16 @@
 "nm.save_edit": "保存修改",
 "nm.bad_addr": "{a} 不是 IP 地址",
 "nm.bad_net": "{a} 不是网段，应写成 192.168.3.0/24 这样",
-"nm.bad_index": "{x} 不是接口编号"
+"nm.bad_index": "{x} 不是接口编号",
+"rg.hosts": "服务器与客户端",
+"rg.services": "服务与服务器",
+"rg.in_server": "服务器在内环",
+"rg.in_client": "客户端在内环",
+"rg.in_service": "服务在内环",
+"rg.hosts_sub_s": "内环：流量最大的服务器；外环：每台服务器的客户端",
+"rg.hosts_sub_c": "内环：流量最大的客户端；外环：每个客户端访问的服务器",
+"rg.svc_sub_v": "内环：流量最大的服务；外环：提供该服务的服务器",
+"rg.svc_sub_s": "内环：流量最大的服务器；外环：每台服务器上的服务",
+"geo.lines_hint": "在 接入 → 名称 里给内网网段设置国家，地图上就会画出从它们到各个国家的流向线。",
+"nm.country_none": "国家（可选）"
 }

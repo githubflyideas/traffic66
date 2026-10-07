@@ -461,5 +461,16 @@
 "nm.save_edit": "Salvar alterações",
 "nm.bad_addr": "{a} não é um endereço IP",
 "nm.bad_net": "{a} não é uma rede como 192.168.3.0/24",
-"nm.bad_index": "{x} não é um número de interface"
+"nm.bad_index": "{x} não é um número de interface",
+"rg.hosts": "Servidores e clientes",
+"rg.services": "Serviços e servidores",
+"rg.in_server": "Servidores dentro",
+"rg.in_client": "Clientes dentro",
+"rg.in_service": "Serviços dentro",
+"rg.hosts_sub_s": "Anel interno: os servidores com mais tráfego; externo: os clientes de cada um",
+"rg.hosts_sub_c": "Anel interno: os clientes com mais tráfego; externo: os servidores que cada um usa",
+"rg.svc_sub_v": "Anel interno: os serviços com mais tráfego; externo: os servidores que os oferecem",
+"rg.svc_sub_s": "Anel interno: os servidores com mais tráfego; externo: os serviços de cada um",
+"geo.lines_hint": "Defina um país para suas redes internas (Fontes → Nomes, Rede) para ver linhas delas até os países com que conversam.",
+"nm.country_none": "país (opcional)"
 }
