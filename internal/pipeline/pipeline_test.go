@@ -504,7 +504,9 @@ func TestPurge(t *testing.T) {
 		t.Fatal(err)
 	}
 	count := func(q string) (n int64) { st.DB.QueryRow(q).Scan(&n); return }
-	flows := func() int64 { return count(`SELECT count(*) FROM ` + st.Source(now.Add(-30*24*time.Hour), now.Add(time.Hour))) }
+	flows := func() int64 {
+		return count(`SELECT count(*) FROM ` + st.Source(now.Add(-30*24*time.Hour), now.Add(time.Hour)))
+	}
 	if n := flows(); n != 30 {
 		t.Fatalf("%d flow rows before", n)
 	}
