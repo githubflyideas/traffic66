@@ -142,11 +142,12 @@ async function resolveNames() {
 // ------------------------------------------------------------ state & API
 const VIEWS = ['overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'sandbox', 'ifaces', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
-const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'in', sort: {k: 'wire', asc: false}, det: null};
+const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'both', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
   if (VIEWS.includes(p.get('v'))) state.v = p.get('v');
   if (RANGES.includes(p.get('r'))) state.r = p.get('r');
+  if (p.get('r') === 'custom' && +p.get('from') > 0 && +p.get('to') > +p.get('from')) { state.r = 'custom'; state.cf = +p.get('from'); state.ct = +p.get('to'); }
   if (p.get('dim')) state.dim = p.get('dim');
   state.tm = p.get('tm') === 'table' || (p.get('v') === 'topn' && p.get('dim')) ? 'table' : 'talkers';
   state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
@@ -161,6 +162,7 @@ function readHash() {
 }
 function writeHash(push) {
   const p = new URLSearchParams({v: state.v, r: state.r});
+  if (state.r === 'custom') { p.set('from', state.cf); p.set('to', state.ct); }
   if (state.ds) p.set('ds', state.ds);
   if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
@@ -184,7 +186,7 @@ function tickClock() {
 setInterval(tickClock, 1000);
 async function api(path, extra = {}, filters = state.f) {
   if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
-  const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : {range: state.r, ...extra});
+  const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
   const res = await fetch('/api/' + path + '?' + p);
   if (res.status === 401) { showLogin(); throw new Error('login'); }
@@ -197,8 +199,41 @@ function sbRange() {
   const a = Math.floor(Date.parse(sbInfo.first) / 6e4) * 6e4, b = Math.ceil((Date.parse(sbInfo.last) + 1) / 6e4) * 6e4;
   return {from: a, to: Math.max(b, a + 6e4)};
 }
-const spanMs = () => { if (inSB()) { const r = sbRange(); return r.to - r.from; } return ({'15m': 9e5, '1h': 36e5, '6h': 216e5, '24h': 864e5, '7d': 6048e5, '30d': 2592e6})[state.r]; };
-const rangeLabel = () => inSB() ? t('sb.range') : t('range.' + state.r);
+const spanMs = () => { if (inSB()) { const r = sbRange(); return r.to - r.from; } if (state.r === 'custom') return state.ct - state.cf; return ({'15m': 9e5, '1h': 36e5, '6h': 216e5, '24h': 864e5, '7d': 6048e5, '30d': 2592e6})[state.r]; };
+const rangeLabel = () => inSB() ? t('sb.range') : state.r === 'custom' ? customLabel() : t('range.' + state.r);
+// "10/05 08:00 – 10/06 08:00": a custom range in the reader's time
+function customLabel() {
+  const a = new Date(state.cf), b = new Date(state.ct), same = a.toDateString() === b.toDateString();
+  const df = new Intl.DateTimeFormat(LANG, {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
+  return df.format(a) + ' – ' + (same ? new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit'}).format(b) : df.format(b));
+}
+// the custom range picker: start and end as date and time
+const localInput = ms => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 6e4); return d.toISOString().slice(0, 16); };
+function openRangePop(btn) {
+  let pop = $('#rangePop');
+  if (!pop) { pop = document.createElement('div'); pop.id = 'rangePop'; pop.className = 'rangepop'; document.body.appendChild(pop); }
+  const now = Date.now(), to = state.r === 'custom' ? state.ct : now, from = state.r === 'custom' ? state.cf : now - (spanMs() || 864e5);
+  pop.innerHTML = `<label>${t('range.from')}<input type="datetime-local" id="rpFrom" value="${localInput(from)}"></label>
+    <label>${t('range.to')}<input type="datetime-local" id="rpTo" value="${localInput(to)}"></label>
+    <div class="rpmsg" id="rpMsg"></div>
+    <div class="rpbtns"><button class="btn" id="rpCancel">${t('range.cancel')}</button><button class="primary" id="rpApply">${t('range.apply')}</button></div>`;
+  pop.hidden = false;
+  const r = btn.getBoundingClientRect();
+  pop.style.top = (r.bottom + 6) + 'px';
+  pop.style.left = Math.max(8, Math.min(r.right - pop.offsetWidth, innerWidth - pop.offsetWidth - 8)) + 'px';
+  $('#rpCancel').onclick = () => { pop.hidden = true; };
+  $('#rpApply').onclick = () => {
+    const f = new Date($('#rpFrom').value).getTime(), tt = new Date($('#rpTo').value).getTime();
+    if (!(f > 0) || !(tt > f)) { $('#rpMsg').textContent = t('range.bad'); return; }
+    state.r = 'custom'; state.cf = f; state.ct = Math.min(tt, Date.now() + 6e4);
+    pop.hidden = true; render(true);
+  };
+}
+function renderRange() {
+  $('#range').innerHTML = RANGES.map(r => `<button data-r="${r}">${t('range.' + r)}</button>`).join('') +
+    `<button data-r="custom" class="custom">${state.r === 'custom' ? esc(customLabel()) : t('range.custom')}</button>`;
+  $('#range').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.r === state.r));
+}
 
 // ------------------------------------------------------------ tooltip & charts
 const tip = $('#tip');
@@ -250,8 +285,11 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
       s += `<path d="${paths}" fill="${a.color}" fill-opacity=".88" stroke="var(--surface)" stroke-width="1"/>`;
     });
     lines.forEach(l => {
-      let d = '', pen = false;
-      l.data.forEach((v, i) => { if (v == null || v < 0) { pen = false; return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = true; });
+      let d = '', pen = false, area = '', seg = [];
+      const close = () => { if (seg.length > 1) area += 'M' + seg.map(i => x(i).toFixed(1) + ' ' + y(l.data[i]).toFixed(1)).join('L') + `L${x(seg[seg.length - 1]).toFixed(1)} ${y(0)}L${x(seg[0]).toFixed(1)} ${y(0)}Z`; seg = []; };
+      l.data.forEach((v, i) => { if (v == null || v < 0) { pen = false; close(); return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = true; seg.push(i); });
+      close();
+      if (l.fill && area) s += `<path d="${area}" fill="${l.color}" fill-opacity=".14" stroke="none"/>`;
       s += `<path d="${d}" fill="none" stroke="${l.color}" stroke-width="2" ${l.dash ? 'stroke-dasharray="4 3"' : ''}/>`;
     });
     s += `<line class="xh" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--ink-2)" stroke-width="1" style="display:none"/><rect class="hit" x="${Math.min(L, R)}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg>`;
@@ -1051,48 +1089,66 @@ function devKind(f) {
   const dv = Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev));
   return dv > Math.max(0.02, 2 * (f.stat_err || 0)) ? 'warn' : 'ok';
 }
+// Interface check: the selected interface's traffic in both directions
+// (ingress green, egress blue) in bits/s and packets/s, the list of
+// interfaces, and flow numbers next to the interface counters.
+const IF_IN = 'var(--c3)', IF_OUT = 'var(--c1)';
+function ifVerdict(r, rc, dirIn) {
+  const dev = dirIn ? r.in_dev : r.out_dev, err = dirIn ? r.in_stat_err : r.out_stat_err;
+  if (!r.has_counters) return {text: t('if.no_counters'), kind: 'none', dev, err};
+  if (Math.abs(dev) <= Math.max(0.02, 2 * err)) return {text: t('if.ok', {dev: fmtPct(dev), err: '±' + nf(err * 100, 1) + '%'}), kind: 'ok', dev, err};
+  const causes = [], src = rc.source;
+  if (src && src.lost_pct >= 0.5) causes.push(t('cause.loss', {p: nf(src.lost_pct, 1) + '%'}));
+  if (src && src.sampling_state === 'waiting') causes.push(t('cause.sampling'));
+  if (dev < 0) causes.push(t('cause.unsampled_iface'));
+  if (dev > 0) causes.push(t('cause.dup'));
+  return {text: t(dev < 0 ? 'if.low' : 'if.high', {dev: nf(Math.abs(dev) * 100, 1) + '%', causes: causes.join('; ')}), kind: 'warn', dev, err};
+}
 views.ifaces = async (el) => {
-  const rates = [['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']];
-  const [d, ...rd] = await Promise.all([api('ifaces'), ...rates.map(([by, m]) => seriesData(by, m))]);
+  const d = await api('ifaces');
   (d.ifaces || []).forEach(f => ifaceNames.set(f.exporter + '/' + f.ifindex, ifName(f) + ' · ' + (f.device || f.exporter)));
   const list = (d.ifaces || []).slice().sort((a, b) => (!!b.has_counters - !!a.has_counters) || ((devKind(b) === 'warn') - (devKind(a) === 'warn')));
   if (!list.length) { el.innerHTML = `<div class="panel"><div class="empty">${t('empty.nodata')}</div></div>`; return; }
   if (!state.ifc || !list.some(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex)) state.ifc = {exporter: list[0].exporter, ifindex: list[0].ifindex};
-  el.innerHTML = `<div class="grid" style="margin-bottom:16px">${rates.map(([by, m], i) => seriesPanel('ifr' + i, 'c6', `${t(by === 'if_in' ? 'if.ingress' : 'if.egress')} · ${t(m === 'wire' ? 'ch.bps' : 'ch.pps')}`)).join('')}</div>
+  const key = state.ifc.exporter + '/' + state.ifc.ifindex, sel = list.find(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex);
+  const fil = [...state.f, {f: 'iface', v: key, neg: false}];
+  const [ri, ro, pi, po, rc] = await Promise.all([['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']].map(([by, measure]) => api('series', {by, measure, top: 20}, fil))
+    .concat([api('recon', {exporter: state.ifc.exporter, ifindex: state.ifc.ifindex})]));
+  const pick = s => { const i = (s.names || []).indexOf(key); return i < 0 ? (s.times || []).map(() => 0) : s.values[i]; };
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const name = `${ifName(sel)} · ${sel.device || sel.exporter}`;
+  const leg = (vi, vo, fmt) => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div>`;
+  el.innerHTML = `<div class="grid" style="margin-bottom:16px">
+    ${panel('c6', `${esc(name)} · ${t('ch.bps')}`, '', `<div class="chart" id="ifB" style="height:220px" aria-label="${esc(t('ch.bps'))}"></div>${leg()}`)}
+    ${panel('c6', `${esc(name)} · ${t('ch.pps')}`, '', `<div class="chart" id="ifP" style="height:220px" aria-label="${esc(t('ch.pps'))}"></div>${leg()}`)}</div>
     <div class="grid">
     ${panel('c4', t('if.title'), t('if.sub'), `<div class="iflist">${list.map(f => {
       const k = devKind(f), cur = f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex;
       return `<button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>`;
     }).join('')}</div>`)}
-    <div class="panel c8" id="recon"><div class="empty">…</div></div></div>`;
-  rates.forEach(([by, m], i) => fillSeries('ifr' + i, rd[i], by, m));
+    <div class="panel c8" id="recon"></div></div>`;
+  const bitsIn = pick(ri), bitsOut = pick(ro);
+  tsChart($('#ifB'), {times: ri.times, lines: [{name: t('if.in'), color: IF_IN, data: bitsIn, fill: true}, {name: t('if.out'), color: IF_OUT, data: bitsOut, fill: true}]});
+  tsChart($('#ifP'), {times: pi.times, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
   el.querySelectorAll('.iflist button').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
-  const rc = await api('recon', {exporter: state.ifc.exporter, ifindex: state.ifc.ifindex});
-  const r = rc.recon, dirIn = state.ifdir === 'in';
-  const dev = dirIn ? r.in_dev : r.out_dev, err = dirIn ? r.in_stat_err : r.out_stat_err;
-  let verdict, vk = 'ok';
-  if (!r.has_counters) { verdict = t('if.no_counters'); vk = 'none'; }
-  else if (Math.abs(dev) <= Math.max(0.02, 2 * err)) {
-    verdict = t('if.ok', {dev: fmtPct(dev), err: '±' + nf(err * 100, 1) + '%'});
-  } else {
-    vk = 'warn';
-    const causes = [];
-    const src = rc.source;
-    if (src && src.lost_pct >= 0.5) causes.push(t('cause.loss', {p: nf(src.lost_pct, 1) + '%'}));
-    if (src && src.sampling_state === 'waiting') causes.push(t('cause.sampling'));
-    if (dev < 0) causes.push(t('cause.unsampled_iface'));
-    if (dev > 0) causes.push(t('cause.dup'));
-    verdict = t(dev < 0 ? 'if.low' : 'if.high', {dev: nf(Math.abs(dev) * 100, 1) + '%', causes: causes.join('; ')});
-  }
-  const ctr = dirIn ? r.in_counter : r.out_counter, flw = dirIn ? r.in_flow : r.out_flow;
-  $('#recon').innerHTML = `<div class="ph"><div><div class="sub">${esc(ifName({...rc, exporter: r.exporter, ifindex: r.ifindex}))} · ${esc(rc.device || r.exporter)}</div>
-      <div style="font-size:22px;font-weight:650">${r.has_counters ? t('if.dev', {v: fmtPct(dev)}) : '—'} ${r.has_counters && err ? `<span class="muted" style="font-size:13px;font-weight:400">${t('if.stat', {v: nf(err * 100, 1) + '%'})}</span>` : ''}</div></div>
-      <div class="seg" role="group"><button data-d="in" aria-pressed="${dirIn}">${t('if.in')}</button><button data-d="out" aria-pressed="${!dirIn}">${t('if.out')}</button></div></div>
+
+  const r = rc.recon, dir = state.ifdir || 'both';
+  const vin = ifVerdict(r, rc, true), vout = ifVerdict(r, rc, false);
+  const head = v => r.has_counters ? t('if.dev', {v: fmtPct(v.dev)}) : '—';
+  const lines = [];
+  if (dir !== 'out') { if (r.has_counters) lines.push({name: t('if.in') + ' · ' + t('if.counter'), color: IF_IN, dash: true, data: r.in_counter}); lines.push({name: t('if.in') + ' · ' + t('if.flow'), color: IF_IN, data: r.in_flow}); }
+  if (dir !== 'in') { if (r.has_counters) lines.push({name: t('if.out') + ' · ' + t('if.counter'), color: IF_OUT, dash: true, data: r.out_counter}); lines.push({name: t('if.out') + ' · ' + t('if.flow'), color: IF_OUT, data: r.out_flow}); }
+  const kinds = (dir === 'both' ? [vin, vout] : [dir === 'in' ? vin : vout]);
+  const vk = kinds.some(v => v.kind === 'warn') ? 'warn' : kinds.every(v => v.kind === 'none') ? 'none' : '';
+  $('#recon').innerHTML = `<div class="ph"><div><div class="sub">${esc(name)}</div>
+      <div style="font-size:20px;font-weight:650">${dir === 'both' ? `<span style="color:${IF_IN}">${t('if.in')}</span> ${head(vin)} · <span style="color:${IF_OUT}">${t('if.out')}</span> ${head(vout)}` : head(dir === 'in' ? vin : vout)}</div></div>
+      <div class="seg" role="group">${['both', 'in', 'out'].map(k => `<button data-d="${k}" aria-pressed="${dir === k}">${t('if.' + k)}</button>`).join('')}</div></div>
     <div class="chart" id="chRecon" style="height:240px" aria-label="${esc(t('if.title'))}"></div>
-    <div class="legend"><span><i class="line" style="background:var(--c1)"></i>${t('if.flow')}</span>${r.has_counters ? `<span><i class="line" style="background:var(--c2)"></i>${t('if.counter')}</span>` : ''}</div>
-    <div class="verdict ${vk === 'ok' ? '' : vk}">${verdict}</div>`;
+    <div class="legend"><span><i class="line" style="background:var(--ink-2)"></i>${t('if.flow')}</span>${r.has_counters ? `<span><i class="line dash" style="border-top:2px dashed var(--ink-2);background:none"></i>${t('if.counter')}</span>` : ''}
+      <span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div>
+    <div class="verdict ${vk}">${dir === 'both' ? `<b>${t('if.in')}</b>: ${vin.text}<br><b>${t('if.out')}</b>: ${vout.text}` : (dir === 'in' ? vin : vout).text}</div>`;
   $('#recon').querySelectorAll('[data-d]').forEach(b => b.onclick = () => { state.ifdir = b.dataset.d; render(); });
-  tsChart($('#chRecon'), {times: r.times, lines: [...(r.has_counters ? [{name: t('if.counter'), color: 'var(--c2)', data: ctr}] : []), {name: t('if.flow'), color: 'var(--c1)', data: flw}]});
+  tsChart($('#chRecon'), {times: r.times, lines});
 };
 
 views.sources = async (el) => {
@@ -1274,7 +1330,7 @@ async function render(push) {
   $('#title').textContent = t('nav.' + state.v);  // the detail view refines it
   document.title = t('nav.' + state.v) + ' · traffic66';
   document.querySelectorAll('#nav button').forEach(b => b.dataset.v === state.v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-  document.querySelectorAll('#range button').forEach(b => b.setAttribute('aria-pressed', b.dataset.r === state.r));
+  renderRange();
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + state.v));
   const el = $('#v-' + state.v), seq = ++loadSeq;
   try {
@@ -1330,11 +1386,14 @@ async function init() {
   $('#lang').value = lang;
   $('#lang').onchange = async () => {
     await loadLang($('#lang').value);
-    $('#range').querySelectorAll('button').forEach(b => b.textContent = t('range.' + b.dataset.r));
     loadStatus(); render();
   };
-  $('#range').innerHTML = RANGES.map(r => `<button data-r="${r}">${t('range.' + r)}</button>`).join('');
-  $('#range').onclick = e => { const b = e.target.closest('[data-r]'); if (b) { state.r = b.dataset.r; render(); } };
+  $('#range').onclick = e => {
+    const b = e.target.closest('[data-r]'); if (!b) return;
+    if (b.dataset.r === 'custom') { e.stopPropagation(); openRangePop(b); return; }
+    state.r = b.dataset.r; render();
+  };
+  document.addEventListener('click', e => { const p = $('#rangePop'); if (p && !p.hidden && !e.target.closest('#rangePop')) p.hidden = true; });
   $('#nav').onclick = e => { const b = e.target.closest('[data-v]'); if (b) go(b.dataset.v); };
   $('#share').onclick = () => { navigator.clipboard?.writeText(location.href).then(() => toast(t('top.copied')), () => toast(location.href)); };
   document.addEventListener('click', e => { if (!e.target.closest('.cols')) { const m = $('#colMenu'); if (m) m.hidden = true; } });

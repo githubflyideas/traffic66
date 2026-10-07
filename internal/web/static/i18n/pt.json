@@ -413,5 +413,12 @@
 "sb.hours": "{n} h",
 "sb.not_capture": "{f} não é um arquivo de captura. Use .pcap ou .pcapng salvo pelo Wireshark ou tcpdump.",
 "sb.avg": "Taxa média",
-"sb.limits_total": "Até {n} arquivos, {gb} no total."
+"sb.limits_total": "Até {n} arquivos, {gb} no total.",
+"if.both": "Ambos",
+"range.custom": "Personalizado…",
+"range.from": "De",
+"range.to": "Até",
+"range.apply": "Aplicar",
+"range.cancel": "Cancelar",
+"range.bad": "O fim deve ser depois do início"
 }
