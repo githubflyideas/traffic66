@@ -413,5 +413,12 @@
 "sb.hours": "{n} ঘণ্টা",
 "sb.not_capture": "{f} ক্যাপচার ফাইল নয়। Wireshark বা tcpdump-এ সংরক্ষিত .pcap বা .pcapng ব্যবহার করুন।",
 "sb.avg": "গড় হার",
-"sb.limits_total": "সর্বোচ্চ {n}টি ফাইল, মোট {gb} পর্যন্ত।"
+"sb.limits_total": "সর্বোচ্চ {n}টি ফাইল, মোট {gb} পর্যন্ত।",
+"if.both": "দুটোই",
+"range.custom": "নিজের মতো…",
+"range.from": "থেকে",
+"range.to": "পর্যন্ত",
+"range.apply": "প্রয়োগ",
+"range.cancel": "বাতিল",
+"range.bad": "শেষ সময় শুরুর পরে হতে হবে"
 }

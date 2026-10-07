@@ -413,5 +413,12 @@
 "sb.hours": "{n} گھنٹے",
 "sb.not_capture": "{f} کیپچر فائل نہیں ہے۔ Wireshark یا tcpdump سے محفوظ ‎.pcap یا ‎.pcapng استعمال کریں۔",
 "sb.avg": "اوسط رفتار",
-"sb.limits_total": "زیادہ سے زیادہ {n} فائلیں، کل {gb} تک۔"
+"sb.limits_total": "زیادہ سے زیادہ {n} فائلیں، کل {gb} تک۔",
+"if.both": "دونوں",
+"range.custom": "اپنی مرضی…",
+"range.from": "سے",
+"range.to": "تک",
+"range.apply": "لاگو کریں",
+"range.cancel": "منسوخ",
+"range.bad": "اختتام، آغاز کے بعد ہونا چاہیے"
 }

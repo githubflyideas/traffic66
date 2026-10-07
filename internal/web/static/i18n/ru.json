@@ -413,5 +413,12 @@
 "sb.hours": "{n} ч",
 "sb.not_capture": "{f} — не файл захвата. Используйте .pcap или .pcapng, сохранённый Wireshark или tcpdump.",
 "sb.avg": "Средняя скорость",
-"sb.limits_total": "До {n} файлов, всего не больше {gb}."
+"sb.limits_total": "До {n} файлов, всего не больше {gb}.",
+"if.both": "Оба",
+"range.custom": "Свой период…",
+"range.from": "С",
+"range.to": "По",
+"range.apply": "Применить",
+"range.cancel": "Отмена",
+"range.bad": "Конец должен быть позже начала"
 }

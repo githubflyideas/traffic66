@@ -413,5 +413,12 @@
 "sb.hours": "{n} h",
 "sb.not_capture": "{f} is not a capture file. Use .pcap or .pcapng as saved by Wireshark or tcpdump.",
 "sb.avg": "Average rate",
-"sb.limits_total": "Up to {n} files, {gb} in all."
+"sb.limits_total": "Up to {n} files, {gb} in all.",
+"if.both": "Both",
+"range.custom": "Custom…",
+"range.from": "From",
+"range.to": "To",
+"range.apply": "Apply",
+"range.cancel": "Cancel",
+"range.bad": "The end must be after the start"
 }

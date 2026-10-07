@@ -413,5 +413,12 @@
 "sb.hours": "{n} 小时",
 "sb.not_capture": "{f} 不是抓包文件。请使用 Wireshark 或 tcpdump 保存的 .pcap 或 .pcapng。",
 "sb.avg": "平均带宽",
-"sb.limits_total": "最多 {n} 个文件，总共不超过 {gb}。"
+"sb.limits_total": "最多 {n} 个文件，总共不超过 {gb}。",
+"if.both": "双向",
+"range.custom": "自定义…",
+"range.from": "开始",
+"range.to": "结束",
+"range.apply": "应用",
+"range.cancel": "取消",
+"range.bad": "结束时间要晚于开始时间"
 }

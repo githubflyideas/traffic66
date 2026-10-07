@@ -413,5 +413,12 @@
 "sb.hours": "{n} 時間",
 "sb.not_capture": "{f} はキャプチャファイルではありません。Wireshark や tcpdump で保存した .pcap か .pcapng を使ってください。",
 "sb.avg": "平均レート",
-"sb.limits_total": "最大 {n} ファイル、合計 {gb} まで。"
+"sb.limits_total": "最大 {n} ファイル、合計 {gb} まで。",
+"if.both": "双方向",
+"range.custom": "期間指定…",
+"range.from": "開始",
+"range.to": "終了",
+"range.apply": "適用",
+"range.cancel": "キャンセル",
+"range.bad": "終了は開始より後にしてください"
 }

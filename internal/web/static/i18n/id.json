@@ -413,5 +413,12 @@
 "sb.hours": "{n} jam",
 "sb.not_capture": "{f} bukan file tangkapan. Gunakan .pcap atau .pcapng yang disimpan Wireshark atau tcpdump.",
 "sb.avg": "Laju rata-rata",
-"sb.limits_total": "Maksimal {n} file, total {gb}."
+"sb.limits_total": "Maksimal {n} file, total {gb}.",
+"if.both": "Keduanya",
+"range.custom": "Kustom…",
+"range.from": "Dari",
+"range.to": "Sampai",
+"range.apply": "Terapkan",
+"range.cancel": "Batal",
+"range.bad": "Akhir harus setelah awal"
 }
