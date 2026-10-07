@@ -3,22 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 1.2.4
+## 1.5.0
 
-Interfaces
-- The interfaces a device samples are told from the ones only seen as the
-  other end of its flows: by the sFlow data source, by flowDirection
-  (IPFIX 61) in NetFlow v9 and IPFIX, or else, without that field, as the
-  interface on at least 90% of the device's traffic.
-- Interface check lists those other interfaces last, in smaller grey type,
-  under "Peer interfaces": their numbers hold only the traffic through the
-  sampled interface. Their charts say so.
-- **Interface** above the pages lists only sampled interfaces, grouped by
-  device.
-- Settings shows for each device the interfaces it samples, and whether its
-  NetFlow/IPFIX templates carry flowDirection.
-
-## 1.2.3
+Includes the changes listed under 1.2.3: the 1.2.3 release was built from
+the same code as 1.2.2.
 
 Interfaces
 - **Interface** at the top of the traffic pages (Overview, Top 66, Traffic
@@ -36,6 +24,25 @@ Interfaces
 - Overview: the bandwidth of the chosen (or default, or busiest) interface
   in bits/s, ingress green and egress blue, above the bandwidth by
   application.
+- The interfaces a device samples are told from the ones only seen as the
+  other end of its flows: by the sFlow data source, by flowDirection
+  (IPFIX 61) in NetFlow v9 and IPFIX, or else, without that field, as the
+  interface on at least 90% of the device's traffic.
+- Interface check lists those other interfaces last, in smaller grey type,
+  under "Peer interfaces": their numbers hold only the traffic through the
+  sampled interface. Their charts say so.
+- **Interface** above the pages lists only sampled interfaces, grouped by
+  device.
+- Settings shows for each device the interfaces it samples, and whether its
+  NetFlow/IPFIX templates carry flowDirection.
+
+Menu
+- Flow records moved up to the traffic pages, under Interface check.
+  Offline pcap analysis follows Settings; Data cleanup is last.
+
+## 1.2.3
+
+Built from the same code as 1.2.2; its changes are in 1.5.0.
 
 ## 1.2.2
 

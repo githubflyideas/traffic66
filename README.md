@@ -710,9 +710,9 @@ Pages:
 | Offline pcap analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-pcap-analysis)) |
 
 The side menu lists the pages in four groups: traffic (Overview, Top 66,
-Traffic details, Flow paths, Interface check), security (Findings, Threat
-intel, Geo & networks), setup and data (Settings, Flow records, Data
-cleanup) and Offline pcap analysis. Under the logo are the version and the
+Traffic details, Flow paths, Interface check, Flow records), security
+(Findings, Threat intel, Geo & networks), Settings and Offline pcap
+analysis, and Data cleanup at the bottom. Under the logo are the version and the
 server's date and time.
 
 Above the traffic pages (Overview, Top 66, Traffic details, Flow paths,

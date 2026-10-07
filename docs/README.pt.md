@@ -747,9 +747,9 @@ Páginas:
 
 O menu lateral organiza as páginas em quatro grupos: tráfego (Visão geral,
 Top 66, Detalhes do tráfego, Caminhos do tráfego, Conferência de
-interfaces), segurança (Detecções, Ameaças, Geografia e redes),
-configuração e dados (Configurações, Registros de fluxo, Limpeza de dados)
-e Análise offline de pcap. Abaixo do logotipo ficam a versão e a data e hora do servidor.
+interfaces, Registros de fluxo), segurança (Detecções, Ameaças, Geografia e
+redes), Configurações e Análise offline de pcap, e Limpeza de dados no
+final. Abaixo do logotipo ficam a versão e a data e hora do servidor.
 
 Acima das páginas de tráfego (Visão geral, Top 66, Detalhes do tráfego,
 Caminhos do tráfego, Geografia e redes, Registros de fluxo e o detalhe de
