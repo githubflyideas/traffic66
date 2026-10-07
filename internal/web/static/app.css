@@ -298,3 +298,8 @@ label.btn.disabled{opacity:.5;cursor:not-allowed!important}
 .morigin-ring{fill:none;stroke:var(--c2);stroke-width:1.5;opacity:.6;transform-box:fill-box;transform-origin:center;animation:mpulse 2s ease-out infinite;pointer-events:none}
 @keyframes mpulse{from{transform:scale(.6);opacity:.8}to{transform:scale(2.2);opacity:0}}
 .maphint{font-size:12.5px;margin:6px 0 0}
+.lic{margin:24px 20px 20px;padding:12px 16px;border-top:1px solid var(--line);text-align:center;font-size:13px;color:var(--ink-2);line-height:1.6}
+.lic b{color:var(--ink)}
+.lic.trial_over b{color:var(--crit)}
+.lic.licensed b{color:var(--good);font-weight:600}
+.lic .muted{margin-inline-start:8px;font-size:12px}

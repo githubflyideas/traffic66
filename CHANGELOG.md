@@ -5,6 +5,14 @@ heading is the version number.
 
 ## 0.3.1
 
+Licence
+- Traffic66 can be tried for 30 days. The foot of every page shows the days
+  left, then that the trial has ended; it keeps working with every feature
+  either way. A licence from the author (a signed license.json in the data
+  directory, checked every 4 hours) shows who it is licensed to and the days
+  left. On first start license.json is created with an 8-digit installation
+  number, which is what a licence is issued for.
+
 Offline analysis
 - New page **Offline pcap analysis**: upload packet captures (.pcap, .pcapng
   from Wireshark or tcpdump; up to 3 files of at most 50 MB). They are

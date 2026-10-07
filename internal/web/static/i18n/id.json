@@ -472,5 +472,10 @@
 "rg.svc_sub_v": "Cincin dalam: layanan tersibuk; luar: server yang menyediakannya",
 "rg.svc_sub_s": "Cincin dalam: server tersibuk; luar: layanan masing-masing",
 "geo.lines_hint": "Tetapkan negara untuk jaringan internal (Sumber → Nama, Jaringan) agar terlihat garis darinya ke negara-negara tujuan.",
-"nm.country_none": "negara (opsional)"
+"nm.country_none": "negara (opsional)",
+"lic.trial": "Masa uji Traffic66 tinggal {n} hari. Silakan minta lisensi pendaftaran kepada pembuatnya.",
+"lic.over": "Masa uji Traffic66 telah berakhir. Silakan minta lisensi pendaftaran kepada pembuatnya.",
+"lic.free": "Sebelum terdaftar, semua fitur tetap bisa dipakai.",
+"lic.ok": "Dilisensikan untuk {c}: tinggal {n} hari",
+"lic.id": "Instalasi {id}"
 }
