@@ -25,7 +25,14 @@ async function loadLang(code) {
   document.querySelectorAll('[data-i]').forEach(el => { el.textContent = t(el.dataset.i); });
   $('#q').placeholder = t('top.search');
   $('#refresh').textContent = t('top.refresh');
+  const th = $('#theme');
+  if (th) {
+    th.setAttribute('aria-label', t('theme.label'));
+    th.innerHTML = THEMES.map(k => `<option value="${k}">${esc(t('theme.' + k))}</option>`).join('');
+    th.value = window.t66Theme ? t66Theme.get() : 'light';
+  }
 }
+const THEMES = ['light', 'bright', 'gray', 'dim', 'dark', 'auto'];
 function pickLang() {
   let saved = null;
   try { saved = localStorage.getItem('t66.lang'); } catch (e) {}
@@ -154,6 +161,7 @@ function readHash() {
   state.ra = p.get('ra') === 'client' ? 'client' : 'server';
   state.rb = p.get('rb') === 'server' ? 'server' : 'service';
   state.ds = p.get('ds') === 'sb' ? 'sb' : '';
+  state.rl = p.get('live') === '1';
   const dd = p.get('d'); if (dd && dd.includes(':')) state.det = {f: dd.slice(0, dd.indexOf(':')), v: dd.slice(dd.indexOf(':') + 1)};
   state.f = (p.get('f') || '').split(',').filter(Boolean).map(s => {
     const neg = s[0] === '!'; if (neg) s = s.slice(1);
@@ -167,6 +175,7 @@ function writeHash(push) {
   if (state.ds) p.set('ds', state.ds);
   if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
+  if (state.v === 'records' && state.rl) p.set('live', '1');
   if (state.v === 'traffic') { if (state.ra === 'client') p.set('ra', 'client'); if (state.rb === 'server') p.set('rb', 'server'); }
   if (state.v === 'detail' && state.det) p.set('d', state.det.f + ':' + state.det.v);
   if (state.f.length) p.set('f', state.f.map(x => (x.neg ? '!' : '') + encodeURIComponent(x.f) + ':' + encodeURIComponent(x.v)).join(','));
@@ -187,7 +196,7 @@ function tickClock() {
 setInterval(tickClock, 1000);
 async function api(path, extra = {}, filters = state.f) {
   if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
-  const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
+  const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : extra.range ? extra : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
   const res = await fetch('/api/' + path + '?' + p);
   if (res.status === 401) { showLogin(); throw new Error('login'); }
@@ -388,7 +397,7 @@ function act(a) {
   if (a === 'detail') { showDetail(ctx.k, ctx.v); return; }
   if (a === 'lookup') { window.open(LOOKUP[ctx.k](ctx.v), '_blank', 'noopener'); return; }
   state.f = state.f.filter(x => !(x.f === ctx.k && x.v === ctx.v));
-  if (a === 'records') { state.f = state.f.filter(x => x.f !== ctx.k); state.f.push({f: ctx.k, v: ctx.v, neg: false}); go('records'); return; }
+  if (a === 'records') { state.f = state.f.filter(x => x.f !== ctx.k); state.f.push({f: ctx.k, v: ctx.v, neg: false}); state.rl = false; go('records'); return; }
   state.f.push({f: ctx.k, v: ctx.v, neg: a === 'not'});
   render();
 }
@@ -971,7 +980,7 @@ views.sankey = async (el) => {
 let WORLD;
 const worldMap = () => WORLD || (WORLD = fetch('world.json').then(r => r.json()).catch(e => { WORLD = null; throw e; }));
 // five steps of the sequential blue, light to dark; no traffic is grey
-const MAP_STEPS = ['#cde2fb', '#86b6ef', '#3987e5', '#1c5cab', '#0d366b'];
+const MAP_STEPS = ['var(--m1)', 'var(--m2)', 'var(--m3)', 'var(--m4)', 'var(--m5)'];
 function mapBins(vals) {
   const v = vals.filter(x => x > 0).sort((a, b) => a - b);
   if (!v.length) return [];
@@ -1178,7 +1187,8 @@ views.records = async (el) => {
   const key = state.r + JSON.stringify(state.f);
   if (state.rk !== key) { state.rk = key; state.rp = 0; }
   const per = state.rps || 50, page = state.rp || 0;
-  const d = await api('records', {limit: per, offset: page * per, stats: 1});
+  const live = state.rl && !inSB();
+  const d = await api('records', {limit: per, offset: page * per, stats: 1, ...(live ? {range: '15m'} : {})});
   const rows = d.rows || [], on = recCols(), total = d.total || 0, pages = Math.max(1, Math.ceil(total / per));
   const cols = REC_COLS.filter(c => on.has(c[0])).map(c => c[0]);
   const cell = (c, r) => ({
@@ -1195,7 +1205,7 @@ views.records = async (el) => {
   const pager = `<div class="pager"><label>${t('rec.per_page')} <select id="recPer">${[50, 100, 200].map(n => `<option ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <span>${esc(t('rec.range', {a: nf(total ? page * per + 1 : 0), b: nf(Math.min(total, page * per + rows.length)), n: nf(total)}))}</span>
       <button class="btn" id="recPrev" ${page ? '' : 'disabled'}>‹ ${t('rec.prev')}</button><button class="btn" id="recNext" ${page + 1 < pages ? '' : 'disabled'}>${t('rec.next')} ›</button></div>`;
-  el.innerHTML = `<div class="panel" style="margin-bottom:16px"><div class="rechead"><div class="kpi"><div class="lab">${t('rec.title')}</div><div class="n big">${nf(total)}</div><div class="d muted">${esc(t('rec.in', {r: rangeLabel()}))}</div></div>
+  el.innerHTML = `<div class="panel" style="margin-bottom:16px"><div class="rechead"><div class="kpi"><div class="lab">${t('rec.title')}</div><div class="n big">${nf(total)}</div><div class="d muted">${esc(t('rec.in', {r: live ? t('range.15m') : rangeLabel()}))}${live ? ' · ' + esc(t('rec.live')) : ''}</div>${!live && !inSB() ? `<button class="btn" id="recLive" style="margin-top:8px">${t('rec.go_live')}</button>` : ''}</div>
       <div class="chart" id="chRec" style="height:150px" aria-label="${esc(t('rec.title'))}"></div></div></div>
     <div class="panel"><div class="ph"><h2>${t('rec.title')}</h2><span class="sub">${esc(t('rec.sorted'))}</span>
       <div class="cols"><button class="btn" id="colBtn">${t('rec.columns')}</button><div class="menu" id="colMenu" hidden>${REC_COLS.map(c => `<label><input type="checkbox" value="${c[0]}" ${on.has(c[0]) ? 'checked' : ''}>${t('rc.' + c[0])}</label>`).join('')}</div></div></div>
@@ -1203,6 +1213,7 @@ views.records = async (el) => {
     ${rows.map(r => `<tr>${cols.map(c => `<td class="${num.has(c) ? 'num' : ''}">${cell(c, r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="empty">${t('empty.nodata')}</td></tr>`}</table></div>${pager}</div>`;
   if (d.hist) barChart($('#chRec'), d.hist.times, d.hist.values[0], v => t('rec.n', {n: nf(v)}));
   $('#recPer').onchange = e => { state.rps = +e.target.value; state.rp = 0; render(); };
+  if ($('#recLive')) $('#recLive').onclick = () => { state.rl = true; state.rp = 0; render(); };
   $('#recPrev').onclick = () => { state.rp = Math.max(0, page - 1); render(); };
   $('#recNext').onclick = () => { state.rp = page + 1; render(); };
   $('#colBtn').onclick = e => { e.stopPropagation(); $('#colMenu').hidden = !$('#colMenu').hidden; };
@@ -1243,44 +1254,37 @@ views.ifaces = async (el) => {
   const key = state.ifc.exporter + '/' + state.ifc.ifindex, sel = list.find(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex);
   // one device's interface: count everything it saw, also traffic another device reported too
   const fil = [...state.f, {f: 'iface', v: key, neg: false}];
-  const pps = state.ifm === 'pps', measure = pps ? 'pkts' : 'wire';
-  const [ri, ro, rc] = await Promise.all([['if_in', measure], ['if_out', measure]].map(([by, measure]) => api('series', {by, measure, top: 20, dup: 1}, fil))
+  const [ri, ro, pi, po, rc] = await Promise.all([['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']].map(([by, measure]) => api('series', {by, measure, top: 20, dup: 1}, fil))
     .concat([api('recon', {exporter: state.ifc.exporter, ifindex: state.ifc.ifindex})]));
   const pick = s => { const i = (s.names || []).indexOf(key); return i < 0 ? (s.times || []).map(() => 0) : s.values[i]; };
-  const sum = a => a.reduce((x, y) => x + y, 0);
   const name = `${ifName(sel)} · ${sel.device || sel.exporter}`;
-  const leg = (vi, vo, fmt) => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div>`;
+  const r = rc.recon || {}, ctr = !!r.has_counters;
+  const leg = withCtr => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span>${withCtr ? `<span><i class="line dash" style="border-top:2px dashed var(--ink-2);background:none"></i>${t('if.counter')}</span>` : ''}</div>`;
   el.innerHTML = `<div class="grid" style="margin-bottom:16px">
-    <div class="panel c12"><div class="ph"><h2>${t('if.bw')} · ${esc(name)}</h2><div class="seg" role="group" style="margin-inline-start:auto">${['bps', 'pps'].map(k => `<button data-m="${k}" aria-pressed="${(state.ifm || 'bps') === k}">${t('ch.' + k)}</button>`).join('')}</div></div>
-      <div class="chart" id="ifB" style="height:240px" aria-label="${esc(t('if.bw'))}"></div>${leg()}</div></div>
+    ${panel('c6', `${esc(name)} · ${t('ch.bps')}`, '', `<div class="chart" id="ifB" style="height:220px" aria-label="${esc(t('ch.bps'))}"></div>${leg(ctr)}`)}
+    ${panel('c6', `${esc(name)} · ${t('ch.pps')}`, '', `<div class="chart" id="ifP" style="height:220px" aria-label="${esc(t('ch.pps'))}"></div>${leg(false)}`)}</div>
     <div class="grid">
     ${panel('c4', t('if.title'), t('if.sub'), `<div class="iflist">${list.map(f => {
       const k = devKind(f), cur = f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex;
       return `<button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>`;
     }).join('')}</div>`)}
     <div class="panel c8" id="recon"></div></div>`;
-  const ln = [{name: t('if.in'), color: IF_IN, data: pick(ri), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(ro), fill: true}];
-  tsChart($('#ifB'), pps ? {times: ri.times, fmtY: fmtAxisBps, fmtV: fmtPps, lines: ln} : {times: ri.times, lines: ln});
-  el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { state.ifm = b.dataset.m; render(); });
+  // the device counters as dashed lines over the flow estimate: each counter
+  // interval holds until the next one
+  const onTimes = (times, vals) => { let j = -1; return times.map(x => { while (j + 1 < r.times.length && r.times[j + 1] <= x) j++; return j < 0 || vals == null ? null : vals[j]; }); };
+  const lb = [{name: t('if.in'), color: IF_IN, data: pick(ri), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(ro), fill: true}];
+  if (ctr && r.times && r.times.length) lb.push({name: t('if.in') + ' · ' + t('if.counter'), color: IF_IN, dash: true, data: onTimes(ri.times, r.in_counter)},
+    {name: t('if.out') + ' · ' + t('if.counter'), color: IF_OUT, dash: true, data: onTimes(ri.times, r.out_counter)});
+  tsChart($('#ifB'), {times: ri.times, lines: lb});
+  tsChart($('#ifP'), {times: pi.times, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
   el.querySelectorAll('.iflist button').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
 
-  const r = rc.recon, dir = state.ifdir || 'both';
   const vin = ifVerdict(r, rc, true), vout = ifVerdict(r, rc, false);
-  const head = v => r.has_counters ? t('if.dev', {v: fmtPct(v.dev)}) : '—';
-  const lines = [];
-  if (dir !== 'out') { if (r.has_counters) lines.push({name: t('if.in') + ' · ' + t('if.counter'), color: IF_IN, dash: true, data: r.in_counter}); lines.push({name: t('if.in') + ' · ' + t('if.flow'), color: IF_IN, data: r.in_flow}); }
-  if (dir !== 'in') { if (r.has_counters) lines.push({name: t('if.out') + ' · ' + t('if.counter'), color: IF_OUT, dash: true, data: r.out_counter}); lines.push({name: t('if.out') + ' · ' + t('if.flow'), color: IF_OUT, data: r.out_flow}); }
-  const kinds = (dir === 'both' ? [vin, vout] : [dir === 'in' ? vin : vout]);
-  const vk = kinds.some(v => v.kind === 'warn') ? 'warn' : kinds.every(v => v.kind === 'none') ? 'none' : '';
-  $('#recon').innerHTML = `<div class="ph"><div><div class="sub">${esc(name)}</div>
-      <div style="font-size:20px;font-weight:650">${dir === 'both' ? `<span style="color:${IF_IN}">${t('if.in')}</span> ${head(vin)} · <span style="color:${IF_OUT}">${t('if.out')}</span> ${head(vout)}` : head(dir === 'in' ? vin : vout)}</div></div>
-      <div class="seg" role="group">${['both', 'in', 'out'].map(k => `<button data-d="${k}" aria-pressed="${dir === k}">${t('if.' + k)}</button>`).join('')}</div></div>
-    <div class="chart" id="chRecon" style="height:240px" aria-label="${esc(t('if.title'))}"></div>
-    <div class="legend"><span><i class="line" style="background:var(--ink-2)"></i>${t('if.flow')}</span>${r.has_counters ? `<span><i class="line dash" style="border-top:2px dashed var(--ink-2);background:none"></i>${t('if.counter')}</span>` : ''}
-      <span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div>
-    <div class="verdict ${vk}">${dir === 'both' ? `<b>${t('if.in')}</b>: ${vin.text}<br><b>${t('if.out')}</b>: ${vout.text}` : (dir === 'in' ? vin : vout).text}</div>`;
-  $('#recon').querySelectorAll('[data-d]').forEach(b => b.onclick = () => { state.ifdir = b.dataset.d; render(); });
-  tsChart($('#chRecon'), {times: r.times, lines});
+  const head = v => ctr ? t('if.dev', {v: fmtPct(v.dev)}) : '—';
+  const vk = [vin, vout].some(v => v.kind === 'warn') ? 'warn' : [vin, vout].every(v => v.kind === 'none') ? 'none' : '';
+  $('#recon').innerHTML = `<div class="ph"><div><div class="sub">${esc(name)} · ${t('if.flow')} / ${t('if.counter')}</div>
+      <div style="font-size:20px;font-weight:650"><span style="color:${IF_IN}">${t('if.in')}</span> ${head(vin)} · <span style="color:${IF_OUT}">${t('if.out')}</span> ${head(vout)}</div></div></div>
+    <div class="verdict ${vk}"><b>${t('if.in')}</b>: ${vin.text}<br><b>${t('if.out')}</b>: ${vout.text}</div>`;
 };
 
 views.sources = async (el) => {
@@ -1369,7 +1373,7 @@ snmp   192.168.1.1     public</pre></div><textarea class="inv" id="inv" spellche
   };
   const logoDone = (ok, text) => {
     const m = $('#logoMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text;
-    if (ok) { const v = Date.now(); $('#logoPrev').src = '/logo?v=' + v; document.querySelectorAll('img.logo').forEach(i => i.src = '/logo?v=' + v); }
+    if (ok) { const v = Date.now(), dk = /^(dark|dim)$/.test(document.documentElement.dataset.theme || '') ? 1 : 0; $('#logoPrev').src = '/logo?v=' + v; document.querySelectorAll('img.logo').forEach(i => i.src = `/logo?dark=${dk}&v=${v}`); }
   };
   $('#logoFile').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -1508,6 +1512,15 @@ views.detail = async (el) => {
 };
 
 // ------------------------------------------------------------ shell
+// Settings, data cleanup, offline analysis and live flow records have no use
+// for the time range, refresh and copy link.
+const NOBAR_VIEWS = new Set(['sources', 'cleanup', 'sandbox']);
+function renderBar() {
+  const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
+  if (off) $('#range').hidden = true;
+  $('#refresh').hidden = off || $('#range').hidden;
+  $('#share').hidden = off;
+}
 // The sandbox bar replaces the time range while capture files are shown.
 function renderSB() {
   const on = inSB() && !['ifaces', 'sources'].includes(state.v);
@@ -1537,6 +1550,7 @@ async function loadSB() {
 
 async function render(push) {
   renderSB();
+  renderBar();
   renderFilters();
   renderFbar();
   writeHash(push);
@@ -1595,8 +1609,30 @@ $('#loginForm').addEventListener('submit', async e => {
   const res = await fetch('/api/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user: f.get('user'), password: f.get('password')})});
   if (!res.ok) { $('#loginErr').hidden = false; $('#loginErr').textContent = t('login.bad'); return; }
   $('#login').hidden = true; $('#app').hidden = false;
-  loadStatus(); render();
+  await Promise.all([loadStatus(), loadSB()]);
+  render();
+  startTimers();
 });
+// The refresh timers start once, whether the page opened signed in or after
+// signing in (before, signing in left the page without automatic refresh).
+let timers = false;
+function startTimers() {
+  if (timers) return;
+  timers = true;
+  setInterval(loadStatus, 10000);
+  // live flow records: every 5 seconds
+  setInterval(() => {
+    if (state.v !== 'records' || !state.rl || document.hidden || pop.style.display === 'block' || (state.rp || 0) > 0) return;
+    if (document.activeElement?.closest?.('.cols, #recPer')) return;
+    render();
+  }, 5000);
+  setInterval(() => {
+    // not while something is being typed or picked (the names form, filters)
+    if (document.hidden || pop.style.display === 'block' || ['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName)) return;
+    if (state.v === 'records' && state.rl) return;
+    if (state.v === 'sources' || state.v === 'records' || state.v === 'overview' || state.v === 'findings' || state.r === '15m' || state.r === '1h') render();
+  }, 30000);
+}
 $('#logout').onclick = async () => { await fetch('/api/logout', {method: 'POST'}); showLogin(); };
 
 async function init() {
@@ -1604,6 +1640,7 @@ async function init() {
   const lang = pickLang();
   await loadLang(lang);
   $('#lang').value = lang;
+  $('#theme').onchange = () => { window.t66Theme && t66Theme.set($('#theme').value); render(); };
   $('#lang').onchange = async () => {
     await loadLang($('#lang').value);
     loadStatus(); render();
@@ -1614,7 +1651,7 @@ async function init() {
     state.r = b.dataset.r; render();
   };
   document.addEventListener('click', e => { const p = $('#rangePop'); if (p && !p.hidden && !e.target.closest('#rangePop')) p.hidden = true; });
-  $('#nav').onclick = e => { const b = e.target.closest('[data-v]'); if (b) go(b.dataset.v); };
+  $('#nav').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; if (b.dataset.v === 'records') state.rl = true; go(b.dataset.v); };
   $('#share').onclick = () => { navigator.clipboard?.writeText(location.href).then(() => toast(t('top.copied')), () => toast(location.href)); };
   document.addEventListener('click', e => { if (!e.target.closest('.cols')) { const m = $('#colMenu'); if (m) m.hidden = true; } });
   readHash();
@@ -1626,11 +1663,7 @@ async function init() {
   $('#app').hidden = false;
   await Promise.all([loadStatus(), loadSB()]);
   render();
-  setInterval(loadStatus, 10000);
-  setInterval(() => {
-    if (document.hidden || pop.style.display === 'block' || document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.id === 'q') return;
-    if (state.v === 'sources' || state.v === 'records' || state.v === 'overview' || state.v === 'findings' || state.r === '15m' || state.r === '1h') render();
-  }, 30000);
+  startTimers();
 }
 init();
 })();

@@ -135,7 +135,7 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 		idx[n] = i
 	}
 	start := q.From
-	n := int(q.To.Sub(start)/step) + 1
+	n := bucketCount(start, q.To, step)
 	se := &Series{Step: int64(step.Seconds()), Names: names, Values: make([][]float64, len(names)), Distinct: distinct}
 	se.Totals = make([]float64, len(names))
 	for i, nm := range names {

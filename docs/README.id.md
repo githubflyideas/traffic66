@@ -517,12 +517,12 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 ## 5. Pastikan flow masuk
 
-Buka **Sumber**. Setiap perangkat yang mengirim sesuatu muncul dalam
+Buka **Pengaturan**. Setiap perangkat yang mengirim sesuatu muncul dalam
 hitungan detik, beserta protokol, sampling rate, loss, paket terakhir, dan
 statusnya. Jika status tidak hijau, teks di sebelahnya menjelaskan apa yang
 salah dan apa yang perlu diubah.
 
-![Sumber: setiap perangkat beserta protokol, sampling, loss, dan apa yang perlu diperbaiki](images/sources.png)
+![Pengaturan: setiap perangkat beserta protokol, sampling, loss, dan apa yang perlu diperbaiki](images/sources.png)
 
 Jika sebuah perangkat tidak muncul:
 
@@ -530,13 +530,13 @@ Jika sebuah perangkat tidak muncul:
    `sudo tcpdump -ni any udp port 6343 or udp port 2055 or udp port 4739`.
    Kalau tidak ada apa-apa, paket tidak sampai ke mesin: periksa
    konfigurasi perangkat, routing, dan firewall di sepanjang jalur.
-2. Paket datang tetapi **Sumber** tetap kosong: firewall lokal membuangnya
+2. Paket datang tetapi **Pengaturan** tetap kosong: firewall lokal membuangnya
    (lihat [Instalasi](#2-install)), atau traffic66 mendengarkan di port
    lain (`-listen`).
 3. Untuk menguji jalur dari mesin lain tanpa menyentuh perangkat, jalankan
    `traffic66 simulate -to 192.0.2.50` di sana selama beberapa detik.
    Perintah ini mengirim sFlow, NetFlow, dan IPFIX dari perangkat simulasi;
-   perangkat itu lalu muncul di **Sumber** dan di data, jadi sebaiknya
+   perangkat itu lalu muncul di **Pengaturan** dan di data, jadi sebaiknya
    lakukan ini di instalasi uji.
 
 <a id="6-make-the-numbers-match-the-interface-counters"></a>
@@ -547,8 +547,10 @@ Angka flow adalah estimasi: jumlah paket sampel dikali sampling rate.
 traffic66 membandingkannya dengan counter interface milik perangkat dan
 menampilkan selisihnya di **Pencocokan antarmuka**, beserta kemungkinan
 penyebabnya bila selisih itu lebih besar daripada yang bisa dijelaskan oleh
-sampling saja. Setiap interface punya satu grafik berisi ingress (hijau) dan
-egress (biru); memilih interface di daftar menampilkan grafiknya.
+sampling saja. Setiap interface punya grafik bit/s dan grafik paket/s berisi
+ingress (hijau) dan egress (biru); counter milik perangkat sendiri berupa garis
+putus-putus di grafik bit/s. Memilih interface di daftar menampilkan
+grafiknya.
 
 ![Pencocokan antarmuka: trafik setiap interface, dan estimasi flow di samping counter perangkat](images/interfaces.png)
 
@@ -557,7 +559,7 @@ Agar ada counter untuk dibandingkan:
 - Perangkat sFlow mengirimkannya sendiri bila interval counter diatur
   (`sflow counter interval 30` dan sejenisnya).
 - Untuk perangkat NetFlow dan IPFIX, tambahkan baris `snmp` di
-  **Sumber → Nama** (lihat [Nama](#7-names-snmp-and-your-own-networks)).
+  **Pengaturan → Nama** (lihat [Nama](#7-names-snmp-and-your-own-networks)).
   traffic66 lalu membaca counter interface setiap menit.
 
 Yang sudah dilakukan traffic66 agar angkanya cocok: memakai sampling rate
@@ -581,7 +583,7 @@ Cara tercepat memberi nama host atau perangkat: klik alamatnya di halaman mana
 pun lalu pilih **Beri nama…**. Ketik namanya dan tekan Enter; nama langsung
 disimpan dan ditampilkan di mana-mana menggantikan alamat polosnya.
 
-Untuk jaringan, interface, dan SNMP, gunakan **Sumber → Nama**: pilih jenisnya
+Untuk jaringan, interface, dan SNMP, gunakan **Pengaturan → Nama**: pilih jenisnya
 (host, jaringan, perangkat, interface, SNMP), isi alamat dan namanya, lalu
 klik **Tambah**. Tabel di bawahnya mencantumkan setiap nama dengan **Ubah**
 dan **Hapus**; menambahkan alamat yang sama lagi menggantikan entri lama.
@@ -632,7 +634,7 @@ snmp   192.0.2.9     s3cret  10.99.0.9:161
 
 Negara dan jaringan (AS) langsung berfungsi: traffic66 sudah membawa basis data gratis **IP to Country Lite** dan **IP to ASN Lite** dari DB-IP (lisensi [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com)). Halaman yang menampilkan negara dan jaringan menyebutkan sumber datanya.
 
-Salinan bawaan berasal dari rilis yang Anda jalankan. DB-IP menerbitkan versi baru tiap bulan; **Sumber → Basis data negara dan jaringan → Perbarui DB-IP Lite sekarang** mengunduh yang terbaru dari db-ip.com (server yang menjalankan traffic66 perlu akses internet; jika gagal, antarmuka akan memberi tahu).
+Salinan bawaan berasal dari rilis yang Anda jalankan. DB-IP menerbitkan versi baru tiap bulan; **Pengaturan → Basis data negara dan jaringan → Perbarui DB-IP Lite sekarang** mengunduh yang terbaru dari db-ip.com (server yang menjalankan traffic66 perlu akses internet; jika gagal, antarmuka akan memberi tahu).
 
 Anda juga bisa memakai basis data gratis lain. Unduh, lalu unggah di halaman yang sama dengan **Unggah file basis data…**. File diperiksa, disimpan di direktori data, dan langsung dipakai untuk trafik baru tanpa restart. Trafik yang sudah tersimpan tetap memakai negara saat disimpan.
 
@@ -698,15 +700,15 @@ Halaman:
 | Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
 | Geografi & jaringan | Peta dunia trafik per negara, dengan garis dari jaringan Anda; jaringan (AS) asal dan tujuan trafik, dari waktu ke waktu dalam bit/s dan paket/s; trafik per negara dan per jaringan |
-| Sumber | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
-| Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu, ingress (hijau) dan egress (biru) dalam satu grafik, dalam bit/s dan paket/s, dan angka flow di samping counter interface, yang paling buruk di atas, beserta alasannya |
-| Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih |
+| Pengaturan | Perangkat, sampling, loss, collector, SNMP, basis data negara dan jaringan, logo, dan **Nama** |
+| Pencocokan antarmuka | Trafik setiap interface dari waktu ke waktu dalam bit/s dan paket/s, ingress (hijau) dan egress (biru), dengan counter perangkat sebagai garis putus-putus; seberapa jauh angka flow dari counter, yang paling buruk di atas, beserta alasannya |
+| Catatan flow | Berapa banyak catatan flow dan kapan (satu batang per interval), dan catatannya sendiri, terbaru di atas, per halaman, dengan kolom yang bisa dipilih. Terbuka pada 15 menit terakhir, diperbarui setiap 5 detik; bila dibuka dari sebuah nilai di halaman lain (**Lihat catatan flow-nya**), rentang waktu halaman itu dipertahankan, dan **Kembali ke waktu nyata** mengembalikannya |
 | Pembersihan data | Menghapus data yang lebih lama dari 120, 90, 60, 30, atau 7 hari, atau semuanya, beserta berapa banyak ruang yang dibebaskan masing-masing ([selengkapnya](#13-data-backup-upgrade-uninstall)) |
 | Analisis pcap offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-pcap-offline)) |
 
 Menu samping mengelompokkan halaman menjadi empat: trafik (Ringkasan, Top 66,
 Detail trafik, Jalur trafik), keamanan (Temuan, Intel ancaman, Geografi &
-jaringan), pengaturan dan data (Sumber, Pencocokan antarmuka, Catatan flow,
+jaringan), pengaturan dan data (Pengaturan, Pencocokan antarmuka, Catatan flow,
 Pembersihan data), dan Analisis pcap offline. Di bawah logo ada versi serta
 tanggal dan jam server.
 
@@ -719,6 +721,13 @@ serta **Perangkat**, **Klien**, **Server**, dan **Layanan** mencantumkan nilai
 tersibuk dalam rentang waktu: pilih satu, atau ketik satu, untuk memfilter;
 filter itu lalu berlaku di setiap halaman sampai Anda mengosongkan kotaknya.
 Bahasa mengikuti browser; ubah di bagian bawah menu, di atas **Keluar**.
+Pengaturan, Catatan flow (saat waktu nyata), Pembersihan data, dan Analisis
+pcap offline tidak punya rentang waktu.
+
+Di samping bahasa ada tema warna, mengikuti warna sistem iOS: **Terang**
+(default), **Cerah** (putih, kontras lebih kuat), **Abu-abu**, **Redup**,
+**Gelap** (hitam, untuk layar dinding), atau **Ikuti sistem**, yang beralih
+antara terang dan gelap mengikuti komputer. Pilihan disimpan di browser.
 
 Grafik dari waktu ke waktu menampilkan 8 nilai terbesar dengan warna tetap
 dan sisanya sebagai Lainnya; legenda memberikan total setiap nilai dan bisa
@@ -741,7 +750,7 @@ dibutuhkan detail untuk hari-hari yang disimpan pada laju saat ini
 (diperkirakan setelah ada data satu hari).
 
 Untuk menampilkan logo Anda sendiri di halaman masuk dan di bagian atas menu,
-gunakan **Sumber → Logo → Unggah logo…**: PNG, SVG, JPEG, WebP, atau GIF, hingga
+gunakan **Pengaturan → Logo → Unggah logo…**: PNG, SVG, JPEG, WebP, atau GIF, hingga
 1 MB, paling baik 272 × 92 piksel (ukuran lain diskalakan agar pas).
 **Pakai logo bawaan** mengembalikan logo traffic66.
 
@@ -942,7 +951,7 @@ Wi-Fi.
 
 ### Memeriksa apakah capture berjalan
 
-**Sumber** mencantumkan setiap interface yang di-capture beserta metode
+**Pengaturan** mencantumkan setiap interface yang di-capture beserta metode
 capture dan jumlah paket yang terlihat. Flow-nya tampil seolah berasal dari
 perangkat `127.0.0.1` (mesin ini), di setiap halaman, sama seperti flow
 perangkat lain. Paket yang terlihat dua kali (misalnya di dua port mirror)
@@ -1007,9 +1016,9 @@ Semua tersimpan di direktori data:
 | `raw/` | detail flow, satu file terkompresi per jam |
 | `traffic66.duckdb` | ringkasan, counter interface, dan jam berjalan |
 | `password` | kata sandi login (dalam bentuk hash) |
-| `inventory.txt` | nama (**Sumber → Nama**) |
+| `inventory.txt` | nama (**Pengaturan → Nama**) |
 | `license.json` | nomor instalasi dan lisensi (lihat [Masa uji dan lisensi](#trial-and-licence)) |
-| `logo.png` (atau `.svg`, `.jpg`, `.webp`, `.gif`) | logo Anda (**Sumber → Logo**), jika Anda mengunggahnya |
+| `logo.png` (atau `.svg`, `.jpg`, `.webp`, `.gif`) | logo Anda (**Pengaturan → Logo**), jika Anda mengunggahnya |
 | `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | basis data negara dan jaringan serta daftar ancaman yang Anda tambahkan |
 
 **Berapa lama data disimpan**: detail flow 30 hari, ringkasan (ikhtisar dan rentang waktu panjang) 400 hari. Data
@@ -1109,7 +1118,7 @@ Query pada detail memindai sekitar 22 juta baris per jam: satu host selama
 banyak core.
 
 Jadi, disk untuk 30 hari pada 5.000 flow/detik sekitar 360 GB;
-sesuaikan dengan laju flow Anda (terlihat di **Sumber**) dan
+sesuaikan dengan laju flow Anda (terlihat di **Pengaturan**) dan
 `-retention-days`.
 
 Memori: `-memory` (default 10% RAM, minimal 256 MB) membatasi cache
@@ -1135,11 +1144,11 @@ kehabisan memori.
 
 | Gejala | Penyebab dan solusi |
 |---|---|
-| Perangkat tidak muncul di **Sumber** | Paket tidak sampai: lihat [Pastikan flow masuk](#5-check-that-flows-arrive) |
+| Perangkat tidak muncul di **Pengaturan** | Paket tidak sampai: lihat [Pastikan flow masuk](#5-check-that-flows-arrive) |
 | "waiting for the sampling rate" | Perangkat belum mengirim sampler options; kebanyakan mengirim ulang dalam beberapa menit. Jika tidak pernah, ekspor opsi itu (`option sampler-table` di Cisco) atau tandai perangkat sebagai `unsampled` di Nama jika memang 1:1 |
 | Angka lebih rendah dari counter interface | Lihat **Pencocokan antarmuka**: loss di jalan, interface tidak di-sampling, atau flow masih di cache perangkat (active timeout lebih dari 60 detik) |
 | Angka lebih tinggi dari counter interface | Trafik yang sama di-sampling di dua interface atau dua perangkat |
-| Tidak ada negara atau jaringan ("Tidak diketahui") | Tidak ada basis data yang dimuat: unggah di **Sumber**, lihat [Negara](#8-countries-networks-and-threat-lists) |
+| Tidak ada negara atau jaringan ("Tidak diketahui") | Tidak ada basis data yang dimuat: unggah di **Pengaturan**, lihat [Negara](#8-countries-networks-and-threat-lists) |
 | "Basis data mencapai batas memorinya dan tidak bisa menjawab" di sebuah halaman | Pilih rentang waktu yang lebih pendek, atau jalankan dengan `-memory` yang lebih besar; detailnya ada di log |
 | Lupa kata sandi | `traffic66 passwd` di mesin traffic66 (tambahkan `-data` jika traffic66 berjalan dengannya) |
 | `Conflicting lock is held` | traffic66 lain sudah memakai direktori data ini |

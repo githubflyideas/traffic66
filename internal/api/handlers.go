@@ -149,7 +149,15 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 			if len(vals) > len(se.Times) {
 				vals = vals[:len(se.Times)]
 			}
-			out["baseline"] = vals
+			// no traffic at all a week ago means no data then (before the
+			// installation, or a gap): leave the line out instead of drawing zero
+			bl := make([]any, len(vals))
+			for i, v := range vals {
+				if v > 0 {
+					bl[i] = v
+				}
+			}
+			out["baseline"] = bl
 		}
 	}
 
