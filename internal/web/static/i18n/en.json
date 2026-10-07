@@ -493,5 +493,9 @@
 "theme.black": "Black",
 "theme.teal": "Teal",
 "theme.orange": "Orange",
-"theme.next": "click for the next theme"
+"theme.next": "click for the next theme",
+"ov.dir_total": "Total",
+"ov.bw_all": "Bandwidth (in + out), by application",
+"ov.bw_in": "Inbound bandwidth, by application",
+"ov.bw_out": "Outbound bandwidth, by application"
 }

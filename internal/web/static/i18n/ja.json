@@ -493,5 +493,9 @@
 "theme.black": "ブラック",
 "theme.teal": "ティール",
 "theme.orange": "オレンジ",
-"theme.next": "クリックで次のテーマ"
+"theme.next": "クリックで次のテーマ",
+"ov.dir_total": "合計",
+"ov.bw_all": "帯域（受信 + 送信）、アプリ別",
+"ov.bw_in": "受信帯域、アプリ別",
+"ov.bw_out": "送信帯域、アプリ別"
 }

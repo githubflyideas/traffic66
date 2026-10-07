@@ -493,5 +493,9 @@
 "theme.black": "블랙",
 "theme.teal": "청록",
 "theme.orange": "주황",
-"theme.next": "클릭하면 다음 테마"
+"theme.next": "클릭하면 다음 테마",
+"ov.dir_total": "합계",
+"ov.bw_all": "대역폭(수신 + 송신), 애플리케이션별",
+"ov.bw_in": "수신 대역폭, 애플리케이션별",
+"ov.bw_out": "송신 대역폭, 애플리케이션별"
 }

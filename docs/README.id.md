@@ -702,7 +702,7 @@ Halaman:
 
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
-| Ringkasan | Berapa trafik sekarang, per aplikasi, dibanding waktu yang sama kemarin (rentang hingga satu hari), minggu lalu (hingga satu minggu), atau hari-hari sebelumnya (rentang lebih panjang), bila ada data saat itu; temuan terbuka; arah dan protokol; klien dan layanan teratas |
+| Ringkasan | Berapa trafik sekarang, per aplikasi (**Total**, atau hanya trafik **Masuk** atau **Keluar** dari jaringan Anda), dibanding waktu yang sama kemarin (rentang hingga satu hari), minggu lalu (hingga satu minggu), atau hari-hari sebelumnya (rentang lebih panjang), bila ada data saat itu; temuan terbuka; arah dan protokol; klien dan layanan teratas |
 | Top 66 | Terbuka di **Tabel**, satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN. **Pihak teratas** menampilkan 30 klien dan server teratas berdampingan dengan trafik, paket, dan catatan flow, di atas satu baris untuk semua trafik |
 | Detail trafik | Dua diagram cincin. **Server dan klien**: cincin dalam berisi 8 server tersibuk, cincin luar klien masing-masing; **Klien di dalam** membaliknya (klien di dalam, server yang dipakai masing-masing di luar), karena sering satu sisi lebih menjelaskan daripada sisi lainnya. **Layanan**: satu cincin berisi layanan tersibuk. Arahkan kursor ke segmen untuk melihat trafiknya; klik seperti nilai mana pun |
 | Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 8 host tersibuk, sisanya sebagai Lainnya. **Klien → server** menampilkan klien → layanan → server; **Per segmen** menampilkan jaringan, bukan host. Nama panjang dipendekkan menjadi 22 karakter; arahkan kursor ke nama untuk melihatnya utuh |
@@ -743,6 +743,11 @@ dan sisanya sebagai Lainnya; legenda memberikan total setiap nilai dan bisa
 diklik seperti nilai lainnya. Grafik klien dan server tidak menggambar
 sisanya, karena dengan ribuan host sisanya akan meratakan 8 teratas; legenda
 tetap memberikan totalnya.
+
+Grafik berakhir di titik data sudah lengkap: dengan sFlow pada menit saat
+ini, dengan NetFlow dan IPFIX sedikit lebih awal, selama waktu yang
+dibutuhkan perangkat untuk mengekspor flow-nya (traffic66 mengukurnya; paling
+lama 2 menit).
 
 Rentang yang lebih panjang dari 6 jam dimulai pada jam penuh, sehingga
 setiap angka di halaman menghitung waktu yang persis sama: "24 jam" mencakup

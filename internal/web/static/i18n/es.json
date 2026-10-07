@@ -493,5 +493,9 @@
 "theme.black": "Negro",
 "theme.teal": "Turquesa",
 "theme.orange": "Naranja",
-"theme.next": "clic para el siguiente tema"
+"theme.next": "clic para el siguiente tema",
+"ov.dir_total": "Total",
+"ov.bw_all": "Ancho de banda (entrada + salida), por aplicación",
+"ov.bw_in": "Ancho de banda entrante, por aplicación",
+"ov.bw_out": "Ancho de banda saliente, por aplicación"
 }
