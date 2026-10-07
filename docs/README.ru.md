@@ -2,344 +2,128 @@
 
 # traffic66
 
-Анализ потоков sFlow, NetFlow и IPFIX в одной программе. traffic66
-принимает экспорт потоков от коммутаторов, маршрутизаторов и межсетевых
-экранов, хранит его во встроенной базе данных и показывает, кто занимает
+Анализ потоков sFlow, NetFlow и IPFIX в одной программе: кто занимает
 полосу, куда уходит трафик и сходятся ли цифры с собственными счётчиками
 интерфейсов устройств — в веб-интерфейсе и в терминальном интерфейсе.
 
-- Один исполняемый файл для Windows, Linux и macOS. Не нужно ставить ни
-  базу данных, ни среду выполнения; работает без доступа в интернет.
-- sFlow v5, NetFlow v5, NetFlow v9 и IPFIX на любом UDP-порту; при желании —
-  локальный захват с сетевого интерфейса или зеркального порта.
-- Сверяет свои цифры со счётчиками интерфейсов (счётчики sFlow или SNMP) и,
-  если они расходятся, объясняет почему.
-- Находит в потоках сканирования, подбор паролей, боковое перемещение,
-  необычные выгрузки, флуд и трафик со списков угроз, в том числе при
-  сэмплировании, и выводит их списком обнаружений, требующих реакции.
-- Списки Top 66, кто с кем обменивается трафиком в виде кольцевых диаграмм
-  (серверы и их клиенты, сервисы и их серверы), трафик во времени по
-  интерфейсам и сетям (AS), пути трафика, страны на карте мира, совпадения
-  со списками угроз, записи потоков, инкапсуляция (GRE, IPIP, VXLAN, GENEVE,
-  MPLS).
-- `traffic66 capture.pcap` открывает до 3 захватов (всего до 3 ГБ) в веб-интерфейсе: потоки, находки, страны и записи за весь захват, без настройки.
-- 13 языков в веб-интерфейсе и в терминальном интерфейсе.
-- Исходный код открыт для ознакомления: бесплатно для оценки и для организаций
-  численностью менее 100 человек; более крупные организации регистрируются
-  после 30 дней промышленного использования. Ничего никогда не отключается
-  (см. [Пробный период и лицензия](#trial-and-licence)).
+- Один исполняемый файл для Windows, Linux и macOS; не нужно ставить базу данных, работает без доступа в интернет.
+- sFlow v5, NetFlow v5/v9 и IPFIX на любом UDP-порту или локальный захват с интерфейса.
+- Сверяет свои цифры со счётчиками интерфейсов (sFlow или SNMP) и объясняет, почему они расходятся.
+- Находит сканирования, подбор паролей, боковое перемещение, необычные выгрузки, флуд и трафик со списков угроз, в том числе при сэмплировании.
+- `traffic66 capture.pcap` анализирует захваты пакетов без какой-либо настройки.
+- 13 языков. Бесплатно для оценки и для организаций численностью менее 100 человек ([лицензия](#licence)).
 
 ![Обзор: открытые обнаружения, полоса по приложениям в сравнении с тем же временем вчера, основные клиенты и сервисы](images/overview.png)
 
-<sub>Все скриншоты сделаны в `traffic66 demo` — смоделированной сети компании, которую можно запустить самому (см. [Попробовать демо](#1-try-the-demo)).</sub>
+<sub>Все скриншоты сделаны в `traffic66 demo` — смоделированной сети компании.</sub>
 
 <a id="contents"></a>
 
 ## Содержание
 
 1. [Попробовать демо](#1-try-the-demo)
-2. [Установка](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
+2. [Установка](#2-install)
 3. [Пользователи и пароли](#3-users-and-passwords)
 4. [Отправка потоков с устройств](#4-send-flows-from-your-devices)
 5. [Проверка поступления потоков](#5-check-that-flows-arrive)
-6. [Как добиться совпадения со счётчиками интерфейсов](#6-make-the-numbers-match-the-interface-counters)
-7. [Названия, SNMP и собственные сети](#7-names-snmp-and-your-own-networks)
-8. [Страны, сети и списки угроз](#8-countries-networks-and-threat-lists)
-9. [Работа с веб-интерфейсом](#9-using-the-web-ui)
-10. [Терминальный интерфейс](#10-terminal-ui)
-11. [Локальный захват](#11-local-capture)
-12. [Параметры](#12-options)
-13. [Данные, резервное копирование, обновление, удаление](#13-data-backup-upgrade-uninstall)
-14. [Безопасность](#14-security)
-15. [Оценка ресурсов](#15-sizing)
-16. [Устранение неполадок](#16-troubleshooting)
-17. [Сборка из исходников](#17-build-from-source)
+6. [Интерфейсы и счётчики](#6-interfaces-and-counters)
+7. [Названия, страны и списки угроз](#7-names-countries-and-threat-lists)
+8. [Работа с веб-интерфейсом](#8-using-the-web-ui)
+9. [Офлайн-анализ pcap, терминальный интерфейс, локальный захват](#9-offline-pcap-terminal-ui-local-capture)
+10. [Параметры и данные](#10-options-and-data)
+11. [Безопасность, оценка ресурсов, устранение неполадок](#11-security-sizing-troubleshooting)
 
 <a id="1-try-the-demo"></a>
 
 ## 1. Попробовать демо
 
 Скачайте архив для своей системы со
-[страницы релизов](https://github.com/githubflyideas/traffic66/releases):
-
-| Система | Архив |
-|---|---|
-| Windows 10/11, Server 2016 и новее (x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64: любой дистрибутив с ядром 3.2 или новее, включая CentOS 7 и Alpine | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64: те же дистрибутивы | `traffic66-linux-arm64.tar.gz` |
-| macOS 11 и новее, Apple silicon | `traffic66-darwin-arm64.tar.gz` |
-| macOS 11 и новее, Intel | `traffic66-darwin-amd64.tar.gz` |
-
-Linux:
+[страницы релизов](https://github.com/githubflyideas/traffic66/releases)
+(Windows x64, Linux x86-64/ARM64 с ядром 3.2+, macOS 11+), распакуйте его и запустите:
 
 ```
-tar xzf traffic66-linux-amd64.tar.gz
-cd traffic66-linux-amd64
-./traffic66 demo -password try66
+./traffic66 demo -password try66          # Linux, macOS
+.\traffic66.exe demo -password try66      # Windows
 ```
 
-macOS (вторая строка разрешает macOS запускать скачанную из интернета
-программу не из App Store):
-
-```
-tar xzf traffic66-darwin-arm64.tar.gz
-xattr -dr com.apple.quarantine traffic66-darwin-arm64
-cd traffic66-darwin-arm64
-./traffic66 demo -password try66
-```
-
-Windows (PowerShell):
-
-```
-Expand-Archive traffic66-windows-amd64.zip .
-cd traffic66-windows-amd64
-.\traffic66.exe demo -password try66
-```
-
-Откройте http://127.0.0.1:8066 и войдите как `admin` / `try66`. Демо
-разворачивает небольшую сеть компании с историей за сутки и живым трафиком от
-четырёх имитируемых устройств, в том числе с атакой: на странице
-**Обнаружения** видны все её шаги (сканирование, сканирование портов, подбор
-паролей, боковое перемещение, выгрузка на управляющий сервер) и флуд на
-публичный сайт. Нажмите **Подробнее** у обнаружения или начните со страницы
-**Обзор**, щёлкните хост в **Основные клиенты**, выберите **Подробнее** и
-дальше идите по щелчкам. Остановка — Ctrl+C. Данные демо лежат в
-`traffic66-demo` рядом с программой; удалите эту папку, чтобы начать демо с нуля.
-
-Демо использует те же порты, что и рабочая установка (8066 и UDP 6343,
-2055, 4739). Чтобы запустить его рядом с рабочей, задайте другие порты:
-`traffic66 demo -password try66 -addr :8067 -listen ""`.
-
-В Windows можно также просто дважды щёлкнуть `traffic66.exe`. Так traffic66
-запускается по-настоящему (не демо) и открывает веб-интерфейс в браузере;
-пароль первого запуска показывается в чёрном окне, а закрытие окна
-останавливает traffic66. Если Windows сообщает
-"Система Windows защитила ваш компьютер", нажмите **Подробнее** →
-**Выполнить в любом случае**.
+В macOS сначала выполните `xattr -dr com.apple.quarantine <folder>`. Откройте
+http://127.0.0.1:8066 и войдите как `admin` / `try66`: сутки истории и живой
+трафик от четырёх имитируемых устройств, включая атаку, показанную шаг за
+шагом на странице **Обнаружения**. Ctrl+C останавливает демо; удалите
+`traffic66-demo`, чтобы начать заново. Чтобы запустить его рядом с
+настоящей установкой: `-addr :8067 -listen ""`.
 
 <a id="2-install"></a>
 
 ## 2. Установка
 
-traffic66 — это один файл. Установить его — значит положить его в нужное
-место, выбрать каталог данных, задать пароль, открыть порты в межсетевом
-экране и включить автозапуск. В примерах `192.0.2.50` — машина с
-traffic66, а `192.0.2.1` — маршрутизатор; подставьте свои адреса.
+traffic66 — это один файл. Порты: UDP 6343 (sFlow), 2055 (NetFlow), 4739
+(IPFIX), TCP 8066 (веб-интерфейс); каждый UDP-порт принимает любой протокол.
 
-Порты:
-
-| Порт | Назначение |
-|---|---|
-| UDP 6343 | sFlow (по умолчанию) |
-| UDP 2055 | NetFlow (по умолчанию) |
-| UDP 4739 | IPFIX (по умолчанию) |
-| TCP 8066 | веб-интерфейс и API |
-
-Каждый UDP-порт принимает любой протокол, так что устройство может слать
-NetFlow и на 6343, если так удобнее. Изменить или добавить порты можно
-через `-listen`.
-
-<a id="linux"></a>
-
-### Linux
+**Linux** (systemd):
 
 ```
-sudo mkdir -p /opt/traffic66
-sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
 ```
 
-Последняя команда запросит пароль пользователя `admin`.
-
-Создайте `/etc/systemd/system/traffic66.service`:
+`/etc/systemd/system/traffic66.service`:
 
 ```
 [Unit]
 Description=traffic66 flow analytics
 After=network-online.target
-Wants=network-online.target
 
 [Service]
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
-# hard memory limit for the whole process (see Sizing)
 MemoryMax=2G
-# only needed for local capture (-capture):
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Запустите службу и увеличьте допустимый размер UDP-буферов, чтобы не
-терять пакеты при всплесках:
-
 ```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf
-sudo sysctl --system
-sudo systemctl daemon-reload
-sudo systemctl enable --now traffic66
-sudo systemctl status traffic66
-journalctl -u traffic66 -f
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
 ```
 
-Межсетевой экран, если это firewalld (RHEL, Rocky, Alma, Fedora):
+**Windows** (PowerShell от имени администратора): распакуйте в `C:\traffic66`,
+выполните `C:\traffic66\traffic66.exe passwd`, откройте порты и настройте
+запуск при загрузке:
 
 ```
-sudo firewall-cmd --permanent --add-port=6343/udp --add-port=2055/udp --add-port=4739/udp --add-port=8066/tcp
-sudo firewall-cmd --reload
-```
-
-или ufw (Ubuntu, Debian):
-
-```
-sudo ufw allow 6343,2055,4739/udp
-sudo ufw allow 8066/tcp
-```
-
-<a id="windows"></a>
-
-### Windows
-
-Распакуйте в `C:\traffic66` и задайте пароль (PowerShell от имени
-администратора):
-
-```
-Expand-Archive traffic66-windows-amd64.zip C:\
-Rename-Item C:\traffic66-windows-amd64 C:\traffic66
-C:\traffic66\traffic66.exe passwd
-```
-
-Данные пишутся в `C:\traffic66\traffic66-data`, рядом с программой.
-
-Откройте порты в межсетевом экране:
-
-```
-New-NetFirewallRule -DisplayName "traffic66 flows" -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName "traffic66 web" -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-Чтобы попробовать в интерактивном режиме, запустите
-`C:\traffic66\traffic66.exe` и остановите по Ctrl+C. Чтобы программа
-работала в фоне с момента загрузки, даже когда никто не вошёл в систему,
-зарегистрируйте её как задачу автозапуска:
-
-```
-$action   = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$trigger  = New-ScheduledTaskTrigger -AtStartup
-$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-Register-ScheduledTask -TaskName traffic66 -Action $action -Trigger $trigger -Settings $settings -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`-ExecutionTimeLimit ([TimeSpan]::Zero)` обязателен: без него Windows
-останавливает задачу через три дня. Остановить задачу — `Stop-ScheduledTask -TaskName
-traffic66`, удалить — `Unregister-ScheduledTask -TaskName traffic66`.
+Можно также просто дважды щёлкнуть `traffic66.exe`: он откроет
+веб-интерфейс и покажет пароль первого запуска в своём окне.
 
-<a id="macos"></a>
-
-### macOS
-
-```
-sudo mkdir -p /usr/local/traffic66
-sudo tar xzf traffic66-darwin-arm64.tar.gz -C /usr/local/traffic66 --strip-components=1
-sudo xattr -dr com.apple.quarantine /usr/local/traffic66
-sudo /usr/local/traffic66/traffic66 passwd -data "/Library/Application Support/traffic66"
-```
-
-Создайте `/Library/LaunchDaemons/traffic66.plist`:
-
-```
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>traffic66</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/usr/local/traffic66/traffic66</string>
-    <string>-data</string>
-    <string>/Library/Application Support/traffic66</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardErrorPath</key><string>/Library/Logs/traffic66.log</string>
-</dict>
-</plist>
-```
-
-Запуск и остановка:
-
-```
-sudo launchctl bootstrap system /Library/LaunchDaemons/traffic66.plist
-tail -f /Library/Logs/traffic66.log
-sudo launchctl bootout system/traffic66
-```
-
-Если в macOS включён брандмауэр, разрешите входящие подключения для
-traffic66 в Системных настройках → Сеть → Брандмауэр → Параметры.
+**macOS**: распакуйте в `/usr/local/traffic66`, снимите флаг карантина,
+выполните `traffic66 passwd -data "/Library/Application Support/traffic66"` и
+запускайте его через LaunchDaemon, у которого `ProgramArguments` — это
+программа, `-data` и этот каталог, с `RunAtLoad` и `KeepAlive`.
 
 <a id="3-users-and-passwords"></a>
 
 ## 3. Пользователи и пароли
 
-**Коротко:** пользователи и пароли хранятся в одном файле, `password`, в
-каталоге данных. Вручную его не редактируют: команда `traffic66 passwd`
-добавляет, меняет, выводит списком и удаляет пользователей. Откройте
-`http://<traffic66 machine>:8066` и войдите под одним из них.
-
-<a id="the-first-sign-in"></a>
-
-### Первый вход
-
 При первом запуске traffic66 создаёт пользователя `admin` со случайным
-паролем и один раз показывает его:
-
-```
-first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
-```
-
-- Запуск двойным щелчком в Windows: в чёрном окне.
-- Запуск в терминале: в этом же терминале.
-- Служба Linux: `journalctl -u traffic66 | grep "first start"`
-- Служба macOS: `grep "first start" /Library/Logs/traffic66.log`
-
-Пропустили? Задайте новый командой `traffic66 passwd` (см. ниже). Если пароль
-задан командой `traffic66 passwd` до первого запуска, как в шагах установки
-выше, ничего не генерируется.
-
-<a id="where-the-users-are-stored"></a>
-
-### Где хранятся пользователи
-
-В файле `password` в каталоге данных:
-
-| Как запущен traffic66 | Файл |
-|---|---|
-| Распакован и запущен из своей папки (по умолчанию) | `traffic66-data/password` рядом с программой |
-| Служба Linux (раздел 2) | `/var/lib/traffic66/password` |
-| Задача автозапуска Windows (раздел 2) | `C:\traffic66\traffic66-data\password` |
-| Служба macOS (раздел 2) | `/Library/Application Support/traffic66/password` |
-| Демо | `traffic66-demo/password` рядом с программой |
-
-Одна строка на пользователя. Пароли хранятся в виде хешей с солью, поэтому
-прочитать их из файла не может никто, даже вы; если пароль забыт, задайте
-новый. Читать файл может только его владелец.
-
-```
-# traffic66 login, one user per line; change with: traffic66 passwd
-admin:pbkdf2-sha256$210000$…
-alice:pbkdf2-sha256$210000$…
-```
-
-<a id="managing-users"></a>
-
-### Управление пользователями
-
-Выполняйте эти команды на машине с traffic66:
+паролем и выводит его один раз (в окне, в терминале или в
+`journalctl -u traffic66 | grep "first start"`). Пользователи хранятся в виде
+хешей с солью в файле `password` в каталоге данных и управляются одной
+командой на машине с traffic66 (добавьте `-data …`, если traffic66 запущен
+с этим параметром):
 
 | Задача | Команда |
 |---|---|
@@ -347,74 +131,28 @@ alice:pbkdf2-sha256$210000$…
 | Добавить пользователя `alice` или сменить её пароль | `traffic66 passwd -user alice` |
 | Удалить пользователя `alice` | `traffic66 passwd -user alice -delete` |
 | Вывести список пользователей | `traffic66 passwd -list` |
-| Задать случайный пароль и вывести его | `traffic66 passwd -generate` (с `-user` для других пользователей) |
 
-- Команда дважды запрашивает новый пароль и не показывает вводимые символы.
-  Используйте не меньше 8 символов.
-- Если traffic66 запущен с `-data`, добавьте тот же `-data` к команде. Для
-  службы Linux из раздела 2:
-
-  ```
-  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
-  ```
-
-  В Windows (PowerShell от имени администратора):
-
-  ```
-  C:\traffic66\traffic66.exe passwd -user alice
-  ```
-
-- Изменения действуют сразу, без перезапуска: новый пароль работает при
-  следующем входе, а удалённый пользователь выходит из открытых браузеров.
-- Последнего оставшегося пользователя удалить нельзя; сначала добавьте
-  другого.
-- Все пользователи видят и могут менять одно и то же; ролей нет.
-
-<a id="passwords-for-scripts-and-containers"></a>
-
-### Пароли для скриптов и контейнеров
-
-`TRAFFIC66_PASSWORD=…` в окружении или `-password …` в командной строке
-заставляют traffic66 на этот запуск принимать ровно одного пользователя:
-указанного в `-user` (по умолчанию `admin`) с этим паролем. Файл `password`
-при этом игнорируется и не меняется. Лучше использовать переменную окружения:
-командную строку видят другие пользователи машины.
-
-```
-TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
-```
-
-После пяти неверных паролей в течение минуты адрес блокируется на минуту.
+Изменения применяются сразу. У всех пользователей одинаковые права. Для
+скриптов и контейнеров `TRAFFIC66_PASSWORD=…` (или `-password`) на этот
+запуск принимает только `-user` с этим паролем. Пять неверных паролей за
+минуту блокируют адрес на минуту.
 
 <a id="4-send-flows-from-your-devices"></a>
 
 ## 4. Отправка потоков с устройств
 
-Направьте каждое устройство на машину с traffic66. Команды зависят от
-модели и версии ПО — сверяйтесь с документацией устройства. Во всех
-примерах `192.0.2.50` — это traffic66, а `192.0.2.1` — собственный адрес
-устройства.
-
-Общие рекомендации:
-
-- Задайте active flow timeout 60 секунд. При больших значениях трафик
-  приходит с опозданием и крупными порциями.
-- Если устройство сэмплирует NetFlow/IPFIX, включите экспорт sampler
-  options, чтобы коэффициент был известен. traffic66 придерживает записи до
-  получения коэффициента, а не считает их как 1:1.
-- Сэмплируйте либо все интерфейсы, либо только граничные, и в одном
-  направлении. Если один и тот же трафик сэмплируется на входе и на выходе,
-  он считается дважды; страница **Сверка интерфейсов** на это укажет.
-- Коэффициент сэмплирования sFlow: около 1:1000 для каналов 1 Гбит/с,
-  1:4096 для 10 Гбит/с, 1:8192 для 40/100 Гбит/с.
-
-Cisco IOS / IOS-XE (Flexible NetFlow):
+`192.0.2.50` — это traffic66, `192.0.2.1` — устройство. Установите активный
+тайм-аут 60 секунд, разрешите устройствам NetFlow/IPFIX экспортировать
+параметры сэмплера и сэмплируйте **каждый интерфейс на входе** (или только
+граничные интерфейсы): тогда каждый пакет учитывается один раз. Частоты
+sFlow: примерно 1:1000 для 1 Гбит/с, 1:4096 для 10 Гбит/с, 1:8192 для
+40/100 Гбит/с.
 
 ```
+! Cisco IOS-XE, NetFlow v9
 flow exporter T66
  destination 192.0.2.50
  transport udp 2055
- export-protocol netflow-v9
  option sampler-table
 flow monitor T66
  exporter T66
@@ -424,39 +162,8 @@ interface GigabitEthernet0/0/0
  ip flow monitor T66 input
 ```
 
-Cisco NX-OS (sFlow):
-
 ```
-feature sflow
-sflow collector-ip 192.0.2.50 vrf default
-sflow collector-port 6343
-sflow agent-ip 192.0.2.1
-sflow sampling-rate 4096
-sflow counter-poll-interval 30
-sflow data-source interface ethernet 1/1
-```
-
-Arista EOS (sFlow):
-
-```
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow source-interface Management1
-sflow run
-```
-
-Juniper EX / QFX (sFlow):
-
-```
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow polling-interval 30
-set protocols sflow interfaces ge-0/0/0
-```
-
-Huawei CloudEngine (sFlow):
-
-```
+# Huawei CloudEngine, sFlow (H3C Comware is similar)
 sflow agent ip 192.0.2.1
 sflow collector 1 ip 192.0.2.50
 interface 10GE1/0/1
@@ -467,46 +174,22 @@ interface 10GE1/0/1
  sflow counter interval 30
 ```
 
-H3C Comware (sFlow):
-
 ```
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50 port 6343
-interface Ten-GigabitEthernet1/0/1
- sflow sampling-rate 4096
- sflow flow collector 1
- sflow counter interval 30
- sflow counter collector 1
-```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
 
-MikroTik RouterOS 7 (NetFlow v9 / IPFIX):
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
 
-```
+# MikroTik RouterOS 7
 /ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
 /ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-```
 
-FortiGate FortiOS 7.4.2 и новее (NetFlow v9):
-
-```
-config system netflow
-    config collectors
-        edit 1
-            set collector-ip 192.0.2.50
-            set collector-port 2055
-        next
-    end
-end
-config system interface
-    edit port1
-        set netflow-sampler both
-    next
-end
-```
-
-Серверы и хосты Linux, через softflowd (NetFlow v9):
-
-```
+# Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
 
@@ -514,330 +197,118 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 ## 5. Проверка поступления потоков
 
-Откройте **Настройки**. Каждое устройство, которое что-либо присылает,
-появляется там за несколько секунд — с протоколом, коэффициентом
-сэмплирования, потерями, временем последнего пакета и статусом. Если
-статус не зелёный, текст рядом с ним объясняет, что не так и что изменить.
-
-**Потеряно** — сэмплы или записи, которые так и не дошли. Для sFlow текст
-поясняет, где они потерялись: по пути сюда (пропуски в порядковых номерах:
-сеть или приёмный буфер UDP этой машины; если `netstat -su` показывает рост
-ошибок приёмного буфера, увеличьте `net.core.rmem_max`) или в самом
-устройстве (sFlow сообщает о сэмплах, отброшенных устройством: его экспорт
-sFlow ограничен по скорости, поэтому сэмплируйте реже или поднимите лимит
-устройства). Итоги компенсируются в обоих случаях; детализация по хостам —
-нет.
+**Настройки** в течение нескольких секунд показывают каждое устройство,
+которое хоть что-то отправляет: протокол, частоту сэмплирования, потери,
+интерфейсы с выборкой и что исправить, если статус не зелёный. Потери sFlow
+разделяются на потери в пути (увеличьте `net.core.rmem_max`, если
+`netstat -su` показывает ошибки буфера) и выборки, отброшенные самим
+устройством.
 
 ![Настройки: каждое устройство с протоколом, сэмплированием, потерями и тем, что нужно исправить](images/sources.png)
 
-Если устройство не появилось:
+Устройства нет? Выполните `sudo tcpdump -ni any udp port 6343 or udp port 2055
+or udp port 4739`: если там пусто — дело в маршрутизации, межсетевом экране
+или конфигурации устройства; если пакеты есть, а в **Настройках** ничего
+нет — в локальном межсетевом экране или `-listen`. `traffic66 simulate -to 192.0.2.50`
+с другой машины проверяет путь с имитируемыми устройствами.
 
-1. Проверьте, приходят ли пакеты на машину с traffic66 (Linux, macOS):
-   `sudo tcpdump -ni any udp port 6343 or udp port 2055 or udp port 4739`.
-   Если там пусто, пакеты до машины не доходят: проверьте конфигурацию
-   устройства, маршрутизацию и межсетевые экраны на пути.
-2. Пакеты приходят, но **Настройки** остаются пустыми: их отбрасывает
-   локальный межсетевой экран (см. [Установка](#2-install)) или traffic66
-   слушает другие порты (`-listen`).
-3. Чтобы проверить путь с другой машины, не трогая устройства, запустите
-   там на несколько секунд `traffic66 simulate -to 192.0.2.50`. Команда
-   шлёт sFlow, NetFlow и IPFIX от имитируемых устройств; они появятся в
-   **Настройки** и в данных, поэтому лучше делать это на тестовой установке.
+<a id="6-interfaces-and-counters"></a>
 
-<a id="6-make-the-numbers-match-the-interface-counters"></a>
+## 6. Интерфейсы и счётчики
 
-## 6. Как добиться совпадения со счётчиками интерфейсов
+Цифры по потокам — это оценки (выборки × частота сэмплирования).
+**Сверка интерфейсов** сравнивает их со счётчиками интерфейсов устройства
+(счётчики sFlow или SNMP через строку `snmp` в Названиях) и объясняет,
+почему они расходятся: интерфейсы без выборки, один и тот же трафик
+сэмплирован дважды, потери в пути или неизвестная частота сэмплирования. У
+каждого интерфейса есть график в бит/с и в пакетах/с: вход зелёный, выход
+синий, счётчики пунктиром.
 
-Цифры по потокам — это оценки: число сэмплированных пакетов, умноженное на
-коэффициент сэмплирования. traffic66 сравнивает их с собственными
-счётчиками интерфейсов устройства и показывает разницу на странице
-**Сверка интерфейсов**, а если она больше, чем можно объяснить одним
-сэмплированием, — и вероятную причину. Для каждого интерфейса есть график в
-бит/с во всю ширину и под ним график в пакетах/с, с входящим (зелёный) и
-исходящим (синий) трафиком; собственные счётчики устройства показаны пунктиром
-на графике в бит/с. Выбор интерфейса в списке показывает его графики.
+В каждой строке **✎** задаёт название и короткую метку (например, *uplink*),
+а **☆** делает интерфейс основным (★) — на нём открываются страницы.
 
-В каждой строке списка две кнопки. **✎** задаёт интерфейсу имя и короткую
-метку (например, *uplink*), которая везде показывается рядом с его именем.
-**☆** делает его основным интерфейсом (**★**); основной интерфейс только один.
-Тогда страницы открываются на нём (см. выбор **Интерфейс** в разделе
-[Работа с веб-интерфейсом](#9-using-the-web-ui)), а обзор показывает его
-полосу пропускания. И то и другое сразу сохраняется в строку `iface` в
-разделе **Названия**.
-
-В записях потоков указаны два интерфейса: тот, через который пакет вошёл, и
-тот, через который вышел. Поэтому устройство, которое делает выборку только на
-части интерфейсов, показывает и другие концы их потоков. Эти **встречные
-интерфейсы** перечислены последними, мелким серым шрифтом, под отдельным
-заголовком: их числа содержат только трафик, прошедший через интерфейс с
-выборкой, а не весь их трафик. В выборе **Интерфейс** над страницами их нет.
-traffic66 узнаёт, какой интерфейс сделал выборку потока, по источнику данных
-sFlow или по полю flowDirection (IPFIX 61) в NetFlow v9 и IPFIX (ingress:
-входной интерфейс, egress: выходной). Без этого поля интерфейсом с выборкой
-считается тот, через который идёт не менее 90% трафика устройства; если такого
-нет, никакой интерфейс не отмечается. **Настройки** показывают для каждого
-устройства интерфейсы с выборкой и то, есть ли в его шаблонах flowDirection (61).
-Чтобы видеть весь трафик устройства, делайте выборку на входе каждого
-интерфейса (см. [Отправка потоков с устройств](#4-send-flows-from-your-devices)).
+Устройство, сэмплирующее только часть интерфейсов, показывает и другие
+концы этих потоков. Эти **встречные интерфейсы** перечислены последними
+мелким серым шрифтом: в них только трафик через сэмплируемый интерфейс.
+Сэмплируемый интерфейс известен из источника данных sFlow или поля
+flowDirection (IPFIX 61); без него — это интерфейс, через который проходит
+90% трафика устройства.
 
 ![Сверка интерфейсов: трафик каждого интерфейса и оценка по потокам рядом со счётчиком устройства](images/interfaces.png)
 
-Откуда взять счётчики для сравнения:
+traffic66 уже использует частоту, применённую устройством, ждёт неизвестные
+частоты, компенсирует потери экспорта, распределяет длинные потоки по их
+минутам и добавляет к NetFlow/IPFIX 18 байт накладных расходов Ethernet на
+пакет (`-l2-overhead`).
 
-- Устройства sFlow присылают их сами, если задан интервал счётчиков
-  (`sflow counter interval 30` и аналоги).
-- Для устройств NetFlow и IPFIX добавьте строку `snmp` в **Настройки → Названия**
-  (см. [Названия](#7-names-snmp-and-your-own-networks)). Тогда traffic66
-  будет считывать счётчики интерфейсов каждую минуту.
+<a id="7-names-countries-and-threat-lists"></a>
 
-Что traffic66 уже делает, чтобы цифры сходились: берёт коэффициент
-сэмплирования, фактически применённый устройством; придерживает записи
-NetFlow/IPFIX, пока коэффициент неизвестен; компенсирует экспортные
-пакеты, потерянные по пути; распределяет длинные потоки по минутам, в
-течение которых они шли; добавляет к байтам NetFlow/IPFIX по 18 байт
-накладных расходов Ethernet на пакет (счётчики интерфейсов их включают,
-а счётчики потоков на уровне IP — нет; меняется через `-l2-overhead`).
+## 7. Названия, страны и списки угроз
 
-Типичные причины оставшейся разницы, и все они видны на странице
-**Сверка интерфейсов**: часть интерфейсов не сэмплируется, один и тот же
-трафик сэмплируется на двух интерфейсах, экспортные пакеты теряются, не
-дойдя до traffic66, или коэффициент сэмплирования ещё неизвестен.
-
-<a id="7-names-snmp-and-your-own-networks"></a>
-
-## 7. Названия, SNMP и собственные сети
-
-Быстрее всего дать название хосту или устройству так: щёлкните его адрес на
-любой странице и выберите **Дать название…**. Введите название и нажмите
-Enter; оно сразу сохраняется и показывается везде вместо голого адреса.
-
-Для сетей, интерфейсов и SNMP используйте **Настройки → Названия**: выберите
-тип (хост, сеть, устройство, интерфейс, SNMP), укажите адрес и название и
-нажмите **Добавить**. В таблице ниже перечислены все названия с кнопками
-**Изменить** и **Удалить**; повторное добавление того же адреса заменяет
-старую запись. Адреса и сети проверяются перед сохранением.
-
-Названия сохраняются в `inventory.txt` в каталоге данных, по одной записи на
-строку. **Править как текст (для опытных)** показывает этот файл; его можно
-править и напрямую (см. `inventory.txt.example`). Все строки необязательны.
+Щёлкните любой адрес и выберите **Дать название…** или используйте
+**Настройки → Названия**. Названия хранятся в `inventory.txt` в каталоге
+данных:
 
 ```
-# your networks: traffic between them is "internal"
-net    10.10.0.0/16  Office LAN
-net    203.0.113.0/24  Public servers country=JP
-
-# device names; "unsampled" if it exports every packet (1:1),
-# sampling=N if it samples 1:N but does not say so in its export
-device 192.0.2.1     Core router
-device 192.0.2.9     Branch firewall unsampled
-device 192.0.2.20    Edge router sampling=1000
-
-# interface names, by device address and ifIndex; speed in bits per second,
-# tag= a short tag, default = the interface the pages open on (one only)
-iface  192.0.2.1 3   ISP uplink speed=1000000000 tag=uplink default
-
-# host names shown instead of addresses
-host   10.10.3.27    Finance PC
-
-# read interface counters over SNMPv2c (IF-MIB 64-bit counters)
-snmp   192.0.2.1     public
-snmp   192.0.2.9     s3cret  10.99.0.9:161
+net    10.10.0.0/16    Office LAN                  # your networks
+net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
+device 192.0.2.1       Core router
+device 192.0.2.9       Branch firewall unsampled    # exports every packet
+device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
+iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
+host   10.10.3.27      Finance PC
+snmp   192.0.2.1       public                       # read counters over SNMPv2c
+snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 ```
 
-- `net`: частные диапазоны (10/8, 172.16/12, 192.168/16, 100.64/10)
-  всегда считаются вашими. Добавьте свои публичные диапазоны, чтобы трафик
-  к ним и от них тоже считался вашим; название появится в **Топ 66**
-  при группировке по сегментам и в путях трафика по сетям. `country=JP`
-  (двухбуквенный код страны) указывает, где находится сеть; тогда карта мира
-  рисует от неё линии к странам, с которыми она обменивается трафиком.
-- `snmp <device> <community> [<management address>[:port]]`: устройство —
-  это адрес, с которого приходят потоки. Укажите адрес управления, если
-  устройство отвечает по SNMP на другом адресе. Описания интерфейсов,
-  считанные по SNMP, используются как названия, если вы не задали название
-  интерфейса через `iface`. Разрешите машину с traffic66 в списке доступа
-  SNMP на устройстве.
-- Изменения применяются по кнопке **Сохранить**; перезапуск не нужен.
+Частные диапазоны всегда считаются вашими. Изменения применяются по
+**Сохранить**, без перезапуска.
 
-<a id="8-countries-networks-and-threat-lists"></a>
-
-## 8. Страны, сети и списки угроз
-
-Страны и сети (AS) работают сразу: в traffic66 встроены бесплатные базы DB-IP **IP to Country Lite** и **IP to ASN Lite** (лицензия [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); «IP Geolocation by DB-IP», [db-ip.com](https://db-ip.com)). Страницы со странами и сетями указывают источник данных.
-
-Встроенная копия — на момент выпуска вашей версии. DB-IP выпускает новую каждый месяц; **Настройки → База стран и сетей → Обновить DB-IP Lite** загружает свежую с db-ip.com (серверу с traffic66 нужен доступ в интернет; при ошибке интерфейс об этом сообщит).
-
-Можно использовать и другую бесплатную базу. Скачайте её и загрузите на той же странице кнопкой **Загрузить файл базы…**. Файл проверяется, сохраняется в каталоге данных и сразу применяется к новому трафику, без перезапуска. Уже сохранённый трафик сохраняет страну, с которой был записан.
-
-| База | Даёт | Лицензия | Где взять |
-|---|---|---|---|
-| DB-IP Lite (встроена) | страны; сети | CC BY 4.0, без регистрации | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country и ASN, `.mmdb` | страны; сети | GeoLite2 EULA, бесплатная учётная запись | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IPinfo Lite, `ipinfo_lite.mmdb` | страны и сети в одном файле | CC BY-SA 4.0, бесплатная учётная запись | [ipinfo.io/lite](https://ipinfo.io/lite) |
-| IPtoASN, `ip2asn-combined.tsv.gz` | сети и их страна | PDDL 1.0, без регистрации | [iptoasn.com](https://iptoasn.com) |
-
-Сначала используются ваши файлы; то, чего в них нет, определяет встроенная DB-IP Lite. **Удалить** рядом с файлом возвращает к остальным. На странице видно, что используется, и дата каждой базы.
-
-Без веб-интерфейса скопируйте файл в каталог данных как `country.mmdb`, `asn.mmdb`, `both.mmdb` (файл со странами и сетями, например IPinfo Lite) или `asn.tsv.gz` и перезапустите traffic66.
-
-**География и сети** показывает трафик с другими странами на карте мира: чем темнее страна, тем больше трафика. Наведите на страну, чтобы увидеть её трафик; нажмите, чтобы отфильтровать или открыть записи потоков. Если у ваших сетей указана страна (`country=` в строке `net`, см. [Названия](#7-names-snmp-and-your-own-networks)), от этой страны идут линии к странам, с которыми они обмениваются трафиком; чем больше трафика, тем толще линия. Границы стран — из [Natural Earth](https://www.naturalearthdata.com) (общественное достояние).
+Страны и сети (AS) работают сразу со свободными базами DB-IP Lite
+([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "IP
+Geolocation by DB-IP", [db-ip.com](https://db-ip.com)); **Настройки**
+обновляют их или принимают вместо них файлы MaxMind GeoLite2, IPinfo Lite
+или IPtoASN. Контуры карты: [Natural Earth](https://www.naturalearthdata.com).
 
 ![География и сети: внешний трафик по странам на карте мира](images/geo.png)
 
-Списки угроз — это текстовые файлы с одним адресом или сетью на строку
-(текст после `#` или `;` игнорируется), сохранённые как
-`<data directory>/threats/<name>.txt`, например:
-
-```
-mkdir -p <data directory>/threats
-curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamhaus-drop.txt
-```
-
-После добавления или изменения списков перезапустите traffic66.
-Совпадения появляются на странице **Угрозы**, сгруппированные по имени
-списка.
+Списки угроз — это текстовые файлы с одним адресом или сетью на строку в
+`<data>/threats/<name>.txt` (например, Spamhaus DROP); после изменения
+перезапустите traffic66. Совпадения появляются на странице **Угрозы**.
 
 ![Угрозы: внутренний хост отправляет данные на адрес из списка угроз](images/threats.png)
 
-<a id="9-using-the-web-ui"></a>
+<a id="8-using-the-web-ui"></a>
 
-## 9. Работа с веб-интерфейсом
+## 8. Работа с веб-интерфейсом
 
-Печатать почти не придётся. Любое значение на любой странице — адрес,
-порт, приложение, страну, устройство — можно щёлкнуть:
+Любое значение на любой странице можно щёлкнуть: **Показать только это** /
+**Исключить это** (фильтры действуют на всех страницах), **Показать записи
+потоков**, **Подробнее** (страница об одном хосте или сервисе), **Дать
+название…**, **Найти в интернете**, **Копировать**.
 
-- **Показать только это** / **Исключить это** добавляет фильтр. Фильтры
-  отображаются под верхней панелью и действуют на всех страницах, пока вы
-  их не уберёте.
-- **Показать записи потоков** открывает соответствующие отдельные потоки.
-- **Подробнее** (хосты, устройства и сервисы) открывает страницу об этом
-  одном хосте или сервисе: его трафик во времени по приложениям, с кем он
-  общается, какие сервисы или клиенты, страны и последние потоки. Любое
-  значение там снова можно щёлкнуть и углубляться дальше; кнопка «Назад»
-  в браузере возвращает обратно.
-- **Дать название…** (хосты и устройства) даёт адресу название, которое
-  с этого момента показывается везде.
-- **Найти в интернете** открывает адрес или AS на публичном сайте-справочнике.
-- **Копировать** копирует значение.
-
-Страницы:
-
-| Страница | На какой вопрос отвечает |
+| Страница | Что показывает |
 |---|---|
-| Обзор | Полоса пропускания выбранного интерфейса (или основного, а иначе самого загруженного) в бит/с, вход и выход с точки зрения интерфейса; сколько трафика сейчас, по приложениям (**Всего** или только **Входящий** либо **Исходящий** трафик ваших сетей), в сравнении с тем же временем вчера (диапазоны до суток), прошлой неделей (до недели) или предыдущими днями (более длинные диапазоны), если за то время есть данные; открытые обнаружения; направление и протокол; основные клиенты и сервисы |
-| Топ 66 | Открывается на вкладке **Таблица** — одной таблице топ 66: по умолчанию сеансы (клиент, сервер, сервис, страна). Любой заголовок сортирует; числовые столбцы (трафик, пакеты, средний пакет, потоки) заново выбирают топ 66 из всего трафика за период, поэтому наименьший средний пакет находит сканирования и флуд. **Группировать по** переключает на приложения, сети, сегменты, устройства, инкапсуляцию и VLAN. **Основные собеседники** показывает топ 30 клиентов и серверов рядом, с трафиком, пакетами и записями потоков, над строкой всего трафика |
-| Детали трафика | Две кольцевые диаграммы. **Серверы и клиенты**: внутреннее кольцо — 8 самых нагруженных серверов, внешнее — клиенты каждого из них; **Клиенты внутри** переворачивает диаграмму (клиенты внутри, серверы, которыми пользуется каждый, снаружи), потому что одна сторона часто объясняет больше другой. **Сервисы**: одно кольцо самых нагруженных сервисов. Наведите на сегмент, чтобы увидеть его трафик; щёлкните по нему, как по любому значению |
-| Пути трафика | Какой узел к какому приложению в какой стране обращается: 8 самых активных узлов, остальные как «Прочее». **Клиент → сервер** показывает клиент → сервис → сервер; **По сегментам** показывает сети вместо узлов. Длинные имена сокращаются до 22 символов; наведите на имя, чтобы увидеть его полностью |
-| Обнаружения | Что требует внимания: сканирования, подбор паролей, боковое перемещение, необычные выгрузки, флуд и трафик со списков угроз ([подробнее](#findings)) |
-| Угрозы | Хосты, обращавшиеся к адресам из ваших списков угроз, и сколько они отправили |
-| География и сети | Карта мира с трафиком по странам и линиями от ваших сетей; сети (AS), откуда трафик пришёл и куда ушёл, во времени в бит/с и пакетах/с; трафик по странам и по сетям |
-| Настройки | Устройства, сэмплирование, интерфейсы с выборкой на каждом устройстве и отправляет ли оно flowDirection, потери, коллекторы, SNMP, база стран и сетей, логотип и **Названия** |
-| Сверка интерфейсов | Трафик каждого интерфейса во времени в бит/с и ниже в пакетах/с, вход (зелёный) и выход (синий), со счётчиками устройства пунктиром; насколько цифры по потокам расходятся со счётчиками, худшие сверху, с причинами; имя, метка и выбор основного для каждого интерфейса |
-| Записи потоков | Сколько было записей потоков и когда (столбик на интервал), и сами записи, новые сверху, постранично, с выбором столбцов. Открывается на последних 15 минутах с обновлением каждые 5 секунд; если открыть её со значения на другой странице (**Показать записи потоков**), сохраняется период той страницы, а **Вернуться к реальному времени** возвращает обратно |
-| Очистка данных | Удаляет данные старше 120, 90, 60, 30 или 7 дней или все данные и показывает, сколько места освобождает каждый вариант ([подробнее](#13-data-backup-upgrade-uninstall)) |
-| Офлайн-анализ pcap | Захваты пакетов (pcap, pcapng) анализируются отдельно от живых данных ([подробнее](#офлайн-анализ-pcap)) |
+| Обзор | Полоса выбранного интерфейса; трафик по приложениям (всего, входящий или исходящий) в сравнении со вчера или прошлой неделей; открытые обнаружения; основные клиенты и сервисы |
+| Топ 66 | Топ 66 сеансов с сортировкой по любому столбцу или с группировкой по приложению, сети, сегменту, устройству, инкапсуляции, VLAN; топ 30 собеседников |
+| Детали трафика | Кольцевые диаграммы: серверы и их клиенты (или наоборот) и сервисы |
+| Пути трафика | Узел → приложение → страна, или клиент → сервис → сервер, или по сетям |
+| Сверка интерфейсов | Каждый интерфейс во времени в сравнении с его счётчиками; названия, метки, основной интерфейс |
+| Записи потоков | Отдельные потоки, вживую каждые 5 секунд или за любой период |
+| Обнаружения, Угрозы | Что требует внимания ([ниже](#findings)); трафик с адресами из списков |
+| География и сети | Карта мира по странам, сети (AS) во времени |
+| Настройки | Устройства, сэмплирование, потери, SNMP, базы, логотип, названия |
+| Офлайн-анализ pcap, Очистка данных | Файлы захвата ([ниже](#9-offline-pcap-terminal-ui-local-capture)); удаление старых данных |
 
-Боковое меню делит страницы на четыре группы: трафик (Обзор, Топ 66, Детали
-трафика, Пути трафика, Сверка интерфейсов, Записи потоков), безопасность
-(Обнаружения, Угрозы, География и сети), Настройки и Офлайн-анализ pcap, а в
-самом низу — Очистка данных. Под логотипом показаны версия, дата и время
-сервера.
-
-Над страницами трафика (Обзор, Топ 66, Детали трафика, Пути трафика, География
-и сети, Записи потоков и страница значения) находится **Интерфейс**: **Все
-интерфейсы** или один интерфейс, чтобы эти страницы показывали только трафик
-через него (вход или выход). В нём перечислены интерфейсы с выборкой,
-сгруппированные по устройствам; сначала выбран основной интерфейс (★, задаётся
-на странице **Сверка интерфейсов**), и выбор входит в ссылку. Обнаружения,
-Угрозы, Сверка интерфейсов и Настройки всегда охватывают весь трафик. Для
-одного интерфейса за 7 или 30 дней страницы читают записи потоков, а не
-почасовые и суточные сводки, поэтому работают дольше и заглядывают назад лишь
-на срок хранения записей потоков (по умолчанию 30 дней).
-
-Над страницами: временной диапазон (от 15 минут до 30 дней или **Свой
-период…** с любым началом и концом, в том числе раньше 30 дней),
-автообновление каждые 30 секунд и **Скопировать ссылку** — копирует ссылку
-ровно на текущий вид (страница, диапазон и фильтры), чтобы отправить коллеге.
-На страницах **Топ 66** и **Детали трафика** поля **Устройство**, **Клиент**,
-**Сервер** и **Сервис** показывают самые активные значения за период: выберите или введите значение, чтобы отфильтровать; затем
-фильтр действует на всех страницах, пока вы не очистите поле. Язык берётся из
-браузера; сменить его можно внизу меню, над кнопкой **Выйти**. У страниц
-«Настройки», «Записи потоков» (в реальном времени), «Очистка данных» и
-«Офлайн-анализ pcap» нет периода.
-
-Рядом с языком — цветовая тема по образцу системных цветов iOS: **Светлая**
-(по умолчанию), **Серая**, **Чёрная** (для настенных экранов), **Бирюзовая**
-и **Оранжевая**. Каждый щелчок по ней переключает на следующую; выбор
-сохраняется в браузере.
-
-Графики во времени показывают 8 крупнейших значений постоянными цветами, а
-остальное — как «Прочее»; легенда даёт итог по каждому значению, и по ней
-можно щёлкнуть, как по любому другому значению. На графиках клиентов и
-серверов остальное не рисуется: при тысячах хостов оно сплющило бы топ 8;
-легенда всё равно даёт его итог.
-
-Графики заканчиваются там, где данные полны: для sFlow — на текущей минуте,
-для NetFlow и IPFIX — немного раньше, на столько, сколько устройствам нужно
-на экспорт потоков (traffic66 измеряет это время; не более 2 минут).
-
-Диапазоны длиннее 6 часов начинаются с целого часа, поэтому все цифры на
-странице считаются ровно за одно и то же время: «24 часа» — это последние 24
-целых часа плюс текущий. Топ 66 за такие диапазоны строится по почасовым
-сводкам; фильтры там недоступны, и страница об этом сообщает. Чтобы
-фильтровать, выберите диапазон покороче. Сеансы всегда читаются из подробных
-данных потоков, поэтому на длинных диапазонах при большом числе потоков
-они могут строиться долго; быстрее всего — один час.
-
-В боковом меню видно, сколько места на диске занимают данные и сколько
-свободно; наведите указатель на свободное место, чтобы увидеть, сколько
-нужно хранимым дням подробных данных при текущей нагрузке (оценка появляется,
-когда накопятся данные за сутки).
-
-Чтобы показать свой логотип на странице входа и вверху меню, откройте
-**Настройки → Логотип → Загрузить логотип…**: PNG, SVG, JPEG, WebP или GIF,
-до 1 MB, лучше всего 272 × 92 пикселя (другие размеры масштабируются).
-**Вернуть встроенный логотип** возвращает логотип traffic66.
-
-<a id="findings"></a>
-
-### Обнаружения
-
-На странице **Обнаружения** перечислено, что traffic66 нашёл в потоках, самое
-серьёзное сверху. Каждые 5 минут проверяются последние 10 минут; то, что
-длится час, — это одно обнаружение, которое растёт, а не новое при каждой
-проверке.
-
-| Обнаружение | Что это значит | Важность |
-|---|---|---|
-| Сканирование | Один адрес отправил мелкие пробы на множество адресов на один порт (TCP или ping) | Высокая изнутри вашей сети, низкая из интернета |
-| Сканирование портов | Один адрес отправил мелкие пробы на множество портов одного хоста | Высокая изнутри, низкая из интернета |
-| Подбор паролей | Множество коротких подключений к службе входа (SSH, RDP, SMB, базы данных и другие) | Высокая изнутри, низкая из интернета |
-| Боковое перемещение | Внутри вашей сети — сеансы общего доступа к файлам или удалённого администрирования (SMB, RDP, SSH, WinRM, VNC) к хостам, которые раньше никогда не предоставляли эту службу | Высокая |
-| Необычная выгрузка | Внутренний хост отправил намного больше, чем получил (100 MB за 10 минут, втрое больше полученного), на адрес, с которым раньше не обменивался данными | Высокая |
-| Флуд | 20,000 и более мелких пакетов в секунду на один адрес, в десять раз больше обычного | Средняя |
-| Список угроз | Трафик с адресом из одного из ваших списков угроз | Высокая, если ваш хост подключился к нему; низкая, если адрес из списка стучался снаружи |
-
-Каждое обнаружение говорит, кто что сделал и с кем, когда и как долго, с
-цифрами, на которых оно основано, и с тем, как сэмплировались данные.
-**Подробнее** открывает страницу хоста, где также перечислены обнаружения по
-нему. **Обработано** закрывает обнаружение; если это повторится, откроется
-новое. **Ложная тревога** закрывает его навсегда: о нём больше никогда не
-сообщается. Красное число рядом с **Обнаружения** в боковом меню — это
-открытые обнаружения высокой и средней важности за последние 24 часа.
-
-Боковому перемещению и необычным выгрузкам нужно знать, что нормально, поэтому
-о них сообщается, когда накопится история за сутки. При первом запуске
-traffic66 учится на уже имеющейся истории.
-
-На сэмплированных данных (sFlow, NetFlow с сэмплированием) правила считают то,
-что видно в выборке, и требуют меньше совпадений, но тогда каждое должно
-выглядеть как одна короткая проба, чтобы на обычных загруженных хостах они не
-срабатывали. То, что скрывает сэмплирование, найти нельзя: при сэмплировании
-1:4096 сканирование нескольких десятков хостов даёт слишком мало пакетов,
-чтобы его заметить. Атака в демо идёт через коммутатор с сэмплированием 1:4096
-и находится полностью; сутки обычного трафика демо не дают ни одного
-обнаружения, кроме интернет-сканера, стучащегося на сайт.
-
-![Обнаружения: все шаги атаки, найденные через сэмплирование sFlow 1:4096](images/findings.png)
+Над страницами: **Интерфейс** (все или один сэмплируемый интерфейс; тогда
+страницы трафика показывают только трафик через него), период (от 15 минут
+до 30 дней или произвольный), обновление каждые 30 с и **Скопировать
+ссылку** на точный вид. Язык и пять цветовых тем — внизу меню. Графики
+заканчиваются там, где данные полны: с NetFlow/IPFIX — с задержкой, с
+которой экспортируют устройства (не более 2 минут). Периоды длиннее 6 часов
+начинаются с целого часа; один интерфейс за 7 или 30 дней читается из
+детальных данных, поэтому это медленнее и доступно лишь на глубину хранения
+детальных данных.
 
 ![Топ 66: топ 66 сеансов, сортировка по любому столбцу](images/topn.png)
 
@@ -847,368 +318,120 @@ traffic66 учится на уже имеющейся истории.
 
 ![Пути трафика: какой узел к какому приложению в какой стране обращается](images/paths.png)
 
-Тот же обзор на китайском; каждая страница доступна на 13 языках:
-
 ![Обзор на китайском](images/overview-zh.png)
 
-<a id="10-terminal-ui"></a>
+<a id="findings"></a>
 
-### Офлайн-анализ pcap
+### Обнаружения
 
-**Офлайн-анализ pcap** показывает захваты Wireshark или tcpdump на тех же страницах, что и живые данные, не смешивая их.
+Проверка выполняется каждые 5 минут за последние 10; то, что длится час, —
+это одно растущее обнаружение.
 
-Он сводит все пакеты в потоки: кто с кем общался, сколько, когда и что похоже на атаку. Он не разбирает протоколы и не показывает содержимое пакетов; для одного пакета или одного TCP-потока используйте Wireshark.
+| Обнаружение | Что это значит |
+|---|---|
+| Сканирование, сканирование портов | Мелкие пробы на множество хостов на один порт или на множество портов одного хоста |
+| Подбор паролей | Множество коротких подключений к службе входа |
+| Боковое перемещение | Общий доступ к файлам или удалённое администрирование к внутренним хостам, которые раньше никогда этого не предоставляли |
+| Необычная выгрузка | 100 MB за 10 минут на новый адрес, втрое больше полученного обратно |
+| Флуд | 20,000+ мелких пакетов/с на один адрес, в десять раз больше обычного |
+| Список угроз | Трафик с адресом из списка |
 
-Из командной строки, без настройки:
+Изнутри вашей сети они высокой важности, из интернета — низкой.
+**Обработано** закрывает обнаружение, **Ложная тревога** заглушает его
+навсегда. Для бокового перемещения и выгрузок нужны сутки истории. При
+сэмплировании 1:4096 атака в демо обнаруживается полностью; очень мелкие
+сканирования могут скрыться за сэмплированием.
 
-```
-traffic66 office.pcap
-traffic66 a.pcap b.pcapng c.pcap
-```
+![Обнаружения: все шаги атаки, найденные через сэмплирование sFlow 1:4096](images/findings.png)
 
-traffic66 запускается только на этом компьютере (127.0.0.1, свободный порт), выводит адрес, пароль и одноразовую ссылку для входа и открывает захват в браузере. До 3 файлов, всего до 3 ГБ; файлы читаются на месте и не изменяются. Ничего не собирается и не отправляется, имена хостов не запрашиваются (`-dns` включает это). Ctrl+C останавливает и удаляет импортированные данные. На 2-ядерной машине захват в 1 ГБ готов примерно за 5 секунд (1,2 млн полноразмерных пакетов) — 30 секунд (14 млн маленьких пакетов).
+<a id="9-offline-pcap-terminal-ui-local-capture"></a>
 
-```
-$ traffic66 office.pcap
+## 9. Офлайн-анализ pcap, терминальный интерфейс, локальный захват
 
-traffic66 0.3.1: analysing 1 capture file(s); nothing is collected or sent
-  Web UI    http://127.0.0.1:38217  (port 38217, this computer only)
-  Sign in   user admin, password gfhfhbuutz2e
-  Open      http://127.0.0.1:38217/auto?t=b9388f…  (signs in once)
-  Stop      Ctrl+C; the imported data is deleted, your files are kept
-```
-
-В веб-интерфейсе работающего traffic66:
-
-1. **Загрузить файлы захвата…**: `.pcap` или `.pcapng`, без сжатия. До 3 файлов, каждый не больше 50 МБ. Файлы превращаются в потоки в отдельной базе (`<data>/sandbox/`); живые данные, их статистика и находки не затрагиваются.
-2. **Анализ**: все страницы (обзор, Top 66, детали трафика, находки, пути, карта, записи потоков) показывают файлы за всё их время. Оранжевая полоса называет файлы; **Вернуться к живым данным** возвращает обратно. Каждый файл выглядит как устройство, поэтому поле **Устройство** показывает по одному файлу.
-3. Правила обнаружения работают и на захвате: сканирования, сканирования портов и подбор паролей появляются в **Обнаружения**. Правила, которым нужен день истории (перемещение внутри сети, необычные выгрузки), к захвату не применяются.
-4. **Удалить** удаляет файл и его данные; **Удалить всё** удаляет всё.
-
-В демо есть пример захвата с атакой.
+**Офлайн-анализ pcap** показывает захваты пакетов (pcap, pcapng) на тех же
+страницах, отдельно от живых данных: `traffic66 a.pcap b.pcapng` запускается
+на 127.0.0.1 и открывает браузер (до 3 файлов, 3 ГБ; Ctrl+C удаляет
+импортированные данные), или загрузите на этой странице до 3 файлов по
+50 МБ. Анализируются потоки, а не содержимое пакетов.
 
 ![Офлайн-анализ: файлы захвата с пакетами, потоками и временем](images/sandbox.png)
 
-## 10. Терминальный интерфейс
-
-```
-traffic66 tui                                     # traffic66 on this machine
-traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-traffic66 -tui                                    # collect and show the terminal UI in one process
-```
-
-На машине с traffic66 `traffic66 tui` входит сам, если может прочитать
-каталог данных (укажите `-data`, если он не стандартный). Если traffic66
-работает от другого пользователя, как в случае службы, используйте
-`-user` и `-password`. `-lang` выбирает язык (`en`, `zh`, `hi`,
-`es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`).
-
-Клавиши: 1–8 страницы, ↑↓ выбор, Enter действия над выбранным значением,
-f показать только это, x исключить, / поиск, t временной диапазон,
-c сбросить фильтры, w открыть тот же вид в браузере, q выход.
+**Терминальный интерфейс**: `traffic66 tui` на машине с traffic66 или
+`traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
+Клавиши: 1–8 страницы, Enter действия, f показать только, x исключить,
+t период, w открыть в браузере, q выход; `-lang` выбирает язык.
 
 ![Терминальный интерфейс: обзор](images/tui-overview.png)
 
 ![Терминальный интерфейс: Топ 66 сеансов](images/tui-topn.png)
 
-<a id="11-local-capture"></a>
+**Локальный захват** строит потоки с локального интерфейса, лучше всего с
+порта, подключённого к зеркальному порту коммутатора: `traffic66 interfaces`
+выводит их список, `-capture eth1` (или имя либо номер в Windows)
+захватывает. В Linux нужны root или `setcap cap_net_raw,cap_net_admin+ep`,
+в macOS — root, в Windows — [Npcap](https://npcap.com). Захваченные потоки
+приходят от устройства `127.0.0.1`.
 
-## 11. Локальный захват
+<a id="10-options-and-data"></a>
 
-Помимо приёма экспорта потоков, traffic66 может сам строить потоки из пакетов
-на сетевом интерфейсе машины, на которой он работает. Что он увидит, зависит
-от интерфейса:
+## 10. Параметры и данные
 
-| Интерфейс | Что видит traffic66 |
-|---|---|
-| Свободный сетевой порт, подключённый к зеркальному (SPAN) порту коммутатора | Весь трафик, который зеркалирует коммутатор: целую сеть или аплинк |
-| Собственный Ethernet или Wi-Fi машины | Только трафик самой этой машины |
-
-Адаптеры Wi-Fi не видят трафик других устройств. Чтобы видеть всю сеть Wi-Fi,
-настройте экспорт потоков на маршрутизаторе или точке доступа (раздел 4) или
-зеркалируйте порт коммутатора, к которому подключена точка доступа.
-
-<a id="windows-1"></a>
-
-### Windows
-
-1. Установите [Npcap](https://npcap.com) с параметрами по умолчанию. Если
-   отметить «Restrict Npcap driver's access to Administrators only»,
-   запускайте traffic66 от имени администратора.
-2. Выведите список интерфейсов (PowerShell):
-
-   ```
-   C:\traffic66\traffic66.exe interfaces
-   ```
-
-   ```
-   #   Name      Address          Adapter / device
-   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
-   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
-   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
-   ```
-
-   Столбец Name — это имя подключения из сетевых параметров Windows; у
-   используемого интерфейса есть адрес.
-3. Запустите захват на Wi-Fi по имени или по номеру:
-
-   ```
-   C:\traffic66\traffic66.exe -capture Wi-Fi
-   C:\traffic66\traffic66.exe -capture 2
-   ```
-
-   Имена с пробелами берите в кавычки: `-capture "Ethernet 2"`. Чтобы
-   захватывать на нескольких интерфейсах, повторите `-capture`. Если нужен
-   только захват без коллекторов потоков, добавьте `-listen=`. Для задачи
-   автозапуска из раздела 2 добавьте параметр в `-Argument`:
-   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`.
-
-<a id="linux-1"></a>
-
-### Linux
-
-```
-traffic66 interfaces
-sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
-traffic66 -capture eth1
-```
-
-Для захвата нужен root или capabilities `CAP_NET_RAW` и `CAP_NET_ADMIN`:
-строка `setcap` выше или строка `AmbientCapabilities` в unit-файле systemd из
-раздела 2. Интерфейсы Wi-Fi обычно называются `wlan0` или `wlp…`.
-
-<a id="macos-1"></a>
-
-### macOS
-
-```
-traffic66 interfaces
-sudo traffic66 -capture en0
-```
-
-Для захвата нужен root; ничего устанавливать не надо. На MacBook `en0` — это
-Wi-Fi.
-
-<a id="checking-that-it-works"></a>
-
-### Проверка работы
-
-На странице **Настройки** перечислены все интерфейсы захвата со способом
-захвата и числом увиденных пакетов. Потоки отображаются как поступающие от
-устройства `127.0.0.1` (эта машина) — на всех страницах, как и потоки любого
-другого устройства. Пакеты, видимые дважды (например, на двух зеркальных
-портах), и считаются дважды.
-
-<a id="12-options"></a>
-
-## 12. Параметры
-
-`traffic66 -h` и `traffic66 <command> -h` выводят полный список.
-
-Команды:
-
-| Команда | |
-|---|---|
-| `traffic66` | собирать потоки и обслуживать веб-интерфейс |
-| `traffic66 demo` | то же самое, но с имитируемой сетью |
-| `traffic66 tui` | терминальный интерфейс к запущенному traffic66 |
-| `traffic66 passwd` | добавить, изменить, вывести списком или удалить пользователей (см. [Пользователи и пароли](#3-users-and-passwords)) |
-| `traffic66 simulate -to HOST` | отправлять имитируемый экспорт на коллектор |
-| `traffic66 interfaces` | список интерфейсов для локального захвата |
-| `traffic66 version` | вывести версию |
-
-Параметры `traffic66` и `traffic66 demo`:
+`traffic66 -h` выводит всё. Самые используемые:
 
 | Параметр | По умолчанию | |
 |---|---|---|
-| `-addr` | `:8066` | адрес веб-интерфейса; `127.0.0.1:8066` — доступ только с этой машины |
 | `-data` | `traffic66-data` рядом с программой | каталог данных |
-| `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP-коллекторы в виде `name=address` через запятую; пустое значение отключает |
-| `-user` | `admin` | имя пользователя, создаваемого при первом запуске, и пользователя, к которому относится `-password` |
-| `-password` | не задан | на этот запуск принимать только `-user` с этим паролем, игнорируя файл `password` (также `TRAFFIC66_PASSWORD`) |
+| `-addr` | `:8066` | веб-интерфейс; `127.0.0.1:8066` — только для этой машины |
+| `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP-коллекторы; пустое значение отключает |
 | `-retention-days` | `30` | сколько дней хранить детальные данные; сводки хранятся 400 дней |
-| `-memory` | `0.10` | доля физической памяти под кеш базы данных и столько же — мягкий лимит для остальной программы (каждый не меньше 256 МБ) |
-| `-l2-overhead` | `18` | байт на пакет, добавляемых к счётчикам байт NetFlow/IPFIX |
-| `-sampling-wait` | `5m` | сколько записи ждут коэффициент сэмплирования |
-| `-capture` | | захват на локальном интерфейсе (можно повторять) |
-| `-inventory` | `<data>/inventory.txt` | файл названий |
-| `-asn` | `<data>/asn.tsv.gz` | таблица IP-to-ASN (файлы `.mmdb`: загрузите их или положите как `<data>/country.mmdb` и `<data>/asn.mmdb`, `<data>/both.mmdb`) |
-| `-threat` | `<data>/threats/*.txt` | дополнительный список угроз в виде `name=path` (можно повторять) |
-| `-dns-upstream` | системный резолвер | DNS-сервер для отображения имён хостов |
-| `-dns-rate` | `20` | максимум обратных DNS-запросов в секунду |
-| `-dns-cache` | `2m` | сколько хранятся в кеше имена хостов |
-| `-no-dns` | | не делать обратных DNS-запросов |
-| `-tui` | | заодно открыть терминальный интерфейс |
+| `-memory` | `0.10` | доля оперативной памяти под кеш базы данных |
+| `-sampling-wait` | `5m` | сколько записи ждут частоту сэмплирования |
+| `-capture` | | локальный интерфейс (можно повторять) |
+| `-no-dns` | | без обратного разрешения имён |
 
-Пример: второй порт коллектора, детальные данные за год и веб-интерфейс
-только на локальной машине:
+В каталоге данных находятся `raw/` (детальные данные, один файл на час),
+`traffic66.duckdb` (сводки и счётчики), `password`, `inventory.txt`,
+`license.json`, ваш логотип и базы. Резервное копирование: остановите
+traffic66 и скопируйте каталог; обновление: замените файл программы.
+**Очистка данных** удаляет данные старше 7–120 дней или все данные.
 
-```
-traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:4739,netflow=:9995" -retention-days 365 -addr 127.0.0.1:8066
-```
+<a id="licence"></a>
 
-<a id="13-data-backup-upgrade-uninstall"></a>
+### Лицензия
 
-## 13. Данные, резервное копирование, обновление, удаление
+Исходный код открыт по [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
+и [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (юридическую
+силу имеет английский текст): бесплатно для оценки и для организаций
+численностью менее 100 человек; более крупные организации регистрируются
+после 30 дней промышленного использования; для продажи, хостинга для других
+или конкурирующих продуктов нужна коммерческая лицензия. Ничего никогда не
+отключается. Внизу каждой страницы показан 8-значный номер установки;
+отправьте его автору и положите полученный `license.json` в каталог данных.
+Контакт: <https://github.com/githubflyideas/traffic66>.
 
-Всё хранится в каталоге данных:
+<a id="11-security-sizing-troubleshooting"></a>
 
-| | |
+## 11. Безопасность, оценка ресурсов, устранение неполадок
+
+Веб-интерфейс работает по обычному HTTP: в недоверенных сетях используйте
+`-addr 127.0.0.1:8066` за TLS-прокси (`caddy reverse-proxy --from traffic66.example.com --to
+127.0.0.1:8066`) или SSH-туннель. Разрешайте UDP-порты только с ваших
+устройств. SNMP-сообщества хранятся открытым текстом; используйте сообщества
+только для чтения.
+
+При 5,000 потоков/с на 2 ядрах: около 12 ГБ диска на сутки детальных данных
+(360 ГБ за 30 дней), шестая часть ядра, 0,6–0,8 ГБ памяти. Обзоры за
+длинные периоды строятся менее чем за 0,2 с; Топ 66 всех сеансов за 1 час —
+около 9 с.
+
+| Симптом | Решение |
 |---|---|
-| `raw/` | детальные данные потоков, по одному сжатому файлу на час |
-| `traffic66.duckdb` | сводки, счётчики интерфейсов и текущий час |
-| `password` | пароли для входа (в виде хешей) |
-| `inventory.txt` | названия (**Настройки → Названия**) |
-| `license.json` | номер установки и лицензия (см. [Пробный период и лицензия](#trial-and-licence)) |
-| `logo.png` (или `.svg`, `.jpg`, `.webp`, `.gif`) | ваш логотип (**Настройки → Логотип**), если вы его загрузили |
-| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | добавленные вами базы стран и сетей и списки угроз |
+| "ожидание частоты сэмплирования" | Экспортируйте параметры сэмплера или укажите `sampling=N` / `unsampled` в строке устройства |
+| Меньше, чем счётчики | Интерфейсы без выборки, потери или активный тайм-аут больше 60 с |
+| Больше, чем счётчики | Один и тот же трафик сэмплируется на двух интерфейсах или устройствах |
+| Забыли пароль | `traffic66 passwd` на машине с traffic66 |
+| `Conflicting lock is held` | Этот каталог данных использует другой traffic66 |
+| `address already in use` | Выберите другие порты с помощью `-addr` или `-listen` |
+| Windows: "Система Windows защитила ваш компьютер" | **Подробнее** → **Выполнить в любом случае** |
 
-**Сколько хранятся данные**: детализация потоков 30 дней, сводки (обзор и длинные периоды) 400 дней. Более
-старые данные удаляются автоматически, проверка каждые 5 минут; больше ничего не удаляется и других ограничений нет.
-Срок детализации меняется параметром `-retention-days`, любое число дней, например `-retention-days 365`. Место на
-диске растёт вместе с ним: **Свободно** в боковом меню становится красным, когда хранимые дни не помещаются. Если
-диск заполнится, новые потоки не сохраняются, пока не освободится место.
-
-**Очистка данных** в боковом меню удаляет данные заранее: старше 120, 90, 60,
-30 или 7 дней или все данные. Для каждого варианта показано, сколько записей
-потоков будет удалено и примерно сколько места на диске освободится, и перед
-удалением запрашивается подтверждение. Удаляются записи потоков, почасовые и
-суточные сводки, счётчики интерфейсов и обнаружения; удаление всех данных
-также сбрасывает то, чему научились правила обнаружения. Отменить это нельзя.
-
-- **Резервное копирование**: остановите traffic66 и скопируйте каталог. Без
-  остановки копируйте `raw/`, `password` и `inventory.txt`; текущего часа и
-  сводок в копии тогда не будет.
-- **Перенос**: остановите traffic66, перенесите каталог и запустите с
-  `-data`, указывающим на новое место.
-- **Обновление**: остановите traffic66, замените файл программы и запустите
-  снова. Данные сохраняются. Например, в Linux:
-
-  ```
-  sudo systemctl stop traffic66
-  sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
-  sudo systemctl start traffic66
-  ```
-
-- **Удаление**: остановите и удалите службу или задачу автозапуска (см.
-  [Установка](#2-install)), затем удалите папку программы и каталог данных.
-
-<a id="trial-and-licence"></a>
-
-### Пробный период и лицензия
-
-Исходный код traffic66 доступен на условиях
-[PolyForm Noncommercial License 1.0.0](../LICENSE.md) и
-[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md); юридическую силу
-имеет английский текст обоих документов. Кратко:
-
-- **Оценка**, тестирование, разработка и демонстрации: бесплатно для всех,
-  без ограничения срока.
-- **Промышленное использование** (реальный трафик, для работы организации)
-  организацией, где менее 100 сотрудников и подрядчиков: бесплатно.
-- Промышленное использование **более крупными организациями**: бесплатно
-  30 дней, затем нужна регистрационная лицензия от автора.
-- Подрядчики и сервис-провайдеры могут запускать его для заказчика в
-  собственной установке этого заказчика; решает размер заказчика.
-- Без коммерческой лицензии запрещено: продавать его или встраивать в
-  продукт, предоставлять другим как размещённый или многопользовательский
-  сервис, а также создавать на его основе конкурирующий продукт.
-
-Стоимость, объём и срок регистрационной лицензии определяются в каждом
-случае отдельно; она может быть и бесплатной. Контакт:
-<https://github.com/githubflyideas/traffic66>.
-
-Пробный период показывается в каждой установке, в том числе там, где лицензия
-не нужна. При первом запуске traffic66 записывает
-`license.json` в каталог данных с 8-значным номером установки. Внизу каждой
-страницы показано, сколько дней пробного периода осталось, а затем — что он
-закончился. В любом случае ничего не отключается: все функции продолжают
-работать.
-
-Чтобы зарегистрироваться, отправьте автору номер установки (он также показан
-внизу каждой страницы). Лицензия придёт в виде нового `license.json`; положите
-его в каталог данных вместо старого. Он проверяется при запуске traffic66 и
-каждые 4 часа, поэтому перезапуск не нужен; затем внизу страницы показано, на
-кого выдана лицензия и сколько дней осталось.
-
-<a id="14-security"></a>
-
-## 14. Безопасность
-
-- Веб-интерфейс работает по обычному HTTP: пароли и данные идут по сети без
-  шифрования. В сетях, которым вы не доверяете полностью, слушайте только
-  на этой машине (`-addr 127.0.0.1:8066`) и поставьте перед traffic66
-  обратный прокси с TLS, например [Caddy](https://caddyserver.com):
-  `caddy reverse-proxy --from traffic66.example.com --to 127.0.0.1:8066`.
-  Или подключайтесь через VPN или SSH-туннель:
-  `ssh -L 8066:127.0.0.1:8066 user@192.0.2.50`, затем откройте
-  http://127.0.0.1:8066.
-- Открывайте UDP-порты коллекторов только для адресов своих устройств.
-- SNMP community в `inventory.txt` хранятся открытым текстом; используйте
-  community только для чтения.
-
-<a id="15-sizing"></a>
-
-## 15. Оценка ресурсов
-
-Замер при 5000 потоков в секунду на 2-ядерной машине: детальные данные
-занимают около 12 ГБ диска в сутки плюс около 1,5 ГБ на текущий час,
-программа — шестую часть одного ядра. Обзоры за
-длинные диапазоны строятся по сводкам и выполняются быстрее 0,2 с. Запросы
-по детальным данным просматривают около 22 млн строк на час: один хост за
-1 час — меньше 1 с, Top 66 всех сессий за 1 час — около 9 с; время растёт
-с диапазоном и сокращается с числом ядер.
-
-Значит, на 30 дней при 5000 потоков/с нужно около 360 ГБ диска;
-пересчитайте под свою интенсивность потоков (видна на странице
-**Настройки**) и `-retention-days`.
-
-Память: `-memory` (по умолчанию 10 % ОЗУ, не меньше 256 МБ) ограничивает
-кеш базы данных, а остальная программа получает мягкий лимит того же
-размера. При 5000 потоков в секунду собственные данные программы
-(декодирование, обнаружение дубликатов, пачки записей) занимают около
-90 МБ; всего рассчитывайте на 0,6–0,8 ГБ, так что машины с 2 ГБ ОЗУ
-достаточно. Замерено за 10 минут непрерывного сбора (пик 0,58 ГБ на машине
-с 8 ГБ) и при загрузке часа потоков с интенсивностью в одиннадцать раз
-выше с ограничениями машины с 2 ГБ (пик 0,74 ГБ).
-
-`-memory` — это бюджет, а не жёсткий предел: лимит Go мягкий, и база данных
-может ненадолго превысить свою долю. Для жёсткого предела используйте
-средства операционной системы: `MemoryMax=` в unit-файле systemd (раздел 2)
-или лимит памяти контейнера. Закладывайте примерно в 2,5 раза больше доли
-`-memory` и не меньше 1 ГБ; при доле по умолчанию `MemoryMax=2G` подходит
-для машин с ОЗУ до 8 ГБ. Тогда перезапускается traffic66, а не у машины
-заканчивается память.
-
-<a id="16-troubleshooting"></a>
-
-## 16. Устранение неполадок
-
-| Симптом | Причина и решение |
-|---|---|
-| Устройства нет на странице **Настройки** | Пакеты не доходят: см. [Проверка поступления потоков](#5-check-that-flows-arrive) |
-| "waiting for the sampling rate" | Устройство ещё не прислало sampler options; большинство устройств повторяют их в течение нескольких минут. Если так и не пришлёт, включите их экспорт (`option sampler-table` на Cisco) или пометьте устройство как `unsampled` в разделе «Названия», если оно действительно экспортирует 1:1, либо укажите его коэффициент через `sampling=N` в строке `device`. На странице **Настройки** затем видны шаблоны, присланные устройством, — по ним понятно, что оно объявляет |
-| Цифры ниже счётчиков интерфейсов | См. **Сверка интерфейсов**: потери по пути, несэмплируемые интерфейсы или потоки ещё в кеше устройства (active timeout больше 60 с) |
-| Цифры выше счётчиков интерфейсов | Один и тот же трафик сэмплируется на двух интерфейсах или двух устройствах |
-| Нет стран и сетей («Неизвестно») | Не загружена база: загрузите её на странице **Настройки**, см. [Страны](#8-countries-networks-and-threat-lists) |
-| "База данных упёрлась в лимит памяти и не смогла ответить" на странице | Выберите период покороче или запустите с бо́льшим `-memory`; подробности в журнале |
-| Забыт пароль | `traffic66 passwd` на машине с traffic66 (добавьте `-data`, если traffic66 запущен с ним) |
-| `Conflicting lock is held` | Этот каталог данных уже использует другой экземпляр traffic66 |
-| `receive buffer is only … KB` | Linux ограничивает размер UDP-буферов: задайте `net.core.rmem_max=16777216` (см. [Linux](#linux)) |
-| `cannot create the data directory` | У этого пользователя нет прав на запись в папку программы: укажите `-data` |
-| macOS: "cannot be opened" или "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
-| Windows: "Система Windows защитила ваш компьютер" | **Подробнее** → **Выполнить в любом случае**; программа пока не подписана |
-| Захват в Windows: Npcap не найден | Установите [Npcap](https://npcap.com) |
-| `address already in use` | Порт занят другой программой: выберите другие через `-addr` или `-listen` |
-
-<a id="17-build-from-source"></a>
-
-## 17. Сборка из исходников
-
-Go 1.24 и компилятор C (gcc или clang; в Windows — MinGW-w64):
-
-```
-git clone https://github.com/githubflyideas/traffic66
-cd traffic66
-scripts/build.sh 0.1.0 traffic66
-```
+Сборка из исходников: Go 1.24 и компилятор C, затем `scripts/build.sh 0.1.0 traffic66`.

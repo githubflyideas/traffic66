@@ -2,398 +2,128 @@
 
 # traffic66
 
-sFlow, NetFlow, IPFIX 플로 분석을 하나의 프로그램으로 처리합니다. 스위치, 라우터, 방화벽이
-익스포트한 플로를 수집해 내장 데이터베이스에 저장하고, 누가 대역폭을 쓰는지, 트래픽이 어디로
-가는지, 그 수치가 장비 자체의 인터페이스 카운터와 맞는지를 웹 UI와 터미널 UI로 보여 줍니다.
+sFlow, NetFlow, IPFIX 플로 분석을 하나의 프로그램으로 처리합니다. 누가 대역폭을 쓰는지, 트래픽이 어디로 가는지, 그 수치가 장비 자체의 인터페이스 카운터와 맞는지를 웹 UI와 터미널 UI로 보여 줍니다.
 
-- Windows, Linux, macOS 모두 실행 파일 하나입니다. 데이터베이스 설치나 런타임이 필요 없고,
-  오프라인에서도 동작합니다.
-- 어떤 UDP 포트로든 sFlow v5, NetFlow v5, NetFlow v9, IPFIX를 받습니다. 네트워크
-  인터페이스나 미러 포트에서 직접 로컬 캡처도 할 수 있습니다.
-- 자체 집계 수치를 인터페이스 카운터(sFlow 카운터 또는 SNMP)와 대조하고, 차이가 나면 그
-  이유를 알려 줍니다.
-- 플로에서 스캔, 비밀번호 대입, 내부 확산, 비정상 업로드, 플러드, 위협 목록 트래픽을
-  찾아내고(샘플링된 데이터에서도), 처리할 탐지 항목으로 보여 줍니다.
-- Top 66 목록, 누가 누구와 통신하는지 보여 주는 링 차트(서버와 그 클라이언트, 서비스와
-  그 서버), 인터페이스와 네트워크(AS)별 시간에 따른 트래픽, 트래픽 경로, 세계 지도 위의
-  국가, 위협 목록 일치 항목, 플로 레코드, 캡슐화(GRE, IPIP, VXLAN, GENEVE, MPLS).
-- `traffic66 capture.pcap`로 최대 3개(합계 3 GB)의 캡처를 웹 UI에서 열어 캡처 전체의 플로, 탐지, 국가, 플로 레코드를 봅니다. 설정할 것이 없습니다.
-- 웹 UI와 터미널 UI 모두 13개 언어를 지원합니다.
-- 소스 공개: 평가 용도와 100명 미만 조직은 무료이고, 더 큰 조직은 운영 사용 30일 뒤
-  등록해야 합니다. 꺼지는 기능은 전혀 없습니다
-  ([체험과 라이선스](#trial-and-licence) 참조).
+- Windows, Linux, macOS 모두 실행 파일 하나입니다. 설치할 데이터베이스가 없고, 오프라인에서도 동작합니다.
+- 어떤 UDP 포트로든 sFlow v5, NetFlow v5/v9, IPFIX를 받으며, 인터페이스에서 로컬 캡처도 할 수 있습니다.
+- 자체 수치를 인터페이스 카운터(sFlow 또는 SNMP)와 대조하고, 차이가 나는 이유를 알려 줍니다.
+- 스캔, 비밀번호 대입, 내부 확산, 비정상 업로드, 플러드, 위협 목록 트래픽을 샘플링을 거쳐서도 찾아냅니다.
+- `traffic66 capture.pcap`은 설정할 것 없이 패킷 캡처를 분석합니다.
+- 13개 언어 지원. 평가 용도와 100명 미만 조직은 무료입니다([라이선스](#licence)).
 
 ![개요: 미처리 탐지, 어제 같은 시각과 비교한 애플리케이션별 대역폭, 상위 클라이언트와 서비스](images/overview.png)
 
-<sub>모든 스크린샷은 직접 실행해 볼 수 있는 가상의 회사 네트워크인 `traffic66 demo`에서 찍은 것입니다([데모 실행해 보기](#1-try-the-demo) 참조).</sub>
+<sub>모든 스크린샷은 가상의 회사 네트워크인 `traffic66 demo`에서 찍은 것입니다.</sub>
 
 <a id="contents"></a>
 
 ## 목차
 
 1. [데모 실행해 보기](#1-try-the-demo)
-2. [설치](#2-install) — [Linux](#linux) · [Windows](#windows) · [macOS](#macos)
+2. [설치](#2-install)
 3. [사용자와 비밀번호](#3-users-and-passwords)
 4. [장비에서 플로 보내기](#4-send-flows-from-your-devices)
 5. [플로 수신 확인](#5-check-that-flows-arrive)
-6. [수치를 인터페이스 카운터와 맞추기](#6-make-the-numbers-match-the-interface-counters)
-7. [이름, SNMP, 자체 네트워크](#7-names-snmp-and-your-own-networks)
-8. [국가, 네트워크, 위협 목록](#8-countries-networks-and-threat-lists)
-9. [웹 UI 사용법](#9-using-the-web-ui)
-10. [터미널 UI](#10-terminal-ui)
-11. [로컬 캡처](#11-local-capture)
-12. [옵션](#12-options)
-13. [데이터, 백업, 업그레이드, 제거](#13-data-backup-upgrade-uninstall)
-14. [보안](#14-security)
-15. [용량 산정](#15-sizing)
-16. [문제 해결](#16-troubleshooting)
-17. [소스에서 빌드](#17-build-from-source)
+6. [인터페이스와 카운터](#6-interfaces-and-counters)
+7. [이름, 국가, 위협 목록](#7-names-countries-and-threat-lists)
+8. [웹 UI 사용법](#8-using-the-web-ui)
+9. [오프라인 pcap, 터미널 UI, 로컬 캡처](#9-offline-pcap-terminal-ui-local-capture)
+10. [옵션과 데이터](#10-options-and-data)
+11. [보안, 용량 산정, 문제 해결](#11-security-sizing-troubleshooting)
 
 <a id="1-try-the-demo"></a>
 
 ## 1. 데모 실행해 보기
 
-[릴리스 페이지](https://github.com/githubflyideas/traffic66/releases)에서 사용 중인
-시스템용 압축 파일을 내려받습니다.
-
-| 시스템 | 압축 파일 |
-|---|---|
-| Windows 10/11, Server 2016 이상(x64) | `traffic66-windows-amd64.zip` |
-| Linux x86-64: 커널 3.2 이상의 모든 배포판(CentOS 7, Alpine 포함) | `traffic66-linux-amd64.tar.gz` |
-| Linux ARM64: 동일한 배포판 | `traffic66-linux-arm64.tar.gz` |
-| macOS 11 이상, Apple 실리콘 | `traffic66-darwin-arm64.tar.gz` |
-| macOS 11 이상, Intel | `traffic66-darwin-amd64.tar.gz` |
-
-Linux:
+[Releases 페이지](https://github.com/githubflyideas/traffic66/releases)에서 시스템에 맞는 압축 파일(Windows x64, 커널 3.2 이상의 Linux x86-64/ARM64, macOS 11 이상)을 내려받아 풀고 실행합니다:
 
 ```
-tar xzf traffic66-linux-amd64.tar.gz
-cd traffic66-linux-amd64
-./traffic66 demo -password try66
+./traffic66 demo -password try66          # Linux, macOS
+.\traffic66.exe demo -password try66      # Windows
 ```
 
-macOS(두 번째 줄은 App Store가 아닌 인터넷에서 내려받은 프로그램을 macOS에서 실행할 수 있게 해 줍니다):
-
-```
-tar xzf traffic66-darwin-arm64.tar.gz
-xattr -dr com.apple.quarantine traffic66-darwin-arm64
-cd traffic66-darwin-arm64
-./traffic66 demo -password try66
-```
-
-Windows(PowerShell):
-
-```
-Expand-Archive traffic66-windows-amd64.zip .
-cd traffic66-windows-amd64
-.\traffic66.exe demo -password try66
-```
-
-http://127.0.0.1:8066 을 열고 `admin` / `try66`으로 로그인합니다. 데모는 작은 회사
-네트워크를 만들어 하루치 이력과 시뮬레이션 장비 4대의 실시간 트래픽을 보여 주며, 공격
-하나가 들어 있습니다. **탐지**에 그 각 단계(스캔, 포트 스캔, 비밀번호 대입, 내부 확산,
-제어 서버로의 업로드)와 공개 웹사이트에 대한 플러드가 표시됩니다. 탐지 항목에서 **상세**를
-클릭하거나, **개요**에서 시작해 **상위 클라이언트**의 호스트를 클릭하고 **상세 보기**를 고른
-뒤, 거기서부터 계속 클릭해 보십시오. Ctrl+C로 중지합니다. 데모 데이터는 프로그램 옆의 `traffic66-demo`에
-저장되며, 이 폴더를 삭제하면 데모를 처음부터 다시 시작할 수 있습니다.
-
-데모는 실제 설치와 같은 포트(8066, UDP 6343, 2055, 4739)를 사용합니다. 실제 인스턴스와
-함께 실행하려면 다른 포트를 지정합니다:
-`traffic66 demo -password try66 -addr :8067 -listen ""`.
-
-Windows에서는 `traffic66.exe`를 더블클릭해도 됩니다. 이렇게 하면 데모가 아닌
-실제 traffic66이 시작되고 브라우저에서 웹 UI가 열립니다. 첫 시작 비밀번호는 검은
-창에 표시되며, 창을 닫으면 traffic66이 중지됩니다. Windows가 "Windows의 PC 보호"
-메시지를 표시하면 **추가 정보** → **실행**을 클릭합니다.
+macOS에서는 먼저 `xattr -dr com.apple.quarantine <folder>`를 실행하십시오. http://127.0.0.1:8066을 열고 `admin` / `try66`으로 로그인하면, 하루치 이력과 가상 장비 네 대의 실시간 트래픽이 보입니다. 여기에는 공격이 하나 포함되어 있으며 **탐지**에서 단계별로 보여 줍니다. Ctrl+C로 중지하고, `traffic66-demo`를 삭제하면 처음부터 다시 시작합니다. 실제 설치와 나란히 실행하려면: `-addr :8067 -listen ""`.
 
 <a id="2-install"></a>
 
 ## 2. 설치
 
-traffic66은 파일 하나입니다. 설치란 이 파일을 적당한 곳에 두고, 데이터 디렉터리를 정하고,
-비밀번호를 설정하고, 방화벽을 열고, 부팅 시 자동으로 시작되게 하는 것입니다. 예시에서는
-traffic66 서버를 `192.0.2.50`, 라우터를 `192.0.2.1`로 표기합니다. 실제 주소로 바꿔
-사용하십시오.
+traffic66은 파일 하나입니다. 포트: UDP 6343(sFlow), 2055(NetFlow), 4739(IPFIX), TCP 8066(웹 UI). 모든 UDP 포트가 모든 프로토콜을 받습니다.
 
-포트:
-
-| 포트 | 용도 |
-|---|---|
-| UDP 6343 | sFlow(기본값) |
-| UDP 2055 | NetFlow(기본값) |
-| UDP 4739 | IPFIX(기본값) |
-| TCP 8066 | 웹 UI 및 API |
-
-모든 UDP 포트가 모든 프로토콜을 받으므로, 편하다면 장비에서 NetFlow를 6343으로 보내도
-됩니다. 포트 변경이나 추가는 `-listen`으로 합니다.
-
-<a id="linux"></a>
-
-### Linux
+**Linux**(systemd):
 
 ```
-sudo mkdir -p /opt/traffic66
-sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
 ```
 
-마지막 명령은 사용자 `admin`의 비밀번호를 묻습니다.
-
-`/etc/systemd/system/traffic66.service`를 만듭니다:
+`/etc/systemd/system/traffic66.service`:
 
 ```
 [Unit]
 Description=traffic66 flow analytics
 After=network-online.target
-Wants=network-online.target
 
 [Service]
 User=traffic66
 ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
 Restart=on-failure
-# hard memory limit for the whole process (see Sizing)
 MemoryMax=2G
-# only needed for local capture (-capture):
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-서비스를 시작하고, 버스트 시 유실되지 않도록 UDP 버퍼 한도를 늘립니다:
-
 ```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf
-sudo sysctl --system
-sudo systemctl daemon-reload
-sudo systemctl enable --now traffic66
-sudo systemctl status traffic66
-journalctl -u traffic66 -f
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
 ```
 
-방화벽, firewalld 사용 시(RHEL, Rocky, Alma, Fedora):
+**Windows**(관리자 권한 PowerShell): `C:\traffic66`에 압축을 풀고, `C:\traffic66\traffic66.exe passwd`를 실행하고, 포트를 연 다음, 부팅 시 시작하도록 등록합니다:
 
 ```
-sudo firewall-cmd --permanent --add-port=6343/udp --add-port=2055/udp --add-port=4739/udp --add-port=8066/tcp
-sudo firewall-cmd --reload
-```
-
-ufw 사용 시(Ubuntu, Debian):
-
-```
-sudo ufw allow 6343,2055,4739/udp
-sudo ufw allow 8066/tcp
-```
-
-<a id="windows"></a>
-
-### Windows
-
-`C:\traffic66`에 압축을 풀고 비밀번호를 설정합니다(관리자 권한 PowerShell):
-
-```
-Expand-Archive traffic66-windows-amd64.zip C:\
-Rename-Item C:\traffic66-windows-amd64 C:\traffic66
-C:\traffic66\traffic66.exe passwd
-```
-
-데이터는 프로그램 옆의 `C:\traffic66\traffic66-data`에 저장됩니다.
-
-방화벽을 엽니다:
-
-```
-New-NetFirewallRule -DisplayName "traffic66 flows" -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName "traffic66 web" -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-포그라운드에서 시험해 보려면 `C:\traffic66\traffic66.exe`를 실행하고 Ctrl+C로 중지합니다.
-아무도 로그인하지 않은 상태에서도 부팅 시부터 백그라운드로 실행하려면 시작 작업으로
-등록합니다:
-
-```
-$action   = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$trigger  = New-ScheduledTaskTrigger -AtStartup
-$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-Register-ScheduledTask -TaskName traffic66 -Action $action -Trigger $trigger -Settings $settings -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`-ExecutionTimeLimit ([TimeSpan]::Zero)`는 반드시 필요합니다. 이것이 없으면 Windows가
-3일 후 작업을 중지합니다. 중지는 `Stop-ScheduledTask -TaskName
-traffic66`, 제거는 `Unregister-ScheduledTask -TaskName traffic66`으로 합니다.
+`traffic66.exe`를 더블클릭해도 됩니다. 웹 UI가 열리고, 첫 비밀번호가 창에 표시됩니다.
 
-<a id="macos"></a>
-
-### macOS
-
-```
-sudo mkdir -p /usr/local/traffic66
-sudo tar xzf traffic66-darwin-arm64.tar.gz -C /usr/local/traffic66 --strip-components=1
-sudo xattr -dr com.apple.quarantine /usr/local/traffic66
-sudo /usr/local/traffic66/traffic66 passwd -data "/Library/Application Support/traffic66"
-```
-
-`/Library/LaunchDaemons/traffic66.plist`를 만듭니다:
-
-```
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>traffic66</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/usr/local/traffic66/traffic66</string>
-    <string>-data</string>
-    <string>/Library/Application Support/traffic66</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardErrorPath</key><string>/Library/Logs/traffic66.log</string>
-</dict>
-</plist>
-```
-
-시작과 중지:
-
-```
-sudo launchctl bootstrap system /Library/LaunchDaemons/traffic66.plist
-tail -f /Library/Logs/traffic66.log
-sudo launchctl bootout system/traffic66
-```
-
-macOS 방화벽이 켜져 있다면 시스템 설정 → 네트워크 → 방화벽 → 옵션에서 traffic66의 수신
-연결을 허용하십시오.
+**macOS**: `/usr/local/traffic66`에 압축을 풀고, quarantine 플래그를 제거하고, `traffic66 passwd -data "/Library/Application Support/traffic66"`를 실행한 뒤, LaunchDaemon으로 시작합니다. `ProgramArguments`는 프로그램, `-data`, 그 디렉터리로 하고 `RunAtLoad`와 `KeepAlive`를 지정합니다.
 
 <a id="3-users-and-passwords"></a>
 
 ## 3. 사용자와 비밀번호
 
-**요약:** 사용자와 비밀번호는 데이터 디렉터리의 파일 하나, `password`에 저장됩니다.
-이 파일을 직접 편집할 일은 없습니다. 사용자 추가, 변경, 목록 확인, 삭제는
-`traffic66 passwd` 명령으로 합니다. `http://<traffic66 machine>:8066`을 열고
-그중 한 사용자로 로그인합니다.
-
-<a id="the-first-sign-in"></a>
-
-### 첫 로그인
-
-traffic66은 처음 시작할 때 임의의 비밀번호로 사용자 `admin`을 만들고, 그 비밀번호를
-한 번만 보여 줍니다:
-
-```
-first start: sign in as user "admin" with password "3f9c2a7e5b1d8046"
-```
-
-- Windows에서 더블클릭으로 시작한 경우: 검은 창에 표시됩니다.
-- 터미널에서 시작한 경우: 그 터미널에 표시됩니다.
-- Linux 서비스: `journalctl -u traffic66 | grep "first start"`
-- macOS 서비스: `grep "first start" /Library/Logs/traffic66.log`
-
-놓쳤다면 `traffic66 passwd`(아래 참조)로 새 비밀번호를 설정합니다. 위의 설치 절차처럼
-첫 시작 전에 `traffic66 passwd`로 비밀번호를 설정해 두었다면 비밀번호가 생성되지
-않습니다.
-
-<a id="where-the-users-are-stored"></a>
-
-### 사용자가 저장되는 곳
-
-데이터 디렉터리의 `password` 파일입니다:
-
-| traffic66 실행 방식 | 파일 |
-|---|---|
-| 압축을 풀고 그 폴더에서 시작(기본) | 프로그램 옆의 `traffic66-data/password` |
-| Linux 서비스(섹션 2) | `/var/lib/traffic66/password` |
-| Windows 시작 작업(섹션 2) | `C:\traffic66\traffic66-data\password` |
-| macOS 서비스(섹션 2) | `/Library/Application Support/traffic66/password` |
-| 데모 | 프로그램 옆의 `traffic66-demo/password` |
-
-사용자마다 한 줄입니다. 비밀번호는 솔트를 넣은 해시로 저장되므로 누구도 파일에서
-비밀번호를 다시 읽어 낼 수 없으며, 본인도 마찬가지입니다. 비밀번호를 잊어버렸다면
-새로 설정합니다. 이 파일은 소유자만 읽을 수 있습니다.
-
-```
-# traffic66 login, one user per line; change with: traffic66 passwd
-admin:pbkdf2-sha256$210000$…
-alice:pbkdf2-sha256$210000$…
-```
-
-<a id="managing-users"></a>
-
-### 사용자 관리
-
-traffic66 서버에서 다음을 실행합니다:
+처음 시작할 때 traffic66은 임의의 비밀번호로 사용자 `admin`을 만들고 그 비밀번호를 한 번만 출력합니다(창, 터미널, 또는 `journalctl -u traffic66 | grep "first start"`). 사용자는 솔트를 적용한 해시로 데이터 디렉터리의 `password`에 저장되며, traffic66 서버에서 명령 하나로 관리합니다(traffic66을 `-data …`와 함께 실행한다면 같은 옵션을 추가):
 
 | 작업 | 명령 |
 |---|---|
 | `admin`의 비밀번호 변경 | `traffic66 passwd` |
-| 사용자 `alice` 추가 또는 비밀번호 변경 | `traffic66 passwd -user alice` |
-| 사용자 `alice` 삭제 | `traffic66 passwd -user alice -delete` |
+| `alice` 추가 또는 비밀번호 변경 | `traffic66 passwd -user alice` |
+| `alice` 삭제 | `traffic66 passwd -user alice -delete` |
 | 사용자 목록 보기 | `traffic66 passwd -list` |
-| 임의의 비밀번호를 설정하고 출력 | `traffic66 passwd -generate`(다른 사용자는 `-user` 추가) |
 
-- 명령은 새 비밀번호를 두 번 묻고, 입력하는 내용은 화면에 표시하지 않습니다.
-  8자 이상을 사용합니다.
-- traffic66을 `-data`와 함께 실행한다면 명령에도 같은 `-data`를 붙입니다.
-  섹션 2의 Linux 서비스라면:
-
-  ```
-  sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66 -user alice
-  ```
-
-  Windows에서는(관리자 권한 PowerShell):
-
-  ```
-  C:\traffic66\traffic66.exe passwd -user alice
-  ```
-
-- 변경 사항은 재시작 없이 바로 적용됩니다. 새 비밀번호는 다음 로그인부터 쓸 수 있고,
-  삭제된 사용자는 열려 있는 브라우저에서 로그아웃됩니다.
-- 마지막 남은 사용자는 삭제할 수 없습니다. 먼저 다른 사용자를 추가합니다.
-- 모든 사용자가 같은 것을 보고 바꿀 수 있습니다. 역할 구분은 없습니다.
-
-<a id="passwords-for-scripts-and-containers"></a>
-
-### 스크립트와 컨테이너용 비밀번호
-
-환경 변수 `TRAFFIC66_PASSWORD=…` 또는 명령줄의 `-password …`를 쓰면 traffic66은
-그 실행 동안 사용자 한 명만 받아들입니다. `-user`로 지정한 사용자(기본값 `admin`)와
-그 비밀번호입니다. 이때 `password` 파일은 무시되며 변경되지도 않습니다. 환경 변수를
-권장합니다. 명령줄은 같은 서버의 다른 사용자에게 보이기 때문입니다.
-
-```
-TRAFFIC66_PASSWORD='s3cret-pass' traffic66 -user ops
-```
-
-1분 안에 비밀번호를 다섯 번 틀린 주소는 1분간 차단됩니다.
+변경은 즉시 적용됩니다. 모든 사용자의 권한은 같습니다. 스크립트와 컨테이너에서는 `TRAFFIC66_PASSWORD=…`(또는 `-password`)를 지정하면 그 실행에서는 `-user`와 그 비밀번호만 받습니다. 1분 안에 비밀번호를 다섯 번 틀리면 그 주소는 1분 동안 차단됩니다.
 
 <a id="4-send-flows-from-your-devices"></a>
 
 ## 4. 장비에서 플로 보내기
 
-각 장비가 traffic66 서버로 플로를 보내도록 설정합니다. 명령은 모델과 소프트웨어 버전에 따라
-다르므로 장비 매뉴얼을 확인하십시오. 모든 예시에서 `192.0.2.50`은 traffic66,
-`192.0.2.1`은 장비 자신의 주소입니다.
-
-일반적인 권장 사항:
-
-- 액티브 플로 타임아웃은 60초로 설정합니다. 타임아웃이 길수록 트래픽이 늦게, 큰 덩어리로
-  도착합니다.
-- 장비가 NetFlow/IPFIX를 샘플링한다면 샘플러 옵션도 익스포트하도록 해서 샘플링 레이트를 알 수
-  있게 합니다. traffic66은 레이트가 도착할 때까지 레코드를 보류하며, 1:1로 계산하지 않습니다.
-- 모든 인터페이스 또는 경계 인터페이스만, 한 방향으로 샘플링합니다. 같은 트래픽을 들어올 때와
-  나갈 때 모두 샘플링하면 두 번 집계됩니다. **인터페이스 대조**가 이를 지적해 줍니다.
-- sFlow 샘플링 레이트: 1 Gb/s 링크는 약 1:1000, 10 Gb/s는 1:4096, 40/100 Gb/s는 1:8192.
-
-Cisco IOS / IOS-XE(Flexible NetFlow):
+`192.0.2.50`은 traffic66, `192.0.2.1`은 장비입니다. 액티브 타임아웃을 60초로 설정하고, NetFlow/IPFIX 장비가 샘플러 옵션을 익스포트하게 하고, **모든 인터페이스의 수신 방향**(또는 에지 인터페이스만)을 샘플링하십시오. 그러면 각 패킷이 한 번만 집계됩니다. sFlow 샘플링 비율: 1 Gb/s는 약 1:1000, 10 Gb/s는 1:4096, 40/100 Gb/s는 1:8192.
 
 ```
+! Cisco IOS-XE, NetFlow v9
 flow exporter T66
  destination 192.0.2.50
  transport udp 2055
- export-protocol netflow-v9
  option sampler-table
 flow monitor T66
  exporter T66
@@ -403,39 +133,8 @@ interface GigabitEthernet0/0/0
  ip flow monitor T66 input
 ```
 
-Cisco NX-OS(sFlow):
-
 ```
-feature sflow
-sflow collector-ip 192.0.2.50 vrf default
-sflow collector-port 6343
-sflow agent-ip 192.0.2.1
-sflow sampling-rate 4096
-sflow counter-poll-interval 30
-sflow data-source interface ethernet 1/1
-```
-
-Arista EOS(sFlow):
-
-```
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow source-interface Management1
-sflow run
-```
-
-Juniper EX / QFX(sFlow):
-
-```
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow polling-interval 30
-set protocols sflow interfaces ge-0/0/0
-```
-
-Huawei CloudEngine(sFlow):
-
-```
+# Huawei CloudEngine, sFlow (H3C Comware is similar)
 sflow agent ip 192.0.2.1
 sflow collector 1 ip 192.0.2.50
 interface 10GE1/0/1
@@ -446,46 +145,22 @@ interface 10GE1/0/1
  sflow counter interval 30
 ```
 
-H3C Comware(sFlow):
-
 ```
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50 port 6343
-interface Ten-GigabitEthernet1/0/1
- sflow sampling-rate 4096
- sflow flow collector 1
- sflow counter interval 30
- sflow counter collector 1
-```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
 
-MikroTik RouterOS 7(NetFlow v9 / IPFIX):
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
 
-```
+# MikroTik RouterOS 7
 /ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
 /ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-```
 
-FortiGate FortiOS 7.4.2 이상(NetFlow v9):
-
-```
-config system netflow
-    config collectors
-        edit 1
-            set collector-ip 192.0.2.50
-            set collector-port 2055
-        next
-    end
-end
-config system interface
-    edit port1
-        set netflow-sampler both
-    next
-end
-```
-
-Linux 서버와 호스트는 softflowd 사용(NetFlow v9):
-
-```
+# Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
 
@@ -493,290 +168,74 @@ softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 
 ## 5. 플로 수신 확인
 
-**설정**를 엽니다. 무엇이든 보내는 장비는 몇 초 안에 나타나며, 프로토콜, 샘플링 레이트,
-유실, 마지막 패킷, 상태가 표시됩니다. 상태가 녹색이 아니면 옆의 설명에 무엇이 잘못됐고 무엇을
-바꿔야 하는지 나와 있습니다.
-
-**손실**은 도착하지 않은 샘플이나 레코드 수입니다. sFlow의 경우 옆의 설명이 어디서
-사라졌는지 알려 줍니다: 여기로 오는 도중(시퀀스 번호의 빈틈: 네트워크, 또는 이 머신의 UDP
-수신 버퍼. `netstat -su`에서 수신 버퍼 오류가 계속 늘어나면 `net.core.rmem_max`를
-올리세요), 또는 장비 자체(sFlow는 장비가 버린 샘플을 보고합니다: 장비의 sFlow 내보내기에
-속도 제한이 있으니 샘플링 빈도를 낮추거나 장비의 한도를 올리세요). 어느 경우든 합계는
-보정되지만, 호스트별 상세는 보정되지 않습니다.
+**설정**에는 무엇이든 보내온 장비가 몇 초 안에 모두 나타납니다: 프로토콜, 샘플링 비율, 유실, 샘플링하는 인터페이스, 그리고 상태가 초록이 아닐 때 무엇을 고쳐야 하는지. sFlow 유실은 경로상의 유실(`netstat -su`에 버퍼 오류가 보이면 `net.core.rmem_max`를 올리십시오)과 장비 자체가 버린 샘플로 나뉘어 표시됩니다.
 
 ![설정: 장비별 프로토콜, 샘플링, 유실, 고쳐야 할 점](images/sources.png)
 
-장비가 나타나지 않으면:
+장비가 보이지 않습니까? `sudo tcpdump -ni any udp port 6343 or udp port 2055 or udp port 4739`를 실행하십시오. 아무것도 보이지 않으면 라우팅, 방화벽 또는 장비 설정 문제이고, 패킷은 보이는데 **설정**에 아무것도 없으면 로컬 방화벽이나 `-listen` 문제입니다. 다른 머신에서 `traffic66 simulate -to 192.0.2.50`을 실행하면 가상 장비로 경로를 테스트할 수 있습니다.
 
-1. traffic66 서버에서 패킷을 확인합니다(Linux, macOS):
-   `sudo tcpdump -ni any udp port 6343 or udp port 2055 or udp port 4739`.
-   아무것도 보이지 않으면 패킷이 서버까지 오지 않는 것입니다. 장비 설정, 라우팅, 경로상의
-   방화벽을 확인하십시오.
-2. 패킷은 들어오는데 **설정**가 비어 있다면: 로컬 방화벽이 패킷을 버리고 있거나
-   ([설치](#2-install) 참조), traffic66이 다른 포트에서 수신하고 있는 것입니다(`-listen`).
-3. 장비를 건드리지 않고 다른 서버에서 경로를 테스트하려면 그 서버에서
-   `traffic66 simulate -to 192.0.2.50`을 몇 초간 실행합니다. 시뮬레이션 장비에서 sFlow,
-   NetFlow, IPFIX를 보내며, 이 장비들이 **설정**와 데이터에 나타나므로 테스트용 설치에서
-   하는 것이 좋습니다.
+<a id="6-interfaces-and-counters"></a>
 
-<a id="6-make-the-numbers-match-the-interface-counters"></a>
+## 6. 인터페이스와 카운터
 
-## 6. 수치를 인터페이스 카운터와 맞추기
+플로 수치는 추정값입니다(샘플 수 × 샘플링 비율). **인터페이스 대조**는 이를 장비의 인터페이스 카운터(sFlow 카운터, 또는 **이름**의 `snmp` 줄을 통한 SNMP)와 비교하고 차이 나는 이유를 알려 줍니다: 샘플링되지 않은 인터페이스, 같은 트래픽의 중복 샘플링, 경로상 유실, 또는 알 수 없는 샘플링 비율. 각 인터페이스에는 bits/s 차트와 packets/s 차트가 있으며, 수신은 초록, 송신은 파랑, 카운터는 점선입니다.
 
-플로 수치는 추정값입니다(샘플링된 패킷 수 × 샘플링 레이트). traffic66은 이를 장비 자체의
-인터페이스 카운터와 비교해 **인터페이스 대조**에 차이를 보여 주며, 샘플링만으로 설명되지 않을
-만큼 차이가 크면 가능한 원인도 함께 표시합니다. 인터페이스마다 전체 폭의 bits/s 그래프와
-그 아래 packets/s 그래프가 있으며 수신(초록)과 송신(파랑)을 함께 보여 줍니다. 장비 자체의
-카운터는 bits/s 그래프에 점선으로 표시됩니다. 목록에서 인터페이스를 고르면 그 그래프가
-표시됩니다.
+각 행에서 **✎**는 이름과 짧은 태그(*uplink* 등)를 설정하고, **☆**는 그 인터페이스를 기본 인터페이스(★)로 만듭니다. 페이지는 이 인터페이스로 열립니다.
 
-목록의 각 행에는 버튼이 두 개 있습니다. **✎**는 인터페이스에 이름과 짧은 태그(*uplink* 등)를
-붙이며, 태그는 어디서나 이름 옆에 표시됩니다. **☆**는 그 인터페이스를 기본 인터페이스(**★**)로
-만듭니다. 기본 인터페이스는 하나뿐입니다. 이후 페이지는 그 인터페이스로 열리고
-([웹 UI 사용법](#9-using-the-web-ui)의 **인터페이스** 선택 참조), 개요에 그 대역폭이 표시됩니다.
-둘 다 **이름**의 `iface` 행에 바로 저장됩니다.
-
-플로 레코드에는 인터페이스가 두 개 기록됩니다. 패킷이 들어온 인터페이스와 나간
-인터페이스입니다. 그래서 일부 인터페이스에서만 샘플링하는 장비는 그 플로의 반대쪽
-인터페이스도 보여 줍니다. 이 **상대 인터페이스**는 목록 맨 끝에 더 작은 회색 글씨로 별도
-제목 아래 나열됩니다. 그 수치는 샘플링 인터페이스를 거친 트래픽만 담으며, 그 인터페이스의
-전체 트래픽이 아닙니다. 페이지 위쪽의 **인터페이스**에는 나오지 않습니다.
-traffic66은 어느 인터페이스가 플로를 샘플링했는지를 sFlow 데이터 소스로, 또는 NetFlow v9와
-IPFIX의 flowDirection 필드(IPFIX 61)로 압니다(ingress: 입력 인터페이스, egress: 출력
-인터페이스). 이 필드가 없으면 장비 트래픽의 90% 이상이 지나는 인터페이스를 샘플링
-인터페이스로 봅니다. 그런 인터페이스가 없으면 아무 인터페이스도 표시하지 않습니다.
-**설정**은 장비마다 샘플링 인터페이스와 템플릿에 방향 필드(61)가 있는지를 보여 줍니다.
-장비의 모든 트래픽을 보려면 모든 인터페이스에서 수신 방향을 샘플링하십시오
-([장비에서 플로 보내기](#4-send-flows-from-your-devices) 참조).
+일부 인터페이스만 샘플링하는 장비는 그 플로의 반대쪽 인터페이스도 보여 줍니다. 이 **상대 인터페이스**는 맨 끝에 작은 회색 글씨로 나열되며, 샘플링된 인터페이스를 지나간 트래픽만 담고 있습니다. 샘플링된 인터페이스는 sFlow 데이터 소스나 flowDirection 필드(IPFIX 61)로 알 수 있고, 그것이 없으면 장비 트래픽의 90%가 지나는 인터페이스로 판단합니다.
 
 ![인터페이스 대조: 모든 인터페이스의 트래픽, 그리고 플로 추정값과 장비 카운터를 나란히 표시](images/interfaces.png)
 
-비교할 카운터를 얻으려면:
+traffic66은 이미 장비가 적용한 비율을 사용하고, 알 수 없는 비율은 기다리고, 익스포트 유실을 보정하고, 긴 플로를 해당 분들에 나눠 담고, NetFlow/IPFIX에는 패킷당 18바이트의 이더넷 오버헤드를 더합니다(`-l2-overhead`).
 
-- sFlow 장비는 카운터 전송 주기를 설정하면(`sflow counter interval 30` 등) 알아서
-  보냅니다.
-- NetFlow와 IPFIX 장비는 **설정 → 이름**에 `snmp` 줄을 추가합니다
-  ([이름](#7-names-snmp-and-your-own-networks) 참조). 그러면 traffic66이 1분마다
-  인터페이스 카운터를 읽습니다.
+<a id="7-names-countries-and-threat-lists"></a>
 
-수치를 맞추기 위해 traffic66이 이미 하고 있는 일: 장비가 실제로 적용한 샘플링 레이트를
-사용하고, 샘플링 레이트가 확인될 때까지 NetFlow/IPFIX 레코드를 보류하고, 중간에 유실된
-익스포트 패킷을 보정하고, 긴 플로를 지속된 각 분에 나눠 배분하며, NetFlow/IPFIX 바이트 수에
-패킷당 18바이트의 Ethernet 오버헤드를 더합니다(인터페이스 카운터에는 포함되고 IP 계층 플로
-집계에는 포함되지 않기 때문이며, `-l2-overhead`로 변경 가능).
+## 7. 이름, 국가, 위협 목록
 
-그래도 남는 차이의 흔한 원인은 다음과 같으며, 모두 **인터페이스 대조**에 보고됩니다: 일부
-인터페이스가 샘플링되지 않음, 같은 트래픽을 두 인터페이스에서 샘플링함, 익스포트 패킷이
-traffic66에 도착하기 전에 유실됨, 샘플링 레이트를 아직 모름.
-
-<a id="7-names-snmp-and-your-own-networks"></a>
-
-## 7. 이름, SNMP, 자체 네트워크
-
-호스트나 장비에 이름을 붙이는 가장 빠른 방법: 아무 페이지에서나 그 주소를 클릭하고
-**이름 붙이기…** 메뉴를 고릅니다. 이름을 입력하고 Enter를 누르면 바로 저장되고, 이후 모든
-곳에서 주소 대신 그 이름이 표시됩니다.
-
-네트워크, 인터페이스, SNMP는 **설정 → 이름**을 씁니다. 유형(호스트, 네트워크, 장비,
-인터페이스, SNMP)을 고르고 주소와 이름을 입력한 뒤 **추가**를 클릭합니다. 아래 표에는 모든
-이름이 **수정**, **삭제**와 함께 나열됩니다. 같은 주소를 다시 추가하면 기존 항목이 바뀝니다.
-주소와 네트워크는 저장하기 전에 검사합니다.
-
-이름은 데이터 디렉터리에 `inventory.txt`로, 한 줄에 하나씩 저장됩니다. **텍스트로 편집(고급)** 버튼은
-이 파일을 보여 주며, 파일을 직접 편집해도 됩니다(`inventory.txt.example` 참조). 모든 줄은
-선택 사항입니다.
+아무 주소나 클릭해 **이름 붙이기…**를 선택하거나, **설정 → 이름**을 사용하십시오. 이름은 데이터 디렉터리의 `inventory.txt`에 저장됩니다:
 
 ```
-# your networks: traffic between them is "internal"
-net    10.10.0.0/16  Office LAN
-net    203.0.113.0/24  Public servers country=JP
-
-# device names; "unsampled" if it exports every packet (1:1),
-# sampling=N if it samples 1:N but does not say so in its export
-device 192.0.2.1     Core router
-device 192.0.2.9     Branch firewall unsampled
-device 192.0.2.20    Edge router sampling=1000
-
-# interface names, by device address and ifIndex; speed in bits per second,
-# tag= a short tag, default = the interface the pages open on (one only)
-iface  192.0.2.1 3   ISP uplink speed=1000000000 tag=uplink default
-
-# host names shown instead of addresses
-host   10.10.3.27    Finance PC
-
-# read interface counters over SNMPv2c (IF-MIB 64-bit counters)
-snmp   192.0.2.1     public
-snmp   192.0.2.9     s3cret  10.99.0.9:161
+net    10.10.0.0/16    Office LAN                  # your networks
+net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
+device 192.0.2.1       Core router
+device 192.0.2.9       Branch firewall unsampled    # exports every packet
+device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
+iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
+host   10.10.3.27      Finance PC
+snmp   192.0.2.1       public                       # read counters over SNMPv2c
+snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 ```
 
-- `net`: 사설 대역(10/8, 172.16/12, 192.168/16, 100.64/10)은 항상 자체 네트워크로
-  취급됩니다. 공인 대역도 추가하면 그 대역을 오가는 트래픽도 자체 트래픽으로 집계됩니다.
-  이름은 세그먼트로 묶은 **Top 66**과 세그먼트별 트래픽 경로에 표시됩니다. `country=JP`(두
-  글자 국가 코드)는 그 네트워크가 있는 국가를 나타내며, 세계 지도는 거기서 통신 상대 국가로
-  선을 그립니다.
-- `snmp <device> <community> [<management address>[:port]]`: device는 플로를 보내는
-  주소입니다. 장비가 다른 주소로 SNMP에 응답한다면 관리 주소를 추가합니다. SNMP로 읽은
-  인터페이스 설명은 `iface`로 이름을 붙이지 않은 경우 인터페이스 이름으로 쓰입니다. 장비의
-  SNMP 접근 목록에서 traffic66 서버를 허용하십시오.
-- 변경 사항은 **저장**을 클릭하면 적용되며, 재시작은 필요 없습니다.
+사설 주소 대역은 항상 자체 네트워크로 취급합니다. 변경은 **저장**하면 적용되며 재시작이 필요 없습니다.
 
-<a id="8-countries-networks-and-threat-lists"></a>
-
-## 8. 국가, 네트워크, 위협 목록
-
-국가와 네트워크(AS)는 처음부터 표시됩니다. traffic66에는 DB-IP의 무료 데이터베이스 **IP to Country Lite**와 **IP to ASN Lite**가 내장되어 있습니다(라이선스 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com)). 국가와 네트워크를 보여 주는 페이지에는 데이터 출처가 표시됩니다.
-
-내장 데이터는 사용 중인 릴리스 시점의 것입니다. DB-IP는 매월 새 버전을 냅니다. **설정 → 국가 및 네트워크 데이터베이스 → DB-IP Lite 지금 업데이트**를 누르면 db-ip.com에서 최신판을 내려받습니다(traffic66이 실행되는 서버가 인터넷에 연결되어 있어야 하며, 실패하면 화면에 알려 줍니다).
-
-다른 무료 데이터베이스도 쓸 수 있습니다. 내려받은 뒤 같은 페이지의 **데이터베이스 파일 업로드…**로 올리면 됩니다. 파일은 검사 후 데이터 디렉터리에 저장되고 새 트래픽에 바로 적용됩니다. 재시작은 필요 없습니다. 이미 저장된 트래픽은 저장할 때의 국가를 유지합니다.
-
-| 데이터베이스 | 내용 | 라이선스 | 받는 곳 |
-|---|---|---|---|
-| DB-IP Lite(내장) | 국가, 네트워크 | CC BY 4.0, 가입 불필요 | [db-ip.com/db/lite.php](https://db-ip.com/db/lite.php) |
-| MaxMind GeoLite2 Country 및 ASN, `.mmdb` | 국가, 네트워크 | GeoLite2 EULA, 무료 계정 필요 | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| IPinfo Lite, `ipinfo_lite.mmdb` | 국가와 네트워크를 한 파일에 | CC BY-SA 4.0, 무료 계정 필요 | [ipinfo.io/lite](https://ipinfo.io/lite) |
-| IPtoASN, `ip2asn-combined.tsv.gz` | 네트워크와 그 국가 | PDDL 1.0, 가입 불필요 | [iptoasn.com](https://iptoasn.com) |
-
-직접 올린 파일을 먼저 쓰고, 거기에 없는 주소는 내장 DB-IP Lite가 답합니다. 파일 옆의 **삭제**를 누르면 나머지 구성으로 돌아갑니다. 페이지에는 사용 중인 데이터베이스와 각각의 날짜가 나옵니다.
-
-웹 UI 없이 하려면 파일을 `country.mmdb`, `asn.mmdb`, `both.mmdb`(IPinfo Lite처럼 국가와 네트워크가 한 파일인 경우) 또는 `asn.tsv.gz`라는 이름으로 데이터 디렉터리에 복사하고 traffic66을 재시작합니다.
-
-**지역 및 네트워크**는 다른 국가와 주고받은 트래픽을 세계 지도로 보여 줍니다. 색이 진할수록 트래픽이 많습니다. 국가에 마우스를 올리면 트래픽 양이, 클릭하면 필터나 플로 레코드를 볼 수 있습니다. 자체 네트워크에 국가가 지정되어 있으면(`net` 줄의 `country=`, [이름](#7-names-snmp-and-your-own-networks) 참조) 그 국가에서 트래픽을 주고받는 국가로 선이 그려지며, 트래픽이 많을수록 굵어집니다. 국경선은 [Natural Earth](https://www.naturalearthdata.com)(퍼블릭 도메인)의 것입니다.
+국가와 네트워크(AS)는 DB-IP의 무료 Lite 데이터베이스([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "IP Geolocation by DB-IP", [db-ip.com](https://db-ip.com))로 바로 동작합니다. **설정**에서 이를 업데이트하거나, 대신 MaxMind GeoLite2, IPinfo Lite, IPtoASN 파일을 쓸 수 있습니다. 지도 윤곽: [Natural Earth](https://www.naturalearthdata.com).
 
 ![지역 및 네트워크: 세계 지도에 표시한 국가별 외부 트래픽](images/geo.png)
 
-위협 목록은 한 줄에 주소나 네트워크 하나씩 적은 일반 텍스트 파일이며(`#` 또는 `;` 뒤는
-무시됨), `<data directory>/threats/<name>.txt`로 저장합니다. 예:
-
-```
-mkdir -p <data directory>/threats
-curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamhaus-drop.txt
-```
-
-목록을 추가하거나 변경한 뒤에는 traffic66을 재시작합니다. 일치 항목은 **위협 정보**에 목록
-이름별로 나타납니다.
+위협 목록은 한 줄에 주소나 네트워크 하나를 적은 텍스트 파일로, `<data>/threats/<name>.txt`에 둡니다(예: Spamhaus DROP). 변경한 뒤에는 재시작하십시오. 일치 항목은 **위협 정보**에 나타납니다.
 
 ![위협 정보: 위협 목록에 있는 주소로 데이터를 보내는 내부 호스트](images/threats.png)
 
-<a id="9-using-the-web-ui"></a>
+<a id="8-using-the-web-ui"></a>
 
-## 9. 웹 UI 사용법
+## 8. 웹 UI 사용법
 
-직접 입력할 일은 거의 없습니다. 모든 페이지의 모든 값(주소, 포트, 애플리케이션, 국가, 장비)을
-클릭할 수 있습니다:
+모든 페이지의 모든 값을 클릭할 수 있습니다: **이것만 보기** / **이것 제외**(필터는 모든 페이지에 적용), **플로 레코드 보기**, **상세 보기**(호스트나 서비스 하나에 대한 페이지), **이름 붙이기…**, **온라인에서 조회**, **복사**.
 
-- **이것만 보기** / **이것 제외**는 필터를 추가합니다. 필터는 상단 바 아래에 표시되며, 제거할
-  때까지 모든 페이지에 적용됩니다.
-- **플로 레코드 보기**는 해당하는 개별 플로를 엽니다.
-- **상세 보기**(호스트, 장비, 서비스)는 그 호스트나 서비스 하나에 대한 페이지를 엽니다.
-  애플리케이션별 트래픽 추이, 통신 상대, 서비스 또는 클라이언트, 국가, 최근 플로를 보여
-  줍니다. 그곳의 모든 값도 다시 클릭할 수 있어 계속 파고들 수 있으며, 브라우저의 뒤로
-  버튼으로 돌아옵니다.
-- **이름 붙이기…**(호스트와 장비)는 주소에 이름을 붙이며, 이후 모든 곳에 그 이름이
-  표시됩니다.
-- **온라인에서 조회**는 주소나 AS를 공개 조회 사이트에서 엽니다.
-- **복사**는 값을 복사합니다.
-
-페이지:
-
-| 페이지 | 알 수 있는 것 |
+| 페이지 | 보여 주는 것 |
 |---|---|
-| 개요 | 선택한 인터페이스(선택하지 않았으면 기본 인터페이스, 그것도 없으면 가장 바쁜 인터페이스)의 대역폭(bits/s, 수신과 송신은 인터페이스 기준), 현재 트래픽 양(애플리케이션별. **합계**, 또는 자체 네트워크의 **인바운드**나 **아웃바운드** 트래픽만)과, 그때의 데이터가 있으면 어제 같은 시각(하루 이하 범위), 지난주(일주일 이하) 또는 그 이전 며칠(더 긴 범위) 대비 변화, 미처리 탐지, 방향과 프로토콜, 상위 클라이언트와 서비스 |
-| Top 66 | 처음에는 **표**가 열립니다: 상위 66개를 담은 하나의 표로, 기본은 대화(클라이언트, 서버, 서비스, 국가). 모든 열 제목으로 정렬할 수 있고, 숫자 열(트래픽, 패킷, 평균 패킷 크기, 플로)은 기간 내 전체 트래픽에서 상위 66개를 다시 뽑으므로 평균 패킷 크기가 작은 순으로 스캔과 플러드를 찾을 수 있습니다. **그룹 기준**에서 애플리케이션, 네트워크, 세그먼트, 장비, 캡슐화, VLAN으로 바꿀 수 있습니다. **주요 통신 상대**는 상위 30개 클라이언트와 서버를 트래픽, 패킷, 플로 레코드와 함께 나란히 보여 주며, 그 아래에 전체 트래픽 행이 있습니다 |
-| 트래픽 상세 | 링 차트 두 개. **서버와 클라이언트**: 안쪽 링은 트래픽이 가장 많은 서버 8개, 바깥쪽 링은 각 서버의 클라이언트입니다. **클라이언트를 안쪽에**는 이를 뒤집습니다(안쪽에 클라이언트, 바깥쪽에 각 클라이언트가 쓰는 서버). 한쪽이 다른 쪽보다 더 많은 것을 설명할 때가 많기 때문입니다. **서비스**: 트래픽이 가장 많은 서비스로 된 링 하나. 조각에 마우스를 올리면 트래픽 양이 보이고, 다른 값처럼 클릭할 수 있습니다 |
-| 트래픽 경로 | 어느 호스트가 어느 국가로 어느 애플리케이션을 쓰는지: 트래픽이 가장 많은 호스트 8개, 나머지는 기타로 묶음. **클라이언트 → 서버**는 클라이언트 → 서비스 → 서버를 보여 주고, **세그먼트별**은 호스트 대신 세그먼트를 보여 줍니다. 긴 이름은 22자로 줄이며, 마우스를 올리면 전체 이름이 보입니다 |
-| 탐지 | 살펴봐야 할 것: 스캔, 비밀번호 대입, 내부 확산, 비정상 업로드, 플러드, 위협 목록 트래픽([자세히](#findings)) |
-| 위협 정보 | 위협 목록에 있는 주소와 통신한 호스트와 그 전송량 |
-| 지역 및 네트워크 | 국가별 트래픽 세계 지도(자체 네트워크에서 뻗는 선 포함), 트래픽이 오간 네트워크(AS)의 시간에 따른 변화(bits/s와 packets/s), 국가별, 네트워크별 트래픽 |
-| 설정 | 장비, 샘플링, 각 장비의 샘플링 인터페이스와 flowDirection 전송 여부, 유실, 수집기, SNMP, 국가 및 네트워크 데이터베이스, 로고, **이름** |
-| 인터페이스 대조 | 모든 인터페이스의 시간에 따른 트래픽(bits/s와 그 아래 packets/s, 수신(초록)과 송신(파랑), 장비 카운터는 점선), 그리고 플로 수치가 카운터와 얼마나 차이 나는지, 차이가 큰 순, 원인 포함, 각 인터페이스의 이름, 태그, 기본 인터페이스 지정 |
-| 플로 레코드 | 플로 레코드가 얼마나, 언제 있었는지(간격마다 막대 하나), 그리고 레코드 자체, 최신순, 페이지 단위, 표시할 열 선택 가능. 처음에는 최근 15분을 5초마다 갱신해 표시하며, 다른 페이지의 값에서 열면(**플로 레코드 보기**) 그 페이지의 시간 범위를 유지하고, **실시간으로 돌아가기**로 돌아옴 |
-| 데이터 정리 | 120, 90, 60, 30, 7일보다 오래된 데이터 또는 모든 데이터를 삭제하며, 각각 얼마나 공간이 확보되는지 표시([자세히](#13-data-backup-upgrade-uninstall)) |
-| 오프라인 pcap 분석 | pcap·pcapng 캡처를 실시간 데이터와 따로 분석 ([자세히](#오프라인-pcap-분석)) |
+| 개요 | 선택한 인터페이스의 대역폭, 애플리케이션별 트래픽(합계, 인바운드, 아웃바운드)과 어제 또는 지난주와의 비교, 미처리 탐지, 상위 클라이언트와 서비스 |
+| Top 66 | 상위 66개 대화(어느 열로든 정렬), 또는 애플리케이션, 네트워크, 세그먼트, 장비, 캡슐화, VLAN별 그룹, 상위 30개 통신 상대 |
+| 트래픽 상세 | 링 차트: 서버와 그 클라이언트(또는 그 반대), 서비스 |
+| 트래픽 경로 | 호스트 → 애플리케이션 → 국가, 또는 클라이언트 → 서비스 → 서버, 또는 네트워크별 |
+| 인터페이스 대조 | 모든 인터페이스의 시간에 따른 트래픽과 카운터 비교, 이름, 태그, 기본 인터페이스 |
+| 플로 레코드 | 개별 플로. 5초마다 실시간으로, 또는 임의의 시간 범위 |
+| 탐지, 위협 정보 | 살펴봐야 할 것([아래](#findings)), 목록에 있는 주소와의 트래픽 |
+| 지역 및 네트워크 | 국가별 세계 지도, 시간에 따른 네트워크(AS) |
+| 설정 | 장비, 샘플링, 유실, SNMP, 데이터베이스, 로고, 이름 |
+| 오프라인 pcap 분석, 데이터 정리 | 캡처 파일([아래](#9-offline-pcap-terminal-ui-local-capture)), 오래된 데이터 삭제 |
 
-사이드 메뉴는 페이지를 네 그룹으로 나눠 보여 줍니다: 트래픽(개요, Top 66, 트래픽 상세,
-트래픽 경로, 인터페이스 대조, 플로 레코드), 보안(탐지, 위협 정보, 지역 및 네트워크), 설정과
-오프라인 pcap 분석, 그리고 맨 아래의 데이터 정리. 로고 아래에는 버전과 서버의
-날짜와 시간이 표시됩니다.
-
-트래픽 페이지(개요, Top 66, 트래픽 상세, 트래픽 경로, 지역 및 네트워크, 플로 레코드, 값의 상세
-페이지) 위쪽에는 **인터페이스**가 있습니다. **모든 인터페이스** 또는 인터페이스 하나를 고르면
-이 페이지들은 그 인터페이스를 지나는(수신 또는 송신) 트래픽만 보여 줍니다. 샘플링 인터페이스가 장비별로 묶여
-나열되며, 처음에는 기본 인터페이스(★, **인터페이스 대조**에서 설정)로 시작하고, 선택은 링크에도 포함됩니다. 탐지,
-위협 정보, 인터페이스 대조, 설정은 항상 모든 트래픽을 대상으로 합니다. 인터페이스 하나를
-7일이나 30일로 볼 때는 시간별·일별 요약 대신 플로 레코드를 읽으므로 시간이 더 걸리고,
-플로 레코드를 보관하는 기간(기본 30일)까지만 거슬러 올라갈 수 있습니다.
-
-페이지 위쪽에는 시간 범위(15분~30일, 또는 **직접 지정…** 메뉴로 임의의 시작과 끝, 30일보다
-이전도 가능), 30초마다 자동 새로 고침, 그리고 **링크 복사**가 있습니다. **링크 복사**는 현재
-보고 있는 화면(페이지, 시간 범위, 필터) 그대로의 링크를 복사하므로 동료에게 보낼 때
-편리합니다. **Top 66**과 **트래픽 상세**에서는 **장비**, **클라이언트**, **서버**, **서비스**에 시간 범위에서 트래픽이 가장 많은 값이 나열됩니다. 값을 고르거나 입력하면
-필터링되고, 그 필터는 상자를 비울 때까지 모든 페이지에 적용됩니다. 언어는 브라우저 설정을
-따르며, 메뉴 맨 아래 **로그아웃** 위에서 바꿀 수 있습니다. 설정, 플로 레코드(실시간 표시 중),
-데이터 정리, 오프라인 pcap 분석에는 시간 범위가 없습니다.
-
-언어 옆에는 iOS의 시스템 색상을 따른 색상 테마가 있습니다. **라이트**(기본값),
-**회색**, **블랙**(벽걸이 화면용), **청록**, **주황**. 클릭할 때마다 다음 테마로 바뀌며,
-선택은 브라우저에 저장됩니다.
-
-시간에 따른 차트는 가장 큰 8개 값을 고정된 색으로, 나머지를 기타로 보여 줍니다. 범례에는 각
-값의 합계가 표시되며, 다른 값처럼 클릭할 수 있습니다. 클라이언트와 서버 차트는 기타를 그리지
-않습니다. 호스트가 수천 개이면 상위 8개가 납작해지기 때문입니다. 범례에는 그 합계가 계속
-표시됩니다.
-
-차트는 데이터가 완전한 지점에서 끝납니다. sFlow는 현재 분까지, NetFlow와 IPFIX는 장비가
-플로를 내보내는 데 걸리는 시간만큼 조금 앞에서 끝납니다(traffic66이 이 시간을 측정하며,
-최대 2분입니다).
-
-6시간보다 긴 범위는 정시에 시작하므로 페이지의 모든 수치가 정확히 같은 시간을 집계합니다.
-"24시간"은 지난 24개의 온전한 시간에 현재 시간을 더한 범위입니다. 이런 범위의 Top 66은
-시간 단위 요약에서 가져오므로 필터를 쓸 수 없으며, 페이지에도 그렇게 표시됩니다. 필터를
-쓰려면 더 짧은 범위를 선택하십시오. 대화는 항상 플로 상세를 읽으므로 플로가 많은 환경에서
-긴 범위를 고르면 시간이 걸릴 수 있습니다. 1시간이 가장 빠릅니다.
-
-사이드 메뉴에는 데이터가 쓰는 디스크 용량과 남은 용량이 표시됩니다. 남은 용량에 마우스를
-올리면 현재 속도로 상세 데이터를 보관 일수만큼 유지하는 데 필요한 용량을 볼 수 있습니다
-(하루치 데이터가 쌓이면 추정됨).
-
-로그인 화면과 메뉴 맨 위에 자체 로고를 표시하려면 **설정 → 로고 → 로고 업로드…**를
-사용하십시오. PNG, SVG, JPEG, WebP 또는 GIF, 최대 1 MB이며 272 × 92 픽셀이 가장 좋습니다
-(다른 크기는 맞춰서 조정됨). **기본 로고로 되돌리기**를 누르면 traffic66 로고로 돌아갑니다.
-
-<a id="findings"></a>
-
-### 탐지
-
-**탐지**는 traffic66이 플로에서 찾아낸 것을 심각한 순서로 보여 줍니다. 5분마다 최근
-10분을 검사하며, 한 시간 동안 이어지는 일은 검사할 때마다 새로 생기는 것이 아니라 하나의
-탐지 항목으로 계속 커집니다.
-
-| 탐지 | 의미 | 심각도 |
-|---|---|---|
-| 스캔 | 한 주소가 여러 주소의 같은 포트로 작은 탐색 패킷을 보냄(TCP 또는 ping) | 내부 네트워크에서 오면 높음, 인터넷에서 오면 낮음 |
-| 포트 스캔 | 한 주소가 한 호스트의 여러 포트로 작은 탐색 패킷을 보냄 | 내부에서 오면 높음, 인터넷에서 오면 낮음 |
-| 비밀번호 대입 | 로그인 서비스(SSH, RDP, SMB, 데이터베이스 등)로의 짧은 연결이 많음 | 내부에서 오면 높음, 인터넷에서 오면 낮음 |
-| 내부 확산 | 내부 네트워크 안에서, 그 서비스를 제공한 적이 없는 호스트로의 파일 공유 또는 원격 관리 세션(SMB, RDP, SSH, WinRM, VNC) | 높음 |
-| 비정상 업로드 | 내부 호스트가 이전에 데이터를 주고받은 적 없는 주소로, 받은 것보다 훨씬 많이 보냄(10분 동안 100 MB, 받은 양의 세 배) | 높음 |
-| 플러드 | 한 주소로 초당 20,000개 이상의 작은 패킷, 평소 속도의 열 배 | 중간 |
-| 위협 목록 | 위협 목록 중 하나에 있는 주소와의 트래픽 | 내 호스트가 그 주소에 연결했으면 높음, 목록의 주소가 밖에서 두드렸으면 낮음 |
-
-각 탐지 항목은 누가 누구에게 무엇을 했는지, 언제 얼마나 오래 했는지를 근거가 되는 수치와
-데이터 샘플링 방식과 함께 보여 줍니다. **상세**는 그 호스트의 페이지를 여는데, 거기에도 그
-호스트에 관한 탐지가 나옵니다. **처리 완료**는 탐지 항목을 닫으며, 같은 일이 다시 일어나면
-새 항목이 열립니다. **문제 없음**은 항목을 영구히 닫아 다시는 보고되지 않습니다. 사이드
-메뉴의 **탐지** 옆 빨간 숫자는 최근 24시간의 미처리 높음·중간 탐지 수입니다.
-
-내부 확산과 비정상 업로드는 무엇이 평소와 같은지 알아야 하므로, 하루치 이력이 쌓인 뒤부터
-보고됩니다. 처음 시작할 때 traffic66은 이미 있는 이력에서 학습합니다.
-
-샘플링된 데이터(sFlow, 샘플링된 NetFlow)에서는 규칙이 샘플에 보이는 것을 세고 더 적은
-수를 요구하지만, 그 대신 각 샘플이 짧은 탐색 하나처럼 보여야 하므로 바쁜 정상 호스트는
-걸리지 않습니다. 샘플링이 가린 것은 찾을 수 없습니다. 1:4096 샘플링 뒤에서는 호스트 수십
-대를 스캔해도 패킷이 너무 적어 보이지 않습니다. 데모의 공격은 1:4096으로 샘플링하는
-스위치를 거치지만 모두 탐지되며, 데모의 정상 트래픽은 하루치를 돌려도 웹사이트를 두드리는
-인터넷 스캐너 말고는 탐지를 만들지 않습니다.
-
-![탐지: 1:4096 sFlow 샘플링을 거쳐 찾아낸 공격의 모든 단계](images/findings.png)
+페이지 위쪽에는 **인터페이스**(전체, 또는 샘플링된 인터페이스 하나. 이때 트래픽 페이지는 그 인터페이스를 지나는 트래픽만 보여 줍니다), 시간 범위(15분~30일, 또는 사용자 지정), 30초마다 새로 고침, 그리고 정확히 현재 화면을 가리키는 **링크 복사**가 있습니다. 언어와 다섯 가지 색상 테마는 메뉴 맨 아래에 있습니다. 차트는 데이터가 완전한 지점에서 끝납니다. NetFlow/IPFIX에서는 장비가 익스포트하는 만큼 늦어집니다(최대 2분). 6시간이 넘는 범위는 정시에 시작합니다. 인터페이스 하나를 7일 또는 30일로 보면 플로 상세를 읽으므로 더 느리고, 상세 보관 기간까지만 거슬러 올라갑니다.
 
 ![Top 66: 상위 66개 대화, 어느 열로든 정렬](images/topn.png)
 
@@ -786,338 +245,84 @@ curl -L https://www.spamhaus.org/drop/drop.txt -o <data directory>/threats/spamh
 
 ![트래픽 경로: 어느 호스트가 어느 국가로 어느 애플리케이션을 쓰는지](images/paths.png)
 
-같은 개요 화면의 중국어 버전입니다. 모든 페이지를 13개 언어로 볼 수 있습니다:
-
 ![중국어로 본 개요](images/overview-zh.png)
 
-<a id="10-terminal-ui"></a>
+<a id="findings"></a>
 
-### 오프라인 pcap 분석
+### 탐지
 
-**오프라인 pcap 분석**는 Wireshark나 tcpdump 캡처를 실시간 데이터와 섞지 않고 같은 페이지로 보여 줍니다.
+5분마다 최근 10분을 검사합니다. 한 시간 동안 이어지는 일은 하나의 탐지 항목으로 계속 커집니다.
 
-모든 패킷을 플로로 요약합니다: 누가 누구와, 얼마나, 언제 통신했고 무엇이 공격처럼 보이는지. 프로토콜을 해석하거나 패킷 내용을 보여 주지는 않습니다. 패킷 하나나 TCP 스트림 하나를 보려면 Wireshark를 쓰세요.
+| 탐지 | 의미 |
+|---|---|
+| 스캔, 포트 스캔 | 여러 호스트의 같은 포트, 또는 한 호스트의 여러 포트로 보내는 작은 탐색 패킷 |
+| 비밀번호 대입 | 로그인 서비스로의 짧은 연결이 많음 |
+| 내부 확산 | 파일 공유나 원격 관리를 제공한 적이 없는 내부 호스트로의 그런 세션 |
+| 비정상 업로드 | 새 주소로 10분 동안 100 MB, 돌아온 양의 세 배 |
+| 플러드 | 한 주소로 초당 20,000개 이상의 작은 패킷, 평소 속도의 열 배 |
+| 위협 목록 | 목록에 있는 주소와의 트래픽 |
 
-명령줄에서 설정 없이 바로 엽니다:
+내부 네트워크에서 오면 높음, 인터넷에서 오면 낮음입니다. **처리 완료**는 탐지 항목을 닫고, **문제 없음**은 영구히 끕니다. 내부 확산과 비정상 업로드에는 하루치 이력이 필요합니다. 1:4096 샘플링을 거쳐도 데모의 공격은 모두 탐지되지만, 아주 작은 스캔은 샘플링 뒤에 숨을 수 있습니다.
 
-```
-traffic66 office.pcap
-traffic66 a.pcap b.pcapng c.pcap
-```
+![탐지: 1:4096 sFlow 샘플링을 거쳐 찾아낸 공격의 모든 단계](images/findings.png)
 
-traffic66은 이 컴퓨터에서만(127.0.0.1, 빈 포트) 실행되며, 주소와 비밀번호, 한 번만 쓰는 로그인 링크를 출력하고 브라우저에서 캡처를 엽니다. 최대 3개 파일, 합계 3 GB. 파일은 그 자리에서 읽으며 바꾸지 않습니다. 아무것도 수집하거나 보내지 않고, 호스트 이름도 조회하지 않습니다(`-dns`로 켬). Ctrl+C로 멈추면 가져온 데이터를 지웁니다. 2코어 컴퓨터에서 1 GB 캡처는 약 5초(최대 크기 패킷 120만 개)에서 30초(작은 패킷 1,400만 개)면 준비됩니다.
+<a id="9-offline-pcap-terminal-ui-local-capture"></a>
 
-```
-$ traffic66 office.pcap
+## 9. 오프라인 pcap, 터미널 UI, 로컬 캡처
 
-traffic66 0.3.1: analysing 1 capture file(s); nothing is collected or sent
-  Web UI    http://127.0.0.1:38217  (port 38217, this computer only)
-  Sign in   user admin, password gfhfhbuutz2e
-  Open      http://127.0.0.1:38217/auto?t=b9388f…  (signs in once)
-  Stop      Ctrl+C; the imported data is deleted, your files are kept
-```
-
-실행 중인 traffic66의 웹 UI에서는:
-
-1. **캡처 파일 업로드…**: `.pcap` 또는 `.pcapng`(압축 불가). 최대 3개 파일, 각각 50 MB 이하. 파일은 플로로 바뀌어 별도 데이터베이스(`<data>/sandbox/`)에 들어가며, 실시간 데이터와 집계, 탐지 결과에는 영향이 없습니다.
-2. **분석**: 모든 페이지(개요, Top 66, 트래픽 상세, 탐지, 플로 경로, 지도, 플로 레코드)가 캡처의 전체 기간을 보여 줍니다. 주황색 막대에 파일 이름이 나오고, **실시간 데이터로 돌아가기**로 돌아갑니다. 각 파일은 장비 하나로 나타나므로 **장비** 칸으로 파일을 하나씩 볼 수 있습니다.
-3. 탐지 규칙도 캡처에 대해 실행되어 스캔, 포트 스캔, 비밀번호 추측이 **탐지**에 나옵니다. 하루치 이력이 필요한 규칙(내부 확산, 비정상 업로드)은 캡처에 적용되지 않습니다.
-4. **삭제**는 파일과 데이터를, **모두 삭제**는 전부를 지웁니다.
-
-데모에는 공격이 담긴 예제 캡처가 들어 있습니다.
+**오프라인 pcap 분석**은 패킷 캡처(pcap, pcapng)를 실시간 데이터와 따로, 같은 페이지로 보여 줍니다. `traffic66 a.pcap b.pcapng`는 127.0.0.1에서 시작해 브라우저를 엽니다(최대 3개 파일, 3 GB. Ctrl+C로 가져온 데이터를 삭제). 또는 그 페이지에서 50 MB까지의 파일을 최대 3개 업로드할 수 있습니다. 다루는 것은 플로이며, 패킷 내용이 아닙니다.
 
 ![오프라인 분석: 캡처 파일과 패킷, 플로, 시간](images/sandbox.png)
 
-## 10. 터미널 UI
-
-```
-traffic66 tui                                     # traffic66 on this machine
-traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-traffic66 -tui                                    # collect and show the terminal UI in one process
-```
-
-traffic66 서버에서는 데이터 디렉터리를 읽을 수 있으면 `traffic66 tui`가 알아서 로그인합니다
-(기본 위치가 아니면 `-data` 지정). 서비스로 실행할 때처럼 traffic66이 다른 사용자로 실행 중이면
-대신 `-user`와 `-password`를 사용합니다. `-lang`으로 언어를 고릅니다(`en`, `zh`, `hi`,
-`es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `ja`, `ko`).
-
-키: 1–8 페이지, ↑↓ 선택, Enter 선택한 값에 대한 동작, f 이것만 보기, x 제외, / 검색,
-t 시간 범위, c 필터 해제, w 같은 화면을 브라우저에서 열기, q 종료.
+**터미널 UI**: traffic66 서버에서 `traffic66 tui`, 또는 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`. 키: 1–8 페이지, Enter 작업, f 이것만 보기, x 제외, t 시간 범위, w 브라우저에서 열기, q 종료. `-lang`으로 언어를 고릅니다.
 
 ![터미널 UI: 개요](images/tui-overview.png)
 
 ![터미널 UI: Top 66 대화](images/tui-topn.png)
 
-<a id="11-local-capture"></a>
+**로컬 캡처**는 로컬 인터페이스에서 플로를 만듭니다. 스위치의 미러 포트에 연결한 포트가 가장 좋습니다. `traffic66 interfaces`로 목록을 보고, `-capture eth1`(또는 Windows의 이름이나 번호)로 캡처합니다. Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windows는 [Npcap](https://npcap.com)이 필요합니다. 캡처한 플로는 장비 `127.0.0.1`에서 온 것으로 표시됩니다.
 
-## 11. 로컬 캡처
+<a id="10-options-and-data"></a>
 
-traffic66은 플로 익스포트를 받는 것 외에도, 자신이 실행 중인 머신의 네트워크 인터페이스에서
-패킷을 받아 직접 플로를 만들 수 있습니다. 무엇이 보이는지는 인터페이스에 따라 다릅니다:
+## 10. 옵션과 데이터
 
-| 인터페이스 | traffic66에 보이는 것 |
-|---|---|
-| 스위치의 미러(SPAN) 포트에 연결한 남는 네트워크 포트 | 스위치가 미러링하는 모든 트래픽: 네트워크 전체 또는 업링크 |
-| 머신 자체의 이더넷 또는 Wi-Fi | 이 머신 자신의 트래픽만 |
-
-Wi-Fi 어댑터로는 다른 장비의 트래픽을 볼 수 없습니다. Wi-Fi 네트워크 전체를 보려면 라우터나
-액세스 포인트가 플로를 익스포트하게 하거나(섹션 4), 액세스 포인트가 연결된 스위치 포트를
-미러링하십시오.
-
-<a id="windows-1"></a>
-
-### Windows
-
-1. [Npcap](https://npcap.com)을 기본 옵션으로 설치합니다.
-   "Restrict Npcap driver's access to Administrators only"를 선택했다면 traffic66을
-   관리자 권한으로 실행하십시오.
-2. 인터페이스 목록을 봅니다(PowerShell):
-
-   ```
-   C:\traffic66\traffic66.exe interfaces
-   ```
-
-   ```
-   #   Name      Address          Adapter / device
-   1   Ethernet  -                Intel(R) Ethernet I219-V  \Device\NPF_{4B8A2C1E-…}
-   2   Wi-Fi     192.168.1.23     Intel(R) Wi-Fi 6 AX201  \Device\NPF_{9F00AA11-…}
-   3   Loopback  -                Adapter for loopback traffic capture  \Device\NPF_Loopback
-   ```
-
-   Name 열은 Windows 네트워크 설정의 연결 이름이며, 사용 중인 인터페이스에는 주소가
-   있습니다.
-3. Wi-Fi에서 이름이나 번호로 캡처합니다:
-
-   ```
-   C:\traffic66\traffic66.exe -capture Wi-Fi
-   C:\traffic66\traffic66.exe -capture 2
-   ```
-
-   공백이 들어간 이름은 따옴표로 감쌉니다: `-capture "Ethernet 2"`. 여러 인터페이스에서
-   캡처하려면 `-capture`를 반복합니다. 플로 수집기 없이 캡처만 하려면 `-listen=`을
-   추가합니다. 섹션 2의 시작 작업이라면 `-Argument`에 옵션을 추가합니다:
-   `-Argument '-data C:\traffic66\traffic66-data -capture Wi-Fi'`.
-
-<a id="linux-1"></a>
-
-### Linux
-
-```
-traffic66 interfaces
-sudo setcap cap_net_raw,cap_net_admin+ep /opt/traffic66/traffic66
-traffic66 -capture eth1
-```
-
-캡처에는 root 권한 또는 `CAP_NET_RAW`, `CAP_NET_ADMIN` 케이퍼빌리티가 필요합니다. 위의
-`setcap` 줄이나 섹션 2 systemd 유닛의 `AmbientCapabilities` 줄을 쓰면 됩니다. Wi-Fi
-인터페이스 이름은 보통 `wlan0` 또는 `wlp…`입니다.
-
-<a id="macos-1"></a>
-
-### macOS
-
-```
-traffic66 interfaces
-sudo traffic66 -capture en0
-```
-
-캡처에는 root 권한이 필요하며, 따로 설치할 것은 없습니다. MacBook에서는 `en0`이 Wi-Fi입니다.
-
-<a id="checking-that-it-works"></a>
-
-### 동작 확인
-
-**설정**에 캡처 중인 인터페이스마다 캡처 방식과 지금까지 본 패킷 수가 표시됩니다. 플로는
-모든 페이지에서 다른 장비의 플로와 마찬가지로 장비 `127.0.0.1`(이 머신)에서 온 것으로
-나타납니다. 같은 패킷이 두 번 보이면(예: 미러 포트 두 곳에서) 두 번 집계됩니다.
-
-<a id="12-options"></a>
-
-## 12. 옵션
-
-`traffic66 -h`와 `traffic66 <command> -h`로 전체 목록을 볼 수 있습니다.
-
-명령:
-
-| 명령 | |
-|---|---|
-| `traffic66` | 플로를 수집하고 웹 UI 제공 |
-| `traffic66 demo` | 위와 같으나 시뮬레이션 네트워크 사용 |
-| `traffic66 tui` | 실행 중인 traffic66용 터미널 UI |
-| `traffic66 passwd` | 사용자 추가, 변경, 목록 확인, 삭제([사용자와 비밀번호](#3-users-and-passwords) 참조) |
-| `traffic66 simulate -to HOST` | 수집기로 시뮬레이션 익스포트 전송 |
-| `traffic66 interfaces` | 로컬 캡처용 인터페이스 목록 |
-| `traffic66 version` | 버전 출력 |
-
-`traffic66`과 `traffic66 demo`의 옵션:
+`traffic66 -h`가 전체를 보여 줍니다. 자주 쓰는 옵션:
 
 | 옵션 | 기본값 | |
 |---|---|---|
-| `-addr` | `:8066` | 웹 UI 주소. `127.0.0.1:8066`이면 이 서버에서만 접근 |
 | `-data` | 프로그램 옆의 `traffic66-data` | 데이터 디렉터리 |
-| `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP 수집기를 `name=address` 형식으로 쉼표 구분. 비우면 비활성화 |
-| `-user` | `admin` | 첫 시작 때 만들어지는 사용자의 이름이자 `-password`가 적용되는 사용자 |
-| `-password` | 설정 안 함 | 이번 실행에서는 `password` 파일을 무시하고 `-user`와 이 비밀번호만 허용(`TRAFFIC66_PASSWORD`도 가능) |
+| `-addr` | `:8066` | 웹 UI. `127.0.0.1:8066`이면 이 머신에서만 |
+| `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP 수집기. 비우면 비활성화 |
 | `-retention-days` | `30` | 플로 상세 보관 일수. 요약은 400일 보관 |
-| `-memory` | `0.10` | 데이터베이스 캐시에 쓸 물리 메모리 비율. 프로그램의 나머지 부분에도 같은 크기의 소프트 한도 적용(각각 최소 256 MB) |
-| `-l2-overhead` | `18` | NetFlow/IPFIX 바이트 수에 패킷당 더하는 바이트 |
-| `-sampling-wait` | `5m` | 레코드가 샘플링 레이트를 기다리는 시간 |
-| `-capture` | | 로컬 인터페이스에서 캡처(반복 지정 가능) |
-| `-inventory` | `<data>/inventory.txt` | 이름 파일 |
-| `-asn` | `<data>/asn.tsv.gz` | IP-ASN 매핑 테이블(`.mmdb` 파일은 업로드하거나 `<data>/country.mmdb`와 `<data>/asn.mmdb`, `<data>/both.mmdb`에 둠) |
-| `-threat` | `<data>/threats/*.txt` | 추가 위협 목록, `name=path` 형식(반복 지정 가능) |
-| `-dns-upstream` | 시스템 리졸버 | 호스트 이름 표시에 쓰는 DNS 서버 |
-| `-dns-rate` | `20` | 초당 최대 역방향 조회 횟수 |
-| `-dns-cache` | `2m` | 호스트 이름 캐시 시간 |
+| `-memory` | `0.10` | 데이터베이스 캐시에 쓰는 메모리 비율 |
+| `-sampling-wait` | `5m` | 레코드가 샘플링 비율을 기다리는 시간 |
+| `-capture` | | 로컬 인터페이스(반복 지정 가능) |
 | `-no-dns` | | 역방향 조회 안 함 |
-| `-tui` | | 터미널 UI도 함께 열기 |
 
-예: 수집 포트 하나 추가, 상세 1년 보관, 웹 UI는 로컬 서버에서만:
+데이터 디렉터리에는 `raw/`(상세, 시간당 파일 하나), `traffic66.duckdb`(요약과 카운터), `password`, `inventory.txt`, `license.json`, 로고와 데이터베이스가 있습니다. 백업은 traffic66을 중지하고 디렉터리를 복사하며, 업그레이드는 프로그램 파일을 교체합니다. **데이터 정리**는 7~120일보다 오래된 데이터 또는 모든 데이터를 삭제합니다.
 
-```
-traffic66 -data /var/lib/traffic66 -listen "sflow=:6343,netflow=:2055,ipfix=:4739,netflow=:9995" -retention-days 365 -addr 127.0.0.1:8066
-```
+<a id="licence"></a>
 
-<a id="13-data-backup-upgrade-uninstall"></a>
+### 라이선스
 
-## 13. 데이터, 백업, 업그레이드, 제거
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md)과 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)(영문이 구속력을 가짐)에 따른 소스 공개: 평가 용도와 100명 미만 조직은 무료이고, 더 큰 조직은 운영 사용 30일 뒤 등록합니다. 판매, 타인을 위한 호스팅, 경쟁 제품에는 상용 라이선스가 필요합니다. 꺼지는 기능은 전혀 없습니다. 모든 페이지 하단에 8자리 설치 번호가 표시되니 작성자에게 보내고, 돌려받은 `license.json`을 데이터 디렉터리에 넣으십시오. 연락처: <https://github.com/githubflyideas/traffic66>.
 
-모든 데이터는 데이터 디렉터리에 있습니다:
+<a id="11-security-sizing-troubleshooting"></a>
 
-| | |
+## 11. 보안, 용량 산정, 문제 해결
+
+웹 UI는 평문 HTTP입니다. 신뢰할 수 없는 네트워크에서는 `-addr 127.0.0.1:8066`을 쓰고 TLS 프록시(`caddy reverse-proxy --from traffic66.example.com --to 127.0.0.1:8066`)나 SSH 터널 뒤에 두십시오. UDP 포트는 자체 장비에서만 허용하십시오. SNMP 커뮤니티는 평문으로 저장되므로 읽기 전용 커뮤니티를 쓰십시오.
+
+2코어에서 초당 5,000 플로일 때: 상세 데이터 하루당 디스크 약 12 GB(30일이면 360 GB), 코어 1개의 6분의 1, 메모리 0.6–0.8 GB. 긴 범위의 개요는 0.2초 미만, 전체 대화의 1시간 Top 66은 약 9초 걸립니다.
+
+| 증상 | 해결 |
 |---|---|
-| `raw/` | 플로 상세, 시간당 압축 파일 하나 |
-| `traffic66.duckdb` | 요약, 인터페이스 카운터, 현재 시간대 데이터 |
-| `password` | 로그인 비밀번호(해시) |
-| `inventory.txt` | 이름(**설정 → 이름**) |
-| `license.json` | 설치 번호와 라이선스([체험과 라이선스](#trial-and-licence) 참조) |
-| `logo.png`(또는 `.svg`, `.jpg`, `.webp`, `.gif`) | 업로드한 경우 내 로고(**설정 → 로고**) |
-| `country.mmdb`, `asn.mmdb`, `both.mmdb`, `asn.tsv.gz`, `dbip-country.mmdb`, `dbip-asn.mmdb`, `threats/`, `sandbox/` | 추가한 국가 및 네트워크 데이터베이스와 위협 목록 |
+| "waiting for the sampling rate" | 샘플러 옵션을 익스포트하거나, device 줄에 `sampling=N` / `unsampled` 지정 |
+| 카운터보다 낮음 | 샘플링되지 않은 인터페이스, 유실, 또는 60초를 넘는 액티브 타임아웃 |
+| 카운터보다 높음 | 같은 트래픽을 두 인터페이스 또는 두 장비에서 샘플링함 |
+| 비밀번호를 잊어버림 | traffic66 서버에서 `traffic66 passwd` |
+| `Conflicting lock is held` | 다른 traffic66이 이 데이터 디렉터리를 사용 중 |
+| `address already in use` | `-addr` 또는 `-listen`으로 다른 포트 지정 |
+| Windows: "Windows의 PC 보호" | **추가 정보** → **실행** |
 
-**데이터 보존 기간**: 플로 상세는 30일, 요약(개요와 긴 기간)은 400일입니다. 그보다 오래된 데이터는 자동으로 삭제되며 5분마다 확인합니다.
-그 밖에는 아무것도 삭제하지 않고 다른 제한도 없습니다. 상세 보존 일수는 `-retention-days`로 바꿀 수 있고
-몇 일이든 지정할 수 있습니다(예: `-retention-days 365`). 디스크 사용량도 함께 늘어납니다. 보존 일수만큼 공간이 부족하면
-사이드 메뉴의 **여유**가 빨간색으로 바뀝니다. 디스크가 가득 차면 공간을 확보할 때까지 새 플로를 저장할 수 없습니다.
-
-사이드 메뉴의 **데이터 정리**는 필요해지기 전에 데이터를 삭제합니다: 120, 90, 60, 30, 7일보다
-오래된 데이터 또는 모든 데이터. 선택지마다 삭제될 플로 레코드 수와 확보되는 디스크 공간의
-대략적인 크기를 보여 주고, 삭제 전에 확인합니다. 플로 레코드, 시간별·일별 요약, 인터페이스
-카운터, 탐지가 삭제되며, 모든 데이터를 삭제하면 탐지 규칙이 학습한 내용도 초기화됩니다.
-되돌릴 수 없습니다.
-
-- **백업**: traffic66을 중지하고 디렉터리를 복사합니다. 중지하지 않고 하려면 `raw/`,
-  `password`, `inventory.txt`를 복사합니다. 이 경우 현재 시간대 데이터와 요약은 빠집니다.
-- **이전**: traffic66을 중지하고 디렉터리를 옮긴 뒤, `-data`로 새 위치를 지정해 시작합니다.
-- **업그레이드**: traffic66을 중지하고 프로그램 파일을 교체한 뒤 다시 시작합니다. 데이터는
-  그대로 유지됩니다. Linux 예:
-
-  ```
-  sudo systemctl stop traffic66
-  sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
-  sudo systemctl start traffic66
-  ```
-
-- **제거**: 서비스나 시작 작업을 중지하고 삭제한 다음([설치](#2-install) 참조), 프로그램
-  폴더와 데이터 디렉터리를 삭제합니다.
-
-<a id="trial-and-licence"></a>
-
-### 체험과 라이선스
-
-traffic66은 [PolyForm Noncommercial License 1.0.0](../LICENSE.md)과
-[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)에 따라 소스를 공개합니다. 둘 다
-영어 원문이 구속력을 가집니다. 요약하면:
-
-- **평가**, 테스트, 개발, 시연: 누구나 기간 제한 없이 무료.
-- 직원과 외부 계약자를 합쳐 100명 미만인 조직의 **운영 사용**(조직 업무를 위해 실제 트래픽을
-  처리하는 것): 무료.
-- **더 큰 조직**의 운영 사용: 30일 동안 무료, 그 뒤에는 작성자의 등록 라이선스가 필요합니다.
-- 계약자와 서비스 제공자는 고객 전용 배포에서 고객을 위해 운영할 수 있습니다. 필요 여부는
-  고객의 규모로 판단합니다.
-- 상용 라이선스 없이는 불가: 판매하거나 제품에 넣는 것, 호스팅 또는 멀티테넌트 서비스로
-  다른 사람에게 제공하는 것, 경쟁 제품.
-
-등록 라이선스의 요금, 범위, 기간은 사안별로 정하며 무료일 수도 있습니다. 연락처:
-<https://github.com/githubflyideas/traffic66>.
-
-라이선스가 필요 없는 경우에도 모든 설치에서 체험 기간이 표시됩니다. 처음 시작할 때 traffic66은
-8자리 설치 번호가 담긴 `license.json`을 데이터 디렉터리에 씁니다. 모든 페이지 하단에 체험 기간이 며칠 남았는지,
-그 뒤에는 체험 기간이 끝났다는 것이 표시됩니다. 어느 경우에도 꺼지는 기능은 없으며, 모든
-기능이 계속 동작합니다.
-
-등록하려면 설치 번호(모든 페이지 하단에도 표시)를 작성자에게 보내십시오. 라이선스는 새
-`license.json`으로 돌아옵니다. 기존 파일 대신 데이터 디렉터리에 넣으십시오. 라이선스는
-traffic66이 시작할 때와 4시간마다 확인하므로 재시작할 필요가 없습니다. 그 뒤 페이지 하단에
-라이선스 대상과 남은 일수가 표시됩니다.
-
-<a id="14-security"></a>
-
-## 14. 보안
-
-- 웹 UI는 평문 HTTP를 사용합니다. 비밀번호와 데이터가 암호화되지 않은 채 네트워크를 지납니다.
-  완전히 신뢰할 수 없는 네트워크에서는 이 서버에서만 수신하도록 하고(`-addr 127.0.0.1:8066`)
-  앞단에 TLS 리버스 프록시를 두십시오. 예를 들어 [Caddy](https://caddyserver.com)를 쓴다면:
-  `caddy reverse-proxy --from traffic66.example.com --to 127.0.0.1:8066`.
-  또는 VPN이나 SSH 터널로 접속합니다:
-  `ssh -L 8066:127.0.0.1:8066 user@192.0.2.50` 후
-  http://127.0.0.1:8066 을 엽니다.
-- UDP 수집 포트는 자체 장비 주소에서만 허용하십시오.
-- `inventory.txt`의 SNMP 커뮤니티는 평문으로 저장됩니다. 읽기 전용 커뮤니티를 사용하십시오.
-
-<a id="15-sizing"></a>
-
-## 15. 용량 산정
-
-2코어 서버에서 초당 5,000 플로로 측정한 결과: 상세 데이터는 하루 약 12 GB의 디스크와 현재
-시간대용 약 1.5 GB를 사용하고, 프로그램은 코어 하나의 6분의 1 정도를
-사용합니다. 긴 시간 범위의 개요는 요약에서 가져오며 0.2초 미만이 걸립니다. 상세 데이터 쿼리는
-시간당 약 2,200만 행을 스캔합니다. 호스트 하나의 1시간 조회는 1초 미만, 전체 대화의 1시간
-Top 66은 약 9초이며, 소요 시간은 범위에 비례해 늘고 코어가 많을수록 줄어듭니다.
-
-따라서 초당 5,000 플로로 30일을 보관하면 디스크가 약 360 GB 필요합니다. 실제 플로 속도
-(**설정**에 표시)와 `-retention-days`에 맞춰 환산하십시오.
-
-메모리: `-memory`(기본값 RAM의 10%, 최소 256 MB)는 데이터베이스 캐시를 제한하며, 프로그램의
-나머지 부분에도 같은 크기의 소프트 한도가 적용됩니다. 초당 5,000 플로에서 프로그램 자체 데이터
-(디코딩, 중복 검출, 배치)는 약 90 MB이며, 전체로는 0.6–0.8 GB를 예상하면 되므로 RAM 2 GB
-서버면 충분합니다. 10분간 연속 수집(8 GB 서버에서 최대 0.58 GB)과, 2 GB 서버의 한도로 그
-11배 속도에서 1시간 분량의 플로를 적재할 때(최대 0.74 GB) 측정했습니다.
-
-`-memory`는 예산이지 하드 한도가 아닙니다. Go 한도는 소프트 한도이고 데이터베이스도
-잠시 자기 몫을 넘을 수 있습니다. 하드 한도가 필요하면 운영체제의 기능을 쓰세요: systemd 유닛의
-`MemoryMax=`(섹션 2) 또는 컨테이너의 메모리 한도. `-memory` 몫의 약 2.5배, 최소 1 GB를
-잡으세요. 기본 몫이라면 RAM 8 GB 이하 서버에는 `MemoryMax=2G`가 적당합니다. 그러면 서버
-메모리가 바닥나는 대신 traffic66이 재시작됩니다.
-
-<a id="16-troubleshooting"></a>
-
-## 16. 문제 해결
-
-| 증상 | 원인과 해결 |
-|---|---|
-| **설정**에 장비가 없음 | 패킷이 도착하지 않음: [플로 수신 확인](#5-check-that-flows-arrive) 참조 |
-| "waiting for the sampling rate" | 장비가 아직 샘플러 옵션을 보내지 않았습니다. 대부분 몇 분 안에 다시 보냅니다. 끝내 보내지 않으면 익스포트하도록 설정하거나(Cisco는 `option sampler-table`), 정말 1:1이라면 이름에서 `unsampled`로 표시하거나, 해당 `device` 줄에 `sampling=N`으로 비율을 지정합니다. 그러면 **설정**에 장비가 보낸 템플릿이 표시되어 무엇을 선언하는지 확인할 수 있습니다 |
-| 수치가 인터페이스 카운터보다 낮음 | **인터페이스 대조** 확인: 경로상 유실, 샘플링되지 않은 인터페이스, 또는 플로가 아직 장비 캐시에 있음(액티브 타임아웃이 60초보다 김) |
-| 수치가 인터페이스 카운터보다 높음 | 같은 트래픽을 두 인터페이스 또는 두 장비에서 샘플링함 |
-| 국가나 네트워크가 표시되지 않음("알 수 없음") | 로드된 데이터베이스가 없음: **설정**에서 업로드. [국가](#8-countries-networks-and-threat-lists) 참조 |
-| 페이지에 "데이터베이스가 메모리 한도에 도달해 응답하지 못했습니다" 표시 | 기간을 줄이거나 더 큰 `-memory`로 시작. 자세한 내용은 로그 참조 |
-| 비밀번호를 잊어버림 | traffic66 서버에서 `traffic66 passwd`(traffic66을 `-data`와 함께 실행한다면 `-data` 추가) |
-| `Conflicting lock is held` | 다른 traffic66이 이미 이 데이터 디렉터리를 사용 중 |
-| `receive buffer is only … KB` | Linux가 UDP 버퍼를 제한함: `net.core.rmem_max=16777216` 설정([Linux](#linux) 참조) |
-| `cannot create the data directory` | 이 사용자에게 프로그램 폴더 쓰기 권한이 없음: `-data` 지정 |
-| macOS: "cannot be opened" 또는 "developer cannot be verified" | `xattr -dr com.apple.quarantine <folder>` |
-| Windows: "Windows의 PC 보호" | **추가 정보** → **실행**. 프로그램이 아직 서명되지 않음 |
-| Windows 캡처: Npcap을 찾을 수 없음 | [Npcap](https://npcap.com) 설치 |
-| `address already in use` | 다른 프로그램이 포트를 사용 중: `-addr` 또는 `-listen`으로 다른 포트 지정 |
-
-<a id="17-build-from-source"></a>
-
-## 17. 소스에서 빌드
-
-Go 1.24와 C 컴파일러(gcc 또는 clang. Windows에서는 MinGW-w64)가 필요합니다:
-
-```
-git clone https://github.com/githubflyideas/traffic66
-cd traffic66
-scripts/build.sh 0.1.0 traffic66
-```
+소스에서 빌드: Go 1.24와 C 컴파일러를 준비한 뒤 `scripts/build.sh 0.1.0 traffic66`.
