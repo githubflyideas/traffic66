@@ -23,8 +23,9 @@ counters से मेल खाते हैं — web UI में भी औ
   matches, flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS)।
 - `traffic66 capture.pcap` अधिकतम 3 पैकेट कैप्चर (कुल 3 GB) वेब UI में खोलता है: पूरे कैप्चर के फ़्लो, निष्कर्ष, देश और फ़्लो रिकॉर्ड, बिना किसी सेटअप के।
 - web UI और terminal UI में 13 भाषाएँ।
-- सभी features के साथ 30 दिन मुफ़्त आज़माएँ; उसके बाद भी यह चलता रहता है
-  ([ट्रायल और लाइसेंस](#trial-and-licence) देखें)।
+- Source available: evaluation के लिए और 100 से कम लोगों वाले संगठनों के लिए
+  मुफ़्त; बड़े संगठन production use के 30 दिन बाद रजिस्टर करते हैं। कभी कुछ
+  बंद नहीं होता ([ट्रायल और लाइसेंस](#trial-and-licence) देखें)।
 
 ![सारांश: खुली संदिग्ध गतिविधियाँ, पिछले हफ़्ते की तुलना में application के हिसाब से bandwidth, top clients और services](images/overview.png)
 
@@ -1022,7 +1023,28 @@ flow records हटेंगे और लगभग कितनी डिस्
 
 ### ट्रायल और लाइसेंस
 
-traffic66 को 30 दिन तक आज़माया जा सकता है। पहली बार शुरू होने पर यह data
+traffic66 source available है,
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) और
+[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) के तहत; दोनों का
+अंग्रेज़ी पाठ ही बाध्यकारी है। संक्षेप में:
+
+- **Evaluation**, testing, development और demonstration: सबके लिए मुफ़्त,
+  बिना समय-सीमा के।
+- 100 से कम कर्मचारियों और contractors वाले संगठन द्वारा **production use**
+  (असली traffic, संगठन के कामकाज के लिए): मुफ़्त।
+- **बड़े संगठनों** द्वारा production use: 30 दिन मुफ़्त, फिर लेखक से
+  registration licence लेना ज़रूरी है।
+- Contractors और service providers इसे किसी customer के लिए, उसी customer के
+  अपने deployment में चला सकते हैं; customer का आकार तय करता है।
+- Commercial licence के बिना अनुमति नहीं: इसे बेचना या किसी product में
+  जोड़ना, इसे दूसरों को hosted या multi-tenant service के रूप में देना, या
+  प्रतिस्पर्धी product।
+
+Registration licence की फ़ीस, दायरा और अवधि हर मामले में अलग से तय होते हैं,
+और यह मुफ़्त भी हो सकता है। संपर्क: <https://github.com/githubflyideas/traffic66>।
+
+हर installation ट्रायल दिखाता है, वहाँ भी जहाँ लाइसेंस की ज़रूरत नहीं है। पहली
+बार शुरू होने पर traffic66 data
 directory में 8 अंकों के installation number के साथ `license.json` लिखता है।
 हर पेज के नीचे दिखता है कि ट्रायल के कितने दिन बचे हैं, और फिर यह कि ट्रायल
 ख़त्म हो गया है। दोनों ही हालत में कुछ बंद नहीं होता: हर feature चलता रहता है।

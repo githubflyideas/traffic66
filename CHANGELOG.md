@@ -3,7 +3,14 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 0.4.0
+## 1.0.0
+
+Licence terms
+- traffic66 is source available under the PolyForm Noncommercial License
+  1.0.0 and the Traffic66 Additional Use Grant 1.0 (LICENSE.md,
+  ADDITIONAL-USE-GRANT.md, both in every download). Evaluation is free for
+  everyone; production use is free for organizations with fewer than 100
+  people; larger organizations need a registration licence after 30 days.
 
 Licence
 - Traffic66 can be tried for 30 days. The foot of every page shows the days

@@ -25,8 +25,10 @@ antarmuka terminal.
   VXLAN, GENEVE, MPLS).
 - `traffic66 capture.pcap` membuka hingga 3 tangkapan paket (total 3 GB) di UI web: flow, temuan, negara, dan catatan flow untuk seluruh tangkapan, tanpa pengaturan.
 - 13 bahasa di antarmuka web dan antarmuka terminal.
-- Gratis dicoba selama 30 hari dengan semua fitur; setelah itu tetap berjalan
-  (lihat [Masa uji dan lisensi](#trial-and-licence)).
+- Kode sumber tersedia: gratis untuk evaluasi dan untuk organisasi dengan
+  kurang dari 100 orang; organisasi yang lebih besar mendaftar setelah 30 hari
+  penggunaan produksi. Tidak ada yang pernah dimatikan (lihat
+  [Masa uji dan lisensi](#trial-and-licence)).
 
 ![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding minggu lalu, klien dan layanan teratas](images/overview.png)
 
@@ -1045,7 +1047,28 @@ yang telah dipelajari aturan deteksi. Tindakan ini tidak dapat dibatalkan.
 
 ### Masa uji dan lisensi
 
-traffic66 bisa dicoba selama 30 hari. Saat pertama kali dijalankan, traffic66
+Kode sumber traffic66 tersedia di bawah
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) dan
+[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md); teks bahasa
+Inggris keduanya yang mengikat. Singkatnya:
+
+- **Evaluasi**, pengujian, pengembangan, dan demonstrasi: gratis untuk siapa
+  saja, tanpa batas waktu.
+- **Penggunaan produksi** (lalu lintas nyata, untuk operasional organisasi)
+  oleh organisasi dengan kurang dari 100 karyawan dan kontraktor: gratis.
+- Penggunaan produksi oleh **organisasi yang lebih besar**: gratis selama
+  30 hari, lalu diperlukan lisensi registrasi dari pembuatnya.
+- Kontraktor dan penyedia layanan boleh menjalankannya untuk pelanggan, dalam
+  deployment milik pelanggan itu sendiri; ukuran pelanggan yang menentukan.
+- Tidak diizinkan tanpa lisensi komersial: menjualnya atau memasukkannya ke
+  dalam produk, menawarkannya kepada pihak lain sebagai layanan hosted atau
+  multi-tenant, atau sebagai produk pesaing.
+
+Biaya, cakupan, dan jangka waktu lisensi registrasi ditetapkan kasus per
+kasus, dan bisa saja gratis. Kontak: <https://github.com/githubflyideas/traffic66>.
+
+Setiap instalasi menampilkan masa uji, juga yang tidak memerlukan lisensi.
+Saat pertama kali dijalankan, traffic66
 menulis `license.json` ke direktori data dengan nomor instalasi 8 digit.
 Bagian bawah setiap halaman menampilkan sisa hari masa uji, lalu bahwa masa
 uji telah berakhir. Tidak ada yang dimatikan: semua fitur tetap berfungsi.

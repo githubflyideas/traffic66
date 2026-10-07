@@ -23,8 +23,10 @@ in a web UI and in a terminal UI.
   flow records, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - `traffic66 capture.pcap` opens up to 3 packet captures (3 GB in all) in the web UI: flows, findings, countries and flow records over the whole capture, with nothing to set up.
 - 13 languages in the web UI and the terminal UI.
-- Free to try for 30 days with every feature; it keeps working after that
-  (see [Trial and licence](#trial-and-licence)).
+- Source available: free for evaluation and for organizations with fewer
+  than 100 people; larger organizations register after 30 days of
+  production use. Nothing is ever switched off (see
+  [Trial and licence](#trial-and-licence)).
 
 ![Overview: open findings, bandwidth by application compared with last week, top clients and services](docs/images/overview.png)
 
@@ -989,8 +991,29 @@ rules have learned. It cannot be undone.
 
 ### Trial and licence
 
-traffic66 can be tried for 30 days. On first start it writes `license.json`
-to the data directory with an 8-digit installation number. The foot of
+traffic66 is source available under the
+[PolyForm Noncommercial License 1.0.0](LICENSE.md) and the
+[Traffic66 Additional Use Grant](ADDITIONAL-USE-GRANT.md); the English text
+of both is binding. In short:
+
+- **Evaluation**, testing, development and demonstrations: free for
+  anyone, without time limit.
+- **Production use** (real traffic, for an organization's operations) by
+  an organization with fewer than 100 employees and contractors: free.
+- Production use by **larger organizations**: free for 30 days, then a
+  registration licence from the author is needed.
+- Contractors and service providers may run it for a customer, in a
+  deployment of that customer's own; the customer's size decides.
+- Not allowed without a commercial licence: selling it or building it into
+  a product, offering it to others as a hosted or multi-tenant service, or
+  a competing product.
+
+Fees, scope and term of a registration licence are set case by case, and
+it may be free. Contact: <https://github.com/githubflyideas/traffic66>.
+
+Every installation shows the trial, also where no licence is needed. On
+first start traffic66 writes `license.json` to the data directory with an
+8-digit installation number. The foot of
 every page shows how many days of the trial are left, then that the trial
 has ended. Nothing is switched off either way: every feature keeps working.
 

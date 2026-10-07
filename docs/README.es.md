@@ -24,8 +24,10 @@ propios equipos, tanto en una interfaz web como en una interfaz de terminal.
   (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - `traffic66 captura.pcap` abre hasta 3 capturas de paquetes (3 GB en total) en la interfaz web: flujos, hallazgos, países y registros de toda la captura, sin configurar nada.
 - 13 idiomas en la interfaz web y en la de terminal.
-- Prueba gratuita de 30 días con todas las funciones; después sigue
-  funcionando (vea [Prueba y licencia](#trial-and-licence)).
+- Código fuente disponible: gratis para evaluación y para organizaciones
+  de menos de 100 personas; las organizaciones más grandes se registran
+  tras 30 días de uso en producción. Nunca se desactiva nada (vea
+  [Prueba y licencia](#trial-and-licence)).
 
 ![Resumen: hallazgos abiertos, ancho de banda por aplicación frente a la semana pasada, principales clientes y servicios](images/overview.png)
 
@@ -1049,9 +1051,32 @@ han aprendido las reglas de detección. No se puede deshacer.
 
 ### Prueba y licencia
 
-traffic66 se puede probar durante 30 días. En el primer arranque escribe
-`license.json` en el directorio de datos con un número de instalación de 8
-cifras. El pie de cada página muestra cuántos días de prueba quedan y,
+traffic66 es de código fuente disponible bajo la
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) y la
+[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md); el texto en
+inglés de ambas es el vinculante. En resumen:
+
+- **Evaluación**, pruebas, desarrollo y demostraciones: gratis para
+  cualquiera, sin límite de tiempo.
+- **Uso en producción** (tráfico real, para las operaciones de una
+  organización) por una organización con menos de 100 empleados y
+  contratistas: gratis.
+- Uso en producción por **organizaciones más grandes**: gratis durante 30
+  días; después se necesita una licencia de registro del autor.
+- Contratistas y proveedores de servicios pueden ejecutarlo para un
+  cliente, en un despliegue propio de ese cliente; decide el tamaño del
+  cliente.
+- No se permite sin una licencia comercial: venderlo o integrarlo en un
+  producto, ofrecerlo a terceros como servicio alojado o multiinquilino, o
+  un producto competidor.
+
+Las tarifas, el alcance y la duración de una licencia de registro se
+fijan caso por caso, y puede ser gratuita. Contacto:
+<https://github.com/githubflyideas/traffic66>.
+
+Toda instalación muestra la prueba, también donde no se necesita
+licencia. En el primer arranque traffic66 escribe `license.json` en el
+directorio de datos con un número de instalación de 8 cifras. El pie de cada página muestra cuántos días de prueba quedan y,
 después, que la prueba ha terminado. En ningún caso se desactiva nada:
 todas las funciones siguen funcionando.
 

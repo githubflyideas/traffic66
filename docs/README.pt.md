@@ -24,8 +24,10 @@ equipamentos, em uma interface web e em uma interface de terminal.
   (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - `traffic66 captura.pcap` abre até 3 capturas de pacotes (3 GB no total) na interface web: fluxos, detecções, países e registros de toda a captura, sem configurar nada.
 - 13 idiomas na interface web e na interface de terminal.
-- Teste gratuito de 30 dias com todos os recursos; depois disso continua
-  funcionando (veja [Teste e licença](#trial-and-licence)).
+- Código-fonte disponível: gratuito para avaliação e para organizações
+  com menos de 100 pessoas; organizações maiores se registram após 30 dias
+  de uso em produção. Nada é desligado, nunca (veja
+  [Teste e licença](#trial-and-licence)).
 
 ![Visão geral: detecções abertas, banda por aplicação em comparação com a semana passada, principais clientes e serviços](images/overview.png)
 
@@ -1045,9 +1047,32 @@ aprenderam. Não dá para desfazer.
 
 ### Teste e licença
 
-O traffic66 pode ser testado por 30 dias. Na primeira inicialização ele
-grava `license.json` no diretório de dados com um número de instalação de
-8 dígitos. O rodapé de cada página mostra quantos dias de teste faltam e,
+O traffic66 tem código-fonte disponível sob a
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) e a
+[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md); o texto em
+inglês de ambas é o que vale. Em resumo:
+
+- **Avaliação**, testes, desenvolvimento e demonstrações: gratuito para
+  qualquer pessoa, sem limite de tempo.
+- **Uso em produção** (tráfego real, para as operações de uma organização)
+  por uma organização com menos de 100 funcionários e terceirizados:
+  gratuito.
+- Uso em produção por **organizações maiores**: gratuito por 30 dias;
+  depois é preciso uma licença de registro do autor.
+- Terceirizados e prestadores de serviços podem executá-lo para um
+  cliente, em uma implantação do próprio cliente; vale o tamanho do
+  cliente.
+- Não permitido sem licença comercial: vendê-lo ou incorporá-lo a um
+  produto, oferecê-lo a terceiros como serviço hospedado ou multilocatário,
+  ou um produto concorrente.
+
+Preço, escopo e prazo de uma licença de registro são definidos caso a
+caso, e ela pode ser gratuita. Contato:
+<https://github.com/githubflyideas/traffic66>.
+
+Toda instalação mostra o teste, também onde não é preciso licença. Na
+primeira inicialização o traffic66 grava `license.json` no diretório de
+dados com um número de instalação de 8 dígitos. O rodapé de cada página mostra quantos dias de teste faltam e,
 depois, que o teste terminou. Nada é desligado em nenhum dos casos: todos
 os recursos continuam funcionando.
 
