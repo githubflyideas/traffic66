@@ -461,5 +461,16 @@
 "nm.save_edit": "Simpan perubahan",
 "nm.bad_addr": "{a} bukan alamat IP",
 "nm.bad_net": "{a} bukan jaringan seperti 192.168.3.0/24",
-"nm.bad_index": "{x} bukan nomor antarmuka"
+"nm.bad_index": "{x} bukan nomor antarmuka",
+"rg.hosts": "Server dan klien",
+"rg.services": "Layanan dan server",
+"rg.in_server": "Server di dalam",
+"rg.in_client": "Klien di dalam",
+"rg.in_service": "Layanan di dalam",
+"rg.hosts_sub_s": "Cincin dalam: server tersibuk; luar: klien masing-masing",
+"rg.hosts_sub_c": "Cincin dalam: klien tersibuk; luar: server yang dipakai masing-masing",
+"rg.svc_sub_v": "Cincin dalam: layanan tersibuk; luar: server yang menyediakannya",
+"rg.svc_sub_s": "Cincin dalam: server tersibuk; luar: layanan masing-masing",
+"geo.lines_hint": "Tetapkan negara untuk jaringan internal (Sumber → Nama, Jaringan) agar terlihat garis darinya ke negara-negara tujuan.",
+"nm.country_none": "negara (opsional)"
 }

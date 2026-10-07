@@ -44,4 +44,19 @@ for (const f of keep) {
 }
 const small = {};
 for (const [cc, [x, y, a]] of Object.entries(ctr)) if (a < 12) small[cc] = [x, y];
-process.stdout.write(JSON.stringify({w: W, h: Math.ceil(y1 - y0 + 4), src: 'Natural Earth (public domain) via world-atlas', c: out, s: small}));
+// a point inside each country for lines on the map: the centre of its
+// largest piece (mainland rather than islands or Alaska)
+const pts = {};
+for (const f of keep) {
+  const polys = f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates];
+  let best = null, ba = -1;
+  for (const p of polys) {
+    const g = {type: 'Polygon', coordinates: p}, a = path.area(g);
+    if (a > ba) { ba = a; best = g; }
+  }
+  const [x, y] = path.centroid(best);
+  if (!pts[f.cc] || ba > pts[f.cc][2]) pts[f.cc] = [Math.round(x), Math.round(y), ba];
+}
+const p = {};
+for (const [cc, [x, y]] of Object.entries(pts)) p[cc] = [x, y];
+process.stdout.write(JSON.stringify({w: W, h: Math.ceil(y1 - y0 + 4), src: 'Natural Earth (public domain) via world-atlas', c: out, s: small, p}));

@@ -38,10 +38,12 @@ func mustPrefixes(ss ...string) []netip.Prefix {
 
 // ---------------------------------------------------------------- inventory
 
-// Network is a named address range from the inventory.
+// Network is a named address range from the inventory, optionally with
+// the country it is in ("net 10.1.0.0/16 Tokyo office country=JP").
 type Network struct {
-	Prefix netip.Prefix
-	Name   string
+	Prefix  netip.Prefix
+	Name    string
+	Country string
 }
 
 // Iface is a named interface of an exporter.
@@ -128,7 +130,23 @@ func (inv *Inventory) Parse(text string) error {
 			if err != nil {
 				return bad("bad prefix " + f[1])
 			}
-			nets = append(nets, Network{p.Masked(), strings.Join(f[2:], " ")})
+			nw := Network{Prefix: p.Masked()}
+			var words []string
+			for _, w := range f[2:] {
+				if k, v, ok := strings.Cut(w, "="); ok && strings.EqualFold(k, "country") {
+					if len(v) != 2 {
+						return bad("country must be a two-letter code such as JP: " + v)
+					}
+					nw.Country = strings.ToUpper(v)
+					continue
+				}
+				words = append(words, w)
+			}
+			if len(words) == 0 {
+				return bad("net needs a prefix and a name")
+			}
+			nw.Name = strings.Join(words, " ")
+			nets = append(nets, nw)
 		case "device":
 			if len(f) < 3 {
 				return bad("device needs an address and a name")
@@ -312,6 +330,19 @@ func (inv *Inventory) Unsampled() map[netip.Addr]bool {
 	out := map[netip.Addr]bool{}
 	for a := range inv.unsampled {
 		out[a] = true
+	}
+	return out
+}
+
+// SegmentCountries maps network names to the country set for them.
+func (inv *Inventory) SegmentCountries() map[string]string {
+	inv.mu.RLock()
+	defer inv.mu.RUnlock()
+	out := map[string]string{}
+	for _, n := range inv.networks {
+		if n.Country != "" {
+			out[n.Name] = n.Country
+		}
 	}
 	return out
 }
@@ -611,7 +642,7 @@ func (t *Threats) Add(name string, r io.Reader) (int, error) {
 			if p.IsSingleIP() {
 				exact[p.Addr().Unmap()] = name
 			} else {
-				nets = append(nets, Network{p.Masked(), name})
+				nets = append(nets, Network{Prefix: p.Masked(), Name: name})
 			}
 			n++
 			continue

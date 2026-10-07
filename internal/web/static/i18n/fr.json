@@ -461,5 +461,16 @@
 "nm.save_edit": "Enregistrer",
 "nm.bad_addr": "{a} n'est pas une adresse IP",
 "nm.bad_net": "{a} n'est pas un réseau comme 192.168.3.0/24",
-"nm.bad_index": "{x} n'est pas un numéro d'interface"
+"nm.bad_index": "{x} n'est pas un numéro d'interface",
+"rg.hosts": "Serveurs et clients",
+"rg.services": "Services et serveurs",
+"rg.in_server": "Serveurs au centre",
+"rg.in_client": "Clients au centre",
+"rg.in_service": "Services au centre",
+"rg.hosts_sub_s": "Anneau intérieur : les serveurs les plus chargés ; extérieur : les clients de chacun",
+"rg.hosts_sub_c": "Anneau intérieur : les clients les plus actifs ; extérieur : les serveurs utilisés par chacun",
+"rg.svc_sub_v": "Anneau intérieur : les services les plus chargés ; extérieur : les serveurs qui les offrent",
+"rg.svc_sub_s": "Anneau intérieur : les serveurs les plus chargés ; extérieur : les services de chacun",
+"geo.lines_hint": "Indiquez le pays de vos réseaux internes (Sources → Noms, Réseau) pour voir les lignes vers les pays avec lesquels ils échangent.",
+"nm.country_none": "pays (facultatif)"
 }
