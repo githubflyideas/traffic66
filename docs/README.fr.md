@@ -27,8 +27,10 @@ terminal.
   flux, encapsulation (GRE, IPIP, VXLAN, GENEVE, MPLS).
 - `traffic66 capture.pcap` ouvre jusqu'à 3 captures de paquets (3 Go au total) dans l'interface web : flux, détections, pays et enregistrements sur toute la capture, sans rien configurer.
 - 13 langues dans l'interface web et dans l'interface terminal.
-- Essai gratuit de 30 jours avec toutes les fonctions ; il continue de
-  fonctionner ensuite (voir [Essai et licence](#trial-and-licence)).
+- Source disponible : gratuit pour l'évaluation et pour les organisations
+  de moins de 100 personnes ; les organisations plus grandes s'enregistrent
+  après 30 jours d'utilisation en production. Rien n'est jamais désactivé
+  (voir [Essai et licence](#trial-and-licence)).
 
 ![Vue d'ensemble : détections ouvertes, bande passante par application comparée à la semaine dernière, principaux clients et services](images/overview.png)
 
@@ -1079,9 +1081,33 @@ les règles de détection ont appris. C'est irréversible.
 
 ### Essai et licence
 
-traffic66 peut être essayé pendant 30 jours. Au premier démarrage, il
-écrit `license.json` dans le répertoire de données avec un numéro
-d'installation à 8 chiffres. Le pied de chaque page indique combien de
+traffic66 est à source disponible sous la
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) et le
+[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) ; le texte
+anglais des deux fait foi. En bref :
+
+- **Évaluation**, tests, développement et démonstrations : gratuit pour
+  tous, sans limite de durée.
+- **Utilisation en production** (trafic réel, pour les opérations d'une
+  organisation) par une organisation de moins de 100 salariés et
+  prestataires : gratuite.
+- Utilisation en production par des **organisations plus grandes** :
+  gratuite pendant 30 jours, puis une licence d'enregistrement de l'auteur
+  est nécessaire.
+- Prestataires et fournisseurs de services peuvent l'exploiter pour un
+  client, dans un déploiement propre à ce client ; c'est la taille du
+  client qui compte.
+- Interdit sans licence commerciale : le vendre ou l'intégrer à un
+  produit, le proposer à des tiers comme service hébergé ou multi-locataire,
+  ou un produit concurrent.
+
+Le prix, la portée et la durée d'une licence d'enregistrement sont fixés au
+cas par cas, et elle peut être gratuite. Contact :
+<https://github.com/githubflyideas/traffic66>.
+
+Chaque installation affiche l'essai, y compris là où aucune licence n'est
+nécessaire. Au premier démarrage, traffic66 écrit `license.json` dans le
+répertoire de données avec un numéro d'installation à 8 chiffres. Le pied de chaque page indique combien de
 jours d'essai il reste, puis que l'essai est terminé. Rien n'est désactivé
 dans un cas comme dans l'autre : toutes les fonctions continuent de
 marcher.
