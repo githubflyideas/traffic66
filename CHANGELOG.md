@@ -8,7 +8,9 @@ heading is the version number.
 Licence terms
 - traffic66 is source available under the PolyForm Noncommercial License
   1.0.0 and the Traffic66 Additional Use Grant 1.0 (LICENSE.md,
-  ADDITIONAL-USE-GRANT.md, both in every download). Evaluation is free for
+  ADDITIONAL-USE-GRANT.md, both in every download; the grant has reference
+  translations in French, Spanish, Chinese and Japanese, the English text
+  is binding). Evaluation is free for
   everyone; production use is free for organizations with fewer than 100
   people; larger organizations need a registration licence after 30 days.
 
