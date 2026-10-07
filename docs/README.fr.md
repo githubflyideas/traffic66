@@ -32,7 +32,7 @@ terminal.
   après 30 jours d'utilisation en production. Rien n'est jamais désactivé
   (voir [Essai et licence](#trial-and-licence)).
 
-![Vue d'ensemble : détections ouvertes, bande passante par application comparée à la semaine dernière, principaux clients et services](images/overview.png)
+![Vue d'ensemble : détections ouvertes, bande passante par application comparée à la même heure hier, principaux clients et services](images/overview.png)
 
 <sub>Toutes les captures d'écran proviennent de `traffic66 demo`, un réseau d'entreprise simulé que vous pouvez lancer vous-même (voir [Essayer la démo](#1-try-the-demo)).</sub>
 
@@ -533,6 +533,16 @@ quelques secondes, avec son protocole, son taux d'échantillonnage, ses
 pertes, son dernier paquet et un état. Quand l'état n'est pas vert, le
 texte à côté indique ce qui ne va pas et ce qu'il faut changer.
 
+**Perdus** compte les échantillons ou enregistrements qui ne sont jamais
+arrivés. Pour sFlow, le texte indique où ils ont disparu : en route (trous
+dans les numéros de séquence : le réseau, ou le tampon de réception UDP de
+cette machine ; si `netstat -su` montre des erreurs de tampon de réception
+en hausse, augmentez `net.core.rmem_max`), ou dans l'équipement lui-même
+(sFlow signale les échantillons abandonnés par l'équipement : son export
+sFlow est limité en débit, échantillonnez donc moins souvent ou relevez la
+limite de l'équipement). Les totaux sont compensés dans les deux cas ; le
+détail par hôte ne l'est pas.
+
 ![Paramètres : chaque équipement avec son protocole, son échantillonnage, ses pertes et ce qu'il faut corriger](images/sources.png)
 
 Si un équipement n'apparaît pas :
@@ -713,9 +723,9 @@ Pages :
 
 | Page | À quoi elle répond |
 |---|---|
-| Vue d'ensemble | Combien de trafic maintenant et par rapport à la semaine dernière, par application ; détections ouvertes ; sens et protocole ; principaux clients et services |
-| Top 66 | S'ouvre sur **Interlocuteurs principaux** : les 30 premiers clients et serveurs côte à côte avec trafic, paquets et enregistrements de flux, au-dessus d'une ligne pour tout le trafic. **Tableau** est un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN |
-| Détails du trafic | Deux graphiques en anneaux. **Serveurs et clients** : l'anneau intérieur montre les 8 serveurs les plus actifs, l'anneau extérieur les clients de chacun ; **Clients au centre** inverse le tout (clients au centre, à l'extérieur les serveurs utilisés par chacun), car un côté en explique souvent plus que l'autre. **Services et serveurs** : les services au centre et les serveurs qui les proposent à l'extérieur, ou l'inverse. Survolez un segment pour voir son trafic ; cliquez dessus comme sur n'importe quelle valeur |
+| Vue d'ensemble | Combien de trafic maintenant, par application, par rapport à la même heure hier (périodes jusqu'à un jour), à la semaine dernière (jusqu'à une semaine) ou aux jours précédents (périodes plus longues), quand il y a des données à ce moment-là ; détections ouvertes ; sens et protocole ; principaux clients et services |
+| Top 66 | S'ouvre sur **Tableau**, un seul tableau du top 66 : par défaut les conversations (client, serveur, service, pays). Chaque en-tête trie ; les colonnes numériques (trafic, paquets, paquet moyen, flux) classent tout le trafic de la période, si bien que le plus petit paquet moyen révèle scans et inondations. **Regrouper par** passe aux applications, réseaux, segments, équipements, encapsulation et VLAN. **Interlocuteurs principaux** montre les 30 premiers clients et serveurs côte à côte avec trafic, paquets et enregistrements de flux, au-dessus d'une ligne pour tout le trafic |
+| Détails du trafic | Deux graphiques en anneaux. **Serveurs et clients** : l'anneau intérieur montre les 8 serveurs les plus actifs, l'anneau extérieur les clients de chacun ; **Clients au centre** inverse le tout (clients au centre, à l'extérieur les serveurs utilisés par chacun), car un côté en explique souvent plus que l'autre. **Services** : un seul anneau des services les plus chargés. Survolez un segment pour voir son trafic ; cliquez dessus comme sur n'importe quelle valeur |
 | Chemins du trafic | Quel hôte utilise quelle application vers quel pays : les 8 hôtes les plus actifs, le reste dans Autres. **Client → serveur** affiche client → service → serveur ; **Par segment** affiche les segments au lieu des hôtes. Les noms longs sont raccourcis à 22 caractères ; survolez-en un pour voir le nom complet |
 | Détections | Ce qui demande votre attention : scans, essais de mots de passe, mouvements latéraux, envois inhabituels, inondations et trafic des listes de menaces ([plus](#findings)) |
 | Menaces | Hôtes ayant communiqué avec des adresses de vos listes de menaces, et volume envoyé |
@@ -727,10 +737,10 @@ Pages :
 | Analyse hors ligne de pcap | Captures de paquets (pcap, pcapng) analysées à part des données en direct ([plus](#analyse-hors-ligne-de-pcap)) |
 
 Le menu latéral range les pages en quatre groupes : trafic (Vue
-d'ensemble, Top 66, Détails du trafic, Chemins du trafic), sécurité
-(Détections, Menaces, Géographie et réseaux), configuration et données
-(Paramètres, Contrôle des interfaces, Enregistrements de flux, Nettoyage des
-données) et Analyse hors ligne de pcap. Sous le logo figurent la version
+d'ensemble, Top 66, Détails du trafic, Chemins du trafic, Contrôle des
+interfaces), sécurité (Détections, Menaces, Géographie et réseaux),
+configuration et données (Paramètres, Enregistrements de flux, Nettoyage
+des données) et Analyse hors ligne de pcap. Sous le logo figurent la version
 ainsi que la date et l'heure du serveur.
 
 Au-dessus des pages : la plage de temps (de 15 minutes à 30 jours, ou
@@ -738,8 +748,8 @@ Au-dessus des pages : la plage de temps (de 15 minutes à 30 jours, ou
 30 jours), le rafraîchissement automatique toutes les 30 secondes et
 **Copier le lien**, qui copie un lien vers la vue exacte (page, plage de
 temps et filtres) à envoyer à un collègue. Sur **Top 66** et **Détails du
-trafic**, un champ de recherche et **Équipement**, **Client**, **Serveur**
-et **Service** listent les valeurs les plus actives de la plage :
+trafic**, **Équipement**, **Client**, **Serveur** et **Service**
+listent les valeurs les plus actives de la plage :
 choisissez-en une, ou tapez-la, pour filtrer ; le filtre s'applique alors
 à toutes les pages jusqu'à ce que vous vidiez le champ. La langue suit
 celle du navigateur ; on la change en bas du menu, au-dessus de
@@ -748,10 +758,9 @@ Nettoyage des données et Analyse hors ligne de pcap n'ont pas de plage de
 temps.
 
 À côté de la langue se trouve le thème de couleurs, inspiré des couleurs
-système d'iOS : **Clair** (par défaut), **Lumineux** (blanc, contraste plus
-fort), **Gris**, **Tamisé**, **Sombre** (noir, pour les écrans muraux) ou
-**Comme le système**, qui passe du clair au sombre avec l'ordinateur. Le
-choix est conservé dans le navigateur.
+système d'iOS : **Clair** (par défaut), **Gris**, **Noir** (pour les
+écrans muraux), **Sarcelle** et **Orange**. Chaque clic passe au suivant ;
+le choix est conservé dans le navigateur.
 
 Les graphiques dans le temps montrent les 8 plus grandes valeurs en couleurs
 fixes et le reste dans Autres ; la légende donne le total de chaque valeur
@@ -823,7 +832,7 @@ site web.
 
 ![Détections : chaque étape d'une attaque, trouvée à travers un échantillonnage sFlow 1:4096](images/findings.png)
 
-![Top 66, Interlocuteurs principaux : les 30 premiers clients et serveurs avec une ligne pour tout le trafic](images/topn.png)
+![Top 66 : les 66 premières conversations, triables par n'importe quelle colonne](images/topn.png)
 
 ![Détails du trafic : les serveurs avec leurs clients, et les services avec leurs serveurs, en graphiques en anneaux](images/traffic.png)
 

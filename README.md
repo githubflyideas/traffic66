@@ -28,7 +28,7 @@ in a web UI and in a terminal UI.
   production use. Nothing is ever switched off (see
   [Trial and licence](#trial-and-licence)).
 
-![Overview: open findings, bandwidth by application compared with last week, top clients and services](docs/images/overview.png)
+![Overview: open findings, bandwidth by application compared with the same time yesterday, top clients and services](docs/images/overview.png)
 
 <sub>All screenshots come from `traffic66 demo`, a simulated company network that you can run yourself (see [Try the demo](#1-try-the-demo)).</sub>
 
@@ -487,6 +487,15 @@ with its protocol, sampling rate, loss, last packet and a status. When the
 status is not green, the text next to it says what is wrong and what to
 change.
 
+**Lost** counts samples or records that never arrived. For sFlow the text
+says where they went missing: on the way here (gaps in the sequence
+numbers: the network, or this machine's UDP receive buffer; if
+`netstat -su` shows receive buffer errors rising, raise
+`net.core.rmem_max`), or in the device itself (sFlow reports the samples
+the device dropped: its sFlow export is rate-limited, so sample less often
+or raise the device's limit). Totals are compensated either way; per-host
+detail is not.
+
 ![Settings: each device with protocol, sampling, loss and what to fix](docs/images/sources.png)
 
 If a device does not appear:
@@ -663,9 +672,9 @@ Pages:
 
 | Page | What it answers |
 |---|---|
-| Overview | How much traffic now and compared with last week, by application; open findings; direction and protocol; top clients and services |
-| Top 66 | Opens on **Talkers**: the top 30 clients and servers side by side with traffic, packets and flow records, above a row for all traffic. **Table** is one table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN |
-| Traffic details | Two ring charts. **Servers and clients**: the inner ring is the 8 busiest servers, the outer ring the clients of each; **Clients inside** turns it round (clients inside, the servers each uses outside), since one side often explains more than the other. **Services and servers**: services inside and the servers offering them outside, or the other way round. Point at a segment for its traffic; click it like any value |
+| Overview | How much traffic now, by application, compared with the same time yesterday (ranges up to a day), last week (up to a week) or the days before (longer ranges), when there is data then; open findings; direction and protocol; top clients and services |
+| Top 66 | Opens on **Table**, one table of the top 66: by default conversations (client, server, service, country). Every column heading sorts; number columns (traffic, packets, average packet size, flows) rank all traffic in the range, so the smallest average packet size finds scanners and floods. **Group by** switches to applications, networks, segments, devices, encapsulation and VLAN. **Talkers** shows the top 30 clients and servers side by side with traffic, packets and flow records, above a row for all traffic |
+| Traffic details | Two ring charts. **Servers and clients**: the inner ring is the 8 busiest servers, the outer ring the clients of each; **Clients inside** turns it round (clients inside, the servers each uses outside), since one side often explains more than the other. **Services**: one ring of the busiest services. Point at a segment for its traffic; click it like any value |
 | Flow paths | Which host uses which application towards which country: the 8 busiest hosts, the rest as Other. **Client → server** shows client → service → server; **By network** shows networks instead of hosts. Long names are shortened to 22 characters; point at one for the full name |
 | Findings | What needs attention: scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic ([more](#findings)) |
 | Threat intel | Hosts that talked to addresses on your threat lists, and how much they sent |
@@ -677,8 +686,8 @@ Pages:
 | Offline pcap analysis | Packet captures (pcap, pcapng) analysed apart from the live data ([more](#offline-pcap-analysis)) |
 
 The side menu lists the pages in four groups: traffic (Overview, Top 66,
-Traffic details, Flow paths), security (Findings, Threat intel, Geo &
-networks), setup and data (Settings, Interface check, Flow records, Data
+Traffic details, Flow paths, Interface check), security (Findings, Threat
+intel, Geo & networks), setup and data (Settings, Flow records, Data
 cleanup) and Offline pcap analysis. Under the logo are the version and the
 server's date and time.
 
@@ -686,18 +695,17 @@ Above the pages: time range (15 minutes to 30 days, or **Custom…** for any
 start and end, also further back than 30 days), automatic refresh every 30
 seconds, and **Copy link**, which copies a link to exactly the current view
 (page, time range and filters) to send to a colleague. On **Top 66** and
-**Traffic details**, a search box and **Device**, **Client**, **Server**
-and **Service** list the busiest values of the time range: pick one, or
+**Traffic details**, **Device**, **Client**, **Server** and **Service**
+list the busiest values of the time range: pick one, or
 type one, to filter; the filter then applies to every page until you empty
 the box. The language follows the browser; change it at the bottom of the
 menu, above **Log out**. Settings, Flow records (while live), Data cleanup
 and Offline pcap analysis have no time range.
 
 Next to the language is the colour theme, after iOS's system colours:
-**Light** (the default), **Bright** (white, stronger contrast), **Grey**,
-**Dim**, **Dark** (black, for wall screens), or **Follow system**, which
-switches between light and dark with the computer. The choice is kept in
-the browser.
+**Light** (the default), **Grey**, **Black** (for wall screens), **Teal**
+and **Orange**. Each click on it goes to the next one; the choice is kept
+in the browser.
 
 Charts over time show the 8 largest values in fixed colours and the rest as
 Other; the legend gives each value's total and can be clicked like any
@@ -758,7 +766,7 @@ no findings except the internet scanner knocking on the website.
 
 ![Findings: every step of an attack, found through 1:4096 sFlow sampling](docs/images/findings.png)
 
-![Top 66, Talkers: the top 30 clients and servers with a row for all traffic](docs/images/topn.png)
+![Top 66: the top 66 conversations, sorted by any column](docs/images/topn.png)
 
 ![Traffic details: servers with their clients, and services with their servers, as ring charts](docs/images/traffic.png)
 

@@ -156,6 +156,7 @@ func (a *app) load(pg, rng, di int, filters []filter, ifc string) page {
 			Totals struct{ Wire, Hosts, Peers, Countries float64 }
 			Base   struct{ Wire float64 } `json:"base_totals"`
 			Basis  string
+			Days   int     `json:"base_days"`
 			Now    float64 `json:"now_bps"`
 			Series struct {
 				Values [][]float64
@@ -167,12 +168,8 @@ func (a *app) load(pg, rng, di int, filters []filter, ifc string) page {
 			return fail(err)
 		}
 		vs := ""
-		if d.Base.Wire > 0 {
-			k := "kpi.vs_prev"
-			if d.Basis == "week" {
-				k = "kpi.vs_week"
-			}
-			vs = a.t(k, "p", pct((d.Totals.Wire-d.Base.Wire)/d.Base.Wire))
+		if d.Base.Wire > 0 && d.Basis != "" {
+			vs = a.t("kpi.vs_"+d.Basis, "p", pct((d.Totals.Wire-d.Base.Wire)/d.Base.Wire), "n", strconv.Itoa(d.Days))
 		}
 		p.top = append(p.top, line{{dim, a.t("kpi.now") + " "}, {bold, fmtBps(d.Now)}, {dim, "  " + vs + "   │ "},
 			{dim, a.t("kpi.total", "r", a.t("range."+ranges[rng])) + " "}, {bold, fmtBytes(d.Totals.Wire)}, {dim, "   │ " + a.t("kpi.hosts") + " "},

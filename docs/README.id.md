@@ -30,7 +30,7 @@ antarmuka terminal.
   penggunaan produksi. Tidak ada yang pernah dimatikan (lihat
   [Masa uji dan lisensi](#trial-and-licence)).
 
-![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding minggu lalu, klien dan layanan teratas](images/overview.png)
+![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding waktu yang sama kemarin, klien dan layanan teratas](images/overview.png)
 
 <sub>Semua tangkapan layar berasal dari `traffic66 demo`, jaringan perusahaan simulasi yang bisa Anda jalankan sendiri (lihat [Coba demo](#1-try-the-demo)).</sub>
 
@@ -522,6 +522,15 @@ hitungan detik, beserta protokol, sampling rate, loss, paket terakhir, dan
 statusnya. Jika status tidak hijau, teks di sebelahnya menjelaskan apa yang
 salah dan apa yang perlu diubah.
 
+**Hilang** menghitung sampel atau catatan yang tidak pernah tiba. Untuk sFlow,
+teksnya menjelaskan di mana sampel itu hilang: dalam perjalanan ke sini (celah
+pada nomor urut: jaringan, atau buffer penerimaan UDP mesin ini; jika
+`netstat -su` menunjukkan error buffer penerimaan terus naik, naikkan
+`net.core.rmem_max`), atau di perangkat itu sendiri (sFlow melaporkan sampel
+yang dibuang perangkat: ekspor sFlow-nya dibatasi lajunya, jadi lakukan
+sampling lebih jarang atau naikkan batas perangkat). Total dikompensasi dalam
+kedua kasus; detail per host tidak.
+
 ![Pengaturan: setiap perangkat beserta protokol, sampling, loss, dan apa yang perlu diperbaiki](images/sources.png)
 
 Jika sebuah perangkat tidak muncul:
@@ -693,9 +702,9 @@ Halaman:
 
 | Halaman | Pertanyaan yang dijawab |
 |---|---|
-| Ringkasan | Berapa trafik sekarang dan dibanding minggu lalu, per aplikasi; temuan terbuka; arah dan protokol; klien dan layanan teratas |
-| Top 66 | Terbuka di **Pihak teratas**: 30 klien dan server teratas berdampingan dengan trafik, paket, dan catatan flow, di atas satu baris untuk semua trafik. **Tabel** adalah satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN |
-| Detail trafik | Dua diagram cincin. **Server dan klien**: cincin dalam berisi 8 server tersibuk, cincin luar klien masing-masing; **Klien di dalam** membaliknya (klien di dalam, server yang dipakai masing-masing di luar), karena sering satu sisi lebih menjelaskan daripada sisi lainnya. **Layanan dan server**: layanan di dalam dan server yang menyediakannya di luar, atau sebaliknya. Arahkan kursor ke segmen untuk melihat trafiknya; klik seperti nilai mana pun |
+| Ringkasan | Berapa trafik sekarang, per aplikasi, dibanding waktu yang sama kemarin (rentang hingga satu hari), minggu lalu (hingga satu minggu), atau hari-hari sebelumnya (rentang lebih panjang), bila ada data saat itu; temuan terbuka; arah dan protokol; klien dan layanan teratas |
+| Top 66 | Terbuka di **Tabel**, satu tabel 66 teratas: secara default percakapan (klien, server, layanan, negara). Setiap judul kolom mengurutkan; kolom angka (lalu lintas, paket, rata-rata paket, flow) memilih ulang 66 teratas dari semua lalu lintas dalam rentang, sehingga rata-rata paket terkecil menemukan pemindaian dan banjir. **Kelompokkan menurut** beralih ke aplikasi, jaringan, segmen, perangkat, enkapsulasi, dan VLAN. **Pihak teratas** menampilkan 30 klien dan server teratas berdampingan dengan trafik, paket, dan catatan flow, di atas satu baris untuk semua trafik |
+| Detail trafik | Dua diagram cincin. **Server dan klien**: cincin dalam berisi 8 server tersibuk, cincin luar klien masing-masing; **Klien di dalam** membaliknya (klien di dalam, server yang dipakai masing-masing di luar), karena sering satu sisi lebih menjelaskan daripada sisi lainnya. **Layanan**: satu cincin berisi layanan tersibuk. Arahkan kursor ke segmen untuk melihat trafiknya; klik seperti nilai mana pun |
 | Jalur trafik | Host mana memakai aplikasi apa menuju negara mana: 8 host tersibuk, sisanya sebagai Lainnya. **Klien → server** menampilkan klien → layanan → server; **Per segmen** menampilkan jaringan, bukan host. Nama panjang dipendekkan menjadi 22 karakter; arahkan kursor ke nama untuk melihatnya utuh |
 | Temuan | Apa yang perlu diperhatikan: pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman ([selengkapnya](#findings)) |
 | Intel ancaman | Host yang berkomunikasi dengan alamat di daftar ancaman Anda, dan berapa banyak yang mereka kirim |
@@ -707,8 +716,8 @@ Halaman:
 | Analisis pcap offline | Tangkapan paket (pcap, pcapng) dianalisis terpisah dari data langsung ([selengkapnya](#analisis-pcap-offline)) |
 
 Menu samping mengelompokkan halaman menjadi empat: trafik (Ringkasan, Top 66,
-Detail trafik, Jalur trafik), keamanan (Temuan, Intel ancaman, Geografi &
-jaringan), pengaturan dan data (Pengaturan, Pencocokan antarmuka, Catatan flow,
+Detail trafik, Jalur trafik, Pencocokan antarmuka), keamanan (Temuan, Intel
+ancaman, Geografi & jaringan), pengaturan dan data (Pengaturan, Catatan flow,
 Pembersihan data), dan Analisis pcap offline. Di bawah logo ada versi serta
 tanggal dan jam server.
 
@@ -716,18 +725,18 @@ Di atas halaman: rentang waktu (15 menit sampai 30 hari, atau **Kustom…**
 untuk awal dan akhir mana pun, juga lebih lama dari 30 hari ke belakang),
 refresh otomatis setiap 30 detik, dan **Salin tautan**, yang menyalin tautan
 ke tampilan saat ini secara persis (halaman, rentang waktu, dan filter) untuk
-dikirim ke rekan kerja. Di **Top 66** dan **Detail trafik**, kotak pencarian
-serta **Perangkat**, **Klien**, **Server**, dan **Layanan** mencantumkan nilai
-tersibuk dalam rentang waktu: pilih satu, atau ketik satu, untuk memfilter;
+dikirim ke rekan kerja. Di **Top 66** dan **Detail trafik**, **Perangkat**,
+**Klien**, **Server**, dan **Layanan** mencantumkan nilai tersibuk dalam
+rentang waktu: pilih satu, atau ketik satu, untuk memfilter;
 filter itu lalu berlaku di setiap halaman sampai Anda mengosongkan kotaknya.
 Bahasa mengikuti browser; ubah di bagian bawah menu, di atas **Keluar**.
 Pengaturan, Catatan flow (saat waktu nyata), Pembersihan data, dan Analisis
 pcap offline tidak punya rentang waktu.
 
 Di samping bahasa ada tema warna, mengikuti warna sistem iOS: **Terang**
-(default), **Cerah** (putih, kontras lebih kuat), **Abu-abu**, **Redup**,
-**Gelap** (hitam, untuk layar dinding), atau **Ikuti sistem**, yang beralih
-antara terang dan gelap mengikuti komputer. Pilihan disimpan di browser.
+(default), **Abu-abu**, **Hitam** (untuk layar dinding), **Hijau toska**, dan
+**Jingga**. Setiap klik beralih ke tema berikutnya; pilihan disimpan di
+browser.
 
 Grafik dari waktu ke waktu menampilkan 8 nilai terbesar dengan warna tetap
 dan sisanya sebagai Lainnya; legenda memberikan total setiap nilai dan bisa
@@ -797,7 +806,7 @@ yang mengetuk situs web.
 
 ![Temuan: setiap langkah serangan, ditemukan melalui sampling sFlow 1:4096](images/findings.png)
 
-![Top 66, Pihak teratas: 30 klien dan server teratas dengan satu baris untuk semua trafik](images/topn.png)
+![Top 66: 66 percakapan teratas, bisa diurutkan menurut kolom mana pun](images/topn.png)
 
 ![Detail trafik: server dengan kliennya, dan layanan dengan servernya, sebagai diagram cincin](images/traffic.png)
 

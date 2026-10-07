@@ -3,6 +3,26 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.0.3
+
+Pages
+- The comparison on the overview says what it compares with: the same time
+  yesterday (ranges up to a day), the same time last week (up to a week)
+  or the days before (longer ranges). Without data then there is none,
+  instead of falling back to "the previous period".
+- Top 66 opens on the table; Talkers is the second tab.
+- Traffic details: the second chart is one ring of services.
+- Flow paths is a quarter taller, and the middle column (application,
+  service) sits two thirds of the way across, on the server side.
+- Interface check moved up, under Flow paths.
+- No search box on Top 66 and Traffic details; the Device, Client, Server
+  and Service boxes stay.
+- Themes: Light, Grey, Black, Teal and Orange; one button, each click goes
+  to the next.
+- Settings: sFlow loss is split into loss on the way (sequence gaps: the
+  network or this machine's receive buffer) and samples the device dropped
+  itself (its sFlow export is rate-limited), each with what to do.
+
 ## 1.0.2
 
 Pages
