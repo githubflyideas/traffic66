@@ -1243,24 +1243,25 @@ views.ifaces = async (el) => {
   const key = state.ifc.exporter + '/' + state.ifc.ifindex, sel = list.find(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex);
   // one device's interface: count everything it saw, also traffic another device reported too
   const fil = [...state.f, {f: 'iface', v: key, neg: false}];
-  const [ri, ro, pi, po, rc] = await Promise.all([['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']].map(([by, measure]) => api('series', {by, measure, top: 20, dup: 1}, fil))
+  const pps = state.ifm === 'pps', measure = pps ? 'pkts' : 'wire';
+  const [ri, ro, rc] = await Promise.all([['if_in', measure], ['if_out', measure]].map(([by, measure]) => api('series', {by, measure, top: 20, dup: 1}, fil))
     .concat([api('recon', {exporter: state.ifc.exporter, ifindex: state.ifc.ifindex})]));
   const pick = s => { const i = (s.names || []).indexOf(key); return i < 0 ? (s.times || []).map(() => 0) : s.values[i]; };
   const sum = a => a.reduce((x, y) => x + y, 0);
   const name = `${ifName(sel)} · ${sel.device || sel.exporter}`;
   const leg = (vi, vo, fmt) => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div>`;
   el.innerHTML = `<div class="grid" style="margin-bottom:16px">
-    ${panel('c6', `${esc(name)} · ${t('ch.bps')}`, '', `<div class="chart" id="ifB" style="height:220px" aria-label="${esc(t('ch.bps'))}"></div>${leg()}`)}
-    ${panel('c6', `${esc(name)} · ${t('ch.pps')}`, '', `<div class="chart" id="ifP" style="height:220px" aria-label="${esc(t('ch.pps'))}"></div>${leg()}`)}</div>
+    <div class="panel c12"><div class="ph"><h2>${t('if.bw')} · ${esc(name)}</h2><div class="seg" role="group" style="margin-inline-start:auto">${['bps', 'pps'].map(k => `<button data-m="${k}" aria-pressed="${(state.ifm || 'bps') === k}">${t('ch.' + k)}</button>`).join('')}</div></div>
+      <div class="chart" id="ifB" style="height:240px" aria-label="${esc(t('if.bw'))}"></div>${leg()}</div></div>
     <div class="grid">
     ${panel('c4', t('if.title'), t('if.sub'), `<div class="iflist">${list.map(f => {
       const k = devKind(f), cur = f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex;
       return `<button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>`;
     }).join('')}</div>`)}
     <div class="panel c8" id="recon"></div></div>`;
-  const bitsIn = pick(ri), bitsOut = pick(ro);
-  tsChart($('#ifB'), {times: ri.times, lines: [{name: t('if.in'), color: IF_IN, data: bitsIn, fill: true}, {name: t('if.out'), color: IF_OUT, data: bitsOut, fill: true}]});
-  tsChart($('#ifP'), {times: pi.times, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
+  const ln = [{name: t('if.in'), color: IF_IN, data: pick(ri), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(ro), fill: true}];
+  tsChart($('#ifB'), pps ? {times: ri.times, fmtY: fmtAxisBps, fmtV: fmtPps, lines: ln} : {times: ri.times, lines: ln});
+  el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { state.ifm = b.dataset.m; render(); });
   el.querySelectorAll('.iflist button').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
 
   const r = rc.recon, dir = state.ifdir || 'both';

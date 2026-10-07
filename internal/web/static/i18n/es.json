@@ -477,5 +477,6 @@
 "lic.over": "La prueba de Traffic66 ha terminado. Solicite al autor una licencia de registro.",
 "lic.free": "Mientras no se registre sigue funcionando, con todas las funciones.",
 "lic.ok": "Licenciado a {c}: quedan {n} días",
-"lic.id": "Instalación {id}"
+"lic.id": "Instalación {id}",
+"if.bw": "Ancho de banda de la interfaz"
 }

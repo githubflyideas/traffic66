@@ -477,5 +477,6 @@
 "lic.over": "The Traffic66 trial has ended. Please ask the author for a registration licence.",
 "lic.free": "Until registered it keeps working, with every feature.",
 "lic.ok": "Licensed to {c}: {n} days left",
-"lic.id": "Installation {id}"
+"lic.id": "Installation {id}",
+"if.bw": "Interface bandwidth"
 }
