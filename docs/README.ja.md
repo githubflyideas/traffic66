@@ -1,8 +1,10 @@
 [English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | **日本語** | [한국어](README.ko.md)
 
-# traffic66
+# traffic66 — NetFlow・sFlow・IPFIX コレクター兼トラフィックアナライザー
 
 sFlow・NetFlow・IPFIX のフロー分析を 1 つのプログラムで行います。誰が帯域を使っているか、トラフィックがどこへ流れているか、その数値が機器自身のインターフェースカウンターと一致しているかを、Web UI とターミナル UI で表示します。
+
+ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG や SolarWinds NTA のフローモジュールに代わる、セルフホスト型の選択肢です。ネットワーク監視（network monitoring）、帯域監視（bandwidth monitoring）、トップトーカー（top talkers）、DDoS・スキャン検知、pcap 分析に使え、Elasticsearch、Kafka、別途のデータベースは不要です。
 
 - Windows・Linux・macOS それぞれ実行ファイル 1 つ。データベースのインストールは不要で、オフラインで動作します。
 - sFlow v5、NetFlow v5/v9、IPFIX を任意の UDP ポートで受信。インターフェースでのローカルキャプチャにも対応。

@@ -2,11 +2,17 @@
 
 <div dir="rtl">
 
-# traffic66
+# traffic66 — NetFlow، sFlow اور IPFIX کلیکٹر اور ٹریفک اینالائزر
 
 sFlow، NetFlow اور IPFIX کے لیے flow analytics، ایک ہی پروگرام میں: bandwidth
 کون استعمال کر رہا ہے، ٹریفک کہاں جا رہی ہے، اور کیا اعداد ڈیوائسز کے اپنے
 interface counters سے میل کھاتے ہیں — web UI اور terminal UI میں۔
+
+ntopng، ElastiFlow، Grafana کے ساتھ pmacct، یا PRTG اور SolarWinds NTA کے
+flow modules کا self-hosted متبادل — نیٹ ورک مانیٹرنگ (network monitoring)،
+bandwidth مانیٹرنگ (bandwidth monitoring)، سب سے زیادہ ٹریفک والے hosts
+(top talkers)، DDoS اور scan کی نشاندہی، اور pcap تجزیے کے لیے، بغیر
+Elasticsearch، Kafka یا الگ database کے۔
 
 - Windows، Linux اور macOS کے لیے ایک ہی executable؛ کوئی database انسٹال نہیں کرنا، offline بھی چلتا ہے۔
 - کسی بھی UDP port پر sFlow v5، NetFlow v5/v9 اور IPFIX، یا کسی interface سے local capture۔
