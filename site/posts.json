@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-10-08",
+    "lang": "en",
+    "slug": "flow-analyzers-compared",
+    "title": "We installed the flow analyzers on GitHub, one after another",
+    "summary": "ntopng, Akvorado, ElastiFlow, FastNetMon, pmacct, GoFlow2 and nfdump next to traffic66: install path, counter check, UI, detection, and where others do better.",
+    "image": "assets/img/overview.png"
+  }
+]

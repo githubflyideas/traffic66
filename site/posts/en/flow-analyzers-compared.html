@@ -1,0 +1,186 @@
+<article>
+<header class="hero col">
+  <div class="kicker"><span><a href="{root}blog/" style="color:inherit">traffic66 blog</a></span><span>NetFlow / sFlow / IPFIX</span><b>October 2026</b></div>
+  <h1>We installed the flow analyzers on GitHub, one after another</h1>
+  <p class="lede">This post measures one thing: how far a network admin has to go from download to <span class="far">a first chart whose numbers they trust</span>. traffic66 has the shortest path. On security detection it is level with ntopng. On scale, deep packet inspection and community, others are ahead. Every claim is checked against the other projects' own documentation, with links at the end.</p>
+  <div class="byline"><span>By the traffic66 developers</span><span>We have a stake in this; read accordingly</span><span>Data as of 8 Oct 2026</span></div>
+</header>
+
+<div class="col">
+<h2>The field</h2>
+<p>We took the projects on GitHub for sFlow, NetFlow and IPFIX with the most stars. Some are complete products, some are only collectors, some are archived. Star counts are those shown on GitHub.</p>
+</div>
+
+<div class="wide">
+<div class="tablewrap">
+<table>
+<thead><tr><th>Project</th><th style="text-align:right">Stars</th><th>What it is</th><th>What you install first</th><th>Status · licence</th></tr></thead>
+<tbody>
+<tr><td class="name">ntopng</td><td class="num">8.1k</td><td>Web traffic monitor with nDPI deep packet inspection</td><td>Redis; for NetFlow/sFlow, nProbe, which needs a licence</td><td><span class="tag ok">active</span> GPL-3.0</td></tr>
+<tr><td class="name">FastNetMon</td><td class="num">3.7k</td><td>DDoS detection, can trigger BGP blackholing</td><td>Linux; charts through InfluxDB/Grafana or similar</td><td><span class="tag ok">active</span> GPL-2.0</td></tr>
+<tr><td class="name">ElastiFlow (legacy)</td><td class="num">2.5k</td><td>Logstash pipeline and Kibana dashboards</td><td>Elasticsearch, Logstash, Kibana</td><td><span class="tag dead">archived 2024-03</span></td></tr>
+<tr><td class="name">Akvorado</td><td class="num">2.3k</td><td>Collector, enricher and visualizer</td><td>inlet, Kafka, outlet, ClickHouse; Redis in the official compose</td><td><span class="tag ok">active</span> AGPL-3.0</td></tr>
+<tr><td class="name">pmacct</td><td class="num">1.2k</td><td>Collector daemons with BGP and BMP</td><td>A database and dashboards of your choice (often Grafana)</td><td><span class="tag ok">active</span> GPL (moving to BSD-style)</td></tr>
+<tr><td class="name">vflow</td><td class="num">1.2k</td><td>Collector feeding Kafka</td><td>Kafka plus storage and dashboards downstream</td><td>Apache-2.0</td></tr>
+<tr><td class="name">nfdump</td><td class="num">922</td><td>Command-line collection and query tools</td><td>No web UI of its own</td><td><span class="tag ok">active</span> BSD</td></tr>
+<tr><td class="name">Cloudflare goflow</td><td class="num">919</td><td>The collector Cloudflare used internally</td><td>Kafka plus downstream</td><td><span class="tag dead">archived 2025-02</span></td></tr>
+<tr><td class="name">GoFlow2</td><td class="num">798</td><td>High-performance collector</td><td>Output to Kafka or files; storage and UI are yours to build</td><td><span class="tag ok">active</span> BSD-3</td></tr>
+<tr class="us"><td class="name">traffic66</td><td class="num">new</td><td>Collector, storage, web and terminal UI, detection, pcap analysis</td><td>Nothing: one executable with embedded DuckDB</td><td><span class="tag ok">active</span> source-available (see below)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">The current ElastiFlow is now called NetObserv Flow. It is closed source; its free Community tier is limited to 500 flow records per second.</p>
+</div>
+
+<div class="col">
+<h2>1. From download to the first chart</h2>
+<p>This is the part we care about most. When someone asks at 3 p.m. who is filling the uplink, nobody wants to learn Kafka first. These are the shortest paths in each project's documentation:</p>
+</div>
+<div class="wide">
+<div class="race" role="list">
+  <div class="lane us" role="listitem"><div class="who">traffic66</div><div class="bar"><span class="step">download, unpack</span><span class="step">./traffic66</span><span class="step">open the browser ✓</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ntopng</div><div class="bar"><span class="step">add the repository</span><span class="step">install ntopng</span><span class="step">install Redis</span><span class="step">install nProbe</span><span class="step">get an nProbe licence</span><span class="step">connect the two</span><span class="step">chart</span></div></div>
+  <div class="lane" role="listitem"><div class="who">Akvorado</div><div class="bar"><span class="step">install Docker</span><span class="step">fetch the compose</span><span class="step">start Kafka</span><span class="step">start ClickHouse</span><span class="step">start inlet/outlet</span><span class="step">set up SNMP, GeoIP</span><span class="step">chart</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ElastiFlow</div><div class="bar"><span class="step">install Elasticsearch</span><span class="step">install Kibana</span><span class="step">install the collector</span><span class="step">import dashboards</span><span class="step">mind the 500 rec/s cap</span><span class="step">chart</span></div></div>
+  <div class="lane" role="listitem"><div class="who">GoFlow2 / pmacct</div><div class="bar"><span class="step">install the collector</span><span class="step">choose a database</span><span class="step">build the pipeline</span><span class="step">install Grafana</span><span class="step">draw your dashboards</span><span class="step">chart</span></div></div>
+</div>
+</div>
+<div class="col">
+<p>A new traffic66 installation signs in as admin / traffic66 and asks for a password of your own at the first sign-in. On Windows, double-clicking <code>traffic66.exe</code> opens the browser. To look around first, <code>traffic66 demo</code> builds a simulated company network with a day of history and a complete attack.</p>
+<p>About <strong>Windows</strong>: almost everything in the table runs on Linux or Docker only. traffic66 builds native Windows, Linux and macOS programs from the same code, with no WSL and no Docker. In many small organizations the monitoring machine is a Windows PC.</p>
+
+<div class="quote" aria-label="Key figure">
+  <div class="big">3 <span>steps</span></div>
+  <div class="cap">from download to the first chart</div>
+</div>
+
+<h2>2. Do the numbers match the interface counters?</h2>
+<p>The question every flow tool gets: the chart says the uplink carries 800 Mb/s, SNMP in Zabbix says 600. Which one is right?</p>
+<p>Flow numbers are estimates: sampled packets times the sampling rate. traffic66 has a page for exactly this, <strong>Interface check</strong>. It draws each interface's flow estimate and the device's own counters (sFlow counters or SNMP) in one chart, and computes the difference and the statistical error of sampling. When the difference is larger than sampling explains, it names the likely cause: interfaces not sampled, the same traffic sampled on two interfaces, export packets lost on the way, or a sampling rate not yet received.</p>
+<p>Behind it are a few quiet details: the sampling rate the device actually applied; records held until their sampling rate arrives instead of being counted 1:1; compensation for lost export packets; long flows spread over the minutes they lasted; and Ethernet overhead added to NetFlow byte counts, because interface counters include it.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/img/interfaces.png" alt="Interface check: bits per second and packets per second, the list of interfaces, and the verdict" width="1440" height="1450" loading="lazy">
+  <figcaption>Interface check. Dashed lines are the device counters; the verdict is at the lower right.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>How far the others go:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Flow estimate and device counters in one chart, difference and statistical error computed, the cause stated. sFlow counters are used as they arrive; for a NetFlow device, one <code>snmp</code> line.</span></div>
+  <div><b>ntopng</b><span>The Enterprise edition polls SNMP and charts device interfaces; the documentation does not mention comparing them with flows. SNMP in the Community edition is not documented.</span></div>
+  <div><b>Akvorado</b><span>Uses SNMP for interface names and descriptions on flow records, not counters.</span></div>
+  <div><b>ElastiFlow</b><span>Also uses SNMP to enrich interface details; a comparison means building two Kibana charts yourself.</span></div>
+  <div><b>FastNetMon</b><span>Not its job; it watches attack thresholds.</span></div>
+  <div><b>GoFlow2 and others</b><span>Not their job; they deliver flow records.</span></div>
+</div>
+<p>Elsewhere, interface counters are either not read or shown as one more chart to compare by eye. We did not find another project that states why the numbers differ.</p>
+
+<h2>3. A conclusion on opening, no query language</h2>
+<p>The overview answers how much traffic there is now, who uses it, and how that compares with yesterday. Every address, port, application and country can be clicked: show only this, exclude it, open its flow records, open its details page. The interface is designed so that you rarely need to type.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/img/overview.png" alt="Overview: interface bandwidth, bandwidth by application compared with yesterday" width="1440" height="900" loading="lazy">
+  <figcaption>Overview. The interface is chosen at the top; the starred one is the default. The dashed line is the same time yesterday.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>The same job in the other projects:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Web UI and terminal UI built in, opening on a summary. 13 languages.</span></div>
+  <div><b>ntopng</b><span>A complete UI with a lot of information; the only one in the table to compare head-on. Seven languages per its announcements.</span></div>
+  <div><b>Akvorado</b><span>A polished web console; its visualizer lets you drag dimensions and draw Sankey charts. It works more like a query tool: you decide what to ask first. English only.</span></div>
+  <div><b>ElastiFlow</b><span>Kibana dashboards; changing them means learning Kibana.</span></div>
+  <div><b>FastNetMon</b><span>No web UI in the Community edition; charts through Grafana. The web UI is in the commercial edition.</span></div>
+  <div><b>GoFlow2, pmacct, vflow, nfdump</b><span>No UI; nfdump has command-line queries. You build the dashboards, usually in Grafana, one query per chart.</span></div>
+</div>
+
+<h2>4. Finding attacks in sampled data</h2>
+<p>Detection on sampled data is hard: at 1:4096, a scan may leave a handful of packets. traffic66's rules are calibrated for sampled data. In the demo, the whole attack chain is found through 1:4096 sFlow: internal scan, port scan, password guessing, lateral movement, a large upload to a new address, and threat list traffic. A day of the demo's normal traffic produces no other findings, apart from the internet scanner knocking on the website.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/img/findings.png" alt="Findings: each step of an attack, most serious first" width="1440" height="900" loading="lazy">
+  <figcaption>Findings. Every step of an attack by a compromised host in the demo, all from 1:4096 sFlow sampling.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Here the comparison is closer:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Scans, port scans, password guessing, lateral movement, unusual uploads, floods and threat lists, with thresholds for sampled data.</span></div>
+  <div><b>ntopng</b><span>Many more checks than ours: scans, floods, blacklists, DNS and ICMP exfiltration, lateral movement, already in the Community edition. ntopng is ahead here.</span></div>
+  <div><b>FastNetMon</b><span>DDoS only, but in depth: detection within seconds and automatic BGP blackholing.</span></div>
+  <div><b>ElastiFlow</b><span>NetIntel threat enrichment; alerting through rules you set up in Elastic.</span></div>
+  <div><b>Akvorado and the collectors</b><span>No security detection.</span></div>
+</div>
+<p>On security we are level with ntopng. What we offer is that the checks come in one program without setup, and are tuned for sampled data.</p>
+<p>One more convenience: <code>traffic66 capture.pcap</code> analyses a packet capture with the same pages, kept apart from the live data. ntopng reads pcap files too, so call this one even.</p>
+
+<h2>Scorecard</h2>
+<p>The points above and the weaknesses below in one table. Filled means done, half means partly, paid or a separate install, empty means not there.</p>
+</div>
+<div class="wide">
+<div class="tablewrap">
+<table class="matrix">
+<thead><tr><th>Capability</th><th class="us">traffic66</th><th>ntopng</th><th>Akvorado</th><th>ElastiFlow (current)</th><th>FastNetMon</th><th>Collectors<small>GoFlow2 · pmacct · vflow · nfdump</small></th></tr></thead>
+<tbody>
+<tr><td>One program, ready after install</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + nProbe licence</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>Grafana for charts</small></td><td><i class="m"></i><small>build storage and UI</small></td></tr>
+<tr><td>Runs natively on Windows</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Windows build is a demo</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Built-in web UI</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>Kibana dashboards</small></td><td><i class="m h"></i><small>commercial edition</small></td><td><i class="m"></i></td></tr>
+<tr><td>UI in many languages</td><td class="us"><i class="m y"></i><small>13</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>English</small></td><td><i class="m h"></i><small>Kibana only</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Flows checked against interface counters</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>SNMP charts (Enterprise)</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>build it yourself</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Security detection</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>most checks</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>threat enrichment</small></td><td><i class="m h"></i><small>DDoS only, with mitigation</small></td><td><i class="m"></i></td></tr>
+<tr><td>Offline pcap analysis</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Terminal UI</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>console client</small></td><td><i class="m h"></i><small>nfdump CLI</small></td></tr>
+<tr><td>Layer-7 application recognition</td><td class="us"><i class="m"></i></td><td><i class="m y"></i><small>nDPI</small></td><td><i class="m"></i></td><td><i class="m h"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Horizontal scale-out</td><td class="us"><i class="m h"></i><small>5,000 records/s, one machine</small></td><td><i class="m h"></i></td><td><i class="m y"></i></td><td><i class="m y"></i><small>paid tiers</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+<tr><td>OSI open-source licence</td><td class="us"><i class="m"></i><small>source-available</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i><small>closed</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+</tbody>
+</table>
+</div>
+<div class="legend"><span><i class="m y"></i> done</span><span><i class="m h"></i> partly, paid or separate install</span><span><i class="m"></i> not there</span></div>
+</div>
+<div class="col">
+<p>traffic66 fills the first eight rows; no other column does. The last three rows are our weak points.</p>
+
+<h2>Where others do better</h2>
+<p>Read this section before you choose.</p>
+</div>
+<div class="wide">
+<div class="grid2">
+  <div class="card"><div class="who">Akvorado · GoFlow2</div><h4>Scale</h4><p>traffic66 is designed for 5,000 flow records per second on one machine with embedded DuckDB. For carrier-scale traffic, a Kafka and ClickHouse architecture that scales out is the right answer.</p></div>
+  <div class="card"><div class="who">ntopng</div><h4>Deep packet inspection</h4><p>ntopng has nDPI and recognizes hundreds of layer-7 protocols. traffic66 works on flows; applications are known by port, packets are not parsed.</p></div>
+  <div class="card"><div class="who">FastNetMon</div><h4>Automatic DDoS mitigation</h4><p>FastNetMon can announce a BGP blackhole or FlowSpec rule as soon as it detects an attack. traffic66 reports floods and leaves routing alone.</p></div>
+  <div class="card"><div class="who">pmacct</div><h4>Routing data and flexibility</h4><p>pmacct takes BGP and BMP alongside flows, adds routing information to records and writes to almost anything. traffic66 is a finished product, not a toolkit.</p></div>
+  <div class="card"><div class="who">The established projects</div><h4>Age and community</h4><p>ntopng has close to 30,000 commits; nfdump has been around for two decades. traffic66 has only started collecting stars and has far less production mileage.</p></div>
+  <div class="card"><div class="who">Most of the table</div><h4>Licence</h4><p>They use OSI-approved open-source licences. traffic66 is source-available: free for evaluation and for organizations under 100 people; larger organizations register after 30 days. Nothing is switched off, but it is not open source.</p></div>
+</div>
+</div>
+
+<div class="col">
+<h2>Which one to pick</h2>
+<div class="pick">
+  <div class="us"><span>One machine, tens to hundreds of interfaces, charts this afternoon, numbers that match SNMP</span><b>traffic66</b></div>
+  <div><span>Layer-7 visibility, or mostly mirror ports</span><b>ntopng</b></div>
+  <div><span>A carrier or large backbone, hundreds of thousands of flows per second</span><b>Akvorado</b></div>
+  <div><span>DDoS detection with automatic blackholing</span><b>FastNetMon</b></div>
+  <div><span>You already run Kafka and a data platform and need a collector</span><b>GoFlow2 / pmacct</b></div>
+  <div><span>Command line, long-term raw records</span><b>nfdump</b></div>
+</div>
+<p>What we are confident about is three things: quick to install, easy to read, and numbers that match. For the rest, issues on <a href="https://github.com/githubflyideas/traffic66" target="_blank" rel="noopener">GitHub</a> are welcome; we will close the gaps one by one.</p>
+</div>
+
+<footer class="col">
+  Sources, checked 8 Oct 2026:
+  <ol>
+    <li>Project pages on GitHub: <a href="https://github.com/ntop/ntopng" target="_blank" rel="noopener">ntopng</a>, <a href="https://github.com/pavel-odintsov/fastnetmon" target="_blank" rel="noopener">FastNetMon</a>, <a href="https://github.com/robcowart/elastiflow" target="_blank" rel="noopener">ElastiFlow (legacy)</a>, <a href="https://github.com/akvorado/akvorado" target="_blank" rel="noopener">Akvorado</a>, <a href="https://github.com/pmacct/pmacct" target="_blank" rel="noopener">pmacct</a>, <a href="https://github.com/Edgio/vflow" target="_blank" rel="noopener">vflow</a>, <a href="https://github.com/phaag/nfdump" target="_blank" rel="noopener">nfdump</a>, <a href="https://github.com/cloudflare/goflow" target="_blank" rel="noopener">Cloudflare goflow</a>, <a href="https://github.com/netsampler/goflow2" target="_blank" rel="noopener">GoFlow2</a>.</li>
+    <li>ntopng needs an nProbe licence for NetFlow/sFlow: <a href="https://www.ntop.org/guides/ntopng/use_cases/netflow_sflow_monitoring.html" target="_blank" rel="noopener">ntop documentation</a>.</li>
+    <li>ntopng alerts per edition: <a href="https://ntop.org/guides/ntopng/alerts/alerts_list_per_license.html" target="_blank" rel="noopener">Alerts List per License</a>; SNMP monitoring: <a href="https://www.ntop.org/monitoring-network-devices-with-ntopng-and-snmp/" target="_blank" rel="noopener">ntop blog</a>; UI languages: <a href="https://www.ntop.org/extended-multilanguage-support-in-ntopng-korean-spanish-and-french/" target="_blank" rel="noopener">2024 announcement</a>; Windows demo build: <a href="https://en.wikipedia.org/wiki/Ntopng" target="_blank" rel="noopener">Wikipedia</a>.</li>
+    <li>Akvorado 2.0 architecture (inlet, Kafka, outlet, ClickHouse): <a href="https://vincent.bernat.ch/en/blog/2025-akvorado-2.0" target="_blank" rel="noopener">author's blog</a>.</li>
+    <li>ElastiFlow NetIntel enrichment: <a href="https://docs.elastiflow.com/flowcoll/configuration/enrichment-options/ip-address-enrichment/enrich_ip_netintel" target="_blank" rel="noopener">ElastiFlow docs</a>; NetObserv Flow licence tiers: <a href="https://docs.elastiflow.com/flowcoll/configuration/config_gen/license" target="_blank" rel="noopener">ElastiFlow docs</a>.</li>
+  </ol>
+  Screenshots are from <code>traffic66 demo</code>, a simulated network.
+</footer>
+</article>
