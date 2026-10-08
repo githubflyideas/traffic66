@@ -1,11 +1,13 @@
 name: pages
 
 # The project website on GitHub Pages: site/ built by site/build.py, with
-# the screenshots from docs/images. Published on every change to main that
-# touches them, or by hand from the Actions page.
+# the screenshots from docs/images. Published on every change to them, or
+# by hand from the Actions page. It runs on v0.1, the default branch, which
+# every merge to main fast-forwards: the github-pages environment only
+# accepts deployments from the default branch.
 on:
   push:
-    branches: [main]
+    branches: [v0.1]
     paths: ["site/**", "docs/images/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
