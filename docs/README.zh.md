@@ -272,7 +272,7 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ## 9. 离线 pcap、终端界面、本地抓包
 
-**离线 pcap 分析** 用相同的页面查看抓包文件（pcap、pcapng），与实时数据分开：`traffic66 a.pcap b.pcapng` 在 127.0.0.1 上启动并打开浏览器（最多 3 个文件，3 GB；按 Ctrl+C 删除导入的数据），也可以在该页面上传最多 3 个 50 MB 的文件。它分析的是流，而不是包内容。
+**离线 pcap 分析** 用相同的页面查看抓包文件（pcap、pcapng），与实时数据分开：`traffic66 a.pcap b.pcapng` 在 127.0.0.1 上启动并打开浏览器（最多 3 个文件，3 GB；按 Ctrl+C 删除导入的数据），也可以在该页面上传最多 3 个 50 MB 的文件。一次分析一个文件，每个文件有自己独立的数据库：在文件所在行点 **分析**，所有页面都显示该文件，顶部的栏可切换到另一个文件。它分析的是流，而不是包内容。
 
 ![离线分析：抓包文件及其包数、流数和时间](images/sandbox.png)
 
@@ -282,7 +282,14 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ![终端界面：Top 66 会话](images/tui-topn.png)
 
-**本地抓包** 从本机网卡生成流，最好是接到交换机镜像端口的网口：`traffic66 interfaces` 列出网卡，`-capture eth1`（或 Windows 的名称或编号）开始抓包。Linux 需要 root 或 `setcap cap_net_raw,cap_net_admin+ep`，macOS 需要 root，Windows 需要 [Npcap](https://npcap.com)。抓到的流显示为来自设备 `127.0.0.1`。
+**本地抓包** 从本机网卡生成流，最好是接到交换机镜像端口的网口：`traffic66 interfaces` 列出网卡，`-capture eth1` 开始抓包。在 Windows 上：
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux 需要 root 或 `setcap cap_net_raw,cap_net_admin+ep`，macOS 需要 root，Windows 需要 [Npcap](https://npcap.com)。抓到的流显示为来自设备 `127.0.0.1`。本地抓包没有设备接口和计数器，因此 **接口对账** 对它没有可对比的内容。
 
 <a id="10-options-and-data"></a>
 

@@ -357,7 +357,10 @@ kecil bisa tersembunyi di balik sampling.
 halaman yang sama, terpisah dari data langsung: `traffic66 a.pcap b.pcapng`
 berjalan di 127.0.0.1 dan membuka browser (maksimal 3 file, 3 GB; Ctrl+C
 menghapus data yang diimpor), atau unggah maksimal 3 file berukuran 50 MB di
-halaman itu. Analisis bekerja pada flow, bukan isi paket.
+halaman itu. Satu file dianalisis pada satu waktu, masing-masing dalam
+database tersendiri: **Analisis** pada baris sebuah file menampilkannya di
+semua halaman, dan bilah di bagian atas beralih ke file lain. Analisis
+bekerja pada flow, bukan isi paket.
 
 ![Analisis offline: file tangkapan beserta paket, flow, dan waktunya](images/sandbox.png)
 
@@ -372,10 +375,18 @@ rentang waktu, w buka di browser, q keluar; `-lang` memilih bahasa.
 
 **Capture lokal** membuat flow dari interface lokal, paling baik port yang
 terhubung ke port mirror sebuah switch: `traffic66 interfaces` menampilkan
-daftarnya, `-capture eth1` (atau nama atau nomor di Windows) melakukan
-capture. Linux butuh root atau `setcap cap_net_raw,cap_net_admin+ep`, macOS
-butuh root, Windows butuh [Npcap](https://npcap.com). Flow hasil capture
-berasal dari perangkat `127.0.0.1`.
+daftarnya, `-capture eth1` melakukan capture. Di Windows:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux butuh root atau `setcap cap_net_raw,cap_net_admin+ep`, macOS butuh
+root, Windows butuh [Npcap](https://npcap.com). Flow hasil capture berasal
+dari perangkat `127.0.0.1`. Capture lokal tidak punya interface atau counter
+perangkat, jadi **Pencocokan antarmuka** tidak punya apa pun untuk
+dibandingkan.
 
 <a id="10-options-and-data"></a>
 

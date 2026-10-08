@@ -378,7 +378,7 @@
 "nav.sandbox": "Analyse hors ligne de pcap",
 "sb.title": "Fichiers de capture",
 "sb.sub": "Analyser des fichiers pcap à part des données en direct",
-"sb.explain": "Importez des captures Wireshark ou tcpdump. Elles vont dans une base séparée : les données en direct, leurs chiffres et détections ne sont pas touchés. Analyser affiche les fichiers sur toutes les pages (vue d'ensemble, Top 66, détections, chemins, carte, enregistrements) ; Supprimer efface les fichiers et leurs données.",
+"sb.explain": "Téléversez des captures Wireshark ou tcpdump. Chacune va dans sa propre base : les données en direct, leurs chiffres et détections ne sont pas touchés. Analyser affiche ce seul fichier sur toutes les pages (vue d’ensemble, Top 66, détections, chemins, carte, enregistrements de flux) ; changez de fichier dans la barre du haut. Supprimer efface un fichier et ses données.",
 "sb.col_file": "Fichier",
 "sb.col_size": "Taille",
 "sb.col_packets": "Paquets",
@@ -514,5 +514,6 @@
 "if.peer_note": "Interface d’en face : non échantillonnée, seulement le trafic passé par l’interface échantillonnée de cet équipement",
 "src.sampled_if": "Échantillonné sur : {v}",
 "src.dir_yes": "avec flowDirection (61)",
-"src.dir_no": "sans flowDirection (61) : interface échantillonnée déduite du trafic"
+"src.dir_no": "sans flowDirection (61) : interface échantillonnée déduite du trafic",
+"if.capture_only": "Le contrôle des interfaces compare les flux aux compteurs d’interface des équipements sFlow, NetFlow et IPFIX. La capture locale sur la carte réseau de cette machine n’a ni interfaces ni compteurs d’équipement : il n’y a rien à comparer ici."
 }

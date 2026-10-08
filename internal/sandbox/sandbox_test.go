@@ -153,3 +153,60 @@ func TestAddPath(t *testing.T) {
 		t.Errorf("the original file was deleted: %v", err)
 	}
 }
+
+// Two captures are analysed one at a time: each has its own flows and
+// findings, the first imported is shown first, and switching shows the
+// other one alone.
+func TestOneFileAtATime(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "sandbox")
+	sb := New(dir, enrich.NewInventory(), enrich.NewASNDB(), enrich.NewThreats())
+	var a, b bytes.Buffer
+	Sample(&a, time.Date(2026, 9, 20, 11, 0, 0, 0, time.UTC))
+	Sample(&b, time.Date(2026, 9, 21, 11, 0, 0, 0, time.UTC))
+	sb.Add("a.pcap", bytes.NewReader(a.Bytes()), false)
+	sb.Add("b.pcap", bytes.NewReader(b.Bytes()), false)
+	in := wait(t, sb)
+	if in.Active != "a.pcap" || !in.Ready || in.First.Day() != 20 {
+		t.Fatalf("active %q ready %v first %v", in.Active, in.Ready, in.First)
+	}
+	count := func() (n int, days string) {
+		st, _, _ := sb.Store()
+		st.DB.QueryRow(`SELECT count(*), string_agg(DISTINCT strftime(ts, '%d'), ',') FROM hot`).Scan(&n, &days)
+		return
+	}
+	if _, d := count(); d != "20" {
+		t.Errorf("a.pcap shows days %q", d)
+	}
+	if err := sb.Select("b.pcap"); err != nil {
+		t.Fatal(err)
+	}
+	if in := sb.Info(); in.Active != "b.pcap" || in.First.Day() != 21 {
+		t.Errorf("after switch: %q %v", in.Active, in.First)
+	}
+	if _, d := count(); d != "21" {
+		t.Errorf("b.pcap shows days %q", d)
+	}
+	// deleting the active file shows the other one; its data stays
+	if err := sb.Delete("b.pcap"); err != nil {
+		t.Fatal(err)
+	}
+	if in := sb.Info(); in.Active != "a.pcap" || !in.Ready {
+		t.Errorf("after delete: %q ready %v", in.Active, in.Ready)
+	}
+	if n, d := count(); n == 0 || d != "20" {
+		t.Errorf("a.pcap after delete: %d rows, days %q", n, d)
+	}
+	// a restart keeps the file and its database
+	sb.Close()
+	sb = New(dir, enrich.NewInventory(), enrich.NewASNDB(), enrich.NewThreats())
+	defer sb.Close()
+	if in := wait(t, sb); in.Active != "a.pcap" || !in.Ready {
+		t.Errorf("after restart: %q ready %v", in.Active, in.Ready)
+	}
+	// a file added to a sandbox that has none open yet imports too
+	sb.Delete("")
+	sb.Add("b.pcap", bytes.NewReader(b.Bytes()), false)
+	if in := wait(t, sb); in.Active != "b.pcap" || !in.Ready {
+		t.Errorf("fresh: %q ready %v", in.Active, in.Ready)
+	}
+}

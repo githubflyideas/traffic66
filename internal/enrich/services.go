@@ -60,10 +60,17 @@ func known(proto uint8, port uint16) bool {
 func Role(r *flow.Record) bool {
 	switch r.Proto {
 	case 6:
-		if r.TCPFlags&0x12 == 0x02 {
+		if r.Opener != 0 {
+			return r.Opener > 0 // the first packet of the connection was seen
+		}
+		// The flags of a record are those of all its packets together: a
+		// client's SYN followed by ACKs reads as SYN+ACK just like the
+		// server's answer. They tell the roles only for a single packet
+		// (an sFlow sample, a lone SYN of a scan).
+		if r.Packets == 1 && r.TCPFlags&0x12 == 0x02 {
 			return true // SYN without ACK: source opened the connection
 		}
-		if r.TCPFlags&0x12 == 0x12 {
+		if r.Packets == 1 && r.TCPFlags&0x12 == 0x12 {
 			return false // SYN+ACK: source is answering
 		}
 	case 17, 132:

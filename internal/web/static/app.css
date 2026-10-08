@@ -365,3 +365,4 @@ label.btn.disabled{opacity:.5;cursor:not-allowed!important}
 .iflist .ifrow.peer>button:first-child{font-size:12px;color:var(--ink-3)}
 .iflist .ifrow.peer>button:first-child .muted{font-size:10.5px!important}
 .iflist .ifrow.peer>button:first-child .st{font-size:11px;opacity:.75}
+#sbbar select{border:1px solid var(--line-2);border-radius:7px;padding:4px 8px;background:var(--surface);color:var(--ink);font-weight:600;max-width:260px}

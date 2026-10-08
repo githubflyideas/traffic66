@@ -324,8 +324,10 @@ sampling.
 **Offline pcap analysis** shows packet captures (pcap, pcapng) with the same
 pages, apart from the live data: `traffic66 a.pcap b.pcapng` starts on
 127.0.0.1 and opens the browser (up to 3 files, 3 GB; Ctrl+C deletes the
-imported data), or upload up to 3 files of 50 MB on that page. It works on
-flows, not packet contents.
+imported data), or upload up to 3 files of 50 MB on that page. One file is
+analysed at a time, each in a database of its own: **Analyse** on a file's
+row shows it on every page, and the bar at the top switches to another. It
+works on flows, not packet contents.
 
 ![Offline analysis: capture files with their packets, flows and time](docs/images/sandbox.png)
 
@@ -340,9 +342,17 @@ in a browser, q quit; `-lang` picks the language.
 
 **Local capture** builds flows from a local interface, best a port
 connected to a switch's mirror port: `traffic66 interfaces` lists them,
-`-capture eth1` (or a Windows name or number) captures. Linux needs root or
-`setcap cap_net_raw,cap_net_admin+ep`, macOS root, Windows
-[Npcap](https://npcap.com). Captured flows come from the device `127.0.0.1`.
+`-capture eth1` captures. On Windows:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux needs root or `setcap cap_net_raw,cap_net_admin+ep`, macOS root,
+Windows [Npcap](https://npcap.com). Captured flows come from the device
+`127.0.0.1`. Local capture has no device interfaces or counters, so
+**Interface check** has nothing to compare for it.
 
 ## 10. Options and data
 

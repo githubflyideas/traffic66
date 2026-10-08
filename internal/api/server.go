@@ -112,6 +112,7 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/sandbox", s.getSandbox)
 	api("POST /api/sandbox/files", s.putSandboxFile)
 	api("DELETE /api/sandbox/files", s.deleteSandbox)
+	api("POST /api/sandbox/active", s.putSandboxActive)
 	api("POST /api/logo", s.putLogo)
 	api("DELETE /api/logo", s.deleteLogo)
 	api("GET /api/geo", s.getGeo)

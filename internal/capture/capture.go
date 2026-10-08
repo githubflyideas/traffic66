@@ -38,6 +38,7 @@ type entry struct {
 	first, last time.Time
 	pkts, bytes uint64
 	flags       uint8
+	opener      int8 // kept across active-timeout exports
 }
 
 // Capture is one running interface capture.
@@ -111,7 +112,7 @@ func (c *Capture) readLoop(ctx context.Context) {
 					c.Dropped.Add(1)
 					return
 				}
-				e = &entry{first: now}
+				e = &entry{first: now, opener: opener(r.TCPFlags)}
 				c.table[k] = e
 			}
 			e.last = now
@@ -145,6 +146,15 @@ func (c *Capture) expireLoop(ctx context.Context) {
 func (c *Capture) flush(now time.Time, all bool) {
 	var out []flow.Record
 	c.mu.Lock()
+	// first learn who opened each connection from either direction, before
+	// any entry is removed below
+	for k, e := range c.table {
+		if e.opener == 0 && e.pkts > 0 {
+			if re := c.table[key{k.dst, k.src, k.dport, k.sport, k.proto, k.vlan, k.encap}]; re != nil {
+				e.opener = -re.opener
+			}
+		}
+	}
 	for k, e := range c.table {
 		idle := now.Sub(e.last) >= idleTimeout
 		active := now.Sub(e.first) >= activeTimeout
@@ -157,15 +167,29 @@ func (c *Capture) flush(now time.Time, all bool) {
 			}
 			continue
 		}
+		op := e.opener
 		out = append(out, flow.Record{Start: e.first, End: e.last, Src: k.src, Dst: k.dst, SrcPort: k.sport, DstPort: k.dport,
-			Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: true,
+			Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: true, Opener: op,
 			Sampling: 1, Mult: 1, SamplingKnown: true, Exporter: Exporter, Domain: c.domain, Source: flow.SrcCapture, Direction: 255})
 		if idle || all {
 			delete(c.table, k)
 		} else {
-			*e = entry{first: now, last: now}
+			*e = entry{first: now, last: now, opener: op}
 		}
 	}
 	c.mu.Unlock()
 	c.sink.Submit(out)
+}
+
+// opener reads the first packet of a TCP connection seen in one direction:
+// a SYN alone opens it (1), a SYN+ACK answers (-1); anything else says
+// nothing (0).
+func opener(flags uint8) int8 {
+	switch flags & 0x12 {
+	case 0x02:
+		return 1
+	case 0x12:
+		return -1
+	}
+	return 0
 }

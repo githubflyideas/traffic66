@@ -58,7 +58,9 @@ type File struct {
 	Path     string    `json:"path,omitempty"` // a file opened in place (never deleted); else it is in Dir/files
 }
 
-// Sandbox holds the uploaded files and their database.
+// Sandbox holds the uploaded files. Each file has a database of its own, so
+// one capture's flows and findings never mix with another's; the pages show
+// one file at a time, the active one.
 type Sandbox struct {
 	Dir string
 	Inv *enrich.Inventory // the live inventory: names of networks and hosts
@@ -72,14 +74,15 @@ type Sandbox struct {
 	work   sync.Mutex
 	closed bool
 
-	mu    sync.Mutex
-	files []*File
-	st    *store.Store
-	det   *detect.Detector
-	inv   *enrich.Inventory // live inventory plus a device per file
-	busy  bool
-	gen   int // bumped by every rebuild; stale imports stop
-	wake  chan struct{}
+	mu     sync.Mutex
+	files  []*File
+	active string            // the file the pages show
+	st     *store.Store      // the active file's database, nil when not open
+	det    *detect.Detector  // its detection rules
+	inv    *enrich.Inventory // live inventory plus a device per file
+	busy   bool
+	gen    int // bumped by every rebuild; stale imports stop
+	wake   chan struct{}
 }
 
 // ErrLimit is returned when a file would exceed the limits.
@@ -100,13 +103,6 @@ func NewWith(dir string, inv *enrich.Inventory, asn *enrich.ASNDB, thr *enrich.T
 	sb.load()
 	go sb.worker()
 	if len(sb.files) > 0 {
-		sb.mu.Lock()
-		if sb.st == nil { // database missing: rebuild from the files
-			for _, f := range sb.files {
-				f.Status = "waiting"
-			}
-		}
-		sb.mu.Unlock()
 		sb.kick()
 	}
 	return sb
@@ -121,9 +117,23 @@ func (sb *Sandbox) filePath(f *File) string {
 	}
 	return filepath.Join(sb.pcapDir(), f.Name)
 }
-func (sb *Sandbox) dbDir() string { return filepath.Join(sb.Dir, "db") }
-func (sb *Sandbox) indexPath() string {
-	return filepath.Join(sb.Dir, "files.json")
+func (sb *Sandbox) dbRoot() string       { return filepath.Join(sb.Dir, "db") }
+func (sb *Sandbox) dbDir(f *File) string { return filepath.Join(sb.dbRoot(), f.Exporter) }
+func (sb *Sandbox) indexPath() string    { return filepath.Join(sb.Dir, "files.json") }
+func (sb *Sandbox) activePath() string   { return filepath.Join(sb.Dir, "active") }
+func (sb *Sandbox) hasDB(f *File) bool {
+	_, err := os.Stat(filepath.Join(sb.dbDir(f), "traffic66.duckdb"))
+	return err == nil
+}
+
+// file returns the file of that name; sb.mu held.
+func (sb *Sandbox) file(name string) *File {
+	for _, f := range sb.files {
+		if f.Name == name {
+			return f
+		}
+	}
+	return nil
 }
 
 func (sb *Sandbox) load() {
@@ -140,16 +150,49 @@ func (sb *Sandbox) load() {
 			sb.files = append(sb.files, f)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(sb.dbDir(), "traffic66.duckdb")); err == nil {
-		if err := sb.open(); err != nil {
-			log.Printf("sandbox: %v", err)
-		}
+	// before 1.5.2 all files shared one database: import them again
+	if _, err := os.Stat(filepath.Join(sb.dbRoot(), "traffic66.duckdb")); err == nil {
+		os.RemoveAll(sb.dbRoot())
 	}
 	for _, f := range sb.files {
-		if f.Status != "done" && f.Status != "error" {
+		if f.Status != "error" && (f.Status != "done" || !sb.hasDB(f)) {
 			f.Status = "waiting"
 		}
 	}
+	if b, err := os.ReadFile(sb.activePath()); err == nil {
+		sb.active = strings.TrimSpace(string(b))
+	}
+	sb.pickActive()
+	if f := sb.file(sb.active); f != nil && f.Status == "done" {
+		if err := sb.openActive(); err != nil {
+			log.Printf("sandbox: %v", err)
+		}
+	}
+}
+
+// pickActive keeps the active file if it is still there, else takes the
+// first imported one; sb.mu held.
+func (sb *Sandbox) pickActive() {
+	if f := sb.file(sb.active); f != nil && f.Status != "error" {
+		return
+	}
+	sb.active = ""
+	for _, f := range sb.files {
+		if f.Status == "done" {
+			sb.active = f.Name
+			break
+		}
+	}
+	sb.saveActive()
+}
+
+func (sb *Sandbox) saveActive() {
+	if sb.active == "" {
+		os.Remove(sb.activePath())
+		return
+	}
+	os.MkdirAll(sb.Dir, 0o755)
+	os.WriteFile(sb.activePath(), []byte(sb.active), 0o644)
 }
 
 func (sb *Sandbox) save() {
@@ -161,13 +204,22 @@ func (sb *Sandbox) save() {
 	}
 }
 
-// open opens (or creates) the database; sb.mu held or not yet shared.
-func (sb *Sandbox) open() error {
+// openDB opens (or creates) one file's database.
+func (sb *Sandbox) openDB(f *File) (*store.Store, error) {
 	threads := 2 // beside live collection
 	if sb.Mem > 0.1 {
 		threads = 0 // on its own: all but one core
 	}
-	st, err := store.Open(store.Options{Dir: sb.dbDir(), MemoryFraction: sb.Mem, Threads: threads})
+	return store.Open(store.Options{Dir: sb.dbDir(f), MemoryFraction: sb.Mem, Threads: threads})
+}
+
+// openActive opens the active file's database for the pages; sb.mu held.
+func (sb *Sandbox) openActive() error {
+	f := sb.file(sb.active)
+	if f == nil {
+		return errors.New("no capture file chosen")
+	}
+	st, err := sb.openDB(f)
 	if err != nil {
 		return err
 	}
@@ -175,6 +227,34 @@ func (sb *Sandbox) open() error {
 	sb.refreshInventory()
 	sb.det = detect.New(st, sb.inv, detect.Config{})
 	return nil
+}
+
+// closeActive closes the pages' database; sb.mu held.
+func (sb *Sandbox) closeActive() {
+	if sb.st != nil {
+		sb.st.Close()
+	}
+	sb.st, sb.det = nil, nil
+}
+
+// Select makes the file of that name the one the pages show.
+func (sb *Sandbox) Select(name string) error {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	f := sb.file(name)
+	if f == nil {
+		return errors.New("no such file")
+	}
+	if f.Status != "done" {
+		return errors.New("the file is not imported yet")
+	}
+	if sb.active == name && sb.st != nil {
+		return nil
+	}
+	sb.closeActive()
+	sb.active = name
+	sb.saveActive()
+	return sb.openActive()
 }
 
 // refreshInventory names each file's exporter after the file.
@@ -197,7 +277,7 @@ func (sb *Sandbox) refreshInventory() {
 	}
 }
 
-// Store returns the sandbox database, or nil when there is none.
+// Store returns the active file's database, or nil when there is none.
 func (sb *Sandbox) Store() (*store.Store, *detect.Detector, *enrich.Inventory) {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
@@ -206,10 +286,11 @@ func (sb *Sandbox) Store() (*store.Store, *detect.Detector, *enrich.Inventory) {
 
 // Info describes the sandbox for the UI.
 type Info struct {
-	Files []File    `json:"files"`
-	Busy  bool      `json:"busy"`
-	First time.Time `json:"first"`
-	Last  time.Time `json:"last"`
+	Files  []File    `json:"files"`
+	Busy   bool      `json:"busy"`
+	Active string    `json:"active"` // the file the pages show
+	First  time.Time `json:"first"`  // its time span
+	Last   time.Time `json:"last"`
 	Limits
 	Ready bool `json:"ready"` // has data to look at
 }
@@ -217,19 +298,13 @@ type Info struct {
 func (sb *Sandbox) Info() Info {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
-	in := Info{Files: []File{}, Busy: sb.busy, Limits: sb.Lim}
+	in := Info{Files: []File{}, Busy: sb.busy, Limits: sb.Lim, Active: sb.active}
 	for _, f := range sb.files {
 		in.Files = append(in.Files, *f)
-		if f.Flows == 0 {
-			continue
+		if f.Name == sb.active && f.Flows > 0 {
+			in.First, in.Last = f.First, f.Last
+			in.Ready = sb.st != nil
 		}
-		if in.First.IsZero() || f.First.Before(in.First) {
-			in.First = f.First
-		}
-		if f.Last.After(in.Last) {
-			in.Last = f.Last
-		}
-		in.Ready = sb.st != nil
 	}
 	return in
 }
@@ -408,15 +483,11 @@ func slicesDelete(fs []*File, f *File) []*File {
 	return out
 }
 
-// Delete removes one file (name) or everything (name ""). The database is
-// rebuilt from the remaining files.
+// Delete removes one file (name) or everything (name ""), with its
+// database. The other files keep theirs.
 func (sb *Sandbox) Delete(name string) error {
 	sb.mu.Lock()
-	found := name == ""
-	for _, f := range sb.files {
-		found = found || f.Name == name
-	}
-	if !found {
+	if name != "" && sb.file(name) == nil {
 		sb.mu.Unlock()
 		return errors.New("no such file")
 	}
@@ -433,31 +504,32 @@ func (sb *Sandbox) Delete(name string) error {
 				keep = append(keep, f)
 				continue
 			}
+			if f.Name == sb.active {
+				sb.closeActive()
+			}
 			if f.Path == "" {
 				os.Remove(filepath.Join(sb.pcapDir(), f.Name))
 			}
+			os.RemoveAll(sb.dbDir(f))
 			continue
+		}
+		if f.Status == "importing" { // stopped by the delete: start it again
+			f.Status = "waiting"
 		}
 		keep = append(keep, f)
 	}
 	sb.files = keep
-	st := sb.st
-	sb.st, sb.det = nil, nil
-	for _, f := range sb.files {
-		if f.Status != "uploading" {
-			f.Status, f.Error, f.Packets, f.Skipped, f.Flows, f.First, f.Last = "waiting", "", 0, 0, 0, time.Time{}, time.Time{}
+	sb.pickActive()
+	if sb.st == nil && sb.active != "" {
+		if err := sb.openActive(); err != nil {
+			log.Printf("sandbox: %v", err)
 		}
 	}
 	sb.save()
 	sb.refreshInventory()
+	empty := len(keep) == 0
 	sb.mu.Unlock()
-	if st != nil {
-		st.Close()
-	}
-	if err := os.RemoveAll(sb.dbDir()); err != nil {
-		return err
-	}
-	if len(keep) == 0 {
+	if empty {
 		os.RemoveAll(sb.Dir)
 	}
 	sb.kick()
@@ -504,17 +576,25 @@ func (sb *Sandbox) importNext() bool {
 		sb.mu.Unlock()
 		return false
 	}
-	if sb.st == nil {
-		if err := sb.open(); err != nil {
-			f.Status, f.Error = "error", err.Error()
-			sb.save()
-			sb.mu.Unlock()
-			return true
-		}
+	// a fresh database of its own
+	if f.Name == sb.active {
+		sb.closeActive()
+	}
+	os.RemoveAll(sb.dbDir(f))
+	st, err := sb.openDB(f)
+	if err != nil {
+		f.Status, f.Error = "error", err.Error()
+		sb.save()
+		sb.mu.Unlock()
+		return true
 	}
 	f.Status = "importing"
 	sb.busy = true
-	gen, st, det, inv := sb.gen, sb.st, sb.det, sb.inv
+	if sb.inv == nil {
+		sb.refreshInventory()
+	}
+	gen, inv := sb.gen, sb.inv
+	det := detect.New(st, inv, detect.Config{})
 	sb.mu.Unlock()
 
 	res, err := sb.importFile(gen, f, st, inv)
@@ -531,10 +611,11 @@ func (sb *Sandbox) importNext() bool {
 			}
 		}
 	}
+	st.Close()
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
 	sb.busy = false
-	if gen != sb.gen { // deleted meanwhile
+	if gen != sb.gen { // deleted or stopped meanwhile
 		return true
 	}
 	f.Packets, f.Skipped, f.Flows, f.First, f.Last = res.packets, res.skipped, res.flows, res.first, res.last
@@ -545,6 +626,15 @@ func (sb *Sandbox) importNext() bool {
 		f.Status, f.Error = "error", "no IP packets found"
 	default:
 		f.Status = "done"
+	}
+	if f.Status == "done" && (sb.active == "" || sb.active == f.Name) {
+		sb.active = f.Name
+		sb.saveActive()
+		if sb.st == nil {
+			if err := sb.openActive(); err != nil {
+				log.Printf("sandbox: %v", err)
+			}
+		}
 	}
 	sb.save()
 	log.Printf("sandbox: %s: %d packets, %d flows, %s – %s (%v)", f.Name, res.packets, res.flows,
@@ -628,10 +718,6 @@ func (sb *Sandbox) Close() {
 	sb.work.Lock() // wait for a running import to stop
 	defer sb.work.Unlock()
 	sb.mu.Lock()
-	st := sb.st
-	sb.st = nil
+	sb.closeActive()
 	sb.mu.Unlock()
-	if st != nil {
-		st.Close()
-	}
 }

@@ -3,6 +3,32 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.5.2
+
+Fixes
+- Client and server were swapped for half of many TCP connections: exported
+  records (NetFlow, IPFIX, local capture, pcap files) carry the flags of all
+  their packets together, so a client's SYN followed by ACKs looked like a
+  server's SYN+ACK and its upload was counted the wrong way round. The flags
+  now decide only for single packets (sFlow samples, lone SYNs); local
+  capture and pcap files use the first packet of each connection; other
+  records go by the ports. Data stored before stays as it is; pcap files are
+  right once imported again.
+
+Offline pcap analysis
+- One file at a time, each in a database of its own: **Analyse** on a
+  file's row shows that file on every page; the bar at the top switches to
+  another. Deleting a file no longer re-imports the others.
+
+Interfaces
+- Interface check explains that local capture has nothing to compare (no
+  device interfaces or counters), and the interface picker is hidden when
+  there are no interfaces.
+
+Docs
+- README: the Windows commands for local capture (`traffic66.exe interfaces`,
+  `traffic66.exe -capture Wi-Fi`).
+
 ## 1.5.1
 
 - The web UI's scripts and styles are no longer kept by the browser across

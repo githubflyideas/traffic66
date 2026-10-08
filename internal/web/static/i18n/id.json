@@ -378,7 +378,7 @@
 "nav.sandbox": "Analisis pcap offline",
 "sb.title": "File tangkapan",
 "sb.sub": "Analisis file pcap terpisah dari data langsung",
-"sb.explain": "Unggah tangkapan paket dari Wireshark atau tcpdump. File masuk ke basis data terpisah: data langsung, angkanya, dan temuannya tidak tersentuh. Analisis menampilkan file di semua halaman (ringkasan, Top 66, temuan, jalur, peta, catatan flow); Hapus menghapus file dan datanya.",
+"sb.explain": "Unggah file tangkapan dari Wireshark atau tcpdump. Masing-masing masuk ke basis data sendiri: data langsung, angka dan temuannya tidak tersentuh. Analisis menampilkan satu file itu di semua halaman (ringkasan, Top 66, temuan, jalur aliran, peta, catatan aliran); ganti file di bilah atas. Hapus menghapus file beserta datanya.",
 "sb.col_file": "File",
 "sb.col_size": "Ukuran",
 "sb.col_packets": "Paket",
@@ -514,5 +514,6 @@
 "if.peer_note": "Antarmuka lawan: tidak disampel, hanya trafik lewat antarmuka yang disampel di perangkat ini",
 "src.sampled_if": "Disampel di: {v}",
 "src.dir_yes": "dengan flowDirection (61)",
-"src.dir_no": "tanpa flowDirection (61): antarmuka yang disampel ditebak dari trafik"
+"src.dir_no": "tanpa flowDirection (61): antarmuka yang disampel ditebak dari trafik",
+"if.capture_only": "Pencocokan antarmuka membandingkan aliran dengan penghitung antarmuka perangkat sFlow, NetFlow, dan IPFIX. Tangkapan lokal di kartu jaringan mesin ini tidak punya antarmuka atau penghitung perangkat, jadi tidak ada yang dibandingkan di sini."
 }
