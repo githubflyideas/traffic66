@@ -50,12 +50,12 @@ Descargue el archivo para su sistema desde la
 (Windows x64, Linux x86-64/ARM64 con kernel 3.2+, macOS 11+), descomprímalo y ejecute:
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
 En macOS ejecute antes `xattr -dr com.apple.quarantine <folder>`. Abra
-http://127.0.0.1:8066 como `admin` / `try66`: un día de historial y tráfico
+http://127.0.0.1:8066 como `admin` / `traffic66`: un día de historial y tráfico
 en vivo de cuatro equipos simulados, incluido un ataque mostrado paso a paso
 en **Hallazgos**. Ctrl+C la detiene; borre `traffic66-demo` para empezar de
 cero. Para ejecutarla junto a una instalación real: `-addr :8067 -listen ""`.
@@ -113,8 +113,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-También funciona hacer doble clic en `traffic66.exe`: abre la interfaz web
-y muestra la primera contraseña en su ventana.
+También funciona hacer doble clic en `traffic66.exe`: abre la interfaz web.
 
 **macOS**: descomprima en `/usr/local/traffic66`, quite la marca de
 cuarentena, ejecute `traffic66 passwd -data "/Library/Application Support/traffic66"`
@@ -125,12 +124,16 @@ programa, `-data` y ese directorio, con `RunAtLoad` y `KeepAlive`.
 
 ## 3. Usuarios y contraseñas
 
-En el primer arranque traffic66 crea el usuario `admin` con una contraseña
-aleatoria y la muestra una sola vez (en la ventana, en el terminal o con
-`journalctl -u traffic66 | grep "first start"`). Los usuarios se guardan como
-hashes con sal en `password` dentro del directorio de datos y se gestionan
-con un solo comando en la máquina de traffic66 (añada `-data …` si traffic66
-se ejecuta con esa opción):
+Una instalación nueva se entra como `admin` / `traffic66`, y el primer
+inicio de sesión pide una contraseña nueva antes de mostrar nada más (la
+demo mantiene `traffic66`). Después, **Cuenta**, al pie del menú, cambia su
+contraseña; el administrador (`admin`) también añade y elimina usuarios y
+restablece sus contraseñas allí. El inicio de sesión con LDAP / Active
+Directory está en desarrollo.
+
+Los usuarios se guardan como hashes con sal en `password` dentro del
+directorio de datos. Lo mismo puede hacerse en la máquina de traffic66 con un
+solo comando (añada `-data …` si traffic66 se ejecuta con esa opción):
 
 | Para | Comando |
 |---|---|
@@ -139,8 +142,8 @@ se ejecuta con esa opción):
 | Eliminar el usuario `alice` | `traffic66 passwd -user alice -delete` |
 | Listar los usuarios | `traffic66 passwd -list` |
 
-Los cambios se aplican al instante. Todos los usuarios tienen los mismos
-permisos. Para scripts y contenedores, `TRAFFIC66_PASSWORD=…` (o `-password`)
+Los cambios se aplican al instante. Salvo la gestión de usuarios, todos los
+usuarios tienen los mismos permisos. Para scripts y contenedores, `TRAFFIC66_PASSWORD=…` (o `-password`)
 acepta en esa ejecución solo `-user` con esa contraseña. Cinco contraseñas
 erróneas en un minuto bloquean la dirección durante un minuto.
 

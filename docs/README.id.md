@@ -49,12 +49,12 @@ Unduh arsip untuk sistem Anda dari
 (Windows x64, Linux x86-64/ARM64 dengan kernel 3.2+, macOS 11+), ekstrak, lalu jalankan:
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
 Di macOS, jalankan dulu `xattr -dr com.apple.quarantine <folder>`. Buka
-http://127.0.0.1:8066 sebagai `admin` / `try66`: riwayat satu hari dan
+http://127.0.0.1:8066 sebagai `admin` / `traffic66`: riwayat satu hari dan
 trafik live dari empat perangkat simulasi, termasuk sebuah serangan yang
 ditampilkan langkah demi langkah di **Temuan**. Ctrl+C menghentikannya; hapus
 `traffic66-demo` untuk memulai dari awal. Untuk menjalankannya berdampingan
@@ -113,8 +113,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-Klik dua kali `traffic66.exe` juga bisa: itu membuka antarmuka web dan
-menampilkan kata sandi pertama di jendelanya.
+Klik dua kali `traffic66.exe` juga bisa: itu membuka antarmuka web.
 
 **macOS**: ekstrak ke `/usr/local/traffic66`, hapus tanda karantina,
 jalankan `traffic66 passwd -data "/Library/Application Support/traffic66"`,
@@ -125,12 +124,16 @@ lalu jalankan dari LaunchDaemon yang `ProgramArguments`-nya adalah program,
 
 ## 3. User dan kata sandi
 
-Pada start pertama, traffic66 membuat user `admin` dengan kata sandi acak
-dan menampilkannya sekali (di jendela, di terminal, atau
-`journalctl -u traffic66 | grep "first start"`). User disimpan sebagai
-salted hash di `password` di direktori data dan dikelola dengan satu
-perintah di mesin traffic66 (tambahkan `-data …` jika traffic66 berjalan
-dengannya):
+Instalasi baru masuk sebagai `admin` / `traffic66`, dan login pertama
+meminta kata sandi baru sebelum menampilkan apa pun (demo tetap memakai
+`traffic66`). Setelah itu, **Akun** di bagian bawah menu mengganti kata
+sandi Anda; administrator (`admin`) juga menambah dan menghapus user serta
+me-reset kata sandi mereka di sana. Login dengan LDAP / Active Directory
+sedang dikembangkan.
+
+User disimpan sebagai salted hash di `password` di direktori data. Hal yang
+sama bisa dilakukan di mesin traffic66 dengan satu perintah (tambahkan
+`-data …` jika traffic66 berjalan dengannya):
 
 | Untuk | Perintah |
 |---|---|
@@ -139,8 +142,8 @@ dengannya):
 | Menghapus `alice` | `traffic66 passwd -user alice -delete` |
 | Menampilkan daftar user | `traffic66 passwd -list` |
 
-Perubahan langsung berlaku. Semua user punya hak yang sama. Untuk skrip dan
-container, `TRAFFIC66_PASSWORD=…` (atau `-password`) hanya menerima `-user`
+Perubahan langsung berlaku. Selain pengelolaan user, semua user punya hak
+yang sama. Untuk skrip dan container, `TRAFFIC66_PASSWORD=…` (atau `-password`) hanya menerima `-user`
 dengan kata sandi itu untuk run tersebut. Lima kali salah kata sandi dalam
 satu menit memblokir alamat itu selama satu menit.
 

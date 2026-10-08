@@ -94,8 +94,8 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
 #theme i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:inset 0 0 0 2px var(--surface),0 0 0 1px var(--line-2)}
 .foot select{width:100%;min-width:0;color:var(--ink);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px;background:var(--surface);font-size:13px}
 .linkbtn{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:12.5px;padding:2px;white-space:nowrap}
-#logout{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;padding:6px 4px;border-radius:6px}
-#logout .ni{width:16px;height:16px}
+#logout,#acct{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;padding:6px 4px;border-radius:6px}
+#logout .ni,#acct .ni{width:16px;height:16px}
 .linkbtn:hover{color:var(--accent-ink)}
 
 .main{min-width:0}
@@ -366,3 +366,14 @@ label.btn.disabled{opacity:.5;cursor:not-allowed!important}
 .iflist .ifrow.peer>button:first-child .muted{font-size:10.5px!important}
 .iflist .ifrow.peer>button:first-child .st{font-size:11px;opacity:.75}
 #sbbar select{border:1px solid var(--line-2);border-radius:7px;padding:4px 8px;background:var(--surface);color:var(--ink);font-weight:600;max-width:260px}
+.login .hint{margin:0;padding:8px 10px;border-radius:8px;background:var(--accent-soft);color:var(--ink);font-size:13.5px}
+.acctform{display:grid;gap:10px;max-width:420px}
+.acctform label{display:grid;gap:4px;font-size:13px;color:var(--ink-3)}
+.acctform input,.acctinline input{border:1px solid var(--line-2);border-radius:7px;padding:7px 9px;background:var(--surface);color:var(--ink);font-size:14px}
+.acctform.ldap{opacity:.55}
+.acctmust{margin:0 0 12px;padding:10px 12px;border-radius:8px;background:var(--accent-soft);color:var(--ink);font-weight:600}
+.accttable{width:100%;margin-bottom:12px}
+.accttable td{padding:8px 4px;border-bottom:1px solid var(--line)}
+.acctinline{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.acctinline input{min-width:0;flex:1 1 140px}
+body.mustchange #nav,body.mustchange #acct,body.mustchange .ifsel{display:none}

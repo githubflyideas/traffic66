@@ -382,7 +382,7 @@ func serve(args []string, demo bool) {
 		poller.Run(ctx)
 	}()
 
-	checker := loginChecker(f.data, f.user, f.password)
+	checker := loginChecker(f.data, f.user, f.password, demo)
 	tok := randomHex(24)
 	tokPath := filepath.Join(f.data, ".tui-token")
 	os.WriteFile(tokPath, []byte(tok), 0o600)
@@ -394,7 +394,7 @@ func serve(args []string, demo bool) {
 		dns = dnsres.New(dnsres.Options{Upstream: f.dnsUpstream, PerSecond: f.dnsRate, TTL: f.dnsTTL})
 	}
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Det: det, Static: web.FS(), Version: version,
-		Demo: demo, Check: checker.Check, Exists: checker.Exists, LocalTok: tok, DataDir: f.data, Started: time.Now()}
+		Demo: demo, Check: checker.Check, Exists: checker.Exists, Accounts: checker, LocalTok: tok, DataDir: f.data, Started: time.Now()}
 	srv.SNMP = poller.Status
 	licDir := f.data
 	if offline != nil {
@@ -688,8 +688,9 @@ func defaultDir(name string) string {
 
 // loginChecker decides where the password comes from: -password, then
 // TRAFFIC66_PASSWORD, then the password file in the data directory. On the
-// very first start it creates the file with a generated password.
-func loginChecker(dir, user, flagPw string) *auth.FileChecker {
+// very first start it creates the file with the default password, which
+// the web UI asks to change at the first sign-in (except in the demo).
+func loginChecker(dir, user, flagPw string, demo bool) *auth.FileChecker {
 	pw := flagPw
 	if pw == "" {
 		pw = os.Getenv("TRAFFIC66_PASSWORD")
@@ -704,12 +705,14 @@ func loginChecker(dir, user, flagPw string) *auth.FileChecker {
 		fatalf("%s: %v", file, err)
 	}
 	if len(es) == 0 {
-		pw = auth.Generate()
-		if err := auth.Set(dir, user, pw); err != nil {
+		if err := auth.Set(dir, user, auth.DefaultPassword); err != nil {
 			fatalf("saving the password: %v", err)
 		}
-		log.Printf("first start: sign in as user %q with password %q", user, pw)
-		log.Printf("this password is kept (hashed) in %s; change it with: traffic66 passwd -data %s", file, quoteArg(dir))
+		if demo {
+			log.Printf("demo: sign in as user %q with password %q", user, auth.DefaultPassword)
+		} else {
+			log.Printf("first start: sign in as user %q with password %q; a new password is asked for at the first sign-in", user, auth.DefaultPassword)
+		}
 	} else {
 		var users []string
 		for _, e := range es {

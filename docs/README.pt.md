@@ -49,12 +49,12 @@ Baixe o arquivo do seu sistema na
 (Windows x64, Linux x86-64/ARM64 com kernel 3.2+, macOS 11+), descompacte e execute:
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
 No macOS, execute antes `xattr -dr com.apple.quarantine <folder>`. Abra
-http://127.0.0.1:8066 como `admin` / `try66`: um dia de histórico e tráfego
+http://127.0.0.1:8066 como `admin` / `traffic66`: um dia de histórico e tráfego
 ao vivo de quatro equipamentos simulados, incluindo um ataque mostrado etapa
 por etapa em **Detecções**. Ctrl+C para; apague `traffic66-demo` para
 recomeçar do zero. Para rodá-la ao lado de uma instalação real:
@@ -115,7 +115,7 @@ Start-ScheduledTask -TaskName traffic66
 ```
 
 Um clique duplo em `traffic66.exe` também funciona: ele abre a interface
-web e mostra a primeira senha na janela.
+web.
 
 **macOS**: descompacte em `/usr/local/traffic66`, remova a marca de
 quarentena, execute `traffic66 passwd -data "/Library/Application Support/traffic66"`
@@ -126,12 +126,16 @@ programa, `-data` e esse diretório, com `RunAtLoad` e `KeepAlive`.
 
 ## 3. Usuários e senhas
 
-Na primeira execução, o traffic66 cria o usuário `admin` com uma senha
-aleatória e a mostra uma única vez (na janela, no terminal ou em
-`journalctl -u traffic66 | grep "first start"`). Os usuários ficam guardados
-como hashes com salt em `password`, no diretório de dados, e são gerenciados
-com um único comando na máquina do traffic66 (adicione `-data …` quando o
-traffic66 roda com ele):
+Uma instalação nova entra como `admin` / `traffic66`, e o primeiro login
+pede uma nova senha antes de mostrar qualquer outra coisa (a demo mantém
+`traffic66`). Depois, **Conta**, no pé do menu, troca a sua senha; o
+administrador (`admin`) também adiciona e remove usuários e redefine as
+senhas deles ali. O login com LDAP / Active Directory está em
+desenvolvimento.
+
+Os usuários ficam guardados como hashes com salt em `password`, no diretório
+de dados. O mesmo pode ser feito na máquina do traffic66 com um único
+comando (adicione `-data …` quando o traffic66 roda com ele):
 
 | Para | Comando |
 |---|---|
@@ -140,8 +144,8 @@ traffic66 roda com ele):
 | Remover `alice` | `traffic66 passwd -user alice -delete` |
 | Listar os usuários | `traffic66 passwd -list` |
 
-As mudanças valem na hora. Todos os usuários têm os mesmos direitos. Para
-scripts e contêineres, `TRAFFIC66_PASSWORD=…` (ou `-password`) aceita só
+As mudanças valem na hora. Fora a gestão de usuários, todos os usuários têm
+os mesmos direitos. Para scripts e contêineres, `TRAFFIC66_PASSWORD=…` (ou `-password`) aceita só
 `-user` com essa senha naquela execução. Cinco senhas erradas em um minuto
 bloqueiam o endereço por um minuto.
 

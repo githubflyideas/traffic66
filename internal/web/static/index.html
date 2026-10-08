@@ -34,6 +34,7 @@
   <div class="self" id="self"></div>
   <div class="foot">
     <div class="pick"><select id="lang" aria-label="Language"></select><button type="button" id="theme"><i></i><span></span></button></div>
+    <button class="linkbtn" id="acct"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span id="acctName" data-i="nav.account"></span></button>
     <button class="linkbtn" id="logout"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 8l-4 4 4 4M6 12h10"/></svg><span data-i="top.logout"></span></button>
   </div>
 </aside>
@@ -62,6 +63,7 @@
     <section class="view" id="v-threats"></section>
     <section class="view" id="v-records"></section>
     <section class="view" id="v-cleanup"></section>
+    <section class="view" id="v-account"></section>
     <section class="view" id="v-sandbox"></section>
     <section class="view" id="v-ifaces"></section>
     <section class="view" id="v-sources"></section>
@@ -76,6 +78,7 @@
     <h2 data-i="login.title"></h2>
     <label><span data-i="login.user"></span><input name="user" autocomplete="username" required></label>
     <label><span data-i="login.password"></span><input name="password" type="password" autocomplete="current-password" required></label>
+    <p class="hint" id="loginHint" hidden></p>
     <p class="err" id="loginErr" hidden></p>
     <button class="primary" data-i="login.go"></button>
   </form>

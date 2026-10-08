@@ -51,12 +51,12 @@ Elasticsearch، Kafka یا الگ database کے۔
 اسے unpack کریں اور چلائیں:
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
 macOS پر پہلے `xattr -dr com.apple.quarantine <folder>` چلائیں۔
-http://127.0.0.1:8066 کھولیں اور `admin` / `try66` سے سائن اِن کریں: ایک دن کی
+http://127.0.0.1:8066 کھولیں اور `admin` / `traffic66` سے سائن اِن کریں: ایک دن کی
 تاریخ اور چار simulated ڈیوائسز سے live ٹریفک، جس میں ایک حملہ بھی ہے جو
 **مشتبہ سرگرمی** پر قدم بہ قدم دکھایا جاتا ہے۔ Ctrl+C اسے روکتا ہے؛ نئے سرے سے
 شروع کرنے کے لیے `traffic66-demo` حذف کر دیں۔ اصل installation کے ساتھ ساتھ
@@ -115,8 +115,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`traffic66.exe` پر double-click بھی کام کرتا ہے: یہ web UI کھولتا ہے اور پہلا
-پاس ورڈ اپنی window میں دکھاتا ہے۔
+`traffic66.exe` پر double-click بھی کام کرتا ہے: یہ web UI کھولتا ہے۔
 
 **macOS**: `/usr/local/traffic66` میں unpack کریں، quarantine flag ہٹائیں،
 `traffic66 passwd -data "/Library/Application Support/traffic66"` چلائیں، اور
@@ -127,12 +126,15 @@ Start-ScheduledTask -TaskName traffic66
 
 ## 3. یوزرز اور پاس ورڈ
 
-پہلی بار شروع ہونے پر traffic66 ایک random پاس ورڈ کے ساتھ یوزر `admin` بناتا
-ہے اور اسے ایک بار دکھاتا ہے (window میں، terminal میں، یا
-`journalctl -u traffic66 | grep "first start"`)۔ یوزرز data directory میں
-`password` کے اندر salted hashes کی صورت میں رکھے جاتے ہیں اور traffic66 مشین
-پر ایک command سے سنبھالے جاتے ہیں (اگر traffic66 `-data …` کے ساتھ چلتا ہے تو
-وہ بھی شامل کریں):
+نئی installation میں `admin` / `traffic66` سے سائن اِن ہوتا ہے، اور پہلا سائن اِن
+کچھ اور دکھانے سے پہلے نیا پاس ورڈ مانگتا ہے (demo `traffic66` ہی رکھتا ہے)۔ اس
+کے بعد menu کے نیچے **اکاؤنٹ** میں آپ اپنا پاس ورڈ بدلتے ہیں؛ administrator
+(`admin`) وہیں یوزرز شامل اور حذف بھی کرتا ہے اور ان کے پاس ورڈ reset کرتا ہے۔
+LDAP / Active Directory سے سائن اِن زیرِ تیاری ہے۔
+
+یوزرز data directory میں `password` کے اندر salted hashes کی صورت میں رکھے جاتے
+ہیں۔ یہی کام traffic66 مشین پر ایک command سے بھی کیا جا سکتا ہے (اگر traffic66
+`-data …` کے ساتھ چلتا ہے تو وہ بھی شامل کریں):
 
 | کام | Command |
 |---|---|
@@ -141,8 +143,8 @@ Start-ScheduledTask -TaskName traffic66
 | `alice` کو حذف کرنا | `traffic66 passwd -user alice -delete` |
 | یوزرز کی فہرست | `traffic66 passwd -list` |
 
-تبدیلیاں فوراً لاگو ہوتی ہیں۔ تمام یوزرز کے اختیارات یکساں ہیں۔ scripts اور
-containers کے لیے `TRAFFIC66_PASSWORD=…` (یا `-password`) اس run میں صرف اسی
+تبدیلیاں فوراً لاگو ہوتی ہیں۔ یوزرز کے انتظام کے علاوہ تمام یوزرز کے اختیارات
+یکساں ہیں۔ scripts اور containers کے لیے `TRAFFIC66_PASSWORD=…` (یا `-password`) اس run میں صرف اسی
 پاس ورڈ کے ساتھ `-user` کو قبول کرتا ہے۔ ایک منٹ میں پانچ غلط پاس ورڈ اس address
 کو ایک منٹ کے لیے block کر دیتے ہیں۔
 

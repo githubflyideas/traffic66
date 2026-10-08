@@ -49,12 +49,12 @@ Elasticsearch, Kafka বা আলাদা database ছাড়াই।
 unpack করে চালান:
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
 macOS-এ আগে `xattr -dr com.apple.quarantine <folder>` চালান।
-http://127.0.0.1:8066 খুলে `admin` / `try66` দিয়ে সাইন ইন করুন: এক দিনের
+http://127.0.0.1:8066 খুলে `admin` / `traffic66` দিয়ে সাইন ইন করুন: এক দিনের
 ইতিহাস আর চারটি simulated ডিভাইস থেকে live ট্রাফিক, সাথে একটি আক্রমণ যা
 **সন্দেহজনক কার্যকলাপ**-এ ধাপে ধাপে দেখানো হয়। Ctrl+C দিয়ে বন্ধ করুন; নতুন
 করে শুরু করতে `traffic66-demo` মুছে দিন। আসল installation-এর পাশাপাশি চালাতে:
@@ -113,8 +113,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`traffic66.exe`-এ double-click করলেও চলে: এটি web UI খোলে এবং প্রথম
-পাসওয়ার্ড তার window-তে দেখায়।
+`traffic66.exe`-এ double-click করলেও চলে: এটি web UI খোলে।
 
 **macOS**: `/usr/local/traffic66`-এ unpack করুন, quarantine flag সরান,
 `traffic66 passwd -data "/Library/Application Support/traffic66"` চালান, এবং
@@ -125,11 +124,15 @@ Start-ScheduledTask -TaskName traffic66
 
 ## 3. ইউজার ও পাসওয়ার্ড
 
-প্রথমবার চালু হলে traffic66 একটি random পাসওয়ার্ডসহ ইউজার `admin` তৈরি করে
-এবং সেটি একবার দেখায় (window-তে, terminal-এ, অথবা
-`journalctl -u traffic66 | grep "first start"`)। ইউজাররা data directory-র
-`password`-এ salted hash হিসেবে থাকে এবং traffic66 মেশিনে একটি command দিয়ে
-পরিচালিত হয় (traffic66 `-data …` দিয়ে চললে সেটিও যোগ করুন):
+নতুন installation-এ `admin` / `traffic66` দিয়ে সাইন ইন হয়, এবং প্রথম সাইন ইন
+অন্য কিছু দেখানোর আগে নতুন পাসওয়ার্ড চায় (demo `traffic66`-ই রাখে)। এরপর
+menu-র নিচে **অ্যাকাউন্ট**-এ আপনার পাসওয়ার্ড বদলান; administrator (`admin`)
+সেখানেই ইউজার যোগ ও মুছতে এবং তাদের পাসওয়ার্ড reset করতে পারেন। LDAP / Active
+Directory দিয়ে সাইন ইন উন্নয়নাধীন।
+
+ইউজাররা data directory-র `password`-এ salted hash হিসেবে থাকে। একই কাজ
+traffic66 মেশিনে একটি command দিয়েও করা যায় (traffic66 `-data …` দিয়ে চললে
+সেটিও যোগ করুন):
 
 | কাজ | Command |
 |---|---|
@@ -138,8 +141,8 @@ Start-ScheduledTask -TaskName traffic66
 | `alice` মুছে ফেলা | `traffic66 passwd -user alice -delete` |
 | ইউজারদের তালিকা দেখা | `traffic66 passwd -list` |
 
-পরিবর্তন সঙ্গে সঙ্গে কার্যকর হয়। সব ইউজারের অধিকার একই। script ও
-container-এর জন্য `TRAFFIC66_PASSWORD=…` (বা `-password`) ওই run-এ শুধু ওই
+পরিবর্তন সঙ্গে সঙ্গে কার্যকর হয়। ইউজার পরিচালনা ছাড়া সব ইউজারের অধিকার
+একই। script ও container-এর জন্য `TRAFFIC66_PASSWORD=…` (বা `-password`) ওই run-এ শুধু ওই
 পাসওয়ার্ডসহ `-user`-কে গ্রহণ করে। এক মিনিটের মধ্যে পাঁচবার ভুল পাসওয়ার্ড দিলে
 সেই address এক মিনিটের জন্য block হয়।
 

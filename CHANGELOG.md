@@ -3,6 +3,20 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.6.0
+
+Sign-in and users
+- A new installation and the demo sign in as admin / traffic66; the
+  sign-in page shows it while it is still in use. A new installation asks
+  for a new password at the first sign-in, before anything else.
+  Installations that already have a password file keep it.
+- **Account** at the foot of the menu: change your password. The
+  administrator (admin) also adds and deletes users and resets passwords;
+  the password file is the same one `traffic66 passwd` writes.
+- LDAP / Active Directory sign-in is shown as in development.
+- With -password or TRAFFIC66_PASSWORD, passwords are not changed from the
+  web UI, and the page says so.
+
 ## 1.5.2
 
 Fixes

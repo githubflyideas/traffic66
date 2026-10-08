@@ -40,11 +40,11 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 [Releases ページ](https://github.com/githubflyideas/traffic66/releases) から自分のシステム用のアーカイブ（Windows x64、カーネル 3.2 以上の Linux x86-64/ARM64、macOS 11 以上）をダウンロードし、展開して実行します：
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
-macOS では先に `xattr -dr com.apple.quarantine <folder>` を実行してください。http://127.0.0.1:8066 を開いて `admin` / `try66` でサインインすると、1 日分の履歴と、シミュレートした 4 台の機器からのライブトラフィックが表示されます。その中には攻撃が含まれ、**検知** で段階ごとに示されます。Ctrl+C で停止し、`traffic66-demo` を削除すると最初からやり直せます。本番インストールと並べて動かすには：`-addr :8067 -listen ""`。
+macOS では先に `xattr -dr com.apple.quarantine <folder>` を実行してください。http://127.0.0.1:8066 を開いて `admin` / `traffic66` でサインインすると、1 日分の履歴と、シミュレートした 4 台の機器からのライブトラフィックが表示されます。その中には攻撃が含まれ、**検知** で段階ごとに示されます。Ctrl+C で停止し、`traffic66-demo` を削除すると最初からやり直せます。本番インストールと並べて動かすには：`-addr :8067 -listen ""`。
 
 <a id="2-install"></a>
 
@@ -96,7 +96,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`traffic66.exe` をダブルクリックしても動きます。Web UI が開き、初回のパスワードがウィンドウに表示されます。
+`traffic66.exe` をダブルクリックしても動きます。Web UI が開きます。
 
 **macOS**：`/usr/local/traffic66` に展開し、quarantine フラグを外し、`traffic66 passwd -data "/Library/Application Support/traffic66"` を実行して、LaunchDaemon から起動します。`ProgramArguments` にはプログラム、`-data`、そのディレクトリを指定し、`RunAtLoad` と `KeepAlive` を付けます。
 
@@ -104,7 +104,9 @@ Start-ScheduledTask -TaskName traffic66
 
 ## 3. ユーザーとパスワード
 
-初回起動時、traffic66 はユーザー `admin` をランダムなパスワードで作成し、一度だけ表示します（ウィンドウ、ターミナル、または `journalctl -u traffic66 | grep "first start"`）。ユーザーはソルト付きハッシュとしてデータディレクトリの `password` に保存され、traffic66 のマシン上で 1 つのコマンドで管理します（traffic66 を `-data …` 付きで動かしている場合は同じものを付けます）：
+新規インストールでは `admin` / `traffic66` でサインインします。初回のサインインでは、ほかの画面を表示する前に新しいパスワードの設定を求められます（デモは `traffic66` のままです）。以降は、メニュー下部の **アカウント** で自分のパスワードを変更できます。管理者（`admin`）はそこでユーザーの追加・削除とパスワードのリセットも行えます。LDAP / Active Directory によるサインインは開発中です。
+
+ユーザーはソルト付きハッシュとしてデータディレクトリの `password` に保存されます。同じ操作は traffic66 のマシン上で 1 つのコマンドでも行えます（traffic66 を `-data …` 付きで動かしている場合は同じものを付けます）：
 
 | 操作 | コマンド |
 |---|---|
@@ -113,7 +115,7 @@ Start-ScheduledTask -TaskName traffic66
 | `alice` を削除 | `traffic66 passwd -user alice -delete` |
 | ユーザーの一覧 | `traffic66 passwd -list` |
 
-変更はすぐに反映されます。すべてのユーザーの権限は同じです。スクリプトやコンテナでは、`TRAFFIC66_PASSWORD=…`（または `-password`）を指定すると、その実行では `-user` とそのパスワードだけを受け付けます。1 分間に 5 回パスワードを間違えると、そのアドレスは 1 分間ブロックされます。
+変更はすぐに反映されます。ユーザー管理を除き、すべてのユーザーの権限は同じです。スクリプトやコンテナでは、`TRAFFIC66_PASSWORD=…`（または `-password`）を指定すると、その実行では `-user` とそのパスワードだけを受け付けます。1 分間に 5 回パスワードを間違えると、そのアドレスは 1 分間ブロックされます。
 
 <a id="4-send-flows-from-your-devices"></a>
 

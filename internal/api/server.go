@@ -2,6 +2,7 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
@@ -16,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/githubflyideas/traffic66/internal/auth"
 	"github.com/githubflyideas/traffic66/internal/collector"
 	"github.com/githubflyideas/traffic66/internal/detect"
 	"github.com/githubflyideas/traffic66/internal/dnsres"
@@ -48,6 +50,9 @@ type Server struct {
 	Check     func(user, pw string) bool // login check; replaces Users when set
 	Exists    func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
 	LocalTok  string                     // token for the TUI on this machine
+	// Accounts is the password file: changing passwords and managing users
+	// from the web UI. Nil in tests and when it does not apply.
+	Accounts *auth.FileChecker
 	Capture   func() []CaptureInfo
 	SNMP      func() []snmp.Status
 	Started   time.Time
@@ -62,7 +67,22 @@ type Server struct {
 type session struct {
 	user string
 	exp  time.Time
+	// mustChange: signed in with the default password; only changing it
+	// is allowed until then
+	mustChange bool
 }
+
+type ctxKey struct{}
+
+// userOf returns the signed-in user of a request ("" for the TUI token).
+func userOf(r *http.Request) string {
+	u, _ := r.Context().Value(ctxKey{}).(string)
+	return u
+}
+
+// allowedBeforeChange are the calls a session that must change its
+// password may make.
+var allowedBeforeChange = map[string]bool{"/api/me": true, "/api/password": true, "/api/status": true}
 
 // CaptureInfo describes a local capture interface.
 type CaptureInfo struct {
@@ -88,8 +108,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/logout", s.logout)
 	mux.HandleFunc("GET /auto", s.autoLogin)
 	mux.HandleFunc("GET /logo", s.logo)
+	mux.HandleFunc("GET /api/loginhint", s.loginHint)
 	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
 	api("GET /api/status", s.status)
+	api("GET /api/me", s.me)
+	api("POST /api/password", s.changePassword)
+	api("GET /api/users", s.listUsers)
+	api("POST /api/users", s.putUser)
+	api("DELETE /api/users", s.deleteUser)
 	api("GET /api/overview", s.data((*Server).overview))
 	api("GET /api/topn", s.data((*Server).topn))
 	api("GET /api/sankey", s.data((*Server).sankey))
@@ -230,7 +256,7 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 				return
 			}
 			s.fails.ok(ip)
-			next(w, r)
+			next(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, u)))
 			return
 		}
 		if c, err := r.Cookie(cookieName); err == nil {
@@ -244,7 +270,11 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 				se.exp = time.Now().Add(12 * time.Hour)
 				s.sessions[c.Value] = se
 				s.mu.Unlock()
-				next(w, r)
+				if se.mustChange && !allowedBeforeChange[r.URL.Path] {
+					writeJSON(w, http.StatusForbidden, map[string]string{"error": "change_password"})
+					return
+				}
+				next(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, se.user)))
 				return
 			}
 			s.mu.Unlock()
@@ -289,10 +319,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 			delete(s.sessions, k)
 		}
 	}
-	s.sessions[tok] = session{in.User, now.Add(12 * time.Hour)}
+	// the default password of a new installation is changed before
+	// anything else (not in the demo, nor with -password)
+	must := !s.Demo && s.Accounts != nil && !s.Accounts.Fixed() && in.Password == auth.DefaultPassword
+	s.sessions[tok] = session{user: in.User, exp: now.Add(12 * time.Hour), mustChange: must}
 	s.mu.Unlock()
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})
-	writeJSON(w, http.StatusOK, map[string]string{"user": in.User})
+	writeJSON(w, http.StatusOK, map[string]any{"user": in.User, "must_change": must})
 }
 
 // autoLogin signs in with the one-time token printed for traffic66 file.pcap
@@ -306,7 +339,7 @@ func (s *Server) autoLogin(w http.ResponseWriter, r *http.Request) {
 		b := make([]byte, 24)
 		rand.Read(b)
 		tok := hex.EncodeToString(b)
-		s.sessions[tok] = session{"admin", time.Now().Add(12 * time.Hour)}
+		s.sessions[tok] = session{user: "admin", exp: time.Now().Add(12 * time.Hour)}
 		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
 	}
 	s.mu.Unlock()

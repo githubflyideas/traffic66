@@ -147,7 +147,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'sources', 'detail'];
+const VIEWS = ['account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'both', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
@@ -237,6 +237,7 @@ async function api(path, extra = {}, filters = state.f) {
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
   const res = await fetch('/api/' + path + '?' + p);
   if (res.status === 401) { showLogin(); throw new Error('login'); }
+  if (res.status === 403 && me) { const j = await res.clone().json().catch(() => ({})); if (j.error === 'change_password') { me.must_change = true; go('account'); throw new Error('login'); } }
   const j = await res.json().catch(() => ({}));
   if (!res.ok) { const e = new Error(j.error || res.statusText); e.kind = j.kind; throw e; }
   return j;
@@ -1201,6 +1202,70 @@ views.sandbox = async (el) => {
 // in offline mode the first visit goes on to the overview once the files are in
 let sbWaited = true;
 
+// Account: one's own password; for the administrator also the users, and
+// the coming LDAP / AD sign-in.
+views.account = async (el) => {
+  await loadMe();
+  const m = me || {};
+  const pwForm = m.fixed ? `<p class="muted">${esc(t('acct.fixed'))}</p>` : `
+    ${m.must_change ? `<p class="acctmust">${esc(t('acct.must'))}</p>` : ''}
+    <form class="acctform" id="pwForm" autocomplete="off">
+      <label ${m.must_change ? 'hidden' : ''}><span>${t('acct.old')}</span><input type="password" name="old" autocomplete="current-password"></label>
+      <label><span>${t('acct.new')}</span><input type="password" name="new" autocomplete="new-password" required></label>
+      <label><span>${t('acct.confirm')}</span><input type="password" name="again" autocomplete="new-password" required></label>
+      <p class="muted" style="font-size:12.5px;margin:0">${esc(t('acct.rule'))}</p>
+      <div><button class="primary" type="submit">${t('acct.save')}</button> <span id="pwMsg"></span></div>
+    </form>`;
+  let users = null;
+  if (m.admin && !m.fixed && !m.must_change) {
+    const r = await fetch('/api/users');
+    if (r.ok) users = await r.json();
+  }
+  const userRows = users ? users.users.map(u => `<tr><td><b>${esc(u)}</b>${u === users.admin ? ` <span class="tag">${t('acct.admin_tag')}</span>` : ''}</td>
+      <td class="nw"><button class="btn" data-reset="${esc(u)}">${t('acct.reset')}</button>${u === users.admin ? '' : ` <button class="btn" data-udel="${esc(u)}">${t('acct.delete')}</button>`}</td></tr>
+      <tr data-resetrow="${esc(u)}" hidden><td colspan="2"><form class="acctinline" data-resetform="${esc(u)}"><input type="password" name="pw" placeholder="${esc(t('acct.new'))}" autocomplete="new-password" required> <button class="primary" type="submit">${t('acct.save')}</button></form></td></tr>`).join('') : '';
+  el.innerHTML = `<div class="grid">
+    ${panel(users ? 'c6' : 'c12', t('acct.title_pw'), esc(m.user || ''), pwForm)}
+    ${users ? panel('c6', t('acct.users'), t('acct.users_sub'), `<table class="accttable">${userRows}</table>
+      <form class="acctinline" id="addUser" autocomplete="off"><input name="user" placeholder="${esc(t('acct.user'))}" required> <input type="password" name="pw" placeholder="${esc(t('acct.new'))}" autocomplete="new-password" required> <button class="primary" type="submit">${t('acct.add')}</button></form>
+      <p id="userMsg" style="font-size:13px;margin:8px 0 0"></p>`) : ''}
+    ${users ? panel('c12', t('acct.ldap'), t('acct.dev'), `<p class="muted" style="margin-top:0">${esc(t('acct.ldap_dev'))}</p>
+      <div class="acctform ldap" aria-disabled="true"><label><span>${t('acct.ldap_server')}</span><input disabled placeholder="ldaps://dc.example.com:636"></label>
+      <label><span>${t('acct.ldap_base')}</span><input disabled placeholder="DC=example,DC=com"></label></div>`) : ''}
+  </div>`;
+  const errText = c => t('acct.err_' + c) !== 'acct.err_' + c ? t('acct.err_' + c) : c;
+  const say = (id, ok, text) => { const n = $(id); if (n) { n.style.color = ok ? 'var(--good)' : 'var(--crit)'; n.textContent = text; } };
+  const pf = $('#pwForm');
+  if (pf) pf.onsubmit = async e => {
+    e.preventDefault();
+    const old = m.must_change ? (sessionStorage.getItem('t66.old') || 'traffic66') : pf.old.value;
+    if (pf.new.value !== pf.again.value) return say('#pwMsg', false, t('acct.err_mismatch'));
+    const r = await fetch('/api/password', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({old, new: pf.new.value})});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return say('#pwMsg', false, errText(j.error));
+    sessionStorage.removeItem('t66.old');
+    toast(t('acct.saved'));
+    if (m.must_change) { me.must_change = false; go('overview'); } else render();
+  };
+  const putUser = async (user, password) => {
+    const r = await fetch('/api/users', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user, password})});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { say('#userMsg', false, errText(j.error)); return false; }
+    toast(t('acct.added')); render(); return true;
+  };
+  const au = $('#addUser');
+  if (au) au.onsubmit = e => { e.preventDefault(); putUser(au.user.value.trim(), au.pw.value); };
+  el.querySelectorAll('[data-reset]').forEach(b => b.onclick = () => { const row = el.querySelector(`[data-resetrow="${CSS.escape(b.dataset.reset)}"]`); row.hidden = !row.hidden; });
+  el.querySelectorAll('[data-resetform]').forEach(f => f.onsubmit = e => { e.preventDefault(); putUser(f.dataset.resetform, f.pw.value); });
+  el.querySelectorAll('[data-udel]').forEach(b => b.onclick = async () => {
+    if (!confirm(t('acct.confirm_del', {u: b.dataset.udel}))) return;
+    const r = await fetch('/api/users?user=' + encodeURIComponent(b.dataset.udel), {method: 'DELETE'});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return say('#userMsg', false, errText(j.error));
+    render();
+  });
+};
+
 views.threats = async (el) => {
   const d = await api('threats', {limit: 66});
   const rows = d.rows || [], lists = d.lists || {};
@@ -1585,7 +1650,7 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['sources', 'cleanup', 'sandbox']);
+const NOBAR_VIEWS = new Set(['sources', 'cleanup', 'sandbox', 'account']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
@@ -1632,6 +1697,9 @@ async function loadSB() {
 }
 
 async function render(push) {
+  // the default password of a new installation is changed before anything else
+  if (me?.must_change) state.v = 'account';
+  document.body.classList.toggle('mustchange', !!me?.must_change);
   renderSB();
   renderBar();
   renderFilters();
@@ -1687,14 +1755,28 @@ async function loadStatus() {
 function showLogin() {
   $('#app').hidden = true; $('#login').hidden = false;
   $('#loginForm [name=user]').focus();
+  // the default password, while a new installation (or the demo) still has it
+  fetch('/api/loginhint').then(r => r.json()).then(h => {
+    const el = $('#loginHint');
+    el.hidden = !h.default;
+    if (h.default) { el.textContent = t(h.demo ? 'login.hint_demo' : 'login.hint', {u: h.user, p: h.password}); if (!$('#loginForm [name=user]').value) $('#loginForm [name=user]').value = h.user; }
+  }).catch(() => {});
+}
+// me: the signed-in user (see /api/me)
+let me = null;
+async function loadMe() {
+  try { const r = await fetch('/api/me'); if (r.ok) me = await r.json(); } catch (e) {}
+  $('#acctName').textContent = me?.user ? me.user : t('nav.account');
 }
 $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = new FormData(e.target);
   const res = await fetch('/api/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user: f.get('user'), password: f.get('password')})});
   if (!res.ok) { $('#loginErr').hidden = false; $('#loginErr').textContent = t('login.bad'); return; }
+  const j = await res.json().catch(() => ({}));
   $('#login').hidden = true; $('#app').hidden = false;
-  await Promise.all([loadStatus(), loadSB()]);
+  if (j.must_change) sessionStorage.setItem('t66.old', f.get('password'));
+  await Promise.all([loadStatus(), loadSB(), loadMe()]);
   render();
   startTimers();
 });
@@ -1718,7 +1800,8 @@ function startTimers() {
     if (state.v === 'sources' || state.v === 'records' || state.v === 'overview' || state.v === 'findings' || state.r === '15m' || state.r === '1h') render();
   }, 30000);
 }
-$('#logout').onclick = async () => { await fetch('/api/logout', {method: 'POST'}); showLogin(); };
+$('#logout').onclick = async () => { await fetch('/api/logout', {method: 'POST'}); me = null; showLogin(); };
+$('#acct').onclick = () => go('account');
 
 async function init() {
   $('#lang').innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
@@ -1747,7 +1830,7 @@ async function init() {
   const res = await fetch('/api/status');
   if (res.status === 401) { showLogin(); return; }
   $('#app').hidden = false;
-  await Promise.all([loadStatus(), loadSB()]);
+  await Promise.all([loadStatus(), loadSB(), loadMe()]);
   render();
   startTimers();
 }
