@@ -108,3 +108,15 @@ footer ol{padding-left:1.3em;margin:8px 0 0}
 .posts p{margin:4px 0 0;font-size:14.5px;color:var(--ink-2)}
 .lang{display:inline-block;font:600 11px/1.7 var(--mono);padding:0 6px;border-radius:5px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:2px}
 @media (max-width:560px){.posts li{grid-template-columns:1fr;gap:4px}.site-head nav{gap:12px}}
+/* posts written in Markdown */
+.md ul,.md ol{margin:0 0 1.1em;padding-inline-start:1.5em}
+.md li{margin:.3em 0}
+.md li>ul,.md li>ol{margin:.3em 0 0}
+.md h4{font:700 16px/1.5 var(--body);margin:26px 0 6px}
+.md blockquote{margin:22px 0;padding:4px 18px;border-inline-start:3px solid var(--accent);color:var(--ink-2)}
+.md pre{overflow-x:auto;margin:20px 0;padding:14px 16px;background:var(--paper);border:1px solid var(--line);border-radius:10px;font:500 13.5px/1.6 var(--mono)}
+.md pre code{background:none;padding:0;font:inherit}
+.md hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+.md p img{max-width:100%;vertical-align:middle}
+.md table{min-width:0}
+.md input[type=checkbox]{margin-inline-end:.4em}
