@@ -1,0 +1,193 @@
+<article>
+<header class="hero col">
+  <div class="kicker"><span><a href="{root}blog/" style="color:inherit">Blog traffic66</a></span><span>NetFlow / sFlow / IPFIX</span><b>Oktober 2026</b></div>
+  <h1>Kami memasang satu per satu penganalisis flow yang ada di GitHub</h1>
+  <p class="lede">Tulisan ini hanya mengukur satu hal: seberapa jauh seorang admin jaringan harus melangkah dari unduhan sampai <span class="far">grafik pertama yang angkanya bisa dipercaya</span>. Jalur traffic66 paling pendek. Dalam deteksi keamanan, traffic66 setara dengan ntopng. Dalam skala, inspeksi paket mendalam, dan komunitas, proyek lain lebih unggul. Setiap klaim sudah dicek terhadap dokumentasi resmi proyek masing-masing; tautannya ada di bagian akhir.</p>
+  <div class="byline"><span>Oleh tim pengembang traffic66</span><span>Kami pihak yang berkepentingan; bacalah dengan kritis</span><span>Data per 8 Oktober 2026</span></div>
+</header>
+
+<div class="col">
+<h2>Para peserta</h2>
+<p>Kami mengambil proyek sFlow, NetFlow, dan IPFIX dengan bintang terbanyak di GitHub. Ada yang berupa produk lengkap, ada yang hanya kolektor, dan ada yang sudah diarsipkan. Jumlah bintang sesuai yang tertera di GitHub.</p>
+</div>
+
+<div class="wide">
+<div class="tablewrap">
+<table>
+<thead><tr><th>Proyek</th><th style="text-align:right">Bintang</th><th>Apa itu</th><th>Yang harus dipasang dulu</th><th>Status · lisensi</th></tr></thead>
+<tbody>
+<tr><td class="name">ntopng</td><td class="num">8.1k</td><td>Monitor trafik berbasis web dengan inspeksi paket mendalam nDPI</td><td>Redis; untuk NetFlow/sFlow, nProbe, yang memerlukan lisensi</td><td><span class="tag ok">aktif</span> GPL-3.0</td></tr>
+<tr><td class="name">FastNetMon</td><td class="num">3.7k</td><td>Deteksi DDoS, bisa memicu BGP blackholing</td><td>Linux; grafik lewat InfluxDB/Grafana atau sejenisnya</td><td><span class="tag ok">aktif</span> GPL-2.0</td></tr>
+<tr><td class="name">ElastiFlow (lama)</td><td class="num">2.5k</td><td>Pipeline Logstash dan dasbor Kibana</td><td>Elasticsearch, Logstash, Kibana</td><td><span class="tag dead">diarsipkan 2024-03</span></td></tr>
+<tr><td class="name">Akvorado</td><td class="num">2.3k</td><td>Kolektor, pengaya data, dan visualisasi</td><td>inlet, Kafka, outlet, ClickHouse; Redis di compose resminya</td><td><span class="tag ok">aktif</span> AGPL-3.0</td></tr>
+<tr><td class="name">pmacct</td><td class="num">1.2k</td><td>Daemon kolektor dengan BGP dan BMP</td><td>Database dan dasbor pilihan Anda (sering Grafana)</td><td><span class="tag ok">aktif</span> GPL (beralih ke gaya BSD)</td></tr>
+<tr><td class="name">vflow</td><td class="num">1.2k</td><td>Kolektor yang mengirim ke Kafka</td><td>Kafka, ditambah penyimpanan dan dasbor di hilir</td><td>Apache-2.0</td></tr>
+<tr><td class="name">nfdump</td><td class="num">922</td><td>Alat baris perintah untuk mengumpulkan dan mengkueri</td><td>Tidak punya UI web sendiri</td><td><span class="tag ok">aktif</span> BSD</td></tr>
+<tr><td class="name">Cloudflare goflow</td><td class="num">919</td><td>Kolektor yang dipakai internal oleh Cloudflare</td><td>Kafka, ditambah komponen hilir</td><td><span class="tag dead">diarsipkan 2025-02</span></td></tr>
+<tr><td class="name">GoFlow2</td><td class="num">798</td><td>Kolektor berkinerja tinggi</td><td>Keluaran ke Kafka atau file; penyimpanan dan UI Anda bangun sendiri</td><td><span class="tag ok">aktif</span> BSD-3</td></tr>
+<tr class="us"><td class="name">traffic66</td><td class="num">baru</td><td>Kolektor, penyimpanan, UI web dan terminal, deteksi, analisis pcap</td><td>Tidak ada: satu file program dengan DuckDB tertanam</td><td><span class="tag ok">aktif</span> source-available (lihat di bawah)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">ElastiFlow versi sekarang bernama NetObserv Flow. Kodenya tertutup; tingkat Community yang gratis dibatasi 500 catatan flow per detik.</p>
+</div>
+
+<div class="col">
+<h2>1. Dari unduhan sampai grafik pertama</h2>
+<p>Inilah bagian yang paling kami pedulikan. Ketika pukul tiga sore ada yang bertanya siapa yang memenuhi uplink, tidak ada yang mau belajar Kafka dulu. Berikut jalur terpendek menurut dokumentasi masing-masing proyek:</p>
+</div>
+<div class="wide">
+<div class="race" role="list">
+  <div class="lane us" role="listitem"><div class="who">traffic66</div><div class="bar"><span class="step">unduh, ekstrak</span><span class="step">./traffic66</span><span class="step">buka browser ✓</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ntopng</div><div class="bar"><span class="step">tambah repositori</span><span class="step">pasang ntopng</span><span class="step">pasang Redis</span><span class="step">pasang nProbe</span><span class="step">dapatkan lisensi nProbe</span><span class="step">hubungkan keduanya</span><span class="step">grafik</span></div></div>
+  <div class="lane" role="listitem"><div class="who">Akvorado</div><div class="bar"><span class="step">pasang Docker</span><span class="step">ambil compose</span><span class="step">jalankan Kafka</span><span class="step">jalankan ClickHouse</span><span class="step">jalankan inlet/outlet</span><span class="step">atur SNMP, GeoIP</span><span class="step">grafik</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ElastiFlow</div><div class="bar"><span class="step">pasang Elasticsearch</span><span class="step">pasang Kibana</span><span class="step">pasang kolektor</span><span class="step">impor dasbor</span><span class="step">perhatikan batas 500 rec/s</span><span class="step">grafik</span></div></div>
+  <div class="lane" role="listitem"><div class="who">GoFlow2 / pmacct</div><div class="bar"><span class="step">pasang kolektor</span><span class="step">pilih database</span><span class="step">bangun pipeline</span><span class="step">pasang Grafana</span><span class="step">gambar dasbor sendiri</span><span class="step">grafik</span></div></div>
+</div>
+</div>
+<div class="col">
+<p>Instalasi traffic66 yang baru masuk dengan admin / traffic66 dan meminta kata sandi Anda sendiri saat login pertama. Di Windows, klik ganda <code>traffic66.exe</code> akan membuka browser. Untuk melihat-lihat dulu, <code>traffic66 demo</code> membangun jaringan perusahaan simulasi lengkap dengan riwayat satu hari dan satu rangkaian serangan utuh.</p>
+<p>Soal <strong>Windows</strong>: hampir semua proyek di tabel hanya berjalan di Linux atau Docker. traffic66 membangun program native untuk Windows, Linux, dan macOS dari kode yang sama, tanpa WSL dan tanpa Docker. Di banyak organisasi kecil, mesin pemantauannya adalah PC Windows.</p>
+
+<div class="quote" aria-label="Angka kunci">
+  <div class="big">3 <span>langkah</span></div>
+  <div class="cap">dari unduhan sampai grafik pertama</div>
+</div>
+
+<h2>Artinya bagi ISP lokal, RT/RW net, sekolah, dan UKM</h2>
+<p>Jika router Anda MikroTik, fitur Traffic Flow di RouterOS menurut dokumentasi resminya mengekspor NetFlow v1, v5, dan v9 serta IPFIX, dan RouterOS v7 menambahkan packet sampling. traffic66 menerima NetFlow v5/v9 dan IPFIX di port UDP mana pun, jadi dua baris di router sudah cukup untuk mulai mengirim data: <code>/ip traffic-flow set enabled=yes</code> dan <code>/ip traffic-flow target add</code> dengan alamat kolektor. Contoh lengkap untuk RouterOS 7 ada di README.</p>
+<p>NetFlow tidak membawa penghitung antarmuka. Agar <strong>Pencocokan antarmuka</strong> bisa membandingkan flow dengan angka dari router, tambahkan satu baris <code>snmp</code> di <strong>Pengaturan → Nama</strong> dan aktifkan SNMP di RouterOS; menurut dokumentasi MikroTik, SNMP mati secara bawaan dan IF-MIB termasuk MIB yang didukung. Semua ini berjalan di PC Windows atau server Linux yang sudah ada, tanpa layanan tambahan, dan gratis untuk organisasi di bawah 100 orang.</p>
+<p>Tentang data pribadi: UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi mendefinisikan data pribadi sebagai data tentang orang perseorangan yang dapat diidentifikasi, sendiri atau dikombinasikan dengan informasi lain. Catatan flow berisi alamat IP; apakah di jaringan Anda alamat itu bisa dikaitkan dengan pelanggan, siswa, atau karyawan, sebaiknya dinilai bersama penasihat hukum Anda. Yang bisa kami sampaikan hanyalah cara kerja programnya: traffic66 berjalan offline dan menyimpan semuanya di direktori data di server Anda sendiri; detail flow disimpan 30 hari secara bawaan (<code>-retention-days</code>), dan halaman <strong>Pembersihan data</strong> menghapus data lama. Catatan flow tidak keluar dari server itu.</p>
+
+<h2>2. Apakah angkanya cocok dengan penghitung antarmuka?</h2>
+<p>Pertanyaan yang selalu muncul untuk setiap alat flow: grafik bilang uplink membawa 800 Mb/s, SNMP di Zabbix bilang 600. Mana yang benar?</p>
+<p>Angka flow adalah perkiraan: paket sampel dikalikan rasio sampling. traffic66 punya halaman khusus untuk ini, <strong>Pencocokan antarmuka</strong>. Halaman ini menggambar perkiraan flow tiap antarmuka dan penghitung milik perangkat itu sendiri (penghitung sFlow atau SNMP) dalam satu grafik, lalu menghitung selisih dan galat statistik dari sampling. Jika selisihnya lebih besar dari yang bisa dijelaskan sampling, halaman ini menyebut kemungkinan penyebabnya: antarmuka yang tidak disampel, trafik yang sama tersampel di dua antarmuka, paket ekspor yang hilang di jalan, atau rasio sampling yang belum diterima.</p>
+<p>Di baliknya ada beberapa detail yang tidak terlihat: rasio sampling yang benar-benar diterapkan perangkat; catatan yang ditahan sampai rasio samplingnya tiba, bukan dihitung 1:1; kompensasi untuk paket ekspor yang hilang; flow panjang yang disebar ke menit-menit selama ia berlangsung; dan overhead Ethernet yang ditambahkan ke jumlah byte NetFlow, karena penghitung antarmuka memasukkannya.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/id/interfaces.jpg" alt="Pencocokan antarmuka: bit per detik dan paket per detik, daftar antarmuka, dan kesimpulan" width="1440" height="1450" loading="lazy">
+  <figcaption>Pencocokan antarmuka. Garis putus-putus adalah penghitung perangkat; kesimpulannya ada di kanan bawah.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Sejauh mana proyek lain melangkah:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Perkiraan flow dan penghitung perangkat dalam satu grafik, selisih dan galat statistik dihitung, penyebabnya disebutkan. Penghitung sFlow dipakai begitu tiba; untuk perangkat NetFlow, cukup satu baris <code>snmp</code>.</span></div>
+  <div><b>ntopng</b><span>Edisi Enterprise melakukan polling SNMP dan menggambar grafik antarmuka perangkat; dokumentasinya tidak menyebut perbandingan dengan flow. SNMP di edisi Community tidak didokumentasikan.</span></div>
+  <div><b>Akvorado</b><span>Memakai SNMP untuk nama dan deskripsi antarmuka pada catatan flow, bukan untuk penghitung.</span></div>
+  <div><b>ElastiFlow</b><span>Juga memakai SNMP untuk memperkaya detail antarmuka; untuk membandingkan, Anda harus membuat dua grafik Kibana sendiri.</span></div>
+  <div><b>FastNetMon</b><span>Bukan tugasnya; ia memantau ambang serangan.</span></div>
+  <div><b>GoFlow2 dan lainnya</b><span>Bukan tugasnya; mereka mengirimkan catatan flow.</span></div>
+</div>
+<p>Di tempat lain, penghitung antarmuka tidak dibaca sama sekali, atau ditampilkan sebagai satu grafik lagi untuk dibandingkan dengan mata. Kami tidak menemukan proyek lain yang menyatakan mengapa angkanya berbeda.</p>
+
+<h2>3. Kesimpulan langsung saat dibuka, tanpa bahasa kueri</h2>
+<p><strong>Ringkasan</strong> menjawab berapa banyak trafik saat ini, siapa yang memakainya, dan bagaimana perbandingannya dengan kemarin. Setiap alamat, port, aplikasi, dan negara bisa diklik: tampilkan hanya ini, kecualikan ini, buka catatan flow-nya, buka halaman detailnya. Antarmukanya dirancang supaya Anda jarang perlu mengetik.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/id/overview.jpg" alt="Ringkasan: bandwidth antarmuka, bandwidth per aplikasi dibandingkan dengan kemarin" width="1440" height="900" loading="lazy">
+  <figcaption>Ringkasan. Antarmuka dipilih di bagian atas; yang bertanda bintang adalah bawaan. Garis putus-putus adalah jam yang sama kemarin.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Pekerjaan yang sama di proyek lain:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>UI web dan UI terminal sudah terpasang, dibuka langsung pada ringkasan. 13 bahasa, termasuk Bahasa Indonesia.</span></div>
+  <div><b>ntopng</b><span>UI lengkap dengan banyak informasi; satu-satunya di tabel yang bisa dibandingkan langsung. Tujuh bahasa menurut pengumumannya.</span></div>
+  <div><b>Akvorado</b><span>Konsol web yang rapi; visualisasinya memungkinkan Anda menyeret dimensi dan menggambar diagram Sankey. Cara kerjanya lebih mirip alat kueri: Anda menentukan pertanyaannya dulu. Hanya bahasa Inggris.</span></div>
+  <div><b>ElastiFlow</b><span>Dasbor Kibana; mengubahnya berarti belajar Kibana.</span></div>
+  <div><b>FastNetMon</b><span>Tidak ada UI web di edisi Community; grafik lewat Grafana. UI web ada di edisi komersial.</span></div>
+  <div><b>GoFlow2, pmacct, vflow, nfdump</b><span>Tanpa UI; nfdump punya kueri baris perintah. Dasbor Anda bangun sendiri, biasanya di Grafana, satu kueri per grafik.</span></div>
+</div>
+
+<h2>4. Menemukan serangan di data yang disampel</h2>
+<p>Deteksi pada data sampel itu sulit: pada 1:4096, sebuah pemindaian mungkin hanya meninggalkan segelintir paket. Aturan traffic66 dikalibrasi untuk data sampel. Di demo, seluruh rantai serangan ditemukan lewat sFlow 1:4096: pemindaian internal, pemindaian port, tebak kata sandi, pergerakan lateral, unggahan besar ke alamat baru, dan trafik ke daftar ancaman. Trafik normal demo selama sehari tidak menghasilkan temuan lain, selain pemindai internet yang mengetuk situs web.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/id/findings.jpg" alt="Temuan: setiap langkah serangan, yang paling serius di atas" width="1440" height="900" loading="lazy">
+  <figcaption>Temuan. Setiap langkah serangan oleh host yang disusupi di demo, semuanya dari sampling sFlow 1:4096.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Di sini perbandingannya lebih ketat:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Pemindaian, pemindaian port, tebak kata sandi, pergerakan lateral, unggahan tak biasa, flood, dan daftar ancaman, dengan ambang untuk data sampel.</span></div>
+  <div><b>ntopng</b><span>Jauh lebih banyak pemeriksaan daripada kami: pemindaian, flood, daftar hitam, eksfiltrasi DNS dan ICMP, pergerakan lateral, sudah ada di edisi Community. Di sini ntopng lebih unggul.</span></div>
+  <div><b>FastNetMon</b><span>Hanya DDoS, tetapi mendalam: deteksi dalam hitungan detik dan BGP blackholing otomatis.</span></div>
+  <div><b>ElastiFlow</b><span>Pengayaan ancaman NetIntel; peringatan lewat aturan yang Anda susun di Elastic.</span></div>
+  <div><b>Akvorado dan para kolektor</b><span>Tanpa deteksi keamanan.</span></div>
+</div>
+<p>Dalam keamanan, kami setara dengan ntopng. Yang kami tawarkan: pemeriksaannya ada dalam satu program tanpa perlu diatur, dan disetel untuk data sampel.</p>
+<p>Satu kemudahan lagi: <code>traffic66 capture.pcap</code> menganalisis file tangkapan paket dengan halaman yang sama (<strong>Analisis pcap offline</strong>), terpisah dari data live. ntopng juga bisa membaca file pcap, jadi anggap saja yang ini seri.</p>
+
+<h2>Rapor</h2>
+<p>Poin-poin di atas dan kelemahan di bawah dalam satu tabel. Penuh berarti ada, setengah berarti sebagian, berbayar, atau perlu pemasangan terpisah, kosong berarti tidak ada.</p>
+</div>
+<div class="wide">
+<div class="tablewrap">
+<table class="matrix">
+<thead><tr><th>Kemampuan</th><th class="us">traffic66</th><th>ntopng</th><th>Akvorado</th><th>ElastiFlow (sekarang)</th><th>FastNetMon</th><th>Kolektor<small>GoFlow2 · pmacct · vflow · nfdump</small></th></tr></thead>
+<tbody>
+<tr><td>Satu program, siap setelah dipasang</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + lisensi nProbe</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>Grafana untuk grafik</small></td><td><i class="m"></i><small>bangun penyimpanan dan UI</small></td></tr>
+<tr><td>Berjalan native di Windows</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>build Windows berupa demo</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>UI web bawaan</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>dasbor Kibana</small></td><td><i class="m h"></i><small>edisi komersial</small></td><td><i class="m"></i></td></tr>
+<tr><td>UI dalam banyak bahasa</td><td class="us"><i class="m y"></i><small>13</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>Inggris</small></td><td><i class="m h"></i><small>hanya Kibana</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Flow dicocokkan dengan penghitung antarmuka</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>grafik SNMP (Enterprise)</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>bangun sendiri</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Deteksi keamanan</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>pemeriksaan terbanyak</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>pengayaan ancaman</small></td><td><i class="m h"></i><small>hanya DDoS, dengan mitigasi</small></td><td><i class="m"></i></td></tr>
+<tr><td>Analisis pcap offline</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>UI terminal</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>klien konsol</small></td><td><i class="m h"></i><small>CLI nfdump</small></td></tr>
+<tr><td>Pengenalan aplikasi layer 7</td><td class="us"><i class="m"></i></td><td><i class="m y"></i><small>nDPI</small></td><td><i class="m"></i></td><td><i class="m h"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Skala horizontal</td><td class="us"><i class="m h"></i><small>5.000 catatan/dtk, satu mesin</small></td><td><i class="m h"></i></td><td><i class="m y"></i></td><td><i class="m y"></i><small>tingkat berbayar</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+<tr><td>Lisensi open source OSI</td><td class="us"><i class="m"></i><small>source-available</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i><small>tertutup</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+</tbody>
+</table>
+</div>
+<div class="legend"><span><i class="m y"></i> ada</span><span><i class="m h"></i> sebagian, berbayar, atau pemasangan terpisah</span><span><i class="m"></i> tidak ada</span></div>
+</div>
+<div class="col">
+<p>traffic66 mengisi delapan baris pertama; tidak ada kolom lain yang begitu. Tiga baris terakhir adalah titik lemah kami.</p>
+
+<h2>Di mana yang lain lebih baik</h2>
+<p>Baca bagian ini sebelum Anda memilih.</p>
+</div>
+<div class="wide">
+<div class="grid2">
+  <div class="card"><div class="who">Akvorado · GoFlow2</div><h4>Skala</h4><p>traffic66 dirancang untuk 5.000 catatan flow per detik di satu mesin dengan DuckDB tertanam. Untuk trafik skala operator, arsitektur Kafka dan ClickHouse yang bisa diperluas secara horizontal adalah jawaban yang tepat.</p></div>
+  <div class="card"><div class="who">ntopng</div><h4>Inspeksi paket mendalam</h4><p>ntopng punya nDPI dan mengenali ratusan protokol layer 7. traffic66 bekerja dengan flow; aplikasi dikenali dari port, paketnya tidak diurai.</p></div>
+  <div class="card"><div class="who">FastNetMon</div><h4>Mitigasi DDoS otomatis</h4><p>FastNetMon bisa mengumumkan BGP blackhole atau aturan FlowSpec begitu mendeteksi serangan. traffic66 melaporkan flood dan tidak menyentuh routing.</p></div>
+  <div class="card"><div class="who">pmacct</div><h4>Data routing dan fleksibilitas</h4><p>pmacct menerima BGP dan BMP bersama flow, menambahkan informasi routing ke catatan, dan bisa menulis ke hampir apa saja. traffic66 adalah produk jadi, bukan toolkit.</p></div>
+  <div class="card"><div class="who">Proyek-proyek mapan</div><h4>Usia dan komunitas</h4><p>ntopng punya hampir 30.000 commit; nfdump sudah ada selama dua dekade. traffic66 baru mulai mengumpulkan bintang dan jam terbangnya di produksi jauh lebih sedikit.</p></div>
+  <div class="card"><div class="who">Sebagian besar tabel</div><h4>Lisensi</h4><p>Mereka memakai lisensi open source yang disetujui OSI. traffic66 berstatus source-available: gratis untuk evaluasi dan untuk organisasi di bawah 100 orang; organisasi yang lebih besar mendaftar setelah 30 hari. Tidak ada fitur yang dimatikan, tetapi ini bukan open source.</p></div>
+</div>
+</div>
+
+<div class="col">
+<h2>Mana yang dipilih</h2>
+<div class="pick">
+  <div class="us"><span>Satu mesin, puluhan sampai ratusan antarmuka, grafik sudah jalan sore ini, angka yang cocok dengan SNMP</span><b>traffic66</b></div>
+  <div><span>Visibilitas layer 7, atau sebagian besar data dari port mirror</span><b>ntopng</b></div>
+  <div><span>Operator besar atau backbone besar, ratusan ribu flow per detik</span><b>Akvorado</b></div>
+  <div><span>Deteksi DDoS dengan blackholing otomatis</span><b>FastNetMon</b></div>
+  <div><span>Anda sudah menjalankan Kafka dan platform data, dan hanya butuh kolektor</span><b>GoFlow2 / pmacct</b></div>
+  <div><span>Baris perintah, catatan mentah jangka panjang</span><b>nfdump</b></div>
+</div>
+<p>Yang kami yakini ada tiga: cepat dipasang, mudah dibaca, dan angkanya cocok. Untuk sisanya, issue di <a href="https://github.com/githubflyideas/traffic66" target="_blank" rel="noopener">GitHub</a> sangat kami harapkan; kekurangannya akan kami tutup satu per satu.</p>
+</div>
+
+<footer class="col">
+  Sumber, dicek 8 Oktober 2026:
+  <ol>
+    <li>Halaman proyek di GitHub: <a href="https://github.com/ntop/ntopng" target="_blank" rel="noopener">ntopng</a>, <a href="https://github.com/pavel-odintsov/fastnetmon" target="_blank" rel="noopener">FastNetMon</a>, <a href="https://github.com/robcowart/elastiflow" target="_blank" rel="noopener">ElastiFlow (lama)</a>, <a href="https://github.com/akvorado/akvorado" target="_blank" rel="noopener">Akvorado</a>, <a href="https://github.com/pmacct/pmacct" target="_blank" rel="noopener">pmacct</a>, <a href="https://github.com/Edgio/vflow" target="_blank" rel="noopener">vflow</a>, <a href="https://github.com/phaag/nfdump" target="_blank" rel="noopener">nfdump</a>, <a href="https://github.com/cloudflare/goflow" target="_blank" rel="noopener">Cloudflare goflow</a>, <a href="https://github.com/netsampler/goflow2" target="_blank" rel="noopener">GoFlow2</a>.</li>
+    <li>ntopng memerlukan lisensi nProbe untuk NetFlow/sFlow: <a href="https://www.ntop.org/guides/ntopng/use_cases/netflow_sflow_monitoring.html" target="_blank" rel="noopener">dokumentasi ntop</a>.</li>
+    <li>Peringatan ntopng per edisi: <a href="https://ntop.org/guides/ntopng/alerts/alerts_list_per_license.html" target="_blank" rel="noopener">Alerts List per License</a>; pemantauan SNMP: <a href="https://www.ntop.org/monitoring-network-devices-with-ntopng-and-snmp/" target="_blank" rel="noopener">blog ntop</a>; bahasa UI: <a href="https://www.ntop.org/extended-multilanguage-support-in-ntopng-korean-spanish-and-french/" target="_blank" rel="noopener">pengumuman 2024</a>; build demo Windows: <a href="https://en.wikipedia.org/wiki/Ntopng" target="_blank" rel="noopener">Wikipedia</a>.</li>
+    <li>Arsitektur Akvorado 2.0 (inlet, Kafka, outlet, ClickHouse): <a href="https://vincent.bernat.ch/en/blog/2025-akvorado-2.0" target="_blank" rel="noopener">blog penulisnya</a>.</li>
+    <li>Pengayaan NetIntel ElastiFlow: <a href="https://docs.elastiflow.com/flowcoll/configuration/enrichment-options/ip-address-enrichment/enrich_ip_netintel" target="_blank" rel="noopener">dokumentasi ElastiFlow</a>; tingkat lisensi NetObserv Flow: <a href="https://docs.elastiflow.com/flowcoll/configuration/config_gen/license" target="_blank" rel="noopener">dokumentasi ElastiFlow</a>.</li>
+    <li>MikroTik RouterOS, Traffic Flow (NetFlow v1, v5, v9 dan IPFIX, packet sampling di v7): <a href="https://help.mikrotik.com/docs/spaces/ROS/pages/21102653/Traffic+Flow" target="_blank" rel="noopener">dokumentasi MikroTik</a>; SNMP (mati secara bawaan, IF-MIB): <a href="https://help.mikrotik.com/docs/spaces/ROS/pages/8978519/SNMP" target="_blank" rel="noopener">dokumentasi MikroTik</a>.</li>
+    <li>UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi, Pasal 1 angka 1: <a href="https://peraturan.bpk.go.id/Details/229798" target="_blank" rel="noopener">JDIH BPK</a>.</li>
+  </ol>
+  Tangkapan layar diambil dari <code>traffic66 demo</code>, sebuah jaringan simulasi.
+</footer>
+</article>

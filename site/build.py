@@ -40,6 +40,12 @@ SCRIPT_FONTS = {
            '"Noto Serif KR",serif', '"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif'),
     "ar": ("Noto+Naskh+Arabic:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700",
            '"Noto Naskh Arabic",serif', '"IBM Plex Sans Arabic",Tahoma,sans-serif'),
+    "ur": ("Noto+Nastaliq+Urdu:wght@400;700",
+           '"Noto Nastaliq Urdu","Jameel Noori Nastaleeq",serif', '"Noto Nastaliq Urdu","Jameel Noori Nastaleeq",serif'),
+    "hi": ("Noto+Serif+Devanagari:wght@600;800&family=Noto+Sans+Devanagari:wght@400;500;700",
+           '"Noto Serif Devanagari",serif', '"Noto Sans Devanagari","Mangal",sans-serif'),
+    "bn": ("Noto+Serif+Bengali:wght@600;800&family=Noto+Sans+Bengali:wght@400;500;700",
+           '"Noto Serif Bengali",serif', '"Noto Sans Bengali","Vrinda",sans-serif'),
 }
 
 

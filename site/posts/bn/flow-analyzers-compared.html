@@ -1,0 +1,194 @@
+<article>
+<header class="hero col">
+  <div class="kicker"><span><a href="{root}blog/" style="color:inherit">traffic66 ব্লগ</a></span><span>NetFlow / sFlow / IPFIX</span><b>অক্টোবর 2026</b></div>
+  <h1>GitHub-এর flow analyzer গুলো একে একে ইনস্টল করে দেখলাম</h1>
+  <p class="lede">এই লেখায় একটি জিনিসই মাপা হয়েছে: ডাউনলোড থেকে শুরু করে <span class="far">এমন প্রথম চার্ট, যার সংখ্যায় ভরসা করা যায়</span>, সেখানে পৌঁছাতে একজন নেটওয়ার্ক অ্যাডমিনকে কতটা পথ পেরোতে হয়। traffic66-এর পথ সবচেয়ে ছোট। নিরাপত্তা শনাক্তকরণে এটি ntopng-এর সমান। স্কেল, ডিপ প্যাকেট ইন্সপেকশন আর কমিউনিটিতে অন্যরা এগিয়ে। প্রতিটি দাবি অন্য প্রজেক্টগুলোর নিজস্ব ডকুমেন্টেশনের সঙ্গে মিলিয়ে দেখা হয়েছে; লিংক শেষে দেওয়া আছে।</p>
+  <div class="byline"><span>traffic66-এর ডেভেলপারদের লেখা</span><span>এতে আমাদের স্বার্থ আছে; সেটা মাথায় রেখে পড়ুন</span><span>তথ্য 8 অক্টোবর 2026 পর্যন্ত</span></div>
+</header>
+
+<div class="col">
+<h2>কারা আছে তালিকায়</h2>
+<p>GitHub-এ sFlow, NetFlow আর IPFIX-এর জন্য সবচেয়ে বেশি স্টার পাওয়া প্রজেক্টগুলো নিয়েছি। কিছু পূর্ণাঙ্গ প্রোডাক্ট, কিছু শুধু collector, কিছু আর্কাইভ করা। স্টারের সংখ্যা GitHub-এ যা দেখায়, তাই।</p>
+</div>
+
+<div class="wide">
+<div class="tablewrap">
+<table>
+<thead><tr><th>প্রজেক্ট</th><th style="text-align:right">স্টার</th><th>এটা কী</th><th>আগে কী ইনস্টল করতে হয়</th><th>অবস্থা · লাইসেন্স</th></tr></thead>
+<tbody>
+<tr><td class="name">ntopng</td><td class="num">8.1k</td><td>nDPI ডিপ প্যাকেট ইন্সপেকশনসহ ওয়েব ট্রাফিক মনিটর</td><td>Redis; NetFlow/sFlow-এর জন্য nProbe, যার লাইসেন্স লাগে</td><td><span class="tag ok">সক্রিয়</span> GPL-3.0</td></tr>
+<tr><td class="name">FastNetMon</td><td class="num">3.7k</td><td>DDoS শনাক্তকরণ, BGP blackholing চালু করতে পারে</td><td>Linux; চার্টের জন্য InfluxDB/Grafana বা এ ধরনের কিছু</td><td><span class="tag ok">সক্রিয়</span> GPL-2.0</td></tr>
+<tr><td class="name">ElastiFlow (legacy)</td><td class="num">2.5k</td><td>Logstash pipeline আর Kibana dashboard</td><td>Elasticsearch, Logstash, Kibana</td><td><span class="tag dead">আর্কাইভ 2024-03</span></td></tr>
+<tr><td class="name">Akvorado</td><td class="num">2.3k</td><td>Collector, enricher ও visualizer</td><td>inlet, Kafka, outlet, ClickHouse; অফিসিয়াল compose-এ Redis-ও</td><td><span class="tag ok">সক্রিয়</span> AGPL-3.0</td></tr>
+<tr><td class="name">pmacct</td><td class="num">1.2k</td><td>BGP ও BMP সমর্থনসহ collector daemon</td><td>পছন্দমতো একটি ডেটাবেস আর dashboard (প্রায়ই Grafana)</td><td><span class="tag ok">সক্রিয়</span> GPL (BSD-ধাঁচের দিকে যাচ্ছে)</td></tr>
+<tr><td class="name">vflow</td><td class="num">1.2k</td><td>Kafka-তে ডেটা পাঠানো collector</td><td>Kafka, তার পরে স্টোরেজ আর dashboard</td><td>Apache-2.0</td></tr>
+<tr><td class="name">nfdump</td><td class="num">922</td><td>কমান্ড-লাইনে সংগ্রহ ও কোয়েরির টুল</td><td>নিজস্ব কোনো ওয়েব UI নেই</td><td><span class="tag ok">সক্রিয়</span> BSD</td></tr>
+<tr><td class="name">Cloudflare goflow</td><td class="num">919</td><td>Cloudflare যে collector নিজেরা ব্যবহার করত</td><td>Kafka, তার পরে বাকিটা</td><td><span class="tag dead">আর্কাইভ 2025-02</span></td></tr>
+<tr><td class="name">GoFlow2</td><td class="num">798</td><td>উচ্চ-পারফরম্যান্স collector</td><td>Kafka বা ফাইলে আউটপুট; স্টোরেজ আর UI নিজেকেই বানাতে হয়</td><td><span class="tag ok">সক্রিয়</span> BSD-3</td></tr>
+<tr class="us"><td class="name">traffic66</td><td class="num">নতুন</td><td>Collector, স্টোরেজ, ওয়েব ও টার্মিনাল UI, শনাক্তকরণ, pcap বিশ্লেষণ</td><td>কিছুই না: embedded DuckDB-সহ একটিমাত্র executable</td><td><span class="tag ok">সক্রিয়</span> source-available (নিচে দেখুন)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">বর্তমান ElastiFlow-এর নাম এখন NetObserv Flow। এটি closed source; এর ফ্রি Community tier প্রতি সেকেন্ডে 500 flow record-এ সীমাবদ্ধ।</p>
+</div>
+
+<div class="col">
+<h2>1. ডাউনলোড থেকে প্রথম চার্ট</h2>
+<p>এই অংশটাই আমাদের কাছে সবচেয়ে গুরুত্বপূর্ণ। দুপুর তিনটায় কেউ যখন জিজ্ঞেস করে uplink কে ভরিয়ে দিচ্ছে, তখন কেউই আগে Kafka শিখতে বসতে চায় না। প্রতিটি প্রজেক্টের ডকুমেন্টেশন অনুযায়ী সবচেয়ে ছোট পথগুলো এই:</p>
+</div>
+<div class="wide">
+<div class="race" role="list">
+  <div class="lane us" role="listitem"><div class="who">traffic66</div><div class="bar"><span class="step">ডাউনলোড, আনজিপ</span><span class="step">./traffic66</span><span class="step">ব্রাউজার খুলুন ✓</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ntopng</div><div class="bar"><span class="step">repository যোগ</span><span class="step">ntopng ইনস্টল</span><span class="step">Redis ইনস্টল</span><span class="step">nProbe ইনস্টল</span><span class="step">nProbe লাইসেন্স সংগ্রহ</span><span class="step">দুটো যুক্ত করা</span><span class="step">চার্ট</span></div></div>
+  <div class="lane" role="listitem"><div class="who">Akvorado</div><div class="bar"><span class="step">Docker ইনস্টল</span><span class="step">compose নামানো</span><span class="step">Kafka চালু</span><span class="step">ClickHouse চালু</span><span class="step">inlet/outlet চালু</span><span class="step">SNMP, GeoIP সেটআপ</span><span class="step">চার্ট</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ElastiFlow</div><div class="bar"><span class="step">Elasticsearch ইনস্টল</span><span class="step">Kibana ইনস্টল</span><span class="step">collector ইনস্টল</span><span class="step">dashboard ইমপোর্ট</span><span class="step">500 rec/s সীমা খেয়াল রাখা</span><span class="step">চার্ট</span></div></div>
+  <div class="lane" role="listitem"><div class="who">GoFlow2 / pmacct</div><div class="bar"><span class="step">collector ইনস্টল</span><span class="step">ডেটাবেস বাছাই</span><span class="step">pipeline বানানো</span><span class="step">Grafana ইনস্টল</span><span class="step">dashboard আঁকা</span><span class="step">চার্ট</span></div></div>
+</div>
+</div>
+<div class="col">
+<p>নতুন traffic66 ইনস্টলেশনে admin / traffic66 দিয়ে সাইন ইন হয়, আর প্রথম সাইন ইনেই নিজের একটি পাসওয়ার্ড দিতে বলে। Windows-এ <code>traffic66.exe</code>-এ ডাবল-ক্লিক করলে ব্রাউজার খুলে যায়। আগে একটু ঘুরে দেখতে চাইলে <code>traffic66 demo</code> একটি সিমুলেটেড কোম্পানি নেটওয়ার্ক তৈরি করে, সঙ্গে এক দিনের ইতিহাস আর একটি পূর্ণাঙ্গ আক্রমণ।</p>
+<p><strong>Windows</strong> প্রসঙ্গে: টেবিলের প্রায় সবকিছুই শুধু Linux বা Docker-এ চলে। traffic66 একই কোড থেকে Windows, Linux আর macOS-এর নেটিভ প্রোগ্রাম তৈরি করে, WSL বা Docker ছাড়াই। অনেক ছোট প্রতিষ্ঠানে মনিটরিংয়ের মেশিনটি একটি Windows PC।</p>
+
+<div class="quote" aria-label="মূল সংখ্যা">
+  <div class="big">3 <span>ধাপ</span></div>
+  <div class="cap">ডাউনলোড থেকে প্রথম চার্ট পর্যন্ত</div>
+</div>
+
+<h2>বাংলাদেশ ও পশ্চিমবঙ্গের ISP, বিশ্ববিদ্যালয় আর ছোট প্রতিষ্ঠানের জন্য</h2>
+<p>অনেক ছোট ISP, বিশ্ববিদ্যালয় বা SME-তে আলাদা মনিটরিং সার্ভার কেনার বাজেট থাকে না; থাকে আগে থেকে চালু একটি Windows PC বা একটি Linux সার্ভার। traffic66 সেই মেশিনেই একটিমাত্র প্রোগ্রাম হিসেবে চলে, বাড়তি কোনো সার্ভিস লাগে না। মূল্যায়নের জন্য এবং 100 জনের কম মানুষের প্রতিষ্ঠানের জন্য এটি ফ্রি।</p>
+<p>Edge router যদি MikroTik হয়: অফিসিয়াল ডকুমেন্টেশন অনুযায়ী RouterOS-এর Traffic Flow ফিচার Cisco NetFlow-এর সঙ্গে সামঞ্জস্যপূর্ণ এবং NetFlow v1, v5, v9 ও IPFIX পাঠায়; RouterOS v7-এ প্যাকেট sampling-ও আছে। traffic66 যেকোনো UDP পোর্টে NetFlow v5/v9 আর IPFIX নেয়, তাই router-এ দুটি লাইনেই ডেটা আসা শুরু হয়: <code>/ip traffic-flow set enabled=yes</code> আর collector-এর ঠিকানা দিয়ে <code>/ip traffic-flow target add</code>। NetFlow ইন্টারফেস কাউন্টার বহন করে না; <strong>ইন্টারফেস মিলানো</strong> পেজে router-এর নিজের মাপের সঙ্গে flow মেলাতে traffic66-এ একটি <code>snmp</code> লাইন যোগ করুন আর RouterOS-এ SNMP চালু করুন, যা ডিফল্টভাবে বন্ধ থাকে এবং যার MIB-এর মধ্যে IF-MIB আছে।</p>
+<p>Flow record-এ ব্যবহারকারীদের IP ঠিকানা থাকে। traffic66 এগুলো আপনার নিজের মেশিনেই রাখে এবং ইন্টারনেট সংযোগ ছাড়াই চলে, ফলে ডেটা কোথায় আছে তা জানা সহজ। এটা এখন আরও কাজের: বাংলাদেশে নভেম্বর 2025-এ Personal Data Protection Ordinance, 2025-এর গেজেট প্রকাশিত হয়েছে, ফেব্রুয়ারি 2026-এ একটি সংশোধনী অধ্যাদেশও এসেছে; ভারতে Digital Personal Data Protection Act, 2023-এর Rules 13 নভেম্বর 2025-এ নোটিফাই হয়েছে, আর ধাপে ধাপে কার্যকর হচ্ছে।</p>
+
+<h2>2. সংখ্যা কি ইন্টারফেস কাউন্টারের সঙ্গে মেলে?</h2>
+<p>প্রতিটি flow টুলকে এই প্রশ্নের মুখোমুখি হতে হয়: চার্ট বলছে uplink-এ 800 Mb/s, অথচ Zabbix-এর SNMP বলছে 600। কোনটা ঠিক?</p>
+<p>Flow-এর সংখ্যা আসলে অনুমান: sample করা প্যাকেট গুণ sampling rate। traffic66-এ ঠিক এই কাজের জন্য একটি পেজ আছে, <strong>ইন্টারফেস মিলানো</strong>। এটি প্রতিটি ইন্টারফেসের flow-ভিত্তিক অনুমান আর ডিভাইসের নিজস্ব কাউন্টার (sFlow counter বা SNMP) একই চার্টে আঁকে, পার্থক্য আর sampling-এর পরিসংখ্যানগত ত্রুটি হিসাব করে। পার্থক্য যদি sampling দিয়ে ব্যাখ্যা করা যায় তার চেয়ে বড় হয়, তাহলে সম্ভাব্য কারণটি বলে দেয়: কিছু ইন্টারফেসে sampling হচ্ছে না, একই ট্রাফিক দুটি ইন্টারফেসে sample হচ্ছে, export প্যাকেট পথে হারিয়ে যাচ্ছে, অথবা sampling rate এখনও পৌঁছায়নি।</p>
+<p>এর পেছনে কিছু নিঃশব্দ খুঁটিনাটি আছে: ডিভাইস আসলে যে sampling rate প্রয়োগ করেছে সেটাই ব্যবহার; sampling rate না আসা পর্যন্ত record ধরে রাখা, 1:1 হিসেবে না গোনা; হারানো export প্যাকেটের ক্ষতিপূরণ; দীর্ঘ flow যত মিনিট চলেছে সেই মিনিটগুলোতে ভাগ করে দেওয়া; আর NetFlow-এর বাইট সংখ্যায় Ethernet overhead যোগ করা, কারণ ইন্টারফেস কাউন্টারে সেটা ধরা থাকে।</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/bn/interfaces.jpg" alt="ইন্টারফেস মিলানো: প্রতি সেকেন্ডে বিট ও প্যাকেট, ইন্টারফেসের তালিকা আর সিদ্ধান্ত" width="1440" height="1450" loading="lazy">
+  <figcaption>ইন্টারফেস মিলানো। ড্যাশ দেওয়া রেখাগুলো ডিভাইসের কাউন্টার; সিদ্ধান্ত নিচে ডান দিকে।</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>অন্যরা কতদূর যায়:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Flow-এর অনুমান আর ডিভাইসের কাউন্টার এক চার্টে, পার্থক্য ও পরিসংখ্যানগত ত্রুটি হিসাব করা, কারণও বলা। sFlow counter যেমন আসে তেমনই ব্যবহার হয়; NetFlow ডিভাইসের জন্য একটি <code>snmp</code> লাইন।</span></div>
+  <div><b>ntopng</b><span>Enterprise সংস্করণ SNMP poll করে ডিভাইসের ইন্টারফেসের চার্ট দেখায়; flow-এর সঙ্গে তুলনার কথা ডকুমেন্টেশনে নেই। Community সংস্করণে SNMP-এর কোনো ডকুমেন্টেশন নেই।</span></div>
+  <div><b>Akvorado</b><span>SNMP ব্যবহার করে flow record-এ ইন্টারফেসের নাম ও বিবরণ যোগ করতে, কাউন্টারের জন্য নয়।</span></div>
+  <div><b>ElastiFlow</b><span>এটিও SNMP দিয়ে ইন্টারফেসের তথ্য সমৃদ্ধ করে; তুলনা করতে হলে Kibana-তে নিজে দুটি চার্ট বানাতে হয়।</span></div>
+  <div><b>FastNetMon</b><span>এটা এর কাজ নয়; এটি আক্রমণের threshold নজরে রাখে।</span></div>
+  <div><b>GoFlow2 ও অন্যরা</b><span>এটা এদের কাজ নয়; এরা flow record পৌঁছে দেয়।</span></div>
+</div>
+<p>অন্য জায়গায় ইন্টারফেস কাউন্টার হয় পড়াই হয় না, নয়তো চোখে মিলিয়ে দেখার জন্য আরেকটি চার্ট হিসেবে দেখানো হয়। সংখ্যা কেন আলাদা, তা বলে দেয় এমন আর কোনো প্রজেক্ট আমরা পাইনি।</p>
+
+<h2>3. খুললেই সিদ্ধান্ত, কোনো query language ছাড়াই</h2>
+<p>সারসংক্ষেপ পেজ জানায় এখন কত ট্রাফিক, কারা ব্যবহার করছে, আর গতকালের তুলনায় কেমন। প্রতিটি ঠিকানা, পোর্ট, অ্যাপ্লিকেশন আর দেশে ক্লিক করা যায়: শুধু এটা দেখাও, এটা বাদ দাও, এর flow record খোলো, এর বিস্তারিত পেজ খোলো। ইন্টারফেসটি এমনভাবে বানানো যাতে টাইপ করার দরকার কমই পড়ে।</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/bn/overview.jpg" alt="সারসংক্ষেপ: ইন্টারফেসের ব্যান্ডউইথ, আর গতকালের তুলনায় অ্যাপ্লিকেশন অনুযায়ী ব্যান্ডউইথ" width="1440" height="900" loading="lazy">
+  <figcaption>সারসংক্ষেপ। ইন্টারফেস ওপরে বাছাই করা হয়; তারকা চিহ্নিতটি ডিফল্ট। ড্যাশ দেওয়া রেখাটি গতকালের একই সময়।</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>অন্য প্রজেক্টগুলোতে একই কাজ:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>ওয়েব UI আর টার্মিনাল UI ভেতরেই আছে, খুললেই একটি সারাংশ। 13টি ভাষা।</span></div>
+  <div><b>ntopng</b><span>প্রচুর তথ্যসহ একটি পূর্ণাঙ্গ UI; টেবিলে একমাত্র এটির সঙ্গেই সরাসরি তুলনা চলে। এদের ঘোষণা অনুযায়ী সাতটি ভাষা।</span></div>
+  <div><b>Akvorado</b><span>গোছানো একটি ওয়েব কনসোল; এর visualizer-এ dimension টেনে এনে Sankey চার্ট আঁকা যায়। এটি অনেকটা query টুলের মতো কাজ করে: কী জিজ্ঞেস করবেন তা আগে আপনাকেই ঠিক করতে হয়। শুধু ইংরেজি।</span></div>
+  <div><b>ElastiFlow</b><span>Kibana dashboard; বদলাতে হলে Kibana শিখতে হয়।</span></div>
+  <div><b>FastNetMon</b><span>Community সংস্করণে ওয়েব UI নেই; চার্ট Grafana দিয়ে। ওয়েব UI বাণিজ্যিক সংস্করণে।</span></div>
+  <div><b>GoFlow2, pmacct, vflow, nfdump</b><span>UI নেই; nfdump-এ কমান্ড-লাইন কোয়েরি আছে। dashboard নিজেকেই বানাতে হয়, সাধারণত Grafana-তে, প্রতিটি চার্টের জন্য একটি করে কোয়েরি।</span></div>
+</div>
+
+<h2>4. Sample করা ডেটায় আক্রমণ খোঁজা</h2>
+<p>Sample করা ডেটায় শনাক্তকরণ কঠিন: 1:4096-এ একটি স্ক্যান হয়তো হাতে-গোনা কয়েকটি প্যাকেট রেখে যায়। traffic66-এর নিয়মগুলো sample করা ডেটার জন্য ক্যালিব্রেট করা। ডেমোতে পুরো আক্রমণ-শৃঙ্খল 1:4096 sFlow দিয়েই ধরা পড়ে: অভ্যন্তরীণ স্ক্যান, পোর্ট স্ক্যান, পাসওয়ার্ড অনুমান, lateral movement, নতুন একটি ঠিকানায় বড় আপলোড, আর threat list-এর ট্রাফিক। ডেমোর এক দিনের স্বাভাবিক ট্রাফিক থেকে আর কোনো ফলাফল আসে না, শুধু ওয়েবসাইটে কড়া নাড়া ইন্টারনেট স্ক্যানারটি ছাড়া।</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/bn/findings.jpg" alt="সন্দেহজনক কার্যকলাপ: আক্রমণের প্রতিটি ধাপ, সবচেয়ে গুরুতরটি আগে" width="1440" height="900" loading="lazy">
+  <figcaption>সন্দেহজনক কার্যকলাপ। ডেমোতে একটি আক্রান্ত হোস্টের আক্রমণের প্রতিটি ধাপ, সবই 1:4096 sFlow sampling থেকে।</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>এখানে তুলনাটা কাছাকাছি:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>স্ক্যান, পোর্ট স্ক্যান, পাসওয়ার্ড অনুমান, lateral movement, অস্বাভাবিক আপলোড, flood আর threat list, sample করা ডেটার জন্য threshold-সহ।</span></div>
+  <div><b>ntopng</b><span>আমাদের চেয়ে অনেক বেশি চেক: স্ক্যান, flood, blacklist, DNS ও ICMP দিয়ে ডেটা পাচার, lateral movement, Community সংস্করণেই। এখানে ntopng এগিয়ে।</span></div>
+  <div><b>FastNetMon</b><span>শুধু DDoS, তবে গভীরভাবে: কয়েক সেকেন্ডের মধ্যে শনাক্তকরণ আর স্বয়ংক্রিয় BGP blackholing।</span></div>
+  <div><b>ElastiFlow</b><span>NetIntel threat enrichment; সতর্কবার্তা Elastic-এ নিজের বানানো নিয়ম দিয়ে।</span></div>
+  <div><b>Akvorado ও collector গুলো</b><span>নিরাপত্তা শনাক্তকরণ নেই।</span></div>
+</div>
+<p>নিরাপত্তায় আমরা ntopng-এর সমান। আমাদের দেওয়ার মতো যা আছে তা হলো, চেকগুলো একটিমাত্র প্রোগ্রামে কোনো সেটআপ ছাড়াই আসে, আর sample করা ডেটার জন্য টিউন করা।</p>
+<p>আরেকটি সুবিধা: <code>traffic66 capture.pcap</code> একটি প্যাকেট ক্যাপচার ফাইলকে একই পেজগুলো দিয়ে বিশ্লেষণ করে (<strong>অফলাইন pcap বিশ্লেষণ</strong>), লাইভ ডেটা থেকে আলাদা রেখে। ntopng-ও pcap ফাইল পড়ে, তাই এটাকে সমান সমান ধরুন।</p>
+
+<h2>ফলাফলের তালিকা</h2>
+<p>ওপরের পয়েন্টগুলো আর নিচের দুর্বলতাগুলো একটি টেবিলে। ভরা মানে আছে, অর্ধেক মানে আংশিক, টাকা দিয়ে বা আলাদা ইনস্টল করে, খালি মানে নেই।</p>
+</div>
+<div class="wide">
+<div class="tablewrap">
+<table class="matrix">
+<thead><tr><th>সক্ষমতা</th><th class="us">traffic66</th><th>ntopng</th><th>Akvorado</th><th>ElastiFlow (বর্তমান)</th><th>FastNetMon</th><th>Collector গুলো<small>GoFlow2 · pmacct · vflow · nfdump</small></th></tr></thead>
+<tbody>
+<tr><td>একটিমাত্র প্রোগ্রাম, ইনস্টলের পরেই প্রস্তুত</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + nProbe লাইসেন্স</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>চার্টের জন্য Grafana</small></td><td><i class="m"></i><small>স্টোরেজ ও UI নিজে বানাতে হয়</small></td></tr>
+<tr><td>Windows-এ নেটিভভাবে চলে</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Windows বিল্ড শুধু ডেমো</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>বিল্ট-ইন ওয়েব UI</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>Kibana dashboard</small></td><td><i class="m h"></i><small>বাণিজ্যিক সংস্করণ</small></td><td><i class="m"></i></td></tr>
+<tr><td>অনেক ভাষায় UI</td><td class="us"><i class="m y"></i><small>13</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>ইংরেজি</small></td><td><i class="m h"></i><small>শুধু Kibana</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>ইন্টারফেস কাউন্টারের সঙ্গে flow মিলিয়ে দেখা</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>SNMP চার্ট (Enterprise)</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>নিজে বানাতে হয়</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>নিরাপত্তা শনাক্তকরণ</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>সবচেয়ে বেশি চেক</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>threat enrichment</small></td><td><i class="m h"></i><small>শুধু DDoS, প্রতিরোধসহ</small></td><td><i class="m"></i></td></tr>
+<tr><td>অফলাইন pcap বিশ্লেষণ</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>টার্মিনাল UI</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>console client</small></td><td><i class="m h"></i><small>nfdump CLI</small></td></tr>
+<tr><td>Layer-7 অ্যাপ্লিকেশন শনাক্তকরণ</td><td class="us"><i class="m"></i></td><td><i class="m y"></i><small>nDPI</small></td><td><i class="m"></i></td><td><i class="m h"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Horizontal scale-out</td><td class="us"><i class="m h"></i><small>5,000 record/s, একটি মেশিন</small></td><td><i class="m h"></i></td><td><i class="m y"></i></td><td><i class="m y"></i><small>পেইড tier</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+<tr><td>OSI-অনুমোদিত open-source লাইসেন্স</td><td class="us"><i class="m"></i><small>source-available</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i><small>closed</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+</tbody>
+</table>
+</div>
+<div class="legend"><span><i class="m y"></i> আছে</span><span><i class="m h"></i> আংশিক, পেইড বা আলাদা ইনস্টল</span><span><i class="m"></i> নেই</span></div>
+</div>
+<div class="col">
+<p>traffic66 প্রথম আটটি সারি পূরণ করে; আর কোনো কলাম তা করে না। শেষ তিনটি সারি আমাদের দুর্বল দিক।</p>
+
+<h2>যেখানে অন্যরা ভালো</h2>
+<p>বেছে নেওয়ার আগে এই অংশটা পড়ুন।</p>
+</div>
+<div class="wide">
+<div class="grid2">
+  <div class="card"><div class="who">Akvorado · GoFlow2</div><h4>স্কেল</h4><p>traffic66 বানানো হয়েছে embedded DuckDB-সহ একটি মেশিনে প্রতি সেকেন্ডে 5,000 flow record-এর জন্য। ক্যারিয়ার-স্তরের ট্রাফিকের জন্য scale-out করা যায় এমন Kafka ও ClickHouse আর্কিটেকচারই সঠিক উত্তর।</p></div>
+  <div class="card"><div class="who">ntopng</div><h4>ডিপ প্যাকেট ইন্সপেকশন</h4><p>ntopng-এ nDPI আছে, শত শত layer-7 প্রোটোকল চিনতে পারে। traffic66 flow নিয়ে কাজ করে; অ্যাপ্লিকেশন চেনে পোর্ট দিয়ে, প্যাকেট পার্স করে না।</p></div>
+  <div class="card"><div class="who">FastNetMon</div><h4>স্বয়ংক্রিয় DDoS প্রতিরোধ</h4><p>আক্রমণ শনাক্ত হওয়ামাত্র FastNetMon একটি BGP blackhole বা FlowSpec রুল announce করতে পারে। traffic66 flood-এর খবর দেয়, রাউটিংয়ে হাত দেয় না।</p></div>
+  <div class="card"><div class="who">pmacct</div><h4>রাউটিং ডেটা ও নমনীয়তা</h4><p>pmacct flow-এর পাশাপাশি BGP ও BMP নেয়, record-এ রাউটিং তথ্য যোগ করে আর প্রায় যেকোনো জায়গায় লিখতে পারে। traffic66 একটি তৈরি প্রোডাক্ট, টুলকিট নয়।</p></div>
+  <div class="card"><div class="who">প্রতিষ্ঠিত প্রজেক্টগুলো</div><h4>বয়স ও কমিউনিটি</h4><p>ntopng-এর প্রায় 30,000 commit; nfdump দুই দশক ধরে আছে। traffic66 সবে স্টার পেতে শুরু করেছে, প্রোডাকশনে চলার অভিজ্ঞতাও অনেক কম।</p></div>
+  <div class="card"><div class="who">টেবিলের বেশিরভাগ</div><h4>লাইসেন্স</h4><p>এরা OSI-অনুমোদিত open-source লাইসেন্স ব্যবহার করে। traffic66 source-available: মূল্যায়নের জন্য এবং 100 জনের কম মানুষের প্রতিষ্ঠানের জন্য ফ্রি; বড় প্রতিষ্ঠানকে 30 দিন পরে রেজিস্টার করতে হয়। কোনো ফিচার বন্ধ হয় না, কিন্তু এটি open source নয়।</p></div>
+</div>
+</div>
+
+<div class="col">
+<h2>কোনটা বেছে নেবেন</h2>
+<div class="pick">
+  <div class="us"><span>একটি মেশিন, দশ থেকে কয়েকশো ইন্টারফেস, আজ বিকেলেই চার্ট চাই, সংখ্যা যেন SNMP-এর সঙ্গে মেলে</span><b>traffic66</b></div>
+  <div><span>Layer-7 পর্যায়ে দেখা দরকার, বা বেশিরভাগই mirror port</span><b>ntopng</b></div>
+  <div><span>ক্যারিয়ার বা বড় backbone, প্রতি সেকেন্ডে কয়েক লাখ flow</span><b>Akvorado</b></div>
+  <div><span>স্বয়ংক্রিয় blackholing-সহ DDoS শনাক্তকরণ</span><b>FastNetMon</b></div>
+  <div><span>আগে থেকেই Kafka আর ডেটা প্ল্যাটফর্ম চলছে, শুধু collector দরকার</span><b>GoFlow2 / pmacct</b></div>
+  <div><span>কমান্ড লাইন, দীর্ঘমেয়াদি raw record</span><b>nfdump</b></div>
+</div>
+<p>তিনটি বিষয়ে আমরা আত্মবিশ্বাসী: দ্রুত ইনস্টল, সহজে পড়া যায়, আর সংখ্যা মেলে। বাকিগুলোর জন্য <a href="https://github.com/githubflyideas/traffic66" target="_blank" rel="noopener">GitHub</a>-এ issue খুলুন; ঘাটতিগুলো আমরা একটা একটা করে পূরণ করব।</p>
+</div>
+
+<footer class="col">
+  সূত্র, 8 অক্টোবর 2026-এ যাচাই করা:
+  <ol>
+    <li>GitHub-এ প্রজেক্টের পেজ: <a href="https://github.com/ntop/ntopng" target="_blank" rel="noopener">ntopng</a>, <a href="https://github.com/pavel-odintsov/fastnetmon" target="_blank" rel="noopener">FastNetMon</a>, <a href="https://github.com/robcowart/elastiflow" target="_blank" rel="noopener">ElastiFlow (legacy)</a>, <a href="https://github.com/akvorado/akvorado" target="_blank" rel="noopener">Akvorado</a>, <a href="https://github.com/pmacct/pmacct" target="_blank" rel="noopener">pmacct</a>, <a href="https://github.com/Edgio/vflow" target="_blank" rel="noopener">vflow</a>, <a href="https://github.com/phaag/nfdump" target="_blank" rel="noopener">nfdump</a>, <a href="https://github.com/cloudflare/goflow" target="_blank" rel="noopener">Cloudflare goflow</a>, <a href="https://github.com/netsampler/goflow2" target="_blank" rel="noopener">GoFlow2</a>।</li>
+    <li>NetFlow/sFlow-এর জন্য ntopng-এর nProbe লাইসেন্স লাগে: <a href="https://www.ntop.org/guides/ntopng/use_cases/netflow_sflow_monitoring.html" target="_blank" rel="noopener">ntop ডকুমেন্টেশন</a>।</li>
+    <li>সংস্করণ অনুযায়ী ntopng-এর alert: <a href="https://ntop.org/guides/ntopng/alerts/alerts_list_per_license.html" target="_blank" rel="noopener">Alerts List per License</a>; SNMP মনিটরিং: <a href="https://www.ntop.org/monitoring-network-devices-with-ntopng-and-snmp/" target="_blank" rel="noopener">ntop ব্লগ</a>; UI-এর ভাষা: <a href="https://www.ntop.org/extended-multilanguage-support-in-ntopng-korean-spanish-and-french/" target="_blank" rel="noopener">2024-এর ঘোষণা</a>; Windows ডেমো বিল্ড: <a href="https://en.wikipedia.org/wiki/Ntopng" target="_blank" rel="noopener">Wikipedia</a>।</li>
+    <li>Akvorado 2.0-এর আর্কিটেকচার (inlet, Kafka, outlet, ClickHouse): <a href="https://vincent.bernat.ch/en/blog/2025-akvorado-2.0" target="_blank" rel="noopener">লেখকের ব্লগ</a>।</li>
+    <li>ElastiFlow NetIntel enrichment: <a href="https://docs.elastiflow.com/flowcoll/configuration/enrichment-options/ip-address-enrichment/enrich_ip_netintel" target="_blank" rel="noopener">ElastiFlow ডকুমেন্টেশন</a>; NetObserv Flow-এর লাইসেন্স tier: <a href="https://docs.elastiflow.com/flowcoll/configuration/config_gen/license" target="_blank" rel="noopener">ElastiFlow ডকুমেন্টেশন</a>।</li>
+    <li>MikroTik RouterOS Traffic Flow (Cisco NetFlow সামঞ্জস্য, v1, v5, v9 ও IPFIX, v7-এ sampling): <a href="https://help.mikrotik.com/docs/spaces/ROS/pages/21102653/Traffic+Flow" target="_blank" rel="noopener">MikroTik ডকুমেন্টেশন</a>; SNMP (ডিফল্টভাবে বন্ধ, IF-MIB): <a href="https://help.mikrotik.com/docs/spaces/ROS/pages/8978519/SNMP" target="_blank" rel="noopener">MikroTik ডকুমেন্টেশন</a>।</li>
+    <li>বাংলাদেশ, Personal Data Protection Ordinance, 2025-এর গেজেট (নভেম্বর 2025): <a href="https://en.prothomalo.com/bangladesh/government/teeopu4dfv" target="_blank" rel="noopener">Prothom Alo</a>; Personal Data Protection (Amendment) Ordinance, 2026 (5 ফেব্রুয়ারি 2026): <a href="https://digitalpolicyalert.org/event/38601-president-implemented-personal-data-protection-amendment-ordinance-2026-ordinance-no-23-of-2026" target="_blank" rel="noopener">Digital Policy Alert</a>।</li>
+    <li>ভারত, Digital Personal Data Protection Rules, 2025 (13 নভেম্বর 2025-এ নোটিফাই, ধাপে ধাপে কার্যকর): <a href="https://www.hoganlovells.com/en/publications/indias-digital-personal-data-protection-act-2023-brought-into-force-" target="_blank" rel="noopener">Hogan Lovells</a>।</li>
+  </ol>
+  স্ক্রিনশটগুলো <code>traffic66 demo</code> থেকে নেওয়া, একটি সিমুলেটেড নেটওয়ার্ক।
+</footer>
+</article>

@@ -17,11 +17,11 @@
   },
   {
     "date": "2026-10-08",
-    "lang": "ja",
+    "lang": "hi",
     "slug": "flow-analyzers-compared",
-    "title": "GitHub のフロー分析ツールを、順番にインストールしてみました",
-    "summary": "ntopng、Akvorado、ElastiFlow、FastNetMon、pmacct、GoFlow2、nfdump と traffic66 を比較しました。導入手順、SNMP カウンターとの照合、UI、検知、そしてほかのプロジェクトが優れている点。",
-    "image": "assets/shots/ja/overview.jpg",
+    "title": "GitHub के flow analyzers हमने एक-एक करके install करके देखे",
+    "summary": "Download से पहले भरोसेमंद chart तक: traffic66 और GitHub के प्रमुख NetFlow/sFlow/IPFIX tools की तुलना, जिसमें यह भी साफ़ लिखा है कि कहाँ दूसरे बेहतर हैं।",
+    "image": "assets/shots/hi/overview.jpg",
     "draft": true
   },
   {
@@ -35,11 +35,11 @@
   },
   {
     "date": "2026-10-08",
-    "lang": "pt",
+    "lang": "ar",
     "slug": "flow-analyzers-compared",
-    "title": "Instalamos, um por um, os analisadores de fluxo do GitHub",
-    "summary": "Do download ao primeiro gráfico confiável: traffic66, ntopng, Akvorado, ElastiFlow e outros comparados, com os pontos em que os outros são melhores.",
-    "image": "assets/shots/pt/overview.jpg",
+    "title": "ثبّتنا أدوات تحليل التدفقات المتاحة على GitHub، واحدةً تلو الأخرى",
+    "summary": "من التنزيل إلى أول رسم بياني موثوق: مقارنة traffic66 بـ ntopng وAkvorado وElastiFlow وغيرها، مع ما يتفوّق فيه الآخرون، ولماذا يهمّ بقاء بيانات التدفق على خادمك.",
+    "image": "assets/shots/ar/overview.jpg",
     "draft": true
   },
   {
@@ -53,11 +53,56 @@
   },
   {
     "date": "2026-10-08",
-    "lang": "de",
+    "lang": "bn",
     "slug": "flow-analyzers-compared",
-    "title": "Wir haben die Flow-Analysatoren auf GitHub der Reihe nach installiert",
-    "summary": "Zehn Flow-Analysatoren für NetFlow, sFlow und IPFIX im Vergleich: Weg zum ersten Diagramm, Abgleich mit Interface-Zählern, Erkennung, Grenzen. Mit Hinweisen zu DSGVO und Betrieb im eigenen Haus.",
-    "image": "assets/img/overview.png",
+    "title": "GitHub-এর flow analyzer গুলো একে একে ইনস্টল করে দেখলাম",
+    "summary": "ডাউনলোড থেকে ভরসাযোগ্য প্রথম চার্ট পর্যন্ত: traffic66 আর GitHub-এর জনপ্রিয় NetFlow/sFlow/IPFIX টুলগুলোর তুলনা, কোথায় অন্যরা এগিয়ে তাও সহ।",
+    "image": "assets/shots/bn/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "pt",
+    "slug": "flow-analyzers-compared",
+    "title": "Instalamos, um por um, os analisadores de fluxo do GitHub",
+    "summary": "Do download ao primeiro gráfico confiável: traffic66, ntopng, Akvorado, ElastiFlow e outros comparados, com os pontos em que os outros são melhores.",
+    "image": "assets/shots/pt/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "ru",
+    "slug": "flow-analyzers-compared",
+    "title": "Мы по очереди установили анализаторы трафика с GitHub",
+    "summary": "Сравнение анализаторов NetFlow, sFlow и IPFIX: путь от скачивания до первого графика, сверка со счётчиками интерфейсов, обнаружение угроз и честно о слабых местах traffic66.",
+    "image": "assets/shots/ru/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "id",
+    "slug": "flow-analyzers-compared",
+    "title": "Kami memasang satu per satu penganalisis flow yang ada di GitHub",
+    "summary": "Dari unduhan sampai grafik pertama yang angkanya bisa dipercaya: traffic66 dibandingkan dengan ntopng, Akvorado, ElastiFlow, FastNetMon, dan kolektor lain, termasuk di mana mereka lebih unggul.",
+    "image": "assets/shots/id/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "ur",
+    "slug": "flow-analyzers-compared",
+    "title": "ہم نے GitHub کے flow analyzers ایک ایک کر کے انسٹال کیے",
+    "summary": "ڈاؤن لوڈ سے ایسے پہلے chart تک جس کے اعداد پر بھروسا ہو: traffic66 کا موازنہ ntopng، Akvorado، ElastiFlow، FastNetMon اور collectors سے، ان کی کمزوریوں اور ہماری کمزوریوں سمیت۔",
+    "image": "assets/shots/ur/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "ja",
+    "slug": "flow-analyzers-compared",
+    "title": "GitHub のフロー分析ツールを、順番にインストールしてみました",
+    "summary": "ntopng、Akvorado、ElastiFlow、FastNetMon、pmacct、GoFlow2、nfdump と traffic66 を比較しました。導入手順、SNMP カウンターとの照合、UI、検知、そしてほかのプロジェクトが優れている点。",
+    "image": "assets/shots/ja/overview.jpg",
     "draft": true
   },
   {
@@ -71,11 +116,11 @@
   },
   {
     "date": "2026-10-08",
-    "lang": "ar",
+    "lang": "de",
     "slug": "flow-analyzers-compared",
-    "title": "ثبّتنا أدوات تحليل التدفقات المتاحة على GitHub، واحدةً تلو الأخرى",
-    "summary": "من التنزيل إلى أول رسم بياني موثوق: مقارنة traffic66 بـ ntopng وAkvorado وElastiFlow وغيرها، مع ما يتفوّق فيه الآخرون، ولماذا يهمّ بقاء بيانات التدفق على خادمك.",
-    "image": "assets/shots/ar/overview.jpg",
+    "title": "Wir haben die Flow-Analysatoren auf GitHub der Reihe nach installiert",
+    "summary": "Zehn Flow-Analysatoren für NetFlow, sFlow und IPFIX im Vergleich: Weg zum ersten Diagramm, Abgleich mit Interface-Zählern, Erkennung, Grenzen. Mit Hinweisen zu DSGVO und Betrieb im eigenen Haus.",
+    "image": "assets/img/overview.png",
     "draft": true
   }
 ]
