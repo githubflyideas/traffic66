@@ -7,12 +7,14 @@ sitemap. To add a post: write site/posts/<lang>/<slug>.html and add it to
 site/posts.json. Screenshots come from docs/images (assets/img on the site).
 
     python3 site/build.py            # writes _site/
+    python3 site/build.py --drafts   # also the posts marked "draft": true
     python3 -m http.server -d _site  # look at it on http://localhost:8000/
 """
 import html
 import json
 import os
 import shutil
+import sys
 
 SITE = "https://githubflyideas.github.io/traffic66/"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +30,17 @@ NAV = [("home", "", "Home"), ("blog", "blog/", "Blog"),
        ("", "https://github.com/githubflyideas/traffic66", "GitHub")]
 # html lang and text direction of each post language
 LANGS = {"ar": "rtl", "ur": "rtl"}
+# fonts for scripts the Latin faces do not cover: (Google Fonts families, display stack, body stack)
+SCRIPT_FONTS = {
+    "zh": ("Noto+Serif+SC:wght@600;900&family=Noto+Sans+SC:wght@400;500;700",
+           '"Noto Serif SC","Songti SC",serif', '"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif'),
+    "ja": ("Noto+Serif+JP:wght@600;900&family=Noto+Sans+JP:wght@400;500;700",
+           '"Noto Serif JP","Hiragino Mincho ProN",serif', '"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif'),
+    "ko": ("Noto+Serif+KR:wght@600;900&family=Noto+Sans+KR:wght@400;500;700",
+           '"Noto Serif KR",serif', '"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif'),
+    "ar": ("Noto+Naskh+Arabic:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700",
+           '"Noto Naskh Arabic",serif', '"IBM Plex Sans Arabic",Tahoma,sans-serif'),
+}
 
 
 def read(*p):
@@ -54,6 +67,11 @@ def page(rel, title, desc, body, cur="", image="assets/img/overview.png", kind="
         for k, h, t in NAV)
     d = LANGS.get(lang, "ltr")
     e = html.escape
+    extra = ""
+    if lang in SCRIPT_FONTS:
+        fam, disp, bod = SCRIPT_FONTS[lang]
+        extra = (f'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={fam}&display=swap">\n'
+                 f'<style>:root{{--display:{disp};--body:{bod}}}</style>\n')
     return f"""<!doctype html>
 <html lang="{lang}" dir="{d}">
 <head>
@@ -74,7 +92,7 @@ def page(rel, title, desc, body, cur="", image="assets/img/overview.png", kind="
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="{FONTS}">
 <link rel="stylesheet" href="{root}assets/site.css">
-</head>
+{extra}</head>
 <body>
 <header class="site-head"><div class="in"><a class="brand" href="{root or './'}">{MARK}<span>traffic<b>66</b></span></a><nav aria-label="Site">{nav}</nav></div></header>
 {body.replace("{root}", root)}
@@ -94,7 +112,10 @@ def post_list(posts, root):
 
 
 def main():
-    posts = sorted(json.loads(read("posts.json")), key=lambda p: p["date"], reverse=True)
+    # a post with "draft": true is left out until it is published
+    drafts = "--drafts" in sys.argv
+    posts = [p for p in json.loads(read("posts.json")) if drafts or not p.get("draft")]
+    posts.sort(key=lambda p: p["date"], reverse=True)
     shutil.rmtree(OUT, ignore_errors=True)
     shutil.copytree(os.path.join(HERE, "assets"), os.path.join(OUT, "assets"))
     shutil.copytree(os.path.join(REPO, "docs", "images"), os.path.join(OUT, "assets", "img"))
@@ -129,7 +150,7 @@ def main():
           + "".join(f"<url><loc>{SITE}{u}</loc><lastmod>{d}</lastmod></url>\n" for u, d in urls) + "</urlset>\n")
     write("robots.txt", f"User-agent: *\nAllow: /\nSitemap: {SITE}sitemap.xml\n")
     write(".nojekyll", "")
-    print(f"built {OUT}: {len(posts)} posts")
+    print(f"built {OUT}: {len(posts)} posts" + (" (drafts included)" if drafts else ""))
 
 
 if __name__ == "__main__":

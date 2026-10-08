@@ -29,7 +29,18 @@ and images work at any depth: `<img src="{root}assets/img/overview.png">`.
 3. Look at it: `python3 site/build.py && python3 -m http.server -d _site`.
 4. Merge to `main`; the site updates within a minute or two.
 
-Posts in Arabic and Urdu are set right to left automatically.
+Posts in Arabic and Urdu are set right to left automatically; Chinese,
+Japanese, Korean and Arabic posts get fonts for their script.
+
+## Drafts and serial publishing
+
+A post with `"draft": true` in `posts.json` is in the repository but not on
+the site. To publish it, remove `"draft": true` and set `"date"` to the day
+it goes out, then merge. `python3 site/build.py --drafts` builds a preview
+with the drafts included.
+
+Screenshots of the traffic66 UI in each language are in
+`assets/shots/<lang>/` (overview, interfaces, findings).
 
 The post appears at `/blog/<lang>/<slug>/`, in the blog index, on the home
 page (the five newest), in `blog/feed.xml` and in `sitemap.xml`.

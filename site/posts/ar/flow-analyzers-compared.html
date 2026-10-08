@@ -1,0 +1,193 @@
+<article>
+<header class="hero col">
+  <div class="kicker"><span><a href="{root}blog/" style="color:inherit">مدونة traffic66</a></span><span>NetFlow / sFlow / IPFIX</span><b>أكتوبر 2026</b></div>
+  <h1>ثبّتنا أدوات تحليل التدفقات المتاحة على GitHub، واحدةً تلو الأخرى</h1>
+  <p class="lede">يقيس هذا المقال أمرًا واحدًا: كم من الخطوات يقطعها مسؤول الشبكة من التنزيل حتى <span class="far">أول رسم بياني يثق بأرقامه</span>. traffic66 صاحب أقصر طريق. وفي كشف التهديدات الأمنية يقف على مستوى ntopng. أما في التوسّع والفحص العميق للحزم وحجم المجتمع، فغيره متقدّم عليه. راجعنا كل ادعاء في وثائق المشاريع الأخرى نفسها، والروابط في آخر المقال.</p>
+  <div class="byline"><span>بقلم فريق تطوير traffic66</span><span>نحن طرف معنيّ بالمقارنة؛ فاقرأ على هذا الأساس</span><span>البيانات حتى 8 أكتوبر 2026</span></div>
+</header>
+
+<div class="col">
+<h2>المشاريع المشمولة</h2>
+<p>اخترنا أكثر المشاريع حصولًا على النجوم في GitHub ضمن مجال sFlow وNetFlow وIPFIX. بعضها منتجات متكاملة، وبعضها مُجمِّعات فقط، وبعضها مؤرشف. أعداد النجوم كما تظهر على GitHub.</p>
+</div>
+
+<div class="wide">
+<div class="tablewrap">
+<table>
+<thead><tr><th>المشروع</th><th style="text-align:right">النجوم</th><th>ما هو</th><th>ما يلزم تثبيته أولًا</th><th>الحالة · الترخيص</th></tr></thead>
+<tbody>
+<tr><td class="name">ntopng</td><td class="num">8.1k</td><td>أداة ويب لمراقبة الحركة مع فحص عميق للحزم عبر nDPI</td><td>Redis؛ ولاستقبال NetFlow/sFlow يلزم nProbe، وهو يتطلّب ترخيصًا</td><td><span class="tag ok">نشط</span> GPL-3.0</td></tr>
+<tr><td class="name">FastNetMon</td><td class="num">3.7k</td><td>كشف هجمات DDoS، ويمكنه تفعيل BGP blackholing</td><td>Linux؛ والرسوم عبر InfluxDB/Grafana أو ما يماثلهما</td><td><span class="tag ok">نشط</span> GPL-2.0</td></tr>
+<tr><td class="name">ElastiFlow (الإصدار القديم)</td><td class="num">2.5k</td><td>خط معالجة Logstash ولوحات Kibana</td><td>Elasticsearch وLogstash وKibana</td><td><span class="tag dead">مؤرشف 2024-03</span></td></tr>
+<tr><td class="name">Akvorado</td><td class="num">2.3k</td><td>مُجمِّع ومُثري للبيانات وأداة عرض</td><td>inlet وKafka وoutlet وClickHouse؛ وRedis في ملف compose الرسمي</td><td><span class="tag ok">نشط</span> AGPL-3.0</td></tr>
+<tr><td class="name">pmacct</td><td class="num">1.2k</td><td>خدمات تجميع تدعم BGP وBMP</td><td>قاعدة بيانات ولوحات من اختيارك (غالبًا Grafana)</td><td><span class="tag ok">نشط</span> GPL (في طور الانتقال إلى ترخيص على نمط BSD)</td></tr>
+<tr><td class="name">vflow</td><td class="num">1.2k</td><td>مُجمِّع يغذّي Kafka</td><td>Kafka ثم التخزين واللوحات بعده</td><td>Apache-2.0</td></tr>
+<tr><td class="name">nfdump</td><td class="num">922</td><td>أدوات سطر أوامر للتجميع والاستعلام</td><td>لا واجهة ويب خاصة به</td><td><span class="tag ok">نشط</span> BSD</td></tr>
+<tr><td class="name">Cloudflare goflow</td><td class="num">919</td><td>المُجمِّع الذي استخدمته Cloudflare داخليًا</td><td>Kafka وما بعده</td><td><span class="tag dead">مؤرشف 2025-02</span></td></tr>
+<tr><td class="name">GoFlow2</td><td class="num">798</td><td>مُجمِّع عالي الأداء</td><td>إخراج إلى Kafka أو ملفات؛ والتخزين والواجهة عليك بناؤهما</td><td><span class="tag ok">نشط</span> BSD-3</td></tr>
+<tr class="us"><td class="name">traffic66</td><td class="num">جديد</td><td>مُجمِّع وتخزين وواجهة ويب وواجهة طرفية وكشف تهديدات وتحليل pcap</td><td>لا شيء: ملف تنفيذي واحد مع DuckDB مدمجة</td><td><span class="tag ok">نشط</span> شيفرة متاحة المصدر (انظر أدناه)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">يحمل ElastiFlow الحالي اسم NetObserv Flow. وهو مغلق المصدر، والفئة المجانية Community فيه محدودة بـ 500 سجل تدفق في الثانية.</p>
+</div>
+
+<div class="col">
+<h2>1. من التنزيل إلى أول رسم بياني</h2>
+<p>هذا أهم ما يعنينا. حين يُسأل فريق الشبكة في الثالثة عصرًا عمّن يملأ وصلة الإنترنت، لا أحد يريد أن يتعلّم Kafka أولًا. هذه أقصر المسارات بحسب وثائق كل مشروع:</p>
+</div>
+<div class="wide">
+<div class="race" role="list">
+  <div class="lane us" role="listitem"><div class="who">traffic66</div><div class="bar"><span class="step">التنزيل وفك الضغط</span><span class="step">./traffic66</span><span class="step">فتح المتصفح ✓</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ntopng</div><div class="bar"><span class="step">إضافة المستودع</span><span class="step">تثبيت ntopng</span><span class="step">تثبيت Redis</span><span class="step">تثبيت nProbe</span><span class="step">الحصول على ترخيص nProbe</span><span class="step">الربط بينهما</span><span class="step">الرسم البياني</span></div></div>
+  <div class="lane" role="listitem"><div class="who">Akvorado</div><div class="bar"><span class="step">تثبيت Docker</span><span class="step">جلب ملف compose</span><span class="step">تشغيل Kafka</span><span class="step">تشغيل ClickHouse</span><span class="step">تشغيل inlet/outlet</span><span class="step">إعداد SNMP وGeoIP</span><span class="step">الرسم البياني</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ElastiFlow</div><div class="bar"><span class="step">تثبيت Elasticsearch</span><span class="step">تثبيت Kibana</span><span class="step">تثبيت المُجمِّع</span><span class="step">استيراد اللوحات</span><span class="step">مراعاة سقف 500 سجل/ث</span><span class="step">الرسم البياني</span></div></div>
+  <div class="lane" role="listitem"><div class="who">GoFlow2 / pmacct</div><div class="bar"><span class="step">تثبيت المُجمِّع</span><span class="step">اختيار قاعدة بيانات</span><span class="step">بناء خط المعالجة</span><span class="step">تثبيت Grafana</span><span class="step">رسم لوحاتك بنفسك</span><span class="step">الرسم البياني</span></div></div>
+</div>
+</div>
+<div class="col">
+<p>عند التثبيت الجديد يكون الدخول إلى traffic66 بالمستخدم admin وكلمة المرور traffic66، ويطلب البرنامج عند أول تسجيل دخول كلمة مرور خاصة بك. على Windows يكفي النقر المزدوج على <code>traffic66.exe</code> لفتح المتصفح. وللاطلاع قبل الربط بأجهزتك، يبني الأمر <code>traffic66 demo</code> شبكة شركة محاكاة فيها يوم كامل من السجل التاريخي وهجوم كامل.</p>
+<p>بشأن <strong>Windows</strong>: تكاد كل مشاريع الجدول تعمل على Linux أو Docker فقط. أما traffic66 فيُبنى من الشيفرة نفسها برامجَ أصلية لـ Windows وLinux وmacOS، من دون WSL ومن دون Docker. وفي كثير من المؤسسات الصغيرة يكون جهاز المراقبة حاسوبًا يعمل بنظام Windows.</p>
+
+<div class="quote" aria-label="رقم رئيسي">
+  <div class="big">3 <span>خطوات</span></div>
+  <div class="cap">من التنزيل إلى أول رسم بياني</div>
+</div>
+
+<h2>لماذا يهمّ هذا الجهاتِ في الخليج والمنطقة العربية: البيانات تبقى عندك</h2>
+<p>سجلات التدفق تصف من تواصل مع من، ومتى، وبأي حجم: عناوين داخلية وخارجية ومنافذ وتطبيقات. وفي الجهات الحكومية والبنوك ومشغّلي الاتصالات والجامعات، كثيرًا ما يُطرح سؤال مكان تخزين هذه البيانات ومن يصل إليها قبل اعتماد أي أداة. في المملكة العربية السعودية صدر نظام حماية البيانات الشخصية بالمرسوم الملكي رقم (م/19) وعُدّل بالمرسوم الملكي رقم (م/148)، ونُشرت في جريدة أم القرى موافقة الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) على لائحته التنفيذية. وفي دولة الإمارات العربية المتحدة يسري المرسوم بقانون اتحادي رقم (45) لسنة 2021 بشأن حماية البيانات الشخصية منذ 2 يناير 2022، وتذكر البوابة الرسمية لحكومة الإمارات أنه يحدّد اشتراطات نقل البيانات الشخصية ومشاركتها عبر الحدود.</p>
+<p>هذا ليس رأيًا قانونيًا، ولا يغيّر traffic66 شيئًا من التزاماتكم بموجب هذه الأنظمة؛ أما هل تُعدّ سجلات التدفق بيانات شخصية في حالتكم، فذلك تقدّره الإدارة القانونية وإدارة الالتزام لديكم. ما نستطيع قوله تقنيًا: التجميع والتخزين (في DuckDB المدمجة) والتحليل تجري كلها على جهاز واحد تملكه أنت، ولا يرسل البرنامج سجلات التدفق ولا أي بيانات قياس عن بُعد إلى الخارج. الاتصال الصادر الوحيد اختياري: تحديث قاعدة بيانات الموقع الجغرافي المجانية من DB-IP عند طلبك، والبرنامج يأتي بنسخة مدمجة منها، فيعمل كاملًا في شبكة معزولة.</p>
+<p>مع خدمة تحليل مستضافة في السحابة، يحتاج سؤال «أين تذهب البيانات؟» إلى إجابة من مزوّد الخدمة. مع traffic66 الإجابة هي قرص الخادم الذي في غرفة الخوادم لديك.</p>
+
+<h2>2. هل تطابق الأرقامُ عدّاداتِ الواجهات؟</h2>
+<p>السؤال الذي تواجهه كل أداة تدفقات: الرسم يقول إن الوصلة تحمل 800 Mb/s، وSNMP في Zabbix يقول 600. أيّهما الصحيح؟</p>
+<p>أرقام التدفقات تقديرات: عدد الحزم المأخوذة عيّنةً مضروبًا في معدل أخذ العينات. ولدى traffic66 صفحة مخصّصة لهذا تحديدًا هي <strong>مطابقة الواجهات</strong>. ترسم لكل واجهة تقدير التدفقات وعدّادات الجهاز نفسه (عدّادات sFlow أو SNMP) في رسم واحد، وتحسب الفرق والخطأ الإحصائي الناتج عن أخذ العينات. وحين يتجاوز الفرق ما يفسّره أخذ العينات، تذكر السبب المرجّح: واجهات لم يُفعَّل عليها أخذ العينات، أو الحركة نفسها مأخوذة عيّنةً على واجهتين، أو حزم تصدير ضاعت في الطريق، أو معدل أخذ عينات لم يصل بعد.</p>
+<p>وخلف ذلك تفاصيل لا تظهر للعين: معدل أخذ العينات الذي طبّقه الجهاز فعلًا؛ وحجز السجلات حتى يصل معدل أخذ العينات الخاص بها بدل احتسابها 1:1؛ وتعويض حزم التصدير المفقودة؛ وتوزيع التدفقات الطويلة على الدقائق التي استمرت فيها؛ وإضافة ترويسة Ethernet إلى أعداد البايتات في NetFlow، لأن عدّادات الواجهات تشملها.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ar/interfaces.jpg" alt="مطابقة الواجهات: البتات في الثانية والحزم في الثانية، وقائمة الواجهات، والحكم" width="1440" height="1450" loading="lazy">
+  <figcaption>مطابقة الواجهات. الخطوط المتقطعة هي عدّادات الجهاز، والحكم في أسفل اليسار.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>إلى أي حدّ تذهب المشاريع الأخرى:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>تقدير التدفقات وعدّادات الجهاز في رسم واحد، مع حساب الفرق والخطأ الإحصائي وذكر السبب. تُستخدم عدّادات sFlow فور وصولها؛ ولجهاز NetFlow يكفي سطر <code>snmp</code> واحد.</span></div>
+  <div><b>ntopng</b><span>إصدار Enterprise يستطلع SNMP ويرسم واجهات الأجهزة؛ ولا تذكر الوثائق مقارنتها بالتدفقات. ودعم SNMP في إصدار Community غير موثّق.</span></div>
+  <div><b>Akvorado</b><span>يستخدم SNMP لأسماء الواجهات وأوصافها في سجلات التدفق، لا للعدّادات.</span></div>
+  <div><b>ElastiFlow</b><span>يستخدم SNMP أيضًا لإثراء بيانات الواجهات؛ والمقارنة تعني أن تبني رسمين في Kibana بنفسك.</span></div>
+  <div><b>FastNetMon</b><span>ليست هذه وظيفته؛ فهو يراقب عتبات الهجمات.</span></div>
+  <div><b>GoFlow2 وغيره</b><span>ليست وظيفتها؛ فهي تسلّم سجلات التدفق.</span></div>
+</div>
+<p>في المشاريع الأخرى، إمّا أن عدّادات الواجهات لا تُقرأ، وإمّا أنها تُعرض رسمًا إضافيًا تقارنه بعينك. ولم نجد مشروعًا آخر يذكر سبب اختلاف الأرقام.</p>
+
+<h2>3. خلاصة عند الفتح، بلا لغة استعلام</h2>
+<p>تجيب صفحة النظرة العامة عن ثلاثة أسئلة: كم حجم الحركة الآن، ومن يستخدمها، وكيف تقارن بالأمس. ويمكن النقر على كل عنوان ومنفذ وتطبيق ودولة: عرض هذا فقط، أو استبعاده، أو فتح سجلات تدفقه، أو فتح صفحة تفاصيله. صُمّمت الواجهة بحيث نادرًا ما تحتاج إلى الكتابة.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ar/overview.jpg" alt="نظرة عامة: عرض النطاق للواجهة، وعرض النطاق حسب التطبيق مقارنةً بالأمس" width="1440" height="900" loading="lazy">
+  <figcaption>نظرة عامة. تُختار الواجهة من الأعلى، والواجهة المميّزة بنجمة هي الافتراضية. الخط المتقطع يمثّل الوقت نفسه من الأمس.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>المهمة نفسها في المشاريع الأخرى:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>واجهة ويب وواجهة طرفية مدمجتان، تفتحان على ملخص. 13 لغة، منها العربية.</span></div>
+  <div><b>ntopng</b><span>واجهة متكاملة غنية بالمعلومات؛ وهو الوحيد في الجدول الذي تصحّ مقارنته وجهًا لوجه. سبع لغات بحسب إعلاناته.</span></div>
+  <div><b>Akvorado</b><span>لوحة ويب متقنة؛ تتيح أداة العرض فيه سحب الأبعاد ورسم مخططات Sankey. لكنه يعمل كأداة استعلام: أنت تقرّر ما تسأل عنه أولًا. بالإنجليزية فقط.</span></div>
+  <div><b>ElastiFlow</b><span>لوحات Kibana؛ وتعديلها يعني تعلّم Kibana.</span></div>
+  <div><b>FastNetMon</b><span>لا واجهة ويب في إصدار Community؛ والرسوم عبر Grafana. واجهة الويب في الإصدار التجاري.</span></div>
+  <div><b>GoFlow2 وpmacct وvflow وnfdump</b><span>بلا واجهة؛ ولدى nfdump استعلامات بسطر الأوامر. أنت تبني اللوحات، عادةً في Grafana، باستعلام لكل رسم.</span></div>
+</div>
+
+<h2>4. كشف الهجمات في البيانات المأخوذة بالعينات</h2>
+<p>الكشف في بيانات العينات صعب: بمعدل 1:4096 قد لا يترك المسح إلا بضع حزم. قواعد traffic66 معايَرة لبيانات العينات. وفي العرض التجريبي تُكتشف سلسلة الهجوم كاملة عبر sFlow بمعدل 1:4096: مسح داخلي، ومسح منافذ، وتخمين كلمات المرور، وتحرّك جانبي، ورفع كبير إلى عنوان جديد، وحركة مع عناوين في قوائم التهديدات. ولا ينتج يوم كامل من الحركة الاعتيادية في العرض التجريبي أي اكتشافات أخرى، باستثناء ماسح من الإنترنت يطرق باب الموقع الإلكتروني.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ar/findings.jpg" alt="الاكتشافات: كل خطوة من خطوات الهجوم، الأخطر أولًا" width="1440" height="900" loading="lazy">
+  <figcaption>الاكتشافات. كل خطوة من هجوم نفّذه جهاز مخترَق في العرض التجريبي، وكلها من عينات sFlow بمعدل 1:4096.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>هنا تتقارب المقارنة:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>مسح عناوين، ومسح منافذ، وتخمين كلمات المرور، وتحرّك جانبي، وعمليات رفع غير معتادة، وهجمات إغراق، وقوائم تهديدات، مع عتبات مضبوطة لبيانات العينات.</span></div>
+  <div><b>ntopng</b><span>فحوص أكثر بكثير من فحوصنا: المسح والإغراق والقوائم السوداء وتسريب البيانات عبر DNS وICMP والتحرّك الجانبي، وكلها في إصدار Community. ntopng متقدّم هنا.</span></div>
+  <div><b>FastNetMon</b><span>DDoS فقط، لكن بعمق: كشف خلال ثوانٍ وBGP blackholing تلقائي.</span></div>
+  <div><b>ElastiFlow</b><span>إثراء بمعلومات التهديدات عبر NetIntel؛ والتنبيه عبر قواعد تضبطها في Elastic.</span></div>
+  <div><b>Akvorado والمُجمِّعات</b><span>لا كشف أمني.</span></div>
+</div>
+<p>في الجانب الأمني نحن على مستوى ntopng. ما نقدّمه أن الفحوص تأتي في برنامج واحد بلا إعداد، ومضبوطة لبيانات العينات.</p>
+<p>ميزة أخرى: الأمر <code>traffic66 capture.pcap</code> يحلّل ملف التقاط حزم بالصفحات نفسها، بمعزل عن البيانات الحية (في الواجهة: «تحليل pcap دون اتصال»). وntopng يقرأ ملفات pcap أيضًا، فالنتيجة هنا تعادل.</p>
+
+<h2>جدول النتائج</h2>
+<p>النقاط السابقة ونقاط الضعف اللاحقة في جدول واحد. الدائرة الممتلئة تعني متوفّر، ونصف الممتلئة تعني جزئيًا أو مدفوعًا أو بتثبيت منفصل، والفارغة تعني غير متوفّر.</p>
+</div>
+<div class="wide">
+<div class="tablewrap">
+<table class="matrix">
+<thead><tr><th>القدرة</th><th class="us">traffic66</th><th>ntopng</th><th>Akvorado</th><th>ElastiFlow (الحالي)</th><th>FastNetMon</th><th>المُجمِّعات<small>GoFlow2 · pmacct · vflow · nfdump</small></th></tr></thead>
+<tbody>
+<tr><td>برنامج واحد جاهز بعد التثبيت</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + ترخيص nProbe</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>Grafana للرسوم</small></td><td><i class="m"></i><small>بناء التخزين والواجهة</small></td></tr>
+<tr><td>يعمل أصليًا على Windows</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>نسخة Windows تجريبية</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>واجهة ويب مدمجة</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>لوحات Kibana</small></td><td><i class="m h"></i><small>الإصدار التجاري</small></td><td><i class="m"></i></td></tr>
+<tr><td>واجهة بلغات متعددة</td><td class="us"><i class="m y"></i><small>13</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>الإنجليزية</small></td><td><i class="m h"></i><small>Kibana فقط</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>مطابقة التدفقات مع عدّادات الواجهات</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>رسوم SNMP (Enterprise)</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>تبنيها بنفسك</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>كشف التهديدات الأمنية</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>أكثر الفحوص</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>إثراء بمعلومات التهديدات</small></td><td><i class="m h"></i><small>DDoS فقط، مع التخفيف</small></td><td><i class="m"></i></td></tr>
+<tr><td>تحليل pcap دون اتصال</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>واجهة طرفية</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>عميل طرفي</small></td><td><i class="m h"></i><small>سطر أوامر nfdump</small></td></tr>
+<tr><td>التعرّف على التطبيقات في الطبقة السابعة</td><td class="us"><i class="m"></i></td><td><i class="m y"></i><small>nDPI</small></td><td><i class="m"></i></td><td><i class="m h"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>التوسّع الأفقي</td><td class="us"><i class="m h"></i><small>5,000 سجل/ث، جهاز واحد</small></td><td><i class="m h"></i></td><td><i class="m y"></i></td><td><i class="m y"></i><small>الفئات المدفوعة</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+<tr><td>ترخيص مفتوح المصدر معتمد من OSI</td><td class="us"><i class="m"></i><small>متاح المصدر</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i><small>مغلق</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+</tbody>
+</table>
+</div>
+<div class="legend"><span><i class="m y"></i> متوفّر</span><span><i class="m h"></i> جزئيًا أو مدفوع أو بتثبيت منفصل</span><span><i class="m"></i> غير متوفّر</span></div>
+</div>
+<div class="col">
+<p>يملأ traffic66 الصفوف الثمانية الأولى، ولا يفعل ذلك أي عمود آخر. والصفوف الثلاثة الأخيرة هي نقاط ضعفنا.</p>
+
+<h2>أين يتفوّق الآخرون</h2>
+<p>اقرأ هذا القسم قبل أن تختار.</p>
+</div>
+<div class="wide">
+<div class="grid2">
+  <div class="card"><div class="who">Akvorado · GoFlow2</div><h4>التوسّع</h4><p>صُمّم traffic66 لـ 5,000 سجل تدفق في الثانية على جهاز واحد مع DuckDB مدمجة. أما لحركة بحجم مشغّلي الاتصالات، فالإجابة الصحيحة بنية Kafka وClickHouse قابلة للتوسّع الأفقي.</p></div>
+  <div class="card"><div class="who">ntopng</div><h4>الفحص العميق للحزم</h4><p>لدى ntopng مكتبة nDPI ويتعرّف على مئات البروتوكولات في الطبقة السابعة. أما traffic66 فيعمل على التدفقات؛ يتعرّف على التطبيقات من المنافذ، ولا يحلّل محتوى الحزم.</p></div>
+  <div class="card"><div class="who">FastNetMon</div><h4>التخفيف التلقائي لهجمات DDoS</h4><p>يستطيع FastNetMon الإعلان عن مسار BGP blackhole أو قاعدة FlowSpec فور اكتشاف الهجوم. أما traffic66 فيبلّغ عن هجمات الإغراق ولا يمسّ التوجيه.</p></div>
+  <div class="card"><div class="who">pmacct</div><h4>بيانات التوجيه والمرونة</h4><p>يستقبل pmacct بيانات BGP وBMP إلى جانب التدفقات، ويضيف معلومات التوجيه إلى السجلات، ويكتب إلى أي وجهة تقريبًا. traffic66 منتج جاهز، لا مجموعة أدوات.</p></div>
+  <div class="card"><div class="who">المشاريع الراسخة</div><h4>العمر والمجتمع</h4><p>لدى ntopng ما يقارب 30,000 تعديل (commit)؛ وnfdump موجود منذ عقدين. أما traffic66 فقد بدأ للتوّ في جمع النجوم، وخبرته في بيئات الإنتاج أقل بكثير.</p></div>
+  <div class="card"><div class="who">معظم مشاريع الجدول</div><h4>الترخيص</h4><p>تستخدم تراخيص مفتوحة المصدر معتمدة من OSI. أما traffic66 فمتاح المصدر: مجاني للتقييم وللمؤسسات التي يقل عدد أفرادها عن 100؛ والمؤسسات الأكبر تسجّل بعد 30 يومًا. لا يتوقف أي شيء عن العمل، لكنه ليس مفتوح المصدر.</p></div>
+</div>
+</div>
+
+<div class="col">
+<h2>أيّها تختار</h2>
+<div class="pick">
+  <div class="us"><span>جهاز واحد، من عشرات إلى مئات الواجهات، رسوم بيانية اليوم نفسه، وأرقام تطابق SNMP</span><b>traffic66</b></div>
+  <div><span>رؤية على مستوى الطبقة السابعة، أو الاعتماد أساسًا على منافذ المرآة (mirror)</span><b>ntopng</b></div>
+  <div><span>مشغّل اتصالات أو شبكة أساسية كبيرة، مئات الآلاف من التدفقات في الثانية</span><b>Akvorado</b></div>
+  <div><span>كشف DDoS مع blackholing تلقائي</span><b>FastNetMon</b></div>
+  <div><span>لديك Kafka ومنصة بيانات قائمة وتحتاج إلى مُجمِّع</span><b>GoFlow2 / pmacct</b></div>
+  <div><span>سطر الأوامر، وحفظ السجلات الخام لمدة طويلة</span><b>nfdump</b></div>
+</div>
+<p>ما نثق به ثلاثة أمور: تثبيت سريع، وقراءة سهلة، وأرقام متطابقة. أما الباقي فنرحّب بملاحظاتكم عبر issues على <a href="https://github.com/githubflyideas/traffic66" target="_blank" rel="noopener">GitHub</a>، وسنسدّ الثغرات واحدةً تلو الأخرى.</p>
+</div>
+
+<footer class="col">
+  المصادر، تمت مراجعتها في 8 أكتوبر 2026:
+  <ol>
+    <li>صفحات المشاريع على GitHub: <a href="https://github.com/ntop/ntopng" target="_blank" rel="noopener">ntopng</a>، <a href="https://github.com/pavel-odintsov/fastnetmon" target="_blank" rel="noopener">FastNetMon</a>، <a href="https://github.com/robcowart/elastiflow" target="_blank" rel="noopener">ElastiFlow (الإصدار القديم)</a>، <a href="https://github.com/akvorado/akvorado" target="_blank" rel="noopener">Akvorado</a>، <a href="https://github.com/pmacct/pmacct" target="_blank" rel="noopener">pmacct</a>، <a href="https://github.com/Edgio/vflow" target="_blank" rel="noopener">vflow</a>، <a href="https://github.com/phaag/nfdump" target="_blank" rel="noopener">nfdump</a>، <a href="https://github.com/cloudflare/goflow" target="_blank" rel="noopener">Cloudflare goflow</a>، <a href="https://github.com/netsampler/goflow2" target="_blank" rel="noopener">GoFlow2</a>.</li>
+    <li>حاجة ntopng إلى ترخيص nProbe لاستقبال NetFlow/sFlow: <a href="https://www.ntop.org/guides/ntopng/use_cases/netflow_sflow_monitoring.html" target="_blank" rel="noopener">وثائق ntop</a>.</li>
+    <li>تنبيهات ntopng حسب الإصدار: <a href="https://ntop.org/guides/ntopng/alerts/alerts_list_per_license.html" target="_blank" rel="noopener">Alerts List per License</a>؛ مراقبة SNMP: <a href="https://www.ntop.org/monitoring-network-devices-with-ntopng-and-snmp/" target="_blank" rel="noopener">مدونة ntop</a>؛ لغات الواجهة: <a href="https://www.ntop.org/extended-multilanguage-support-in-ntopng-korean-spanish-and-french/" target="_blank" rel="noopener">إعلان 2024</a>؛ نسخة Windows التجريبية: <a href="https://en.wikipedia.org/wiki/Ntopng" target="_blank" rel="noopener">Wikipedia</a>.</li>
+    <li>بنية Akvorado 2.0 ‏(inlet وKafka وoutlet وClickHouse): <a href="https://vincent.bernat.ch/en/blog/2025-akvorado-2.0" target="_blank" rel="noopener">مدونة المؤلف</a>.</li>
+    <li>إثراء NetIntel في ElastiFlow: <a href="https://docs.elastiflow.com/flowcoll/configuration/enrichment-options/ip-address-enrichment/enrich_ip_netintel" target="_blank" rel="noopener">وثائق ElastiFlow</a>؛ فئات ترخيص NetObserv Flow: <a href="https://docs.elastiflow.com/flowcoll/configuration/config_gen/license" target="_blank" rel="noopener">وثائق ElastiFlow</a>.</li>
+    <li>نظام حماية البيانات الشخصية في المملكة العربية السعودية ولائحته التنفيذية: <a href="https://www.uqn.gov.sa/details?p=23594" target="_blank" rel="noopener">جريدة أم القرى، الموافقة على اللائحة التنفيذية</a>؛ <a href="https://rulebook.sama.gov.sa/en/node/4725/revisions/67073/view" target="_blank" rel="noopener">مرجع البنك المركزي السعودي إلى النظام (م/19، م/148)</a>.</li>
+    <li>المرسوم بقانون اتحادي رقم (45) لسنة 2021 بشأن حماية البيانات الشخصية: <a href="https://uaelegislation.gov.ae/en/legislations/1972" target="_blank" rel="noopener">منصة التشريعات الإماراتية</a>؛ <a href="https://u.ae/en/about-the-uae/digital-uae/data/data-protection-laws" target="_blank" rel="noopener">البوابة الرسمية لحكومة الإمارات u.ae</a>.</li>
+  </ol>
+  لقطات الشاشة من <code>traffic66 demo</code>، وهي شبكة محاكاة.
+</footer>
+</article>
