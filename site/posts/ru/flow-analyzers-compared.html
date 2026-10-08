@@ -1,0 +1,192 @@
+<article>
+<header class="hero col">
+  <div class="kicker"><span><a href="{root}blog/" style="color:inherit">Блог traffic66</a></span><span>NetFlow / sFlow / IPFIX</span><b>Октябрь 2026</b></div>
+  <h1>Мы по очереди установили анализаторы трафика с GitHub</h1>
+  <p class="lede">В этой статье измеряется одно: какой путь проходит сетевой администратор от скачивания до <span class="far">первого графика, цифрам которого можно верить</span>. У traffic66 этот путь самый короткий. В обнаружении угроз он на одном уровне с ntopng. По масштабированию, глубокому анализу пакетов и сообществу впереди другие. Каждое утверждение сверено с документацией самих проектов, ссылки — в конце.</p>
+  <div class="byline"><span>Авторы — разработчики traffic66</span><span>Мы заинтересованная сторона, учитывайте это</span><span>Данные на 8 октября 2026 г.</span></div>
+</header>
+
+<div class="col">
+<h2>Участники</h2>
+<p>Мы взяли проекты на GitHub для sFlow, NetFlow и IPFIX с наибольшим числом звёзд. Одни — законченные продукты, другие — только коллекторы, третьи уже в архиве. Число звёзд — то, что показывает GitHub.</p>
+</div>
+
+<div class="wide">
+<div class="tablewrap">
+<table>
+<thead><tr><th>Проект</th><th style="text-align:right">Звёзды</th><th>Что это</th><th>Что нужно установить сначала</th><th>Статус · лицензия</th></tr></thead>
+<tbody>
+<tr><td class="name">ntopng</td><td class="num">8.1k</td><td>Веб-монитор трафика с глубоким анализом пакетов nDPI</td><td>Redis; для NetFlow/sFlow — nProbe, которому нужна лицензия</td><td><span class="tag ok">активен</span> GPL-3.0</td></tr>
+<tr><td class="name">FastNetMon</td><td class="num">3.7k</td><td>Обнаружение DDoS, может запускать BGP blackholing</td><td>Linux; графики через InfluxDB/Grafana или аналоги</td><td><span class="tag ok">активен</span> GPL-2.0</td></tr>
+<tr><td class="name">ElastiFlow (legacy)</td><td class="num">2.5k</td><td>Конвейер Logstash и дашборды Kibana</td><td>Elasticsearch, Logstash, Kibana</td><td><span class="tag dead">в архиве с 2024-03</span></td></tr>
+<tr><td class="name">Akvorado</td><td class="num">2.3k</td><td>Коллектор, обогащение и визуализация</td><td>inlet, Kafka, outlet, ClickHouse; в официальном compose ещё Redis</td><td><span class="tag ok">активен</span> AGPL-3.0</td></tr>
+<tr><td class="name">pmacct</td><td class="num">1.2k</td><td>Демоны-коллекторы с BGP и BMP</td><td>База данных и дашборды на ваш выбор (часто Grafana)</td><td><span class="tag ok">активен</span> GPL (переходит на лицензию в стиле BSD)</td></tr>
+<tr><td class="name">vflow</td><td class="num">1.2k</td><td>Коллектор с выдачей в Kafka</td><td>Kafka, а за ней хранилище и дашборды</td><td>Apache-2.0</td></tr>
+<tr><td class="name">nfdump</td><td class="num">922</td><td>Консольные утилиты для сбора и запросов</td><td>Собственного веб-интерфейса нет</td><td><span class="tag ok">активен</span> BSD</td></tr>
+<tr><td class="name">Cloudflare goflow</td><td class="num">919</td><td>Коллектор, который Cloudflare использовала у себя</td><td>Kafka и всё, что за ней</td><td><span class="tag dead">в архиве с 2025-02</span></td></tr>
+<tr><td class="name">GoFlow2</td><td class="num">798</td><td>Высокопроизводительный коллектор</td><td>Вывод в Kafka или файлы; хранилище и интерфейс строите сами</td><td><span class="tag ok">активен</span> BSD-3</td></tr>
+<tr class="us"><td class="name">traffic66</td><td class="num">новый</td><td>Коллектор, хранилище, веб- и терминальный интерфейс, обнаружение угроз, анализ pcap</td><td>Ничего: один исполняемый файл со встроенной DuckDB</td><td><span class="tag ok">активен</span> source-available (см. ниже)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">Нынешний ElastiFlow называется NetObserv Flow. Его код закрыт; бесплатный тариф Community ограничен 500 записями потоков в секунду.</p>
+</div>
+
+<div class="col">
+<h2>1. От скачивания до первого графика</h2>
+<p>Это для нас главное. Когда в три часа дня спрашивают, кто забил аплинк, никто не хочет сначала разбираться с Kafka. Вот самые короткие пути по документации каждого проекта:</p>
+</div>
+<div class="wide">
+<div class="race" role="list">
+  <div class="lane us" role="listitem"><div class="who">traffic66</div><div class="bar"><span class="step">скачать, распаковать</span><span class="step">./traffic66</span><span class="step">открыть браузер ✓</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ntopng</div><div class="bar"><span class="step">подключить репозиторий</span><span class="step">установить ntopng</span><span class="step">установить Redis</span><span class="step">установить nProbe</span><span class="step">получить лицензию nProbe</span><span class="step">связать их</span><span class="step">график</span></div></div>
+  <div class="lane" role="listitem"><div class="who">Akvorado</div><div class="bar"><span class="step">установить Docker</span><span class="step">скачать compose</span><span class="step">запустить Kafka</span><span class="step">запустить ClickHouse</span><span class="step">запустить inlet/outlet</span><span class="step">настроить SNMP, GeoIP</span><span class="step">график</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ElastiFlow</div><div class="bar"><span class="step">установить Elasticsearch</span><span class="step">установить Kibana</span><span class="step">установить коллектор</span><span class="step">импортировать дашборды</span><span class="step">помнить о лимите 500 зап./с</span><span class="step">график</span></div></div>
+  <div class="lane" role="listitem"><div class="who">GoFlow2 / pmacct</div><div class="bar"><span class="step">установить коллектор</span><span class="step">выбрать базу данных</span><span class="step">собрать конвейер</span><span class="step">установить Grafana</span><span class="step">нарисовать дашборды</span><span class="step">график</span></div></div>
+</div>
+</div>
+<div class="col">
+<p>Свежая установка traffic66 пускает под admin / traffic66 и при первом входе просит задать собственный пароль. В Windows двойной щелчок по <code>traffic66.exe</code> открывает браузер. Чтобы сначала осмотреться, команда <code>traffic66 demo</code> создаёт смоделированную сеть компании с историей за сутки и полной атакой.</p>
+<p>О <strong>Windows</strong>: почти всё из таблицы работает только на Linux или в Docker. traffic66 собирается из одного кода в нативные программы для Windows, Linux и macOS, без WSL и без Docker. Во многих небольших организациях машина для мониторинга — это ПК с Windows.</p>
+
+<div class="quote" aria-label="Ключевая цифра">
+  <div class="big">3 <span>шага</span></div>
+  <div class="cap">от скачивания до первого графика</div>
+</div>
+
+<h2>Что это значит для сетей на MikroTik</h2>
+<p>Во многих сетях граничный маршрутизатор — MikroTik. Функция Traffic Flow в RouterOS, по официальной документации, совместима с Cisco NetFlow и поддерживает NetFlow версий 1, 5 и 9, а также IPFIX; выборка пакетов (sampling) появилась в RouterOS v7. По умолчанию RouterOS отправляет данные на UDP-порт 2055 — тот же порт, который traffic66 слушает для NetFlow (принимает он NetFlow v5/v9 и IPFIX на любом UDP-порту). Достаточно двух команд на маршрутизаторе: <code>/ip traffic-flow set enabled=yes</code> и <code>/ip traffic-flow target add dst-address=&lt;адрес traffic66&gt; port=2055 version=9</code>.</p>
+<p>NetFlow не передаёт счётчики интерфейсов. Чтобы <strong>Сверка интерфейсов</strong> сравнивала потоки с тем, что насчитал сам маршрутизатор, в traffic66 добавляется одна строка <code>snmp</code> (раздел <strong>Названия</strong> в <strong>Настройках</strong>), а в RouterOS включается SNMP: по умолчанию он выключен, а IF-MIB входит в список поддерживаемых MIB.</p>
+<p>traffic66 работает целиком на вашей машине: без облака, без внешних сервисов и без учётных записей у поставщика. Записи потоков, в которых есть IP-адреса пользователей, остаются на вашем сервере. Базы стран и автономных систем поставляются вместе с программой, списки угроз — обычные текстовые файлы, лицензия для крупных организаций — файл <code>license.json</code>, который кладётся в каталог данных. Поэтому traffic66 подходит и для изолированных сегментов без доступа в интернет.</p>
+
+<h2>2. Сходятся ли цифры со счётчиками интерфейсов?</h2>
+<p>Вопрос, который задают любому инструменту анализа потоков: на графике аплинк загружен на 800 Мбит/с, а SNMP в Zabbix показывает 600. Кому верить?</p>
+<p>Цифры по потокам — это оценки: число попавших в выборку пакетов, умноженное на коэффициент выборки. В traffic66 для этого есть отдельная страница, <strong>Сверка интерфейсов</strong>. Она выводит на одном графике оценку по потокам для каждого интерфейса и собственные счётчики устройства (счётчики sFlow или SNMP), считает расхождение и статистическую погрешность выборки. Если расхождение больше, чем объясняет выборка, она называет вероятную причину: часть интерфейсов не попадает в выборку, один и тот же трафик учитывается на двух интерфейсах, экспортные пакеты теряются по пути или коэффициент выборки ещё не получен.</p>
+<p>За этим стоит несколько незаметных деталей: используется коэффициент выборки, который устройство применило на самом деле; записи ждут, пока придёт их коэффициент, а не считаются как 1:1; потерянные экспортные пакеты компенсируются; длинные потоки распределяются по минутам, которые они длились; к байтам NetFlow добавляются накладные расходы Ethernet, потому что счётчики интерфейсов их учитывают.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ru/interfaces.jpg" alt="Сверка интерфейсов: биты в секунду и пакеты в секунду, список интерфейсов и вывод" width="1440" height="1450" loading="lazy">
+  <figcaption>Сверка интерфейсов. Пунктир — счётчики устройства; вывод — справа внизу.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Как далеко заходят другие:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Оценка по потокам и счётчики устройства на одном графике, расхождение и статистическая погрешность посчитаны, причина названа. Счётчики sFlow используются по мере поступления; для устройства с NetFlow — одна строка <code>snmp</code>.</span></div>
+  <div><b>ntopng</b><span>Редакция Enterprise опрашивает SNMP и строит графики по интерфейсам устройств; сравнение с потоками в документации не упоминается. SNMP в редакции Community не документирован.</span></div>
+  <div><b>Akvorado</b><span>Использует SNMP для имён и описаний интерфейсов в записях потоков, а не для счётчиков.</span></div>
+  <div><b>ElastiFlow</b><span>Тоже использует SNMP для обогащения данных об интерфейсах; для сравнения придётся самому построить два графика в Kibana.</span></div>
+  <div><b>FastNetMon</b><span>Не его задача: он следит за порогами атак.</span></div>
+  <div><b>GoFlow2 и другие</b><span>Не их задача: они поставляют записи потоков.</span></div>
+</div>
+<p>В остальных проектах счётчики интерфейсов либо не читаются, либо показываются ещё одним графиком для сравнения на глаз. Другого проекта, который объяснял бы, почему цифры расходятся, мы не нашли.</p>
+
+<h2>3. Вывод сразу при открытии, без языка запросов</h2>
+<p>Обзор отвечает на вопросы: сколько трафика сейчас, кто его потребляет и как это соотносится со вчерашним днём. По любому адресу, порту, приложению и стране можно щёлкнуть: показать только его, исключить, открыть его записи потоков, открыть страницу подробностей. Интерфейс сделан так, чтобы печатать приходилось редко.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ru/overview.jpg" alt="Обзор: полоса пропускания интерфейса, трафик по приложениям в сравнении со вчерашним днём" width="1440" height="900" loading="lazy">
+  <figcaption>Обзор. Интерфейс выбирается вверху; отмеченный звёздочкой открывается по умолчанию. Пунктир — то же время вчера.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Та же задача в других проектах:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Встроенные веб- и терминальный интерфейсы, при открытии — сводка. 13 языков, в том числе русский.</span></div>
+  <div><b>ntopng</b><span>Полноценный интерфейс с большим объёмом информации; единственный в таблице, с которым уместно сравнение напрямую. По его анонсам — семь языков.</span></div>
+  <div><b>Akvorado</b><span>Аккуратная веб-консоль; визуализатор позволяет перетаскивать измерения и строить диаграммы Sankey. Работает скорее как инструмент запросов: сначала решаете, что спросить. Только английский.</span></div>
+  <div><b>ElastiFlow</b><span>Дашборды Kibana; чтобы их менять, нужно освоить Kibana.</span></div>
+  <div><b>FastNetMon</b><span>В редакции Community веб-интерфейса нет, графики через Grafana. Веб-интерфейс — в коммерческой редакции.</span></div>
+  <div><b>GoFlow2, pmacct, vflow, nfdump</b><span>Интерфейса нет; у nfdump есть запросы из командной строки. Дашборды строите сами, обычно в Grafana, по запросу на график.</span></div>
+</div>
+
+<h2>4. Поиск атак в данных с выборкой</h2>
+<p>Обнаруживать угрозы по выборочным данным трудно: при 1:4096 от сканирования может остаться горстка пакетов. Правила traffic66 откалиброваны под данные с выборкой. В демо вся цепочка атаки находится по sFlow 1:4096: сканирование внутренней сети, сканирование портов, подбор паролей, горизонтальное перемещение, крупная выгрузка на новый адрес и трафик с адресами из списков угроз. Сутки обычного трафика в демо не дают других обнаружений, кроме интернет-сканера, который стучится на веб-сайт.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ru/findings.jpg" alt="Обнаружения: каждый шаг атаки, самые серьёзные сверху" width="1440" height="900" loading="lazy">
+  <figcaption>Обнаружения. Каждый шаг атаки со скомпрометированного узла в демо, всё по выборке sFlow 1:4096.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Здесь сравнение ближе:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Сканирование, сканирование портов, подбор паролей, горизонтальное перемещение, необычные выгрузки, флуд и списки угроз, с порогами для данных с выборкой.</span></div>
+  <div><b>ntopng</b><span>Проверок гораздо больше, чем у нас: сканирование, флуд, чёрные списки, эксфильтрация через DNS и ICMP, горизонтальное перемещение — уже в редакции Community. Здесь ntopng впереди.</span></div>
+  <div><b>FastNetMon</b><span>Только DDoS, зато основательно: обнаружение за секунды и автоматический BGP blackholing.</span></div>
+  <div><b>ElastiFlow</b><span>Обогащение данными об угрозах NetIntel; оповещения через правила, которые вы настраиваете в Elastic.</span></div>
+  <div><b>Akvorado и коллекторы</b><span>Обнаружения угроз нет.</span></div>
+</div>
+<p>В безопасности мы на одном уровне с ntopng. Наше преимущество в том, что проверки встроены в одну программу, не требуют настройки и настроены на данные с выборкой.</p>
+<p>Ещё одно удобство: <code>traffic66 capture.pcap</code> анализирует захват пакетов на тех же страницах, отдельно от живых данных. ntopng тоже читает файлы pcap, так что здесь ничья.</p>
+
+<h2>Итоговая таблица</h2>
+<p>Сказанное выше и слабые места, о которых ниже, — в одной таблице. Заполненный кружок — сделано, наполовину — частично, платно или отдельной установкой, пустой — нет.</p>
+</div>
+<div class="wide">
+<div class="tablewrap">
+<table class="matrix">
+<thead><tr><th>Возможность</th><th class="us">traffic66</th><th>ntopng</th><th>Akvorado</th><th>ElastiFlow (текущий)</th><th>FastNetMon</th><th>Коллекторы<small>GoFlow2 · pmacct · vflow · nfdump</small></th></tr></thead>
+<tbody>
+<tr><td>Одна программа, готова после установки</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + лицензия nProbe</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>Grafana для графиков</small></td><td><i class="m"></i><small>хранилище и интерфейс — самим</small></td></tr>
+<tr><td>Нативно работает в Windows</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>сборка для Windows — демо</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Встроенный веб-интерфейс</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>дашборды Kibana</small></td><td><i class="m h"></i><small>коммерческая редакция</small></td><td><i class="m"></i></td></tr>
+<tr><td>Интерфейс на многих языках</td><td class="us"><i class="m y"></i><small>13</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>английский</small></td><td><i class="m h"></i><small>только Kibana</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Сверка потоков со счётчиками интерфейсов</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>графики SNMP (Enterprise)</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>собрать самому</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Обнаружение угроз</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>больше всего проверок</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>обогащение данными об угрозах</small></td><td><i class="m h"></i><small>только DDoS, с подавлением</small></td><td><i class="m"></i></td></tr>
+<tr><td>Офлайн-анализ pcap</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Терминальный интерфейс</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>консольный клиент</small></td><td><i class="m h"></i><small>CLI nfdump</small></td></tr>
+<tr><td>Распознавание приложений уровня 7</td><td class="us"><i class="m"></i></td><td><i class="m y"></i><small>nDPI</small></td><td><i class="m"></i></td><td><i class="m h"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Горизонтальное масштабирование</td><td class="us"><i class="m h"></i><small>5000 записей/с, одна машина</small></td><td><i class="m h"></i></td><td><i class="m y"></i></td><td><i class="m y"></i><small>платные тарифы</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+<tr><td>Открытая лицензия, одобренная OSI</td><td class="us"><i class="m"></i><small>source-available</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i><small>закрытый код</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+</tbody>
+</table>
+</div>
+<div class="legend"><span><i class="m y"></i> сделано</span><span><i class="m h"></i> частично, платно или отдельной установкой</span><span><i class="m"></i> нет</span></div>
+</div>
+<div class="col">
+<p>traffic66 закрывает первые восемь строк; больше ни одна колонка этого не делает. Последние три строки — наши слабые места.</p>
+
+<h2>В чём другие лучше</h2>
+<p>Прочитайте этот раздел, прежде чем выбирать.</p>
+</div>
+<div class="wide">
+<div class="grid2">
+  <div class="card"><div class="who">Akvorado · GoFlow2</div><h4>Масштаб</h4><p>traffic66 рассчитан на 5000 записей потоков в секунду на одной машине со встроенной DuckDB. Для трафика масштаба оператора связи правильный ответ — горизонтально масштабируемая архитектура на Kafka и ClickHouse.</p></div>
+  <div class="card"><div class="who">ntopng</div><h4>Глубокий анализ пакетов</h4><p>В ntopng есть nDPI, он распознаёт сотни протоколов уровня 7. traffic66 работает с потоками: приложения определяются по порту, пакеты не разбираются.</p></div>
+  <div class="card"><div class="who">FastNetMon</div><h4>Автоматическое подавление DDoS</h4><p>FastNetMon может анонсировать BGP blackhole или правило FlowSpec сразу после обнаружения атаки. traffic66 сообщает о флуде и маршрутизацию не трогает.</p></div>
+  <div class="card"><div class="who">pmacct</div><h4>Данные маршрутизации и гибкость</h4><p>pmacct принимает BGP и BMP вместе с потоками, добавляет в записи сведения о маршрутизации и пишет почти куда угодно. traffic66 — готовый продукт, а не конструктор.</p></div>
+  <div class="card"><div class="who">Зрелые проекты</div><h4>Возраст и сообщество</h4><p>У ntopng около 30 000 коммитов; nfdump существует два десятка лет. traffic66 только начинает набирать звёзды, и опыта эксплуатации в продакшене у него гораздо меньше.</p></div>
+  <div class="card"><div class="who">Большая часть таблицы</div><h4>Лицензия</h4><p>Они используют открытые лицензии, одобренные OSI. traffic66 — source-available: бесплатно для ознакомления и для организаций до 100 человек; более крупные организации регистрируются через 30 дней. Ничего не отключается, но это не open source.</p></div>
+</div>
+</div>
+
+<div class="col">
+<h2>Что выбрать</h2>
+<div class="pick">
+  <div class="us"><span>Одна машина, от десятков до сотен интерфейсов, графики уже сегодня, цифры сходятся с SNMP</span><b>traffic66</b></div>
+  <div><span>Нужна видимость уровня 7 или в основном зеркальные порты</span><b>ntopng</b></div>
+  <div><span>Оператор связи или крупная магистраль, сотни тысяч потоков в секунду</span><b>Akvorado</b></div>
+  <div><span>Обнаружение DDoS с автоматическим blackholing</span><b>FastNetMon</b></div>
+  <div><span>Kafka и платформа данных уже есть, не хватает коллектора</span><b>GoFlow2 / pmacct</b></div>
+  <div><span>Командная строка, долгосрочное хранение сырых записей</span><b>nfdump</b></div>
+</div>
+<p>В трёх вещах мы уверены: быстро ставится, легко читается, цифры сходятся. По всему остальному ждём issues на <a href="https://github.com/githubflyideas/traffic66" target="_blank" rel="noopener">GitHub</a>; будем закрывать пробелы один за другим.</p>
+</div>
+
+<footer class="col">
+  Источники, проверено 8 октября 2026 г.:
+  <ol>
+    <li>Страницы проектов на GitHub: <a href="https://github.com/ntop/ntopng" target="_blank" rel="noopener">ntopng</a>, <a href="https://github.com/pavel-odintsov/fastnetmon" target="_blank" rel="noopener">FastNetMon</a>, <a href="https://github.com/robcowart/elastiflow" target="_blank" rel="noopener">ElastiFlow (legacy)</a>, <a href="https://github.com/akvorado/akvorado" target="_blank" rel="noopener">Akvorado</a>, <a href="https://github.com/pmacct/pmacct" target="_blank" rel="noopener">pmacct</a>, <a href="https://github.com/Edgio/vflow" target="_blank" rel="noopener">vflow</a>, <a href="https://github.com/phaag/nfdump" target="_blank" rel="noopener">nfdump</a>, <a href="https://github.com/cloudflare/goflow" target="_blank" rel="noopener">Cloudflare goflow</a>, <a href="https://github.com/netsampler/goflow2" target="_blank" rel="noopener">GoFlow2</a>.</li>
+    <li>Для NetFlow/sFlow ntopng нужна лицензия nProbe: <a href="https://www.ntop.org/guides/ntopng/use_cases/netflow_sflow_monitoring.html" target="_blank" rel="noopener">документация ntop</a>.</li>
+    <li>Оповещения ntopng по редакциям: <a href="https://ntop.org/guides/ntopng/alerts/alerts_list_per_license.html" target="_blank" rel="noopener">Alerts List per License</a>; мониторинг SNMP: <a href="https://www.ntop.org/monitoring-network-devices-with-ntopng-and-snmp/" target="_blank" rel="noopener">блог ntop</a>; языки интерфейса: <a href="https://www.ntop.org/extended-multilanguage-support-in-ntopng-korean-spanish-and-french/" target="_blank" rel="noopener">анонс 2024 года</a>; демо-сборка для Windows: <a href="https://en.wikipedia.org/wiki/Ntopng" target="_blank" rel="noopener">Википедия</a>.</li>
+    <li>Архитектура Akvorado 2.0 (inlet, Kafka, outlet, ClickHouse): <a href="https://vincent.bernat.ch/en/blog/2025-akvorado-2.0" target="_blank" rel="noopener">блог автора</a>.</li>
+    <li>Обогащение NetIntel в ElastiFlow: <a href="https://docs.elastiflow.com/flowcoll/configuration/enrichment-options/ip-address-enrichment/enrich_ip_netintel" target="_blank" rel="noopener">документация ElastiFlow</a>; тарифы лицензий NetObserv Flow: <a href="https://docs.elastiflow.com/flowcoll/configuration/config_gen/license" target="_blank" rel="noopener">документация ElastiFlow</a>.</li>
+    <li>MikroTik RouterOS, Traffic Flow (совместимость с Cisco NetFlow, версии 1, 5, 9 и IPFIX, выборка пакетов в v7, порт по умолчанию 2055): <a href="https://help.mikrotik.com/docs/spaces/ROS/pages/21102653/Traffic+Flow" target="_blank" rel="noopener">документация MikroTik</a>; SNMP (выключен по умолчанию, IF-MIB): <a href="https://help.mikrotik.com/docs/spaces/ROS/pages/8978519/SNMP" target="_blank" rel="noopener">документация MikroTik</a>.</li>
+  </ol>
+  Скриншоты сделаны в <code>traffic66 demo</code>, смоделированной сети.
+</footer>
+</article>
