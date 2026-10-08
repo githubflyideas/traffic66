@@ -3,6 +3,12 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.5.1
+
+- The web UI's scripts and styles are no longer kept by the browser across
+  an upgrade: after replacing the program, a normal reload shows the new
+  pages (before, an old app.js could stay in the browser's cache).
+
 ## 1.5.0
 
 Includes the changes listed under 1.2.3: the 1.2.3 release was built from

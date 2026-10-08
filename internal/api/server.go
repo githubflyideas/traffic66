@@ -122,9 +122,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
-			w.Header().Set("Cache-Control", "no-cache")
-		}
+		// no-cache on every file: after an upgrade the browser must not keep
+		// the old app.js or app.css (the embedded files carry no date to
+		// revalidate against, so a cached copy could outlive the program)
+		w.Header().Set("Cache-Control", "no-cache")
 		static.ServeHTTP(w, r)
 	})
 	return mux
