@@ -1,0 +1,193 @@
+<article>
+<header class="hero col">
+  <div class="kicker"><span><a href="{root}blog/" style="color:inherit">traffic66 블로그</a></span><span>NetFlow / sFlow / IPFIX</span><b>2026년 10월</b></div>
+  <h1>GitHub의 플로 분석 도구를 하나씩 설치해 보았습니다</h1>
+  <p class="lede">이 글이 재는 것은 한 가지입니다. 네트워크 관리자가 내려받은 뒤 <span class="far">숫자를 믿을 수 있는 첫 차트</span>까지 얼마나 가야 하는가. 이 경로는 traffic66이 가장 짧습니다. 보안 탐지는 ntopng과 같은 수준입니다. 확장성, 심층 패킷 분석, 커뮤니티에서는 다른 프로젝트가 앞서 있습니다. 모든 내용은 각 프로젝트의 공식 문서와 대조했으며, 출처는 글 끝에 있습니다.</p>
+  <div class="byline"><span>traffic66 개발팀 작성</span><span>당사자가 쓴 글이므로 그 점을 감안해 읽어 주십시오</span><span>데이터 기준일 2026년 10월 8일</span></div>
+</header>
+
+<div class="col">
+<h2>비교 대상</h2>
+<p>GitHub에서 sFlow, NetFlow, IPFIX 관련 프로젝트 가운데 스타가 많은 것을 골랐습니다. 완성된 제품도 있고, 수집기만 있는 것도 있고, 보관(archived) 처리된 것도 있습니다. 스타 수는 GitHub에 표시된 값입니다.</p>
+</div>
+
+<div class="wide">
+<div class="tablewrap">
+<table>
+<thead><tr><th>프로젝트</th><th style="text-align:right">스타</th><th>무엇인가</th><th>먼저 설치해야 하는 것</th><th>상태 · 라이선스</th></tr></thead>
+<tbody>
+<tr><td class="name">ntopng</td><td class="num">8.1k</td><td>nDPI 심층 패킷 분석을 갖춘 웹 트래픽 모니터</td><td>Redis. NetFlow/sFlow에는 라이선스가 필요한 nProbe</td><td><span class="tag ok">활동 중</span> GPL-3.0</td></tr>
+<tr><td class="name">FastNetMon</td><td class="num">3.7k</td><td>DDoS 탐지, BGP 블랙홀링 실행 가능</td><td>Linux. 차트는 InfluxDB/Grafana 등으로</td><td><span class="tag ok">활동 중</span> GPL-2.0</td></tr>
+<tr><td class="name">ElastiFlow (구버전)</td><td class="num">2.5k</td><td>Logstash 파이프라인과 Kibana 대시보드</td><td>Elasticsearch, Logstash, Kibana</td><td><span class="tag dead">2024-03 보관</span></td></tr>
+<tr><td class="name">Akvorado</td><td class="num">2.3k</td><td>수집, 보강, 시각화</td><td>inlet, Kafka, outlet, ClickHouse. 공식 compose에는 Redis도 포함</td><td><span class="tag ok">활동 중</span> AGPL-3.0</td></tr>
+<tr><td class="name">pmacct</td><td class="num">1.2k</td><td>BGP, BMP를 지원하는 수집 데몬</td><td>원하는 데이터베이스와 대시보드(주로 Grafana)</td><td><span class="tag ok">활동 중</span> GPL(BSD 계열로 전환 중)</td></tr>
+<tr><td class="name">vflow</td><td class="num">1.2k</td><td>Kafka로 보내는 수집기</td><td>Kafka와 그 뒤의 저장소, 대시보드</td><td>Apache-2.0</td></tr>
+<tr><td class="name">nfdump</td><td class="num">922</td><td>명령줄 수집·조회 도구</td><td>자체 웹 UI 없음</td><td><span class="tag ok">활동 중</span> BSD</td></tr>
+<tr><td class="name">Cloudflare goflow</td><td class="num">919</td><td>Cloudflare가 내부에서 쓰던 수집기</td><td>Kafka와 그 뒤의 구성</td><td><span class="tag dead">2025-02 보관</span></td></tr>
+<tr><td class="name">GoFlow2</td><td class="num">798</td><td>고성능 수집기</td><td>Kafka 또는 파일로 출력. 저장소와 UI는 직접 구축</td><td><span class="tag ok">활동 중</span> BSD-3</td></tr>
+<tr class="us"><td class="name">traffic66</td><td class="num">신규</td><td>수집, 저장, 웹·터미널 UI, 탐지, pcap 분석</td><td>없음. DuckDB를 내장한 실행 파일 하나</td><td><span class="tag ok">활동 중</span> 소스 공개형(아래 참조)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">현재의 ElastiFlow는 NetObserv Flow로 이름이 바뀌었습니다. 소스는 비공개이며, 무료 Community 등급은 초당 500 플로 레코드로 제한됩니다.</p>
+</div>
+
+<div class="col">
+<h2>1. 내려받기부터 첫 차트까지</h2>
+<p>저희가 가장 중요하게 보는 부분입니다. 오후 3시에 누가 업링크를 채우고 있느냐는 질문을 받았을 때 Kafka부터 배우고 싶은 사람은 없습니다. 각 프로젝트 문서에 있는 가장 짧은 경로는 다음과 같습니다.</p>
+</div>
+<div class="wide">
+<div class="race" role="list">
+  <div class="lane us" role="listitem"><div class="who">traffic66</div><div class="bar"><span class="step">내려받아 압축 해제</span><span class="step">./traffic66</span><span class="step">브라우저 열기 ✓</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ntopng</div><div class="bar"><span class="step">저장소 추가</span><span class="step">ntopng 설치</span><span class="step">Redis 설치</span><span class="step">nProbe 설치</span><span class="step">nProbe 라이선스 받기</span><span class="step">둘을 연결</span><span class="step">차트</span></div></div>
+  <div class="lane" role="listitem"><div class="who">Akvorado</div><div class="bar"><span class="step">Docker 설치</span><span class="step">compose 받기</span><span class="step">Kafka 기동</span><span class="step">ClickHouse 기동</span><span class="step">inlet/outlet 기동</span><span class="step">SNMP, GeoIP 설정</span><span class="step">차트</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ElastiFlow</div><div class="bar"><span class="step">Elasticsearch 설치</span><span class="step">Kibana 설치</span><span class="step">수집기 설치</span><span class="step">대시보드 가져오기</span><span class="step">초당 500건 제한 유의</span><span class="step">차트</span></div></div>
+  <div class="lane" role="listitem"><div class="who">GoFlow2 / pmacct</div><div class="bar"><span class="step">수집기 설치</span><span class="step">데이터베이스 선택</span><span class="step">파이프라인 구축</span><span class="step">Grafana 설치</span><span class="step">대시보드 직접 작성</span><span class="step">차트</span></div></div>
+</div>
+</div>
+<div class="col">
+<p>새로 설치한 traffic66은 admin / traffic66으로 로그인하며, 첫 로그인에서 새 비밀번호를 정하도록 요구합니다. Windows에서는 <code>traffic66.exe</code>를 더블클릭하면 브라우저가 열립니다. 먼저 둘러보고 싶다면 <code>traffic66 demo</code>가 하루치 이력과 공격 한 건 전체를 담은 가상의 회사 네트워크를 만들어 줍니다.</p>
+<p><strong>Windows</strong>에 관해: 표에 있는 도구는 거의 모두 Linux나 Docker에서만 동작합니다. traffic66은 같은 코드에서 Windows, Linux, macOS용 네이티브 프로그램을 만들며, WSL도 Docker도 필요 없습니다. 작은 조직에서는 모니터링용 머신이 Windows PC인 경우가 많습니다.</p>
+
+<div class="quote" aria-label="핵심 수치">
+  <div class="big">3 <span>단계</span></div>
+  <div class="cap">내려받기부터 첫 차트까지</div>
+</div>
+
+<h2>망분리된 내부망과 대규모 네트워크에서</h2>
+<p>공공기관과 금융회사를 비롯해 업무망을 인터넷과 분리해 운영하는 조직이 적지 않습니다. 공공 부문의 망 보안은 국가정보원의 「국가 사이버보안 기본지침」에 규정되어 있으며, 인터넷 사용을 제한하는 내용을 담고 있습니다. 금융 부문에서는 금융위원회와 금융감독원이 2024년 8월 망분리 개선 로드맵을 발표했지만, 기존 보안체계가 외부 통신과 분리된 환경을 전제로 한다는 이유로 단계적 개선을 택했습니다. 어느 쪽이든 내부 업무망에 두는 모니터링 장비는 인터넷 없이 동작해야 하는 경우가 많습니다.</p>
+<p>이런 망에서는 설치할 것이 적을수록 반입 절차도 짧아집니다. traffic66은 실행 파일 하나이고 오프라인에서 동작합니다. 국가·AS 정보는 내장된 DB-IP Lite 데이터베이스로 바로 나오고, 위협 목록은 한 줄에 주소 하나를 적은 텍스트 파일이므로 승인된 경로로 파일을 들여와 데이터 디렉터리에 두면 됩니다. 패키지 저장소도, 컨테이너 레지스트리도 필요 없습니다.</p>
+<p>한계도 분명히 적어 둡니다. traffic66은 머신 한 대에서 <strong>초당 5,000 플로 레코드</strong>를 기준으로 설계되었습니다. 이는 패킷 수가 아니라 장비가 내보내는 레코드 수이며, 샘플링한 sFlow라면 인터페이스 수십~수백 개 규모를 염두에 두고 있습니다. 그러나 비샘플링 NetFlow를 내보내는 대학 백본이나 통신사 규모의 망이라면 이 숫자를 먼저 자기 환경의 레코드 수와 비교해 보십시오. 넘는다면 아래에서 다루는 Kafka·ClickHouse 기반 구성이 맞습니다.</p>
+
+<h2>2. 숫자가 인터페이스 카운터와 맞는가?</h2>
+<p>모든 플로 도구가 받는 질문입니다. 차트에서는 업링크가 800 Mb/s인데 Zabbix의 SNMP는 600이라고 합니다. 어느 쪽이 맞습니까?</p>
+<p>플로 숫자는 추정치입니다. 샘플링된 패킷에 샘플링 비율을 곱한 값입니다. traffic66에는 바로 이 문제를 위한 페이지, <strong>인터페이스 대조</strong>가 있습니다. 인터페이스마다 플로 추정치와 장비 자체의 카운터(sFlow 카운터 또는 SNMP)를 한 차트에 그리고, 그 차이와 샘플링의 통계적 오차를 계산합니다. 차이가 샘플링으로 설명되는 범위보다 크면 가능성 높은 원인을 알려 줍니다. 샘플링하지 않는 인터페이스, 같은 트래픽을 두 인터페이스에서 중복 샘플링, 전송 중 유실된 익스포트 패킷, 아직 수신되지 않은 샘플링 비율 등입니다.</p>
+<p>그 뒤에는 눈에 잘 띄지 않는 세부 처리가 있습니다. 장비가 실제로 적용한 샘플링 비율을 쓰고, 샘플링 비율이 도착하기 전의 레코드는 1:1로 세지 않고 보류하며, 유실된 익스포트 패킷을 보정하고, 긴 플로는 지속된 시간에 걸쳐 분 단위로 나누고, 인터페이스 카운터에는 이더넷 오버헤드가 포함되므로 NetFlow 바이트 수에도 이를 더합니다.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ko/interfaces.jpg" alt="인터페이스 대조: 초당 비트와 초당 패킷 차트, 인터페이스 목록과 판정" width="1440" height="1450" loading="lazy">
+  <figcaption>인터페이스 대조. 점선은 장비 카운터이며, 판정은 오른쪽 아래에 있습니다.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>다른 도구는 어디까지 하는가:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>플로 추정치와 장비 카운터를 한 차트에 그리고, 차이와 통계적 오차를 계산해 원인을 알려 줍니다. sFlow 카운터는 도착하는 대로 사용하고, NetFlow 장비는 <code>snmp</code> 한 줄이면 됩니다.</span></div>
+  <div><b>ntopng</b><span>Enterprise 에디션은 SNMP를 폴링해 장비 인터페이스를 차트로 보여 줍니다. 문서에는 플로와 비교한다는 언급이 없습니다. Community 에디션의 SNMP는 문서화되어 있지 않습니다.</span></div>
+  <div><b>Akvorado</b><span>SNMP는 플로 레코드에 인터페이스 이름과 설명을 붙이는 데 쓰며, 카운터는 쓰지 않습니다.</span></div>
+  <div><b>ElastiFlow</b><span>역시 SNMP로 인터페이스 정보를 보강합니다. 비교하려면 Kibana 차트 두 개를 직접 만들어야 합니다.</span></div>
+  <div><b>FastNetMon</b><span>이 도구의 역할이 아닙니다. 공격 임계값을 감시합니다.</span></div>
+  <div><b>GoFlow2 등</b><span>이 도구들의 역할이 아닙니다. 플로 레코드를 전달합니다.</span></div>
+</div>
+<p>다른 도구에서는 인터페이스 카운터를 읽지 않거나, 읽더라도 눈으로 비교할 차트 하나가 더 생길 뿐입니다. 숫자가 왜 다른지 알려 주는 다른 프로젝트는 찾지 못했습니다.</p>
+
+<h2>3. 열면 바로 결론, 쿼리 언어 불필요</h2>
+<p>개요는 지금 트래픽이 얼마인지, 누가 쓰는지, 어제와 비교하면 어떤지를 보여 줍니다. 모든 주소, 포트, 애플리케이션, 국가를 클릭해 이것만 보기, 제외하기, 플로 레코드 열기, 상세 페이지 열기를 할 수 있습니다. 입력할 일이 거의 없도록 설계했습니다.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ko/overview.jpg" alt="개요: 인터페이스 대역폭, 애플리케이션별 대역폭과 어제 같은 시간대 비교" width="1440" height="900" loading="lazy">
+  <figcaption>개요. 상단에서 인터페이스를 고르며, 별표가 붙은 것이 기본입니다. 점선은 어제 같은 시각입니다.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>다른 프로젝트에서 같은 일을 하려면:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>웹 UI와 터미널 UI를 내장하고, 요약 화면에서 시작합니다. 13개 언어.</span></div>
+  <div><b>ntopng</b><span>정보량이 많은 완성된 UI입니다. 표에서 정면으로 비교할 수 있는 유일한 도구입니다. 발표에 따르면 7개 언어.</span></div>
+  <div><b>Akvorado</b><span>잘 다듬어진 웹 콘솔입니다. 시각화 화면에서 차원을 끌어다 놓고 Sankey 차트를 그릴 수 있습니다. 쿼리 도구에 가까워서 무엇을 물을지 먼저 정해야 합니다. 영어만 지원.</span></div>
+  <div><b>ElastiFlow</b><span>Kibana 대시보드입니다. 바꾸려면 Kibana를 배워야 합니다.</span></div>
+  <div><b>FastNetMon</b><span>Community 에디션에는 웹 UI가 없고 차트는 Grafana로 봅니다. 웹 UI는 상용 에디션에 있습니다.</span></div>
+  <div><b>GoFlow2, pmacct, vflow, nfdump</b><span>UI가 없습니다. nfdump는 명령줄 조회가 가능합니다. 대시보드는 보통 Grafana에서 차트마다 쿼리를 하나씩 작성해 직접 만듭니다.</span></div>
+</div>
+
+<h2>4. 샘플링 데이터에서 공격 찾기</h2>
+<p>샘플링 데이터에서의 탐지는 어렵습니다. 1:4096이라면 스캔 하나가 패킷 몇 개만 남길 수도 있습니다. traffic66의 규칙은 샘플링 데이터에 맞춰 보정되어 있습니다. 데모에서는 1:4096 sFlow를 통해 공격 과정 전체를 찾아냅니다. 내부 스캔, 포트 스캔, 비밀번호 대입, 내부 확산, 새 주소로의 대용량 업로드, 위협 목록 트래픽입니다. 데모의 하루치 정상 트래픽에서는 웹사이트를 두드리는 인터넷 스캐너 외에 다른 탐지 결과가 나오지 않습니다.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/ko/findings.jpg" alt="탐지: 공격의 각 단계를 심각한 것부터 나열" width="1440" height="900" loading="lazy">
+  <figcaption>탐지. 데모에서 감염된 호스트가 벌인 공격의 모든 단계로, 전부 1:4096 sFlow 샘플링에서 나온 것입니다.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>여기서는 비교가 더 팽팽합니다.</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>스캔, 포트 스캔, 비밀번호 대입, 내부 확산, 비정상 업로드, 플러드, 위협 목록. 임계값은 샘플링 데이터에 맞춰져 있습니다.</span></div>
+  <div><b>ntopng</b><span>저희보다 훨씬 많은 검사 항목이 있습니다. 스캔, 플러드, 블랙리스트, DNS·ICMP를 이용한 데이터 유출, 내부 확산이 Community 에디션에도 들어 있습니다. 이 부분은 ntopng이 앞서 있습니다.</span></div>
+  <div><b>FastNetMon</b><span>DDoS 전용이지만 깊이가 있습니다. 수 초 안에 탐지하고 BGP 블랙홀링을 자동으로 실행합니다.</span></div>
+  <div><b>ElastiFlow</b><span>NetIntel 위협 정보 보강. 경보는 Elastic에서 직접 설정한 규칙으로 처리합니다.</span></div>
+  <div><b>Akvorado와 수집기들</b><span>보안 탐지 없음.</span></div>
+</div>
+<p>보안 면에서 저희는 ntopng과 같은 수준입니다. 저희가 내세우는 것은 검사 기능이 설정 없이 프로그램 하나에 들어 있고, 샘플링 데이터에 맞춰져 있다는 점입니다.</p>
+<p>편의 기능이 하나 더 있습니다. <code>traffic66 capture.pcap</code>은 패킷 캡처를 같은 페이지로, 실시간 데이터와 분리해 분석합니다(<strong>오프라인 pcap 분석</strong>). ntopng도 pcap 파일을 읽으므로 이 항목은 무승부로 봅니다.</p>
+
+<h2>종합 평가표</h2>
+<p>위의 내용과 아래의 약점을 한 표에 모았습니다. 꽉 찬 원은 지원, 반쪽은 일부·유료·별도 설치, 빈 원은 미지원입니다.</p>
+</div>
+<div class="wide">
+<div class="tablewrap">
+<table class="matrix">
+<thead><tr><th>기능</th><th class="us">traffic66</th><th>ntopng</th><th>Akvorado</th><th>ElastiFlow (현행)</th><th>FastNetMon</th><th>수집기<small>GoFlow2 · pmacct · vflow · nfdump</small></th></tr></thead>
+<tbody>
+<tr><td>프로그램 하나, 설치 후 바로 사용</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + nProbe 라이선스</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>차트는 Grafana</small></td><td><i class="m"></i><small>저장소와 UI 직접 구축</small></td></tr>
+<tr><td>Windows 네이티브 실행</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Windows 빌드는 데모판</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>내장 웹 UI</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>Kibana 대시보드</small></td><td><i class="m h"></i><small>상용 에디션</small></td><td><i class="m"></i></td></tr>
+<tr><td>다국어 UI</td><td class="us"><i class="m y"></i><small>13</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>영어</small></td><td><i class="m h"></i><small>Kibana만</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>플로와 인터페이스 카운터 대조</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>SNMP 차트(Enterprise)</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>직접 구축</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>보안 탐지</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>검사 항목 최다</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>위협 정보 보강</small></td><td><i class="m h"></i><small>DDoS만, 차단 포함</small></td><td><i class="m"></i></td></tr>
+<tr><td>오프라인 pcap 분석</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>터미널 UI</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>콘솔 클라이언트</small></td><td><i class="m h"></i><small>nfdump CLI</small></td></tr>
+<tr><td>7계층 애플리케이션 식별</td><td class="us"><i class="m"></i></td><td><i class="m y"></i><small>nDPI</small></td><td><i class="m"></i></td><td><i class="m h"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>수평 확장</td><td class="us"><i class="m h"></i><small>초당 5,000 레코드, 머신 한 대</small></td><td><i class="m h"></i></td><td><i class="m y"></i></td><td><i class="m y"></i><small>유료 등급</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+<tr><td>OSI 오픈소스 라이선스</td><td class="us"><i class="m"></i><small>소스 공개형</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i><small>비공개</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+</tbody>
+</table>
+</div>
+<div class="legend"><span><i class="m y"></i> 지원</span><span><i class="m h"></i> 일부·유료·별도 설치</span><span><i class="m"></i> 미지원</span></div>
+</div>
+<div class="col">
+<p>traffic66은 위의 여덟 행을 모두 채웁니다. 다른 열 중에는 그런 것이 없습니다. 마지막 세 행은 저희의 약점입니다.</p>
+
+<h2>다른 도구가 더 나은 점</h2>
+<p>고르기 전에 이 부분을 읽어 주십시오.</p>
+</div>
+<div class="wide">
+<div class="grid2">
+  <div class="card"><div class="who">Akvorado · GoFlow2</div><h4>규모</h4><p>traffic66은 내장 DuckDB로 머신 한 대에서 초당 5,000 플로 레코드를 처리하도록 설계되었습니다. 통신사 규모의 트래픽이라면 수평 확장되는 Kafka·ClickHouse 구조가 맞는 답입니다.</p></div>
+  <div class="card"><div class="who">ntopng</div><h4>심층 패킷 분석</h4><p>ntopng은 nDPI로 수백 가지 7계층 프로토콜을 식별합니다. traffic66은 플로를 다루며, 애플리케이션은 포트로 판단하고 패킷 내용은 분석하지 않습니다.</p></div>
+  <div class="card"><div class="who">FastNetMon</div><h4>DDoS 자동 차단</h4><p>FastNetMon은 공격을 탐지하는 즉시 BGP 블랙홀이나 FlowSpec 규칙을 광고할 수 있습니다. traffic66은 플러드를 보고할 뿐 라우팅에는 손대지 않습니다.</p></div>
+  <div class="card"><div class="who">pmacct</div><h4>라우팅 정보와 유연성</h4><p>pmacct는 플로와 함께 BGP, BMP를 받아 레코드에 라우팅 정보를 붙이고, 거의 어디로든 기록할 수 있습니다. traffic66은 툴킷이 아니라 완성된 제품입니다.</p></div>
+  <div class="card"><div class="who">오래된 프로젝트들</div><h4>연륜과 커뮤니티</h4><p>ntopng은 커밋이 3만 건 가까이 되고, nfdump는 20년 가까이 쓰여 왔습니다. traffic66은 이제 막 스타를 모으기 시작했고, 운영 환경에서 쌓은 경험도 훨씬 적습니다.</p></div>
+  <div class="card"><div class="who">표의 대부분</div><h4>라이선스</h4><p>이들은 OSI 승인 오픈소스 라이선스를 씁니다. traffic66은 소스 공개형입니다. 평가 목적과 100명 미만 조직은 무료이고, 그보다 큰 조직은 30일 후 등록합니다. 기능이 꺼지는 일은 없지만, 오픈소스는 아닙니다.</p></div>
+</div>
+</div>
+
+<div class="col">
+<h2>무엇을 고를까</h2>
+<div class="pick">
+  <div class="us"><span>머신 한 대로 인터페이스 수십~수백 개, 오늘 오후에 차트를 보고, SNMP와 맞는 숫자가 필요하다. 인터넷이 닿지 않는 내부망이어도 된다</span><b>traffic66</b></div>
+  <div><span>7계층 가시성이 필요하거나, 주로 미러 포트로 본다</span><b>ntopng</b></div>
+  <div><span>통신사나 대규모 백본, 초당 수십만 플로</span><b>Akvorado</b></div>
+  <div><span>자동 블랙홀링까지 포함한 DDoS 탐지</span><b>FastNetMon</b></div>
+  <div><span>이미 Kafka와 데이터 플랫폼을 운영 중이고 수집기만 필요하다</span><b>GoFlow2 / pmacct</b></div>
+  <div><span>명령줄, 원시 레코드 장기 보관</span><b>nfdump</b></div>
+</div>
+<p>저희가 자신 있는 것은 세 가지입니다. 설치가 빠르고, 읽기 쉽고, 숫자가 맞습니다. 나머지는 <a href="https://github.com/githubflyideas/traffic66" target="_blank" rel="noopener">GitHub</a>에 이슈로 남겨 주십시오. 부족한 점을 하나씩 메워 가겠습니다.</p>
+</div>
+
+<footer class="col">
+  출처, 2026년 10월 8일 확인:
+  <ol>
+    <li>GitHub 프로젝트 페이지: <a href="https://github.com/ntop/ntopng" target="_blank" rel="noopener">ntopng</a>, <a href="https://github.com/pavel-odintsov/fastnetmon" target="_blank" rel="noopener">FastNetMon</a>, <a href="https://github.com/robcowart/elastiflow" target="_blank" rel="noopener">ElastiFlow (구버전)</a>, <a href="https://github.com/akvorado/akvorado" target="_blank" rel="noopener">Akvorado</a>, <a href="https://github.com/pmacct/pmacct" target="_blank" rel="noopener">pmacct</a>, <a href="https://github.com/Edgio/vflow" target="_blank" rel="noopener">vflow</a>, <a href="https://github.com/phaag/nfdump" target="_blank" rel="noopener">nfdump</a>, <a href="https://github.com/cloudflare/goflow" target="_blank" rel="noopener">Cloudflare goflow</a>, <a href="https://github.com/netsampler/goflow2" target="_blank" rel="noopener">GoFlow2</a>.</li>
+    <li>ntopng에서 NetFlow/sFlow를 쓰려면 nProbe 라이선스가 필요: <a href="https://www.ntop.org/guides/ntopng/use_cases/netflow_sflow_monitoring.html" target="_blank" rel="noopener">ntop 문서</a>.</li>
+    <li>ntopng 에디션별 경보: <a href="https://ntop.org/guides/ntopng/alerts/alerts_list_per_license.html" target="_blank" rel="noopener">Alerts List per License</a>, SNMP 모니터링: <a href="https://www.ntop.org/monitoring-network-devices-with-ntopng-and-snmp/" target="_blank" rel="noopener">ntop 블로그</a>, UI 언어: <a href="https://www.ntop.org/extended-multilanguage-support-in-ntopng-korean-spanish-and-french/" target="_blank" rel="noopener">2024년 발표</a>, Windows 데모 빌드: <a href="https://en.wikipedia.org/wiki/Ntopng" target="_blank" rel="noopener">Wikipedia</a>.</li>
+    <li>Akvorado 2.0 구조(inlet, Kafka, outlet, ClickHouse): <a href="https://vincent.bernat.ch/en/blog/2025-akvorado-2.0" target="_blank" rel="noopener">개발자 블로그</a>.</li>
+    <li>ElastiFlow NetIntel 보강: <a href="https://docs.elastiflow.com/flowcoll/configuration/enrichment-options/ip-address-enrichment/enrich_ip_netintel" target="_blank" rel="noopener">ElastiFlow 문서</a>, NetObserv Flow 라이선스 등급: <a href="https://docs.elastiflow.com/flowcoll/configuration/config_gen/license" target="_blank" rel="noopener">ElastiFlow 문서</a>.</li>
+    <li>국가정보원 「국가 사이버보안 기본지침」: <a href="https://www.ncsc.go.kr/template/resources/file/nis_guide_lines_2023_1_31.pdf" target="_blank" rel="noopener">국가사이버안보센터 PDF</a>.</li>
+    <li>금융위원회·금융감독원 「금융분야 망분리 개선 로드맵」(2024. 8. 13. 발표, 단계적 개선): <a href="https://www.kimchang.com/ko/insights/detail.kc?idx=31199" target="_blank" rel="noopener">김·장 법률사무소 해설</a>.</li>
+  </ol>
+  스크린샷은 가상 네트워크인 <code>traffic66 demo</code>에서 찍은 것입니다.
+</footer>
+</article>

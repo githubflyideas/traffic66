@@ -1,10 +1,81 @@
 [
   {
     "date": "2026-10-08",
+    "lang": "zh",
+    "slug": "flow-analyzers-compared",
+    "title": "我们把 GitHub 上的流量分析工具都装了一遍",
+    "summary": "ntopng、Akvorado、ElastiFlow、FastNetMon、pmacct、GoFlow2、nfdump 和 traffic66 逐项对比：安装路径、计数器对账、界面、安全检测，以及别人做得更好的地方。",
+    "image": "assets/shots/zh/overview.jpg"
+  },
+  {
+    "date": "2026-10-08",
     "lang": "en",
     "slug": "flow-analyzers-compared",
     "title": "We installed the flow analyzers on GitHub, one after another",
     "summary": "ntopng, Akvorado, ElastiFlow, FastNetMon, pmacct, GoFlow2 and nfdump next to traffic66: install path, counter check, UI, detection, and where others do better.",
     "image": "assets/img/overview.png"
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "ja",
+    "slug": "flow-analyzers-compared",
+    "title": "GitHub のフロー分析ツールを、順番にインストールしてみました",
+    "summary": "ntopng、Akvorado、ElastiFlow、FastNetMon、pmacct、GoFlow2、nfdump と traffic66 を比較しました。導入手順、SNMP カウンターとの照合、UI、検知、そしてほかのプロジェクトが優れている点。",
+    "image": "assets/shots/ja/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "es",
+    "slug": "flow-analyzers-compared",
+    "title": "Instalamos uno por uno los analizadores de flujos de GitHub",
+    "summary": "Cuánto cuesta llegar de la descarga a un primer gráfico confiable con ntopng, Akvorado, ElastiFlow, GoFlow2 y traffic66, y dónde otros proyectos lo hacen mejor.",
+    "image": "assets/shots/es/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "pt",
+    "slug": "flow-analyzers-compared",
+    "title": "Instalamos, um por um, os analisadores de fluxo do GitHub",
+    "summary": "Do download ao primeiro gráfico confiável: traffic66, ntopng, Akvorado, ElastiFlow e outros comparados, com os pontos em que os outros são melhores.",
+    "image": "assets/shots/pt/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "fr",
+    "slug": "flow-analyzers-compared",
+    "title": "Nous avons installé, l’un après l’autre, les analyseurs de flux publiés sur GitHub",
+    "summary": "Du téléchargement au premier graphique fiable : traffic66 face à ntopng, Akvorado, ElastiFlow et aux collecteurs. Données gardées chez vous, licence non libre, points faibles assumés.",
+    "image": "assets/shots/fr/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "de",
+    "slug": "flow-analyzers-compared",
+    "title": "Wir haben die Flow-Analysatoren auf GitHub der Reihe nach installiert",
+    "summary": "Zehn Flow-Analysatoren für NetFlow, sFlow und IPFIX im Vergleich: Weg zum ersten Diagramm, Abgleich mit Interface-Zählern, Erkennung, Grenzen. Mit Hinweisen zu DSGVO und Betrieb im eigenen Haus.",
+    "image": "assets/img/overview.png",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "ko",
+    "slug": "flow-analyzers-compared",
+    "title": "GitHub의 플로 분석 도구를 하나씩 설치해 보았습니다",
+    "summary": "ntopng, Akvorado, ElastiFlow, FastNetMon, pmacct, GoFlow2, nfdump와 traffic66 비교: 설치 경로, 카운터 대조, UI, 탐지, 망분리 환경, 그리고 다른 도구가 더 나은 점.",
+    "image": "assets/shots/ko/overview.jpg",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
+    "lang": "ar",
+    "slug": "flow-analyzers-compared",
+    "title": "ثبّتنا أدوات تحليل التدفقات المتاحة على GitHub، واحدةً تلو الأخرى",
+    "summary": "من التنزيل إلى أول رسم بياني موثوق: مقارنة traffic66 بـ ntopng وAkvorado وElastiFlow وغيرها، مع ما يتفوّق فيه الآخرون، ولماذا يهمّ بقاء بيانات التدفق على خادمك.",
+    "image": "assets/shots/ar/overview.jpg",
+    "draft": true
   }
 ]

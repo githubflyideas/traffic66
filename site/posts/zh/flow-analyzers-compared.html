@@ -1,0 +1,187 @@
+<article>
+<header class="hero col">
+  <div class="kicker"><span><a href="{root}blog/" style="color:inherit">traffic66 博客</a></span><span>NetFlow / sFlow / IPFIX</span><b>2026 年 10 月</b></div>
+  <h1>我们把 GitHub 上的流量分析工具都装了一遍</h1>
+  <p class="lede">这篇只比一件事：一个网管拿到工具，到<span class="far">看见第一张图、并且相信图上的数字</span>，中间要走多远。traffic66 在这条路上走得最短；安全检测和 ntopng 同一档；规模、深度包检测和社区积累，别人更强。每一项都逐个对比过，表在后面。</p>
+  <div class="byline"><span>作者：traffic66 开发组</span><span>立场：利益相关，请自行打折</span><span>数据截至 2026-10-08</span></div>
+</header>
+
+<div class="col">
+<h2>参赛选手</h2>
+<p>我们找了 GitHub 上和 sFlow、NetFlow、IPFIX 有关、星数靠前的项目。有的是完整产品，有的只是采集器，有的已经归档。星数是 GitHub 页面上的数字。</p>
+</div>
+
+<div class="wide">
+<div class="tablewrap">
+<table>
+<thead><tr><th>项目</th><th style="text-align:right">星数</th><th>是什么</th><th>要先装好的东西</th><th>状态 · 许可证</th></tr></thead>
+<tbody>
+<tr><td class="name">ntopng</td><td class="num">8.1k</td><td>Web 流量监控，nDPI 深度包检测</td><td>Redis；收 NetFlow/sFlow 要配 nProbe，nProbe 需要授权</td><td><span class="tag ok">活跃</span> GPL-3.0</td></tr>
+<tr><td class="name">FastNetMon</td><td class="num">3.7k</td><td>DDoS 检测，可联动 BGP 黑洞</td><td>Linux；看图要另配 InfluxDB/Grafana 等</td><td><span class="tag ok">活跃</span> GPL-2.0</td></tr>
+<tr><td class="name">ElastiFlow（旧版）</td><td class="num">2.5k</td><td>Logstash + Kibana 看板</td><td>Elasticsearch、Logstash、Kibana</td><td><span class="tag dead">2024-03 归档</span></td></tr>
+<tr><td class="name">Akvorado</td><td class="num">2.3k</td><td>采集、补全、可视化</td><td>inlet、Kafka、outlet、ClickHouse，官方 compose 里还有 Redis</td><td><span class="tag ok">活跃</span> AGPL-3.0</td></tr>
+<tr><td class="name">pmacct</td><td class="num">1.2k</td><td>采集守护进程，带 BGP/BMP</td><td>自己选数据库和看板（常见是 Grafana）</td><td><span class="tag ok">活跃</span> GPL（拟改 BSD 类）</td></tr>
+<tr><td class="name">vflow</td><td class="num">1.2k</td><td>采集器，输出到 Kafka</td><td>Kafka 以及下游存储和看板</td><td>Apache-2.0</td></tr>
+<tr><td class="name">nfdump</td><td class="num">922</td><td>命令行收集和查询工具集</td><td>没有现成 Web 界面</td><td><span class="tag ok">活跃</span> BSD</td></tr>
+<tr><td class="name">Cloudflare goflow</td><td class="num">919</td><td>Cloudflare 内部用的采集器</td><td>Kafka 以及下游</td><td><span class="tag dead">2025-02 归档</span></td></tr>
+<tr><td class="name">GoFlow2</td><td class="num">798</td><td>高性能采集器</td><td>输出到 Kafka 或文件，存储和界面自己搭</td><td><span class="tag ok">活跃</span> BSD-3</td></tr>
+<tr class="us"><td class="name">traffic66</td><td class="num">刚起步</td><td>采集、存储、Web 和终端界面、检测、pcap 分析</td><td>没有。一个可执行文件，DuckDB 内嵌</td><td><span class="tag ok">活跃</span> 源码可用（见下文）</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">新版 ElastiFlow 已更名 NetObserv Flow，闭源，免费的 Community 版限 500 条流记录/秒。</p>
+</div>
+
+<div class="col">
+<h2>第一项：从下载到第一张图</h2>
+<p>这是我们最在意的一项。网工下午三点接到“出口跑满了，看看是谁”，没有人想先学 Kafka。下面是各家从零到能看图的步骤，按官方文档最短路径数：</p>
+</div>
+<div class="wide">
+<div class="race" role="list">
+  <div class="lane us" role="listitem"><div class="who">traffic66</div><div class="bar"><span class="step">下载解压</span><span class="step">./traffic66</span><span class="step">打开浏览器 ✓</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ntopng</div><div class="bar"><span class="step">加软件源</span><span class="step">装 ntopng</span><span class="step">装 Redis</span><span class="step">装 nProbe</span><span class="step">申请 nProbe 授权</span><span class="step">配两边端口</span><span class="step">看图</span></div></div>
+  <div class="lane" role="listitem"><div class="who">Akvorado</div><div class="bar"><span class="step">装 Docker</span><span class="step">拉 compose</span><span class="step">起 Kafka</span><span class="step">起 ClickHouse</span><span class="step">起 inlet/outlet</span><span class="step">配 SNMP、GeoIP</span><span class="step">看图</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ElastiFlow 新版</div><div class="bar"><span class="step">装 Elasticsearch</span><span class="step">装 Kibana</span><span class="step">装采集器</span><span class="step">导入看板</span><span class="step">注意 500 条/秒上限</span><span class="step">看图</span></div></div>
+  <div class="lane" role="listitem"><div class="who">GoFlow2 / pmacct</div><div class="bar"><span class="step">装采集器</span><span class="step">选数据库</span><span class="step">写入管道</span><span class="step">装 Grafana</span><span class="step">自己画看板</span><span class="step">看图</span></div></div>
+</div>
+</div>
+<div class="col">
+<p>traffic66 第一次启动后用 admin / traffic66 登录，登录后先改一个自己的密码。Windows 上双击 <code>traffic66.exe</code> 就自动打开浏览器。想先看效果，<code>traffic66 demo</code> 会造一个模拟公司网络，带一天历史数据和一次完整的攻击过程。</p>
+<p>顺带一提，<strong>Windows</strong>。表里的项目基本只跑在 Linux 或 Docker 上。traffic66 的 Windows、Linux、macOS 是同一份代码编出来的原生程序，不用 WSL，也不用 Docker。很多中小单位的网管机就是一台 Windows。</p>
+
+<div class="quote" aria-label="要点">
+  <div class="big">3 <span>步</span></div>
+  <div class="cap">从下载到看见第一张图</div>
+</div>
+
+<h2>第二项：数字能不能和设备计数器对上</h2>
+<p>流量工具最常被问的问题：图上说出口 800M，Zabbix 里 SNMP 取的是 600M，到底信哪个？</p>
+<p>流量数字本来就是估算值：采样到的包乘以采样率。traffic66 专门做了一页<strong>接口对账</strong>，把每个接口的流量估算和设备自己的计数器（sFlow 计数器或 SNMP）画在同一张图上，算出偏差和采样本身的统计误差。偏差超出误差范围，会直接写出最可能的原因：有接口没开采样、同一份流量在两个口各采了一次、导出包在路上丢了，或者采样率还没收到。</p>
+<p>为了让数字对得上，后台还做了几件不显眼的事：用设备实际生效的采样率；采样率没到之前先扣住记录，不按 1:1 乱算；补偿导出时丢掉的包；把长流按持续时间摊到每一分钟；给 NetFlow 字节数补上以太网开销，因为接口计数器是算它的。</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/zh/interfaces.jpg" alt="接口对账：比特每秒和包每秒两张大图，下面是接口列表和偏差结论" width="1440" height="1450" loading="lazy">
+  <figcaption>接口对账。虚线是设备计数器，结论写在右下角。没开采样的对端接口排在列表最后，变灰显示。</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>对手们在这件事上做到哪一步：</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>流量估算和设备计数器画在一起，算偏差和统计误差，写出原因。sFlow 计数器自动用，NetFlow 设备加一行 snmp 就行。</span></div>
+  <div><b>ntopng</b><span>企业版能轮询 SNMP，画设备接口图；官方文档没有提到拿它和流量做对比。社区版的 SNMP 支持文档里没写。</span></div>
+  <div><b>Akvorado</b><span>SNMP 只用来取接口名称和描述，补到流记录里，不读计数器。</span></div>
+  <div><b>ElastiFlow</b><span>同样用 SNMP 补全接口信息；对账要自己在 Kibana 里拼两张图。</span></div>
+  <div><b>FastNetMon</b><span>不做。它关心的是攻击阈值。</span></div>
+  <div><b>GoFlow2 等采集器</b><span>不做。它们只负责把流记录送出去。</span></div>
+</div>
+<p>接口计数器在别家要么不读，要么是另一张图，摆在那里让你自己比。把“对不上的原因”写成结论的，我们没找到第二家。</p>
+
+<h2>第三项：打开就有结论，不用先学查询语言</h2>
+<p>概览页回答“现在多少、谁在用、和昨天比怎么样”。每个地址、端口、应用、国家都能点：只看它、排除它、看它的流记录、看它的详情页。整个界面的设计目标是让人尽量不用打字。</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/zh/overview.jpg" alt="概览：接口带宽、按应用的带宽与昨天同时段对比" width="1440" height="900" loading="lazy">
+  <figcaption>概览。顶部选接口，带星号的是默认接口。虚线是昨天同一时段。</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>同一件事，对手们的界面：</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>自带 Web 界面和终端界面，打开就是结论页。界面有 13 种语言，包括简体中文。</span></div>
+  <div><b>ntopng</b><span>界面完整，信息量很大，是这张表里唯一能正面比的。语言有英、意、德、日、韩、西、法 7 种，官方公告里没有中文。</span></div>
+  <div><b>Akvorado</b><span>Web 控制台做得漂亮，可视化页面能拖维度、画桑基图，但更像一个查询工具，要先想好查什么。只有英文。</span></div>
+  <div><b>ElastiFlow</b><span>界面是 Kibana 看板。Kibana 有中文，看板本身是英文，改看板要学 Kibana。</span></div>
+  <div><b>FastNetMon</b><span>社区版没有 Web 界面，看图要接 Grafana；Web 界面在商业版里。</span></div>
+  <div><b>GoFlow2、pmacct、vflow、nfdump</b><span>没有界面，nfdump 是命令行查询。界面要自己搭，通常是 Grafana，每张图自己写查询。</span></div>
+</div>
+
+<h2>第四项：攻击能不能在采样数据里找到</h2>
+<p>采样数据做安全检测是出了名的难：1:4096 的采样下，一次扫描可能只剩几个包。traffic66 的检测规则按采样后的数据重新校过阈值，演示环境里的整条攻击链都能找出来：内网扫描、端口扫描、暴力破解、横向移动、向陌生地址的大量上传，再加上威胁情报命中。同时，一天的正常流量里除了互联网上的扫描器敲网站，不出别的误报。</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/zh/findings.jpg" alt="发现：一次攻击的每一步，按严重程度排列" width="1440" height="900" loading="lazy">
+  <figcaption>发现。演示环境里一台被控主机的完整攻击过程，全部来自 1:4096 的 sFlow 采样。</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>这一项要说实话：</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>扫描、端口扫描、暴力破解、横向移动、异常上传、洪泛、威胁情报，阈值按采样数据校过，演示环境 1:4096 下整条攻击链全中。</span></div>
+  <div><b>ntopng</b><span>检测项比我们多得多：各种扫描、洪泛、黑名单、DNS/ICMP 数据外传、横向移动，社区版就有。这一项 ntopng 领先。</span></div>
+  <div><b>FastNetMon</b><span>只做 DDoS，但做得深：秒级检测，还能自动发 BGP 黑洞。</span></div>
+  <div><b>ElastiFlow</b><span>有 NetIntel 威胁情报补全，告警要靠 Elastic 自己配规则。</span></div>
+  <div><b>Akvorado 和各采集器</b><span>不做安全检测。</span></div>
+</div>
+<p>所以安全这一项，我们和 ntopng 是同一档。我们的优势在于：这些检测在一个程序里、不用额外配置，而且专门针对采样数据调过。</p>
+<p>还有一个顺手的功能：<code>traffic66 a.pcap b.pcapng</code> 直接分析抓包文件，和实时数据分开存放，Ctrl+C 退出时自动删除导入的数据。ntopng 也能读 pcap，这一项算打平。</p>
+
+<h2>总成绩单</h2>
+<p>把上面几项和后面要说的弱项放在一张表里。实心是做到了，半个是部分做到或要付费、要另装，空心是没有。</p>
+</div>
+<div class="wide">
+<div class="tablewrap">
+<table class="matrix">
+<thead><tr><th>能力</th><th class="us">traffic66</th><th>ntopng</th><th>Akvorado</th><th>ElastiFlow 新版</th><th>FastNetMon</th><th>采集器类<small>GoFlow2 · pmacct · vflow · nfdump</small></th></tr></thead>
+<tbody>
+<tr><td>一个程序装完就能用</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + nProbe 授权</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>看图另接 Grafana</small></td><td><i class="m"></i><small>存储和界面自建</small></td></tr>
+<tr><td>Windows 原生运行</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Windows 为演示版</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>自带 Web 界面</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>Kibana 看板</small></td><td><i class="m h"></i><small>商业版</small></td><td><i class="m"></i></td></tr>
+<tr><td>中文界面</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>Kibana 有，看板英文</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>流量与接口计数器对账</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>企业版有 SNMP 图</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>自己拼图</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>安全检测</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>检测项最多</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>威胁情报补全</small></td><td><i class="m h"></i><small>只做 DDoS，可自动处置</small></td><td><i class="m"></i></td></tr>
+<tr><td>pcap 离线分析</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>终端界面</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>命令行</small></td><td><i class="m h"></i><small>nfdump 命令行</small></td></tr>
+<tr><td>七层应用识别</td><td class="us"><i class="m"></i></td><td><i class="m y"></i><small>nDPI</small></td><td><i class="m"></i></td><td><i class="m h"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>大规模横向扩展</td><td class="us"><i class="m h"></i><small>单机 5,000 条/秒</small></td><td><i class="m h"></i></td><td><i class="m y"></i></td><td><i class="m y"></i><small>付费档</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+<tr><td>OSI 开源许可证</td><td class="us"><i class="m"></i><small>源码可用</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i><small>闭源</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+</tbody>
+</table>
+</div>
+<div class="legend"><span><i class="m y"></i> 做到了</span><span><i class="m h"></i> 部分、付费或要另装</span><span><i class="m"></i> 没有</span></div>
+</div>
+<div class="col">
+<p>前八行里，traffic66 每一行都是实心；八行全实心的，表里只有这一列。后三行是我们的短板，下一节细说。</p>
+
+<h2>别人做得更好的地方</h2>
+<p>选工具之前，请认真看这一节。</p>
+</div>
+<div class="wide">
+<div class="grid2">
+  <div class="card"><div class="who">Akvorado · GoFlow2</div><h4>规模</h4><p>traffic66 按单机每秒 5,000 条流设计，DuckDB 内嵌。运营商级别的流量，Kafka 加 ClickHouse 的横向扩展架构才是正解。</p></div>
+  <div class="card"><div class="who">ntopng</div><h4>深度包检测</h4><p>ntopng 有 nDPI，能识别几百种七层协议。traffic66 只看流，应用靠端口识别，不解析包内容。</p></div>
+  <div class="card"><div class="who">FastNetMon</div><h4>DDoS 自动处置</h4><p>FastNetMon 检测到攻击能直接发 BGP 黑洞或 FlowSpec。traffic66 只报告洪泛，不动路由。</p></div>
+  <div class="card"><div class="who">pmacct</div><h4>路由数据和灵活度</h4><p>pmacct 能同时收 BGP 和 BMP，把路由信息并进流记录，输出到几乎任何地方。traffic66 是成品，不是积木。</p></div>
+  <div class="card"><div class="who">所有老项目</div><h4>年头和社区</h4><p>ntopng 有近三万次提交，nfdump 跑了二十年。traffic66 刚开始攒星，经受的生产检验远远不够。</p></div>
+  <div class="card"><div class="who">表里多数项目</div><h4>许可证</h4><p>它们是 OSI 认可的开源许可证。traffic66 是源码可用：评估免费，100 人以下的组织生产使用免费，更大的组织 30 天后需要登记。功能不锁，但这不是开源。</p></div>
+</div>
+</div>
+
+<div class="col">
+<h2>怎么选</h2>
+<div class="pick">
+  <div class="us"><span>一台机器、几十到几百个接口，想今天下午就看到图，还要和 SNMP 对得上</span><b>traffic66</b></div>
+  <div><span>要看七层应用，或者主要靠镜像口</span><b>ntopng</b></div>
+  <div><span>运营商或大型骨干，每秒几十万条流</span><b>Akvorado</b></div>
+  <div><span>主要诉求是 DDoS 检测加自动黑洞</span><b>FastNetMon</b></div>
+  <div><span>已有 Kafka 和数据平台，只缺一个采集器</span><b>GoFlow2 / pmacct</b></div>
+  <div><span>习惯命令行，要长期留存原始记录</span><b>nfdump</b></div>
+</div>
+<p>我们有把握的是三件事：装得快、看得懂、数字对得上。其他几项，欢迎来 <a href="https://github.com/githubflyideas/traffic66" target="_blank" rel="noopener">GitHub</a> 提 issue，把差距一项一项缩小。</p>
+</div>
+
+<footer class="col">
+  数据来源，2026-10-08 查阅：
+  <ol>
+    <li>各项目 GitHub 页面：<a href="https://github.com/ntop/ntopng" target="_blank" rel="noopener">ntopng</a>、<a href="https://github.com/pavel-odintsov/fastnetmon" target="_blank" rel="noopener">FastNetMon</a>、<a href="https://github.com/robcowart/elastiflow" target="_blank" rel="noopener">ElastiFlow 旧版</a>、<a href="https://github.com/akvorado/akvorado" target="_blank" rel="noopener">Akvorado</a>、<a href="https://github.com/pmacct/pmacct" target="_blank" rel="noopener">pmacct</a>、<a href="https://github.com/Edgio/vflow" target="_blank" rel="noopener">vflow</a>、<a href="https://github.com/phaag/nfdump" target="_blank" rel="noopener">nfdump</a>、<a href="https://github.com/cloudflare/goflow" target="_blank" rel="noopener">Cloudflare goflow</a>、<a href="https://github.com/netsampler/goflow2" target="_blank" rel="noopener">GoFlow2</a>。</li>
+    <li>ntopng 收 NetFlow/sFlow 需要 nProbe 授权：<a href="https://www.ntop.org/guides/ntopng/use_cases/netflow_sflow_monitoring.html" target="_blank" rel="noopener">ntop 文档</a>。</li>
+    <li>Akvorado 2.0 架构（inlet、Kafka、outlet、ClickHouse）：<a href="https://vincent.bernat.ch/en/blog/2025-akvorado-2.0" target="_blank" rel="noopener">作者博客</a>。</li>
+    <li>ntopng 各版本告警项：<a href="https://ntop.org/guides/ntopng/alerts/alerts_list_per_license.html" target="_blank" rel="noopener">Alerts List per License</a>；SNMP 监控：<a href="https://www.ntop.org/monitoring-network-devices-with-ntopng-and-snmp/" target="_blank" rel="noopener">ntop 博客</a>；界面语言：<a href="https://www.ntop.org/extended-multilanguage-support-in-ntopng-korean-spanish-and-french/" target="_blank" rel="noopener">2024 年公告</a>；Windows 演示版：<a href="https://en.wikipedia.org/wiki/Ntopng" target="_blank" rel="noopener">Wikipedia</a>。</li>
+    <li>ElastiFlow NetIntel 威胁情报补全：<a href="https://docs.elastiflow.com/flowcoll/configuration/enrichment-options/ip-address-enrichment/enrich_ip_netintel" target="_blank" rel="noopener">ElastiFlow 文档</a>。</li>
+    <li>NetObserv Flow（原 ElastiFlow）许可证分级：<a href="https://docs.elastiflow.com/flowcoll/configuration/config_gen/license" target="_blank" rel="noopener">ElastiFlow 文档</a>。</li>
+  </ol>
+  截图均来自 <code>traffic66 demo</code> 的模拟网络。
+</footer>
+</article>
