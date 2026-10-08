@@ -16,13 +16,12 @@
     "image": "assets/img/overview.png"
   },
   {
-    "date": "2026-10-08",
+    "date": "2026-10-09",
     "lang": "hi",
     "slug": "flow-analyzers-compared",
     "title": "GitHub के flow analyzers हमने एक-एक करके install करके देखे",
     "summary": "Download से पहले भरोसेमंद chart तक: traffic66 और GitHub के प्रमुख NetFlow/sFlow/IPFIX tools की तुलना, जिसमें यह भी साफ़ लिखा है कि कहाँ दूसरे बेहतर हैं।",
-    "image": "assets/shots/hi/overview.jpg",
-    "draft": true
+    "image": "assets/shots/hi/overview.jpg"
   },
   {
     "date": "2026-10-08",
