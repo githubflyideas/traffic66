@@ -23,6 +23,14 @@ import (
 // FileName is the password file inside the data directory.
 const FileName = "password"
 
+// DefaultPassword is the password of the first user of a new installation
+// and of the demo. A new installation asks for a new one at the first
+// sign-in, before anything else is shown.
+const DefaultPassword = "traffic66"
+
+// MinLength is the shortest password accepted from the web UI.
+const MinLength = 8
+
 const iterations = 210000
 
 var b64 = base64.RawStdEncoding
@@ -202,6 +210,9 @@ type FileChecker struct {
 	mu    sync.Mutex
 	stamp string
 	c     *Checker
+	// HasDefault's answer and the file state it was computed for
+	def      bool
+	defStamp string
 }
 
 // NewFileChecker returns a checker for dir; fixed may be nil.
@@ -233,6 +244,69 @@ func (f *FileChecker) Check(user, pw string) bool {
 	c := f.c
 	f.mu.Unlock()
 	return c.Check(user, pw)
+}
+
+// Fixed reports whether the passwords were given at start (-password or
+// TRAFFIC66_PASSWORD) rather than kept in the password file.
+func (f *FileChecker) Fixed() bool { return f.fixed != nil }
+
+// Users lists the users in the password file, in file order.
+func (f *FileChecker) Users() []string {
+	if f.fixed != nil {
+		var out []string
+		for u := range f.fixed {
+			out = append(out, u)
+		}
+		return out
+	}
+	es, _ := Load(f.dir)
+	var out []string
+	for _, e := range es {
+		out = append(out, e.User)
+	}
+	return out
+}
+
+// Admin is the user who manages the others: "admin" when there is one,
+// else the first user in the file.
+func (f *FileChecker) Admin() string {
+	us := f.Users()
+	for _, u := range us {
+		if u == "admin" {
+			return u
+		}
+	}
+	if len(us) > 0 {
+		return us[0]
+	}
+	return ""
+}
+
+// HasDefault reports whether some user still has DefaultPassword, for the
+// hint on the sign-in page. It is checked once per change of the file.
+func (f *FileChecker) HasDefault() bool {
+	if f.fixed != nil {
+		return false
+	}
+	stamp := ""
+	if fi, err := os.Stat(filepath.Join(f.dir, FileName)); err == nil {
+		stamp = fmt.Sprint(fi.ModTime().UnixNano(), fi.Size())
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.defStamp == stamp && stamp != "" {
+		return f.def
+	}
+	es, _ := Load(f.dir)
+	f.def = false
+	for _, e := range es {
+		if Verify(e.Hash, DefaultPassword) {
+			f.def = true
+			break
+		}
+	}
+	f.defStamp = stamp
+	return f.def
 }
 
 // Exists reports whether user can currently sign in.

@@ -50,12 +50,12 @@ Kafka أو قاعدة بيانات منفصلة.
 (Windows x64، وLinux x86-64/ARM64 بنواة 3.2+، وmacOS 11+)، وفكّ ضغطه وشغّل:
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
 على macOS شغّل أولًا `xattr -dr com.apple.quarantine <folder>`. افتح
-http://127.0.0.1:8066 وسجّل الدخول بـ `admin` / `try66`: سجلّ يوم كامل وحركة
+http://127.0.0.1:8066 وسجّل الدخول بـ `admin` / `traffic66`: سجلّ يوم كامل وحركة
 حية من أربعة أجهزة محاكاة، ومنها هجوم يُعرض خطوةً خطوة في **الاكتشافات**. يوقفه
 Ctrl+C؛ احذف `traffic66-demo` لتبدأ من جديد. لتشغيله بجوار تثبيت حقيقي:
 `-addr :8067 -listen ""`.
@@ -113,8 +113,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-النقر المزدوج على `traffic66.exe` يعمل أيضًا: يفتح واجهة الويب ويعرض كلمة
-المرور الأولى في نافذته.
+النقر المزدوج على `traffic66.exe` يعمل أيضًا: يفتح واجهة الويب.
 
 **macOS**: فكّ الضغط إلى `/usr/local/traffic66`، وأزل علامة الحجر،
 وشغّل `traffic66 passwd -data "/Library/Application Support/traffic66"`، ثم
@@ -125,11 +124,15 @@ Start-ScheduledTask -TaskName traffic66
 
 ## 3. المستخدمون وكلمات المرور
 
-عند التشغيل الأول ينشئ traffic66 المستخدم `admin` بكلمة مرور عشوائية ويطبعها
-مرة واحدة (في النافذة، أو الطرفية، أو
-`journalctl -u traffic66 | grep "first start"`). يُحفظ المستخدمون بصيغة
-تجزئات مملّحة في `password` داخل دليل البيانات، ويُدارون بأمر واحد على جهاز
-traffic66 (أضف `-data …` إن كان traffic66 يعمل به):
+يُسجَّل الدخول في التثبيت الجديد بـ `admin` / `traffic66`، ويطلب أول تسجيل
+دخول كلمة مرور جديدة قبل عرض أي شيء آخر (يحتفظ العرض التجريبي بـ `traffic66`).
+بعد ذلك تُغيّر كلمة مرورك من **الحساب** أسفل القائمة؛ ومن هناك أيضًا يضيف
+المسؤول (`admin`) المستخدمين ويحذفهم ويعيد تعيين كلمات مرورهم. تسجيل الدخول عبر
+LDAP / Active Directory قيد التطوير.
+
+يُحفظ المستخدمون بصيغة تجزئات مملّحة في `password` داخل دليل البيانات. ويمكن
+فعل الشيء نفسه بأمر واحد على جهاز traffic66 (أضف `-data …` إن كان traffic66
+يعمل به):
 
 | المطلوب | الأمر |
 |---|---|
@@ -138,8 +141,8 @@ traffic66 (أضف `-data …` إن كان traffic66 يعمل به):
 | حذف `alice` | `traffic66 passwd -user alice -delete` |
 | عرض المستخدمين | `traffic66 passwd -list` |
 
-تُطبَّق التغييرات فورًا. لجميع المستخدمين الصلاحيات نفسها. للسكربتات
-والحاويات، يقبل `TRAFFIC66_PASSWORD=…` (أو `-password`) المستخدم `-user` فقط
+تُطبَّق التغييرات فورًا. باستثناء إدارة المستخدمين، لجميع المستخدمين
+الصلاحيات نفسها. للسكربتات والحاويات، يقبل `TRAFFIC66_PASSWORD=…` (أو `-password`) المستخدم `-user` فقط
 بكلمة المرور تلك طوال ذلك التشغيل. خمس كلمات مرور خاطئة خلال دقيقة تحظر
 العنوان لمدة دقيقة.
 

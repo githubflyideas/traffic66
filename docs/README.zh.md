@@ -40,11 +40,11 @@
 从 [Releases 页面](https://github.com/githubflyideas/traffic66/releases) 下载对应系统的压缩包（Windows x64、内核 3.2 及以上的 Linux x86-64/ARM64、macOS 11 及以上），解压后运行：
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
-在 macOS 上请先运行 `xattr -dr com.apple.quarantine <folder>`。打开 http://127.0.0.1:8066，用 `admin` / `try66` 登录：可以看到一天的历史数据和四台模拟设备的实时流量，其中包括一次攻击，在 **发现** 中一步步展示。按 Ctrl+C 停止；删除 `traffic66-demo` 即可从头开始。要和正式安装同时运行：`-addr :8067 -listen ""`。
+在 macOS 上请先运行 `xattr -dr com.apple.quarantine <folder>`。打开 http://127.0.0.1:8066，用 `admin` / `traffic66` 登录：可以看到一天的历史数据和四台模拟设备的实时流量，其中包括一次攻击，在 **发现** 中一步步展示。按 Ctrl+C 停止；删除 `traffic66-demo` 即可从头开始。要和正式安装同时运行：`-addr :8067 -listen ""`。
 
 <a id="2-install"></a>
 
@@ -96,7 +96,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-也可以直接双击 `traffic66.exe`：它会打开 Web 界面，并在窗口中显示首次启动的密码。
+也可以直接双击 `traffic66.exe`：它会打开 Web 界面。
 
 **macOS**：解压到 `/usr/local/traffic66`，去掉隔离标记，运行 `traffic66 passwd -data "/Library/Application Support/traffic66"`，然后用一个 LaunchDaemon 启动它：其 `ProgramArguments` 为程序、`-data` 和该目录，并设置 `RunAtLoad` 和 `KeepAlive`。
 
@@ -104,7 +104,9 @@ Start-ScheduledTask -TaskName traffic66
 
 ## 3. 用户与密码
 
-traffic66 首次启动时会创建用户 `admin`，设置一个随机密码并只显示一次（在窗口、终端中，或通过 `journalctl -u traffic66 | grep "first start"` 查看）。用户以加盐哈希的形式保存在数据目录下的 `password` 文件中，在 traffic66 主机上用一条命令管理（如果 traffic66 运行时使用了 `-data …`，命令中也要加上）：
+新安装的 traffic66 用 `admin` / `traffic66` 登录，首次登录会先要求设置新密码，之后才显示其他内容（演示模式保持 `traffic66`）。此后在菜单底部的 **账户** 中修改自己的密码；管理员（`admin`）还可以在那里添加和删除用户，并重置他们的密码。通过 LDAP / Active Directory 登录正在开发中。
+
+用户以加盐哈希的形式保存在数据目录下的 `password` 文件中。同样的操作也可以在 traffic66 主机上用一条命令完成（如果 traffic66 运行时使用了 `-data …`，命令中也要加上）：
 
 | 操作 | 命令 |
 |---|---|
@@ -113,7 +115,7 @@ traffic66 首次启动时会创建用户 `admin`，设置一个随机密码并�
 | 删除 `alice` | `traffic66 passwd -user alice -delete` |
 | 列出用户 | `traffic66 passwd -list` |
 
-更改立即生效。所有用户权限相同。用于脚本和容器时，`TRAFFIC66_PASSWORD=…`（或 `-password`）使本次运行只接受 `-user` 及该密码。同一地址在一分钟内输错五次密码，会被封禁一分钟。
+更改立即生效。除管理用户外，所有用户权限相同。用于脚本和容器时，`TRAFFIC66_PASSWORD=…`（或 `-password`）使本次运行只接受 `-user` 及该密码。同一地址在一分钟内输错五次密码，会被封禁一分钟。
 
 <a id="4-send-flows-from-your-devices"></a>
 

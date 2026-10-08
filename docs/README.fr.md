@@ -50,12 +50,12 @@ Téléchargez l'archive de votre système depuis la
 (Windows x64, Linux x86-64/ARM64 avec noyau 3.2+, macOS 11+), décompressez-la et lancez :
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
 Sous macOS, lancez d'abord `xattr -dr com.apple.quarantine <folder>`. Ouvrez
-http://127.0.0.1:8066 en tant que `admin` / `try66` : une journée
+http://127.0.0.1:8066 en tant que `admin` / `traffic66` : une journée
 d'historique et du trafic en direct venant de quatre équipements simulés,
 dont une attaque montrée étape par étape dans **Détections**. Ctrl+C
 l'arrête ; supprimez `traffic66-demo` pour repartir de zéro. Pour la lancer
@@ -116,7 +116,7 @@ Start-ScheduledTask -TaskName traffic66
 ```
 
 Double-cliquer sur `traffic66.exe` fonctionne aussi : il ouvre l'interface
-web et affiche le premier mot de passe dans sa fenêtre.
+web.
 
 **macOS** : décompressez dans `/usr/local/traffic66`, retirez l'attribut de
 quarantaine, lancez `traffic66 passwd -data "/Library/Application Support/traffic66"`
@@ -127,12 +127,17 @@ programme, `-data` et ce répertoire, avec `RunAtLoad` et `KeepAlive`.
 
 ## 3. Utilisateurs et mots de passe
 
-Au premier démarrage, traffic66 crée l'utilisateur `admin` avec un mot de
-passe aléatoire et l'affiche une seule fois (dans la fenêtre, le terminal
-ou `journalctl -u traffic66 | grep "first start"`). Les utilisateurs sont
-enregistrés sous forme de hachages salés dans `password` dans le répertoire
-de données et se gèrent avec une seule commande sur la machine traffic66
-(ajoutez `-data …` si traffic66 tourne avec cette option) :
+Une nouvelle installation se connecte en tant que `admin` / `traffic66`, et
+la première connexion demande un nouveau mot de passe avant d'afficher quoi
+que ce soit d'autre (la démo garde `traffic66`). Ensuite, **Compte**, en bas
+du menu, change votre mot de passe ; l'administrateur (`admin`) y ajoute et
+supprime aussi des utilisateurs et réinitialise leurs mots de passe. La
+connexion via LDAP / Active Directory est en développement.
+
+Les utilisateurs sont enregistrés sous forme de hachages salés dans
+`password` dans le répertoire de données. La même chose se fait sur la
+machine traffic66 avec une seule commande (ajoutez `-data …` si traffic66
+tourne avec cette option) :
 
 | Pour | Commande |
 |---|---|
@@ -141,8 +146,8 @@ de données et se gèrent avec une seule commande sur la machine traffic66
 | Supprimer l'utilisateur `alice` | `traffic66 passwd -user alice -delete` |
 | Lister les utilisateurs | `traffic66 passwd -list` |
 
-Les changements s'appliquent immédiatement. Tous les utilisateurs ont les
-mêmes droits. Pour les scripts et les conteneurs, `TRAFFIC66_PASSWORD=…` (ou
+Les changements s'appliquent immédiatement. Hormis la gestion des
+utilisateurs, tous les utilisateurs ont les mêmes droits. Pour les scripts et les conteneurs, `TRAFFIC66_PASSWORD=…` (ou
 `-password`) n'accepte que `-user` avec ce mot de passe pour cette
 exécution. Cinq mots de passe erronés en une minute bloquent l'adresse
 pendant une minute.

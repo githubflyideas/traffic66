@@ -40,11 +40,11 @@ ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 �
 [Releases 페이지](https://github.com/githubflyideas/traffic66/releases)에서 시스템에 맞는 압축 파일(Windows x64, 커널 3.2 이상의 Linux x86-64/ARM64, macOS 11 이상)을 내려받아 풀고 실행합니다:
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
-macOS에서는 먼저 `xattr -dr com.apple.quarantine <folder>`를 실행하십시오. http://127.0.0.1:8066을 열고 `admin` / `try66`으로 로그인하면, 하루치 이력과 가상 장비 네 대의 실시간 트래픽이 보입니다. 여기에는 공격이 하나 포함되어 있으며 **탐지**에서 단계별로 보여 줍니다. Ctrl+C로 중지하고, `traffic66-demo`를 삭제하면 처음부터 다시 시작합니다. 실제 설치와 나란히 실행하려면: `-addr :8067 -listen ""`.
+macOS에서는 먼저 `xattr -dr com.apple.quarantine <folder>`를 실행하십시오. http://127.0.0.1:8066을 열고 `admin` / `traffic66`으로 로그인하면, 하루치 이력과 가상 장비 네 대의 실시간 트래픽이 보입니다. 여기에는 공격이 하나 포함되어 있으며 **탐지**에서 단계별로 보여 줍니다. Ctrl+C로 중지하고, `traffic66-demo`를 삭제하면 처음부터 다시 시작합니다. 실제 설치와 나란히 실행하려면: `-addr :8067 -listen ""`.
 
 <a id="2-install"></a>
 
@@ -96,7 +96,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`traffic66.exe`를 더블클릭해도 됩니다. 웹 UI가 열리고, 첫 비밀번호가 창에 표시됩니다.
+`traffic66.exe`를 더블클릭해도 됩니다. 웹 UI가 열립니다.
 
 **macOS**: `/usr/local/traffic66`에 압축을 풀고, quarantine 플래그를 제거하고, `traffic66 passwd -data "/Library/Application Support/traffic66"`를 실행한 뒤, LaunchDaemon으로 시작합니다. `ProgramArguments`는 프로그램, `-data`, 그 디렉터리로 하고 `RunAtLoad`와 `KeepAlive`를 지정합니다.
 
@@ -104,7 +104,9 @@ Start-ScheduledTask -TaskName traffic66
 
 ## 3. 사용자와 비밀번호
 
-처음 시작할 때 traffic66은 임의의 비밀번호로 사용자 `admin`을 만들고 그 비밀번호를 한 번만 출력합니다(창, 터미널, 또는 `journalctl -u traffic66 | grep "first start"`). 사용자는 솔트를 적용한 해시로 데이터 디렉터리의 `password`에 저장되며, traffic66 서버에서 명령 하나로 관리합니다(traffic66을 `-data …`와 함께 실행한다면 같은 옵션을 추가):
+새로 설치하면 `admin` / `traffic66`으로 로그인하며, 첫 로그인에서는 다른 화면을 보여 주기 전에 새 비밀번호를 요구합니다(데모는 `traffic66`을 유지합니다). 이후 메뉴 맨 아래의 **계정**에서 자신의 비밀번호를 바꿀 수 있고, 관리자(`admin`)는 그곳에서 사용자를 추가·삭제하고 비밀번호를 재설정할 수도 있습니다. LDAP / Active Directory 로그인은 개발 중입니다.
+
+사용자는 솔트를 적용한 해시로 데이터 디렉터리의 `password`에 저장됩니다. 같은 작업을 traffic66 서버에서 명령 하나로도 할 수 있습니다(traffic66을 `-data …`와 함께 실행한다면 같은 옵션을 추가):
 
 | 작업 | 명령 |
 |---|---|
@@ -113,7 +115,7 @@ Start-ScheduledTask -TaskName traffic66
 | `alice` 삭제 | `traffic66 passwd -user alice -delete` |
 | 사용자 목록 보기 | `traffic66 passwd -list` |
 
-변경은 즉시 적용됩니다. 모든 사용자의 권한은 같습니다. 스크립트와 컨테이너에서는 `TRAFFIC66_PASSWORD=…`(또는 `-password`)를 지정하면 그 실행에서는 `-user`와 그 비밀번호만 받습니다. 1분 안에 비밀번호를 다섯 번 틀리면 그 주소는 1분 동안 차단됩니다.
+변경은 즉시 적용됩니다. 사용자 관리를 제외하면 모든 사용자의 권한은 같습니다. 스크립트와 컨테이너에서는 `TRAFFIC66_PASSWORD=…`(또는 `-password`)를 지정하면 그 실행에서는 `-user`와 그 비밀번호만 받습니다. 1분 안에 비밀번호를 다섯 번 틀리면 그 주소는 1분 동안 차단됩니다.
 
 <a id="4-send-flows-from-your-devices"></a>
 

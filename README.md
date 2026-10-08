@@ -43,12 +43,12 @@ Download your system's archive from the
 (Windows x64, Linux x86-64/ARM64 with kernel 3.2+, macOS 11+), unpack it and run:
 
 ```
-./traffic66 demo -password try66          # Linux, macOS
-.\traffic66.exe demo -password try66      # Windows
+./traffic66 demo          # Linux, macOS
+.\traffic66.exe demo      # Windows
 ```
 
 On macOS first run `xattr -dr com.apple.quarantine <folder>`. Open
-http://127.0.0.1:8066 as `admin` / `try66`: a day of history and live
+http://127.0.0.1:8066 as `admin` / `traffic66`: a day of history and live
 traffic from four simulated devices, including an attack shown step by step
 on **Findings**. Ctrl+C stops it; delete `traffic66-demo` to start afresh.
 To run it next to a real installation: `-addr :8067 -listen ""`.
@@ -103,8 +103,7 @@ Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTas
 Start-ScheduledTask -TaskName traffic66
 ```
 
-Double-clicking `traffic66.exe` also works: it opens the web UI and shows
-the first password in its window.
+Double-clicking `traffic66.exe` also works: it opens the web UI.
 
 **macOS**: unpack to `/usr/local/traffic66`, remove the quarantine flag,
 run `traffic66 passwd -data "/Library/Application Support/traffic66"`, and
@@ -113,11 +112,16 @@ start it from a LaunchDaemon whose `ProgramArguments` are the program,
 
 ## 3. Users and passwords
 
-On first start traffic66 creates the user `admin` with a random password
-and prints it once (in the window, the terminal, or
-`journalctl -u traffic66 | grep "first start"`). Users are kept as salted
-hashes in `password` in the data directory and managed with one command on
-the traffic66 machine (add `-data …` when traffic66 runs with it):
+A new installation signs in as `admin` / `traffic66`, and the first sign-in
+asks for a new password before anything else is shown (the demo keeps
+`traffic66`). Afterwards **Account**, at the foot of the menu, changes your
+password; the administrator (`admin`) also adds and deletes users and
+resets their passwords there. Sign-in with LDAP / Active Directory is in
+development.
+
+Users are kept as salted hashes in `password` in the data directory. The
+same can be done on the traffic66 machine with one command (add `-data …`
+when traffic66 runs with it):
 
 | To | Command |
 |---|---|
@@ -126,8 +130,8 @@ the traffic66 machine (add `-data …` when traffic66 runs with it):
 | Delete `alice` | `traffic66 passwd -user alice -delete` |
 | List users | `traffic66 passwd -list` |
 
-Changes apply at once. All users have the same rights. For scripts and
-containers, `TRAFFIC66_PASSWORD=…` (or `-password`) accepts only `-user`
+Changes apply at once. Apart from managing users, all users have the same
+rights. For scripts and containers, `TRAFFIC66_PASSWORD=…` (or `-password`) accepts only `-user`
 with that password for that run. Five wrong passwords in a minute block the
 address for a minute.
 
