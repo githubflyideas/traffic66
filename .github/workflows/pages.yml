@@ -1,0 +1,36 @@
+name: pages
+
+# The project website on GitHub Pages: site/ built by site/build.py, with
+# the screenshots from docs/images. Published on every change to main that
+# touches them, or by hand from the Actions page.
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "docs/images/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build
+        run: python3 site/build.py
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+          include-hidden-files: true
+      - id: deploy
+        uses: actions/deploy-pages@v5

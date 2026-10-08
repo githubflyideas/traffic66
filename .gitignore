@@ -5,3 +5,4 @@
 /traffic66-demo/
 *.duckdb
 *.duckdb.wal
+_site/
