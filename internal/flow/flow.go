@@ -85,6 +85,12 @@ type Record struct {
 	Encap       Encap
 	// Direction as reported by the exporter: 0 ingress, 1 egress, 255 unknown.
 	Direction uint8
+	// Opener says who opened a TCP connection, when the packets showed it
+	// (local capture and pcap files see the first packet of each
+	// direction): 1 the source sent the SYN, -1 the source answered it with
+	// SYN+ACK, 0 unknown. Exported records carry only the merged flags of
+	// all packets, which cannot tell.
+	Opener int8
 
 	SrcAS, DstAS uint32
 

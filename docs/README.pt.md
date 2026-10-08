@@ -357,8 +357,11 @@ muito pequenas podem se esconder atrás da amostragem.
 **Análise offline de pcap** mostra capturas de pacotes (pcap, pcapng) com as
 mesmas páginas, separadas dos dados ao vivo: `traffic66 a.pcap b.pcapng`
 inicia em 127.0.0.1 e abre o navegador (até 3 arquivos, 3 GB; Ctrl+C apaga
-os dados importados), ou envie até 3 arquivos de 50 MB nessa página. Ela
-trabalha com fluxos, não com o conteúdo dos pacotes.
+os dados importados), ou envie até 3 arquivos de 50 MB nessa página. Um
+arquivo é analisado por vez, cada um em seu próprio banco de dados:
+**Analisar** na linha de um arquivo o mostra em todas as páginas, e a barra
+no topo troca para outro. Ela trabalha com fluxos, não com o conteúdo dos
+pacotes.
 
 ![Análise offline: arquivos de captura com pacotes, fluxos e período](images/sandbox.png)
 
@@ -373,10 +376,18 @@ tempo, w abrir no navegador, q sair; `-lang` escolhe o idioma.
 
 **Captura local** gera fluxos a partir de uma interface local, de
 preferência uma porta ligada à porta espelho de um switch:
-`traffic66 interfaces` as lista, `-capture eth1` (ou um nome ou número do
-Windows) captura. O Linux precisa de root ou
-`setcap cap_net_raw,cap_net_admin+ep`, o macOS de root, o Windows do
-[Npcap](https://npcap.com). Os fluxos capturados vêm do equipamento `127.0.0.1`.
+`traffic66 interfaces` as lista, `-capture eth1` captura. No Windows:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+O Linux precisa de root ou `setcap cap_net_raw,cap_net_admin+ep`, o macOS de
+root, o Windows do [Npcap](https://npcap.com). Os fluxos capturados vêm do
+equipamento `127.0.0.1`. A captura local não tem interfaces nem contadores
+do equipamento, então a **Conferência de interfaces** não tem nada a
+comparar para ela.
 
 <a id="10-options-and-data"></a>
 

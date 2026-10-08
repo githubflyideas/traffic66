@@ -343,7 +343,9 @@ NetFlow/IPFIX بقدر تأخر الأجهزة في التصدير (دقيقتا
 يعرض **تحليل pcap دون اتصال** ملفات التقاط الحزم (pcap وpcapng) بالصفحات نفسها،
 بمعزل عن البيانات الحية: يبدأ `traffic66 a.pcap b.pcapng` على 127.0.0.1 ويفتح
 المتصفح (حتى 3 ملفات، 3 GB؛ يحذف Ctrl+C البيانات المستوردة)، أو ارفع حتى 3
-ملفات بحجم 50 MB في تلك الصفحة. يعمل على التدفقات، لا على محتوى الحزم.
+ملفات بحجم 50 MB في تلك الصفحة. يُحلَّل ملف واحد في كل مرة، ولكل ملف قاعدة
+بيانات خاصة به: يعرض **تحليل** في صف الملف بياناته في كل الصفحات، ويبدّل
+الشريط في الأعلى إلى ملف آخر. يعمل على التدفقات، لا على محتوى الحزم.
 
 ![التحليل دون اتصال: ملفات الالتقاط مع حزمها وتدفقاتها ووقتها](images/sandbox.png)
 
@@ -357,10 +359,18 @@ NetFlow/IPFIX بقدر تأخر الأجهزة في التصدير (دقيقتا
 ![الواجهة الطرفية: محادثات أعلى 66](images/tui-topn.png)
 
 **الالتقاط المحلي** يبني التدفقات من واجهة محلية، ويُفضَّل منفذ موصول بمنفذ
-المرآة في مبدّل: يسردها `traffic66 interfaces`، ويلتقط `-capture eth1` (أو اسم
-أو رقم في Windows). يحتاج Linux إلى root أو
-`setcap cap_net_raw,cap_net_admin+ep`، وmacOS إلى root، وWindows إلى
-[Npcap](https://npcap.com). تأتي التدفقات الملتقطة من الجهاز `127.0.0.1`.
+المرآة في مبدّل: يسردها `traffic66 interfaces`، ويلتقط `-capture eth1`. على
+Windows:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+يحتاج Linux إلى root أو `setcap cap_net_raw,cap_net_admin+ep`، وmacOS إلى
+root، وWindows إلى [Npcap](https://npcap.com). تأتي التدفقات الملتقطة من
+الجهاز `127.0.0.1`. لا واجهات ولا عدّادات جهاز للالتقاط المحلي، لذا ليس لدى
+**مطابقة الواجهات** ما تقارنه فيه.
 
 <a id="10-options-and-data"></a>
 

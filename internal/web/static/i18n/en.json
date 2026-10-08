@@ -378,7 +378,7 @@
 "nav.sandbox": "Offline pcap analysis",
 "sb.title": "Capture files",
 "sb.sub": "Analyse pcap files apart from the live data",
-"sb.explain": "Upload packet captures from Wireshark or tcpdump. They go into a separate database: the live data, its numbers and findings are not touched. Analyse shows the files on every page (overview, Top 66, findings, flow paths, map, flow records); Delete removes the files and their data.",
+"sb.explain": "Upload packet captures from Wireshark or tcpdump. Each goes into a database of its own: the live data, its numbers and findings are not touched. Analyse shows that one file on every page (overview, Top 66, findings, flow paths, map, flow records); switch files in the bar at the top. Delete removes a file and its data.",
 "sb.col_file": "File",
 "sb.col_size": "Size",
 "sb.col_packets": "Packets",
@@ -514,5 +514,6 @@
 "if.peer_note": "Peer interface: not sampled, only the traffic through the sampled interface of this device",
 "src.sampled_if": "Sampled on: {v}",
 "src.dir_yes": "with flowDirection (61)",
-"src.dir_no": "without flowDirection (61): sampled interface inferred from traffic"
+"src.dir_no": "without flowDirection (61): sampled interface inferred from traffic",
+"if.capture_only": "Interface check compares flows with the interface counters of sFlow, NetFlow and IPFIX devices. Local capture on this machine's network card has no device interfaces or counters, so there is nothing to compare here."
 }

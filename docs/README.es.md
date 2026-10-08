@@ -360,7 +360,10 @@ los escaneos muy pequeños pueden ocultarse tras el muestreo.
 las mismas páginas, aparte de los datos en vivo: `traffic66 a.pcap b.pcapng`
 arranca en 127.0.0.1 y abre el navegador (hasta 3 archivos, 3 GB; Ctrl+C
 borra los datos importados), o suba en esa página hasta 3 archivos de 50 MB.
-Trabaja con flujos, no con el contenido de los paquetes.
+Se analiza un archivo a la vez, cada uno en su propia base de datos:
+**Analizar** en la fila de un archivo lo muestra en todas las páginas, y la
+barra superior cambia a otro. Trabaja con flujos, no con el contenido de los
+paquetes.
 
 ![Análisis offline: archivos de captura con sus paquetes, flujos y tiempo](images/sandbox.png)
 
@@ -375,10 +378,18 @@ tiempo, w abrir en un navegador, q salir; `-lang` elige el idioma.
 
 **Captura local** construye flujos desde una interfaz local, idealmente un
 puerto conectado al puerto espejo de un switch: `traffic66 interfaces` las
-lista y `-capture eth1` (o un nombre o número de Windows) captura. Linux
-necesita root o `setcap cap_net_raw,cap_net_admin+ep`, macOS root, Windows
-[Npcap](https://npcap.com). Los flujos capturados provienen del equipo
-`127.0.0.1`.
+lista y `-capture eth1` captura. En Windows:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux necesita root o `setcap cap_net_raw,cap_net_admin+ep`, macOS root,
+Windows [Npcap](https://npcap.com). Los flujos capturados provienen del
+equipo `127.0.0.1`. La captura local no tiene interfaces ni contadores del
+equipo, así que **Verificación de interfaces** no tiene nada que comparar
+para ella.
 
 <a id="10-options-and-data"></a>
 

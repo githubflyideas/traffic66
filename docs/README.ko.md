@@ -272,7 +272,7 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ## 9. 오프라인 pcap, 터미널 UI, 로컬 캡처
 
-**오프라인 pcap 분석**은 패킷 캡처(pcap, pcapng)를 실시간 데이터와 따로, 같은 페이지로 보여 줍니다. `traffic66 a.pcap b.pcapng`는 127.0.0.1에서 시작해 브라우저를 엽니다(최대 3개 파일, 3 GB. Ctrl+C로 가져온 데이터를 삭제). 또는 그 페이지에서 50 MB까지의 파일을 최대 3개 업로드할 수 있습니다. 다루는 것은 플로이며, 패킷 내용이 아닙니다.
+**오프라인 pcap 분석**은 패킷 캡처(pcap, pcapng)를 실시간 데이터와 따로, 같은 페이지로 보여 줍니다. `traffic66 a.pcap b.pcapng`는 127.0.0.1에서 시작해 브라우저를 엽니다(최대 3개 파일, 3 GB. Ctrl+C로 가져온 데이터를 삭제). 또는 그 페이지에서 50 MB까지의 파일을 최대 3개 업로드할 수 있습니다. 한 번에 한 파일씩, 파일마다 별도의 데이터베이스에서 분석합니다. 파일 행의 **분석**을 누르면 모든 페이지에 그 파일이 표시되고, 상단 바에서 다른 파일로 전환합니다. 다루는 것은 플로이며, 패킷 내용이 아닙니다.
 
 ![오프라인 분석: 캡처 파일과 패킷, 플로, 시간](images/sandbox.png)
 
@@ -282,7 +282,14 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ![터미널 UI: Top 66 대화](images/tui-topn.png)
 
-**로컬 캡처**는 로컬 인터페이스에서 플로를 만듭니다. 스위치의 미러 포트에 연결한 포트가 가장 좋습니다. `traffic66 interfaces`로 목록을 보고, `-capture eth1`(또는 Windows의 이름이나 번호)로 캡처합니다. Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windows는 [Npcap](https://npcap.com)이 필요합니다. 캡처한 플로는 장비 `127.0.0.1`에서 온 것으로 표시됩니다.
+**로컬 캡처**는 로컬 인터페이스에서 플로를 만듭니다. 스위치의 미러 포트에 연결한 포트가 가장 좋습니다. `traffic66 interfaces`로 목록을 보고, `-capture eth1`로 캡처합니다. Windows에서는:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windows는 [Npcap](https://npcap.com)이 필요합니다. 캡처한 플로는 장비 `127.0.0.1`에서 온 것으로 표시됩니다. 로컬 캡처에는 장비 인터페이스나 카운터가 없으므로 **인터페이스 대조**에서 비교할 것이 없습니다.
 
 <a id="10-options-and-data"></a>
 

@@ -214,6 +214,7 @@ async function renderIfsel() {
   w.hidden = !show;
   if (!show) return;
   const d = await loadIfaces(), list = d.ifaces || [];
+  if (!list.length) { w.hidden = true; return; }  // e.g. local capture only: nothing to choose
   if (state.ifv === undefined) state.ifv = d.default || 'all';
   const key = f => f.exporter + '/' + f.ifindex;
   const opt = (v, l, tt) => `<option value="${esc(v)}"${tt ? ` title="${esc(tt)}"` : ''}>${esc(l)}</option>`;
@@ -1150,18 +1151,17 @@ views.sandbox = async (el) => {
       <td class="num">${f.packets ? nf(f.packets) : '—'}</td><td class="num">${f.flows ? nf(f.flows) : '—'}</td>
       <td class="nw muted">${f.flows ? esc(df.format(new Date(f.first))) + ' – ' + esc(df.format(new Date(f.last))) : ''}</td>
       <td>${f.status === 'error' ? status('bad', f.error || t('sb.st_error')) : f.status === 'done' ? status('ok', t('sb.st_done')) : `<span class="muted">${t('sb.st_' + f.status)}…</span>`}</td>
-      <td><button class="btn" data-sbdel="${esc(f.name)}">${t('sb.delete')}</button></td></tr>`).join('');
+      <td class="nw"><button class="${f.name === sbInfo.active ? 'primary' : 'btn'}" data-sbgo="${esc(f.name)}" ${f.status === 'done' ? '' : 'disabled'}>${t('sb.analyze')}</button> <button class="btn" data-sbdel="${esc(f.name)}">${t('sb.delete')}</button></td></tr>`).join('');
   el.innerHTML = `<div class="grid">${panel('c12', t('sb.title'), t('sb.sub'), `<p class="sbexplain">${esc(t('sb.explain'))}</p>
     <table><tr><th>${t('sb.col_file')}</th><th class="num">${t('sb.col_size')}</th><th class="num">${t('sb.col_packets')}</th><th class="num">${t('sb.col_flows')}</th><th>${t('sb.col_span')}</th><th>${t('sb.col_status')}</th><th></th></tr>
     ${rows || `<tr><td colspan="7" class="empty">${t('sb.empty')}</td></tr>`}</table>
-    <div class="sbactions"><button class="primary" id="sbGo" ${sbInfo.ready && !pending ? '' : 'disabled'}>${t('sb.analyze')}</button>
-      <label class="btn ${own >= sbInfo.max_files ? 'disabled' : ''}" style="cursor:pointer">${t('sb.upload')}<input type="file" id="sbFile" accept=".pcap,.pcapng,.cap" multiple hidden ${own >= sbInfo.max_files ? 'disabled' : ''}></label>
+    <div class="sbactions"><label class="btn ${own >= sbInfo.max_files ? 'disabled' : ''}" style="cursor:pointer">${t('sb.upload')}<input type="file" id="sbFile" accept=".pcap,.pcapng,.cap" multiple hidden ${own >= sbInfo.max_files ? 'disabled' : ''}></label>
       ${fs.length ? `<button class="btn" id="sbAll">${t('sb.delete_all')}</button>` : ''}<span id="sbMsg" style="font-size:13px"></span></div>
     <p class="muted" style="font-size:12.5px;margin:10px 0 0">${esc(sbInfo.max_total >= sbInfo.max_file_size * sbInfo.max_files ? t('sb.limits', {n: sbInfo.max_files, mb}) : sbInfo.max_total <= sbInfo.max_file_size ? t('sb.limits_total', {n: sbInfo.max_files, gb: fmtBytes(sbInfo.max_total)}) : t('sb.limits', {n: sbInfo.max_files, mb}) + ' ' + t('sb.limits_total', {n: sbInfo.max_files, gb: fmtBytes(sbInfo.max_total)}))} ${esc(t('sb.formats'))}</p>`)}</div>`;
   // the last upload problem stays shown after the page refreshes
   const msg = (ok, text) => { sbMsg = ok === false ? text : ''; const m = $('#sbMsg'); m.style.color = ok === null ? 'var(--ink-3)' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
   if (sbMsg) msg(false, sbMsg);
-  $('#sbGo').onclick = () => { state.ds = 'sb'; go('overview'); };
+  el.querySelectorAll('[data-sbgo]').forEach(b => b.onclick = async () => { if (await sbSelect(b.dataset.sbgo)) { state.ds = 'sb'; go('overview'); } });
   el.querySelectorAll('[data-sbdel]').forEach(b => b.onclick = async () => {
     if (!confirm(t('sb.confirm', {f: b.dataset.sbdel}))) return;
     await fetch('/api/sandbox/files?name=' + encodeURIComponent(b.dataset.sbdel), {method: 'DELETE'});
@@ -1293,7 +1293,13 @@ views.ifaces = async (el) => {
   const d = await api('ifaces');
   (d.ifaces || []).forEach(f => ifaceNames.set(f.exporter + '/' + f.ifindex, ifName(f) + ' · ' + (f.device || f.exporter)));
   const list = (d.ifaces || []).slice().sort((a, b) => (!!a.peer - !!b.peer) || (!!b.has_counters - !!a.has_counters) || ((devKind(b) === 'warn') - (devKind(a) === 'warn')));
-  if (!list.length) { el.innerHTML = `<div class="panel"><div class="empty">${t('empty.nodata')}</div></div>`; return; }
+  if (!list.length) {
+    // local capture has no device interfaces or counters to compare with
+    const src = await api('sources').catch(() => ({}));
+    const capOnly = (src.captures || []).length && !(src.sources || []).length;
+    el.innerHTML = `<div class="panel"><div class="empty">${esc(t(capOnly ? 'if.capture_only' : 'empty.nodata'))}</div></div>`;
+    return;
+  }
   if (!state.ifc || !list.some(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex)) { const d = list.find(f => f.default) || list.find(f => !f.peer) || list[0]; state.ifc = {exporter: d.exporter, ifindex: d.ifindex}; }
   const key = state.ifc.exporter + '/' + state.ifc.ifindex, sel = list.find(f => f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex);
   // one device's interface: count everything it saw, also traffic another device reported too
@@ -1597,11 +1603,23 @@ function renderSB() {
   const r = sbRange(), span = r.to - r.from;
   const df = new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}), tf = new Intl.DateTimeFormat(LANG, {timeStyle: 'short'});
   const sameDay = new Date(r.from).toDateString() === new Date(r.to).toDateString();
-  const names = sbInfo.files.filter(f => f.status === 'done').map(f => f.name);
-  $('#sbbar').innerHTML = `<span class="sbtag">${t('sb.banner')}</span><span class="sbfiles">${names.map(esc).join(' · ')}</span>
+  // one file at a time; the others are a click away
+  const done = sbInfo.files.filter(f => f.status === 'done');
+  const pick = done.length > 1 ? `<select id="sbPick" aria-label="${esc(t('sb.col_file'))}">${done.map(f => `<option${f.name === sbInfo.active ? ' selected' : ''}>${esc(f.name)}</option>`).join('')}</select>` : `<span class="sbfiles">${esc(sbInfo.active)}</span>`;
+  $('#sbbar').innerHTML = `<span class="sbtag">${t('sb.banner')}</span>${pick}
     <span class="muted nw">${esc(df.format(r.from))} – ${esc(sameDay ? tf.format(r.to) : df.format(r.to))} (${esc(fmtDur(span))})</span>
     ${offlineMode ? '' : `<button class="btn" id="sbBack">${t('sb.back')}</button>`}`;
   if ($('#sbBack')) $('#sbBack').onclick = () => { state.ds = ''; render(); };
+  if ($('#sbPick')) $('#sbPick').onchange = async e => { if (await sbSelect(e.target.value)) render(); };
+}
+// sbSelect makes one capture file the one every page shows.
+async function sbSelect(name) {
+  if (name === sbInfo.active && sbInfo.ready) return true;
+  const res = await fetch('/api/sandbox/active?name=' + encodeURIComponent(name), {method: 'POST'});
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) { toast(j.error || res.statusText); return false; }
+  sbInfo = j;
+  return true;
 }
 function fmtDur(ms) {
   const m = Math.round(ms / 6e4);

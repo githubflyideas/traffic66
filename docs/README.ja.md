@@ -272,7 +272,7 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ## 9. オフライン pcap、ターミナル UI、ローカルキャプチャ
 
-**オフライン pcap 分析** は、パケットキャプチャ（pcap、pcapng）をライブデータとは分けて、同じページで表示します。`traffic66 a.pcap b.pcapng` は 127.0.0.1 で起動してブラウザーを開きます（最大 3 ファイル、3 GB。Ctrl+C で取り込んだデータを削除）。そのページで 50 MB までのファイルを最大 3 つアップロードすることもできます。扱うのはフローで、パケットの中身ではありません。
+**オフライン pcap 分析** は、パケットキャプチャ（pcap、pcapng）をライブデータとは分けて、同じページで表示します。`traffic66 a.pcap b.pcapng` は 127.0.0.1 で起動してブラウザーを開きます（最大 3 ファイル、3 GB。Ctrl+C で取り込んだデータを削除）。そのページで 50 MB までのファイルを最大 3 つアップロードすることもできます。一度に分析するのは 1 ファイルで、それぞれ専用のデータベースに入ります。ファイルの行の **分析** でそのファイルが全ページに表示され、上部のバーで別のファイルに切り替えられます。扱うのはフローで、パケットの中身ではありません。
 
 ![オフライン分析：キャプチャファイルとパケット数、フロー数、時間](images/sandbox.png)
 
@@ -282,7 +282,14 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ![ターミナル UI：上位 66 の会話](images/tui-topn.png)
 
-**ローカルキャプチャ** はローカルのインターフェースからフローを作ります。スイッチのミラーポートにつないだポートが最適です。`traffic66 interfaces` で一覧を表示し、`-capture eth1`（または Windows の名前か番号）でキャプチャします。Linux では root か `setcap cap_net_raw,cap_net_admin+ep`、macOS では root、Windows では [Npcap](https://npcap.com) が必要です。キャプチャしたフローは機器 `127.0.0.1` からのものとして表示されます。
+**ローカルキャプチャ** はローカルのインターフェースからフローを作ります。スイッチのミラーポートにつないだポートが最適です。`traffic66 interfaces` で一覧を表示し、`-capture eth1` でキャプチャします。Windows では：
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux では root か `setcap cap_net_raw,cap_net_admin+ep`、macOS では root、Windows では [Npcap](https://npcap.com) が必要です。キャプチャしたフローは機器 `127.0.0.1` からのものとして表示されます。ローカルキャプチャには機器のインターフェースもカウンターもないため、**インターフェース照合** で比較する対象はありません。
 
 <a id="10-options-and-data"></a>
 

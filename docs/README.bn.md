@@ -351,8 +351,10 @@ export করে ততটা (সর্বোচ্চ 2 মিনিট)। 6 
 **অফলাইন pcap বিশ্লেষণ** প্যাকেট ক্যাপচার (pcap, pcapng) একই পেজে দেখায়, লাইভ
 ডেটা থেকে আলাদা রেখে: `traffic66 a.pcap b.pcapng` 127.0.0.1-এ চালু হয় এবং
 browser খোলে (সর্বোচ্চ 3টি ফাইল, 3 GB; Ctrl+C ইমপোর্ট করা ডেটা মুছে দেয়),
-অথবা ওই পেজে 50 MB পর্যন্ত 3টি ফাইল আপলোড করুন। এটি flow নিয়ে কাজ করে,
-প্যাকেটের বিষয়বস্তু নিয়ে নয়।
+অথবা ওই পেজে 50 MB পর্যন্ত 3টি ফাইল আপলোড করুন। একবারে একটি ফাইল বিশ্লেষণ
+করা হয়, প্রতিটি নিজস্ব আলাদা ডেটাবেসে: কোনো ফাইলের সারিতে **বিশ্লেষণ**
+সেটিকে প্রতিটি পেজে দেখায়, আর ওপরের বার অন্য ফাইলে বদলে দেয়। এটি flow নিয়ে
+কাজ করে, প্যাকেটের বিষয়বস্তু নিয়ে নয়।
 
 ![অফলাইন বিশ্লেষণ: ক্যাপচার ফাইল, তাদের প্যাকেট, ফ্লো ও সময়](images/sandbox.png)
 
@@ -367,9 +369,17 @@ browser-এ খুলুন, q বেরিয়ে যান; `-lang` ভা�
 
 **Local capture** একটি local interface থেকে flow তৈরি করে, সবচেয়ে ভালো হয়
 switch-এর mirror port-এ যুক্ত একটি port: `traffic66 interfaces` সেগুলোর তালিকা
-দেয়, `-capture eth1` (অথবা Windows-এর নাম বা নম্বর) capture করে। Linux-এ root
-বা `setcap cap_net_raw,cap_net_admin+ep` লাগে, macOS-এ root, Windows-এ
-[Npcap](https://npcap.com)। capture করা flow ডিভাইস `127.0.0.1` থেকে আসে।
+দেয়, `-capture eth1` capture করে। Windows-এ:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux-এ root বা `setcap cap_net_raw,cap_net_admin+ep` লাগে, macOS-এ root,
+Windows-এ [Npcap](https://npcap.com)। capture করা flow ডিভাইস `127.0.0.1`
+থেকে আসে। Local capture-এ ডিভাইসের interface বা counter নেই, তাই
+**ইন্টারফেস মিলানো**-তে এর জন্য তুলনা করার কিছু নেই।
 
 <a id="10-options-and-data"></a>
 

@@ -354,8 +354,10 @@ Threat lists متن کی فائلیں ہیں، ہر لائن میں ایک addre
 **آف لائن pcap تجزیہ** پیکٹ کیپچر (pcap، pcapng) کو انہی صفحات پر دکھاتا ہے، لائیو
 ڈیٹا سے الگ: `traffic66 a.pcap b.pcapng` 127.0.0.1 پر شروع ہوتا ہے اور browser
 کھولتا ہے (زیادہ سے زیادہ 3 فائلیں، 3 GB؛ Ctrl+C امپورٹ شدہ ڈیٹا حذف کر دیتا
-ہے)، یا اسی صفحے پر 50 MB تک کی 3 فائلیں اپ لوڈ کریں۔ یہ flows پر کام کرتا ہے،
-پیکٹ کے مواد پر نہیں۔
+ہے)، یا اسی صفحے پر 50 MB تک کی 3 فائلیں اپ لوڈ کریں۔ ایک وقت میں ایک فائل کا
+تجزیہ ہوتا ہے، ہر فائل اپنے الگ ڈیٹابیس میں: کسی فائل کی قطار پر
+**تجزیہ کریں** اسے ہر صفحے پر دکھاتا ہے، اور اوپر کی پٹی دوسری فائل پر بدل دیتی
+ہے۔ یہ flows پر کام کرتا ہے، پیکٹ کے مواد پر نہیں۔
 
 ![آف لائن تجزیہ: کیپچر فائلیں، ان کے پیکٹ، فلو اور وقت](images/sandbox.png)
 
@@ -370,9 +372,17 @@ browser میں کھولیں، q باہر نکلیں؛ `-lang` زبان چنتا 
 
 **Local capture** ایک local interface سے flows بناتا ہے، بہترین ہے کہ وہ کسی
 switch کے mirror port سے جڑا port ہو: `traffic66 interfaces` ان کی فہرست دیتا
-ہے، `-capture eth1` (یا Windows کا نام یا نمبر) capture کرتا ہے۔ Linux کو root یا
-`setcap cap_net_raw,cap_net_admin+ep` چاہیے، macOS کو root، Windows کو
-[Npcap](https://npcap.com)۔ capture شدہ flows ڈیوائس `127.0.0.1` سے آتے ہیں۔
+ہے، `-capture eth1` capture کرتا ہے۔ Windows پر:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux کو root یا `setcap cap_net_raw,cap_net_admin+ep` چاہیے، macOS کو root،
+Windows کو [Npcap](https://npcap.com)۔ capture شدہ flows ڈیوائس `127.0.0.1` سے
+آتے ہیں۔ Local capture میں ڈیوائس کے interfaces یا counters نہیں ہوتے، اس لیے
+**انٹرفیس جانچ** کے پاس اس کے لیے موازنہ کرنے کو کچھ نہیں ہے۔
 
 <a id="10-options-and-data"></a>
 

@@ -352,8 +352,10 @@ NetFlow/IPFIX के साथ उतनी देर तक जितनी द
 **ऑफ़लाइन pcap विश्लेषण** पैकेट कैप्चर (pcap, pcapng) को उन्हीं पेजों पर
 दिखाता है, लाइव डेटा से अलग: `traffic66 a.pcap b.pcapng` 127.0.0.1 पर शुरू
 होकर browser खोलता है (अधिकतम 3 फ़ाइलें, 3 GB; Ctrl+C आयात किया डेटा मिटा देता
-है), या उस पेज पर 50 MB तक की अधिकतम 3 फ़ाइलें अपलोड करें। यह flows पर काम
-करता है, पैकेट की सामग्री पर नहीं।
+है), या उस पेज पर 50 MB तक की अधिकतम 3 फ़ाइलें अपलोड करें। एक समय में एक
+फ़ाइल का विश्लेषण होता है, हर फ़ाइल अपने अलग database में: किसी फ़ाइल की
+पंक्ति पर **विश्लेषण करें** उसे हर पेज पर दिखाता है, और ऊपर की पट्टी दूसरी
+फ़ाइल पर बदल देती है। यह flows पर काम करता है, पैकेट की सामग्री पर नहीं।
 
 ![ऑफ़लाइन विश्लेषण: कैप्चर फ़ाइलें, उनके पैकेट, फ़्लो और समय](images/sandbox.png)
 
@@ -368,9 +370,17 @@ browser में खोलें, q बाहर निकलें; `-lang` �
 
 **Local capture** किसी local interface से flows बनाता है, सबसे अच्छा किसी
 switch के mirror port से जुड़ा port: `traffic66 interfaces` उनकी सूची देता है,
-`-capture eth1` (या Windows का नाम या नंबर) capture करता है। Linux को root या
-`setcap cap_net_raw,cap_net_admin+ep` चाहिए, macOS को root, Windows को
-[Npcap](https://npcap.com)। Capture किए गए flows डिवाइस `127.0.0.1` से आते हैं।
+`-capture eth1` capture करता है। Windows पर:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux को root या `setcap cap_net_raw,cap_net_admin+ep` चाहिए, macOS को root,
+Windows को [Npcap](https://npcap.com)। Capture किए गए flows डिवाइस `127.0.0.1`
+से आते हैं। Local capture में डिवाइस के interfaces या counters नहीं होते,
+इसलिए **इंटरफ़ेस मिलान** के पास इसके लिए तुलना करने को कुछ नहीं है।
 
 <a id="10-options-and-data"></a>
 

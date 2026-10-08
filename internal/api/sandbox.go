@@ -78,3 +78,16 @@ func (s *Server) deleteSandbox(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, s.SB.Info())
 }
+
+// putSandboxActive makes one capture file the one the pages show.
+func (s *Server) putSandboxActive(w http.ResponseWriter, r *http.Request) {
+	if s.SB == nil {
+		fail(w, errors.New("offline analysis is not available"))
+		return
+	}
+	if err := s.SB.Select(r.URL.Query().Get("name")); err != nil {
+		fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, s.SB.Info())
+}

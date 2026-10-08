@@ -378,7 +378,7 @@
 "nav.sandbox": "Análisis offline de pcap",
 "sb.title": "Archivos de captura",
 "sb.sub": "Analizar archivos pcap aparte de los datos en vivo",
-"sb.explain": "Suba capturas de Wireshark o tcpdump. Van a una base de datos aparte: los datos en vivo, sus cifras y hallazgos no se tocan. Analizar muestra los archivos en todas las páginas (resumen, Top 66, hallazgos, rutas, mapa, registros); Eliminar borra los archivos y sus datos.",
+"sb.explain": "Sube capturas de Wireshark o tcpdump. Cada una va a su propia base de datos: los datos en vivo, sus cifras y hallazgos no se tocan. Analizar muestra ese archivo en todas las páginas (resumen, Top 66, hallazgos, rutas, mapa, registros de flujo); cambia de archivo en la barra superior. Eliminar borra un archivo y sus datos.",
 "sb.col_file": "Archivo",
 "sb.col_size": "Tamaño",
 "sb.col_packets": "Paquetes",
@@ -514,5 +514,6 @@
 "if.peer_note": "Interfaz del otro extremo: sin muestreo, solo el tráfico por la interfaz muestreada de este equipo",
 "src.sampled_if": "Muestreo en: {v}",
 "src.dir_yes": "con flowDirection (61)",
-"src.dir_no": "sin flowDirection (61): interfaz muestreada deducida del tráfico"
+"src.dir_no": "sin flowDirection (61): interfaz muestreada deducida del tráfico",
+"if.capture_only": "La verificación de interfaces compara los flujos con los contadores de interfaz de equipos sFlow, NetFlow e IPFIX. La captura local en la tarjeta de red de este equipo no tiene interfaces ni contadores de dispositivo, así que aquí no hay nada que comparar."
 }

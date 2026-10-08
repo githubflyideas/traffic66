@@ -369,8 +369,11 @@ l'échantillonnage.
 pcapng) avec les mêmes pages, à part des données en direct :
 `traffic66 a.pcap b.pcapng` démarre sur 127.0.0.1 et ouvre le navigateur
 (jusqu'à 3 fichiers, 3 Go ; Ctrl+C supprime les données importées), ou
-importez sur cette page jusqu'à 3 fichiers de 50 Mo. L'analyse porte sur
-les flux, pas sur le contenu des paquets.
+importez sur cette page jusqu'à 3 fichiers de 50 Mo. Un seul fichier est
+analysé à la fois, chacun dans sa propre base de données : **Analyser** sur
+la ligne d'un fichier l'affiche sur toutes les pages, et la barre du haut
+passe à un autre. L'analyse porte sur les flux, pas sur le contenu des
+paquets.
 
 ![Analyse hors ligne : fichiers de capture avec leurs paquets, flux et période](images/sandbox.png)
 
@@ -386,10 +389,18 @@ la langue.
 
 **Capture locale** construit des flux à partir d'une interface locale,
 idéalement un port relié au port miroir d'un switch : `traffic66 interfaces`
-les liste, `-capture eth1` (ou un nom ou numéro Windows) capture. Linux
-demande root ou `setcap cap_net_raw,cap_net_admin+ep`, macOS root, Windows
-[Npcap](https://npcap.com). Les flux capturés proviennent de l'équipement
-`127.0.0.1`.
+les liste, `-capture eth1` capture. Sous Windows :
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux demande root ou `setcap cap_net_raw,cap_net_admin+ep`, macOS root,
+Windows [Npcap](https://npcap.com). Les flux capturés proviennent de
+l'équipement `127.0.0.1`. La capture locale n'a ni interfaces ni compteurs
+d'équipement, le **Contrôle des interfaces** n'a donc rien à comparer pour
+elle.
 
 <a id="10-options-and-data"></a>
 

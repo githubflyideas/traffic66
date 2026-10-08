@@ -34,6 +34,7 @@ type fentry struct {
 	first, last time.Time
 	pkts, bytes uint64
 	flags       uint8
+	opener      int8 // see flow.Record.Opener; kept across active-timeout exports
 }
 
 const (
@@ -89,6 +90,12 @@ func (b *builder) add(p *pcapfile.Packet) {
 			b.sweep(p.Time, true)
 		}
 		e = &fentry{first: p.Time}
+		switch r.TCPFlags & 0x12 {
+		case 0x02:
+			e.opener = 1
+		case 0x12:
+			e.opener = -1
+		}
 		b.table[k] = e
 	}
 	if p.Time.After(e.last) {
@@ -111,6 +118,15 @@ func (b *builder) add(p *pcapfile.Packet) {
 func (b *builder) sweep(now time.Time, all bool) {
 	b.swept = now
 	var out []flow.Record
+	// first learn who opened each connection from either direction, before
+	// any entry is removed below
+	for k, e := range b.table {
+		if e.opener == 0 && e.pkts > 0 {
+			if re := b.table[fkey{k.dst, k.src, k.dport, k.sport, k.proto, k.vlan, k.encap, k.l2}]; re != nil {
+				e.opener = -re.opener
+			}
+		}
+	}
 	for k, e := range b.table {
 		idle := now.Sub(e.last) >= idleTimeout
 		active := now.Sub(e.first) >= activeTimeout
@@ -118,14 +134,14 @@ func (b *builder) sweep(now time.Time, all bool) {
 			continue
 		}
 		if e.pkts > 0 {
-			out = append(out, flow.Record{Start: e.first, End: e.last, Src: k.src, Dst: k.dst, SrcPort: k.sport, DstPort: k.dport,
+			out = append(out, flow.Record{Start: e.first, End: e.last, Src: k.src, Dst: k.dst, SrcPort: k.sport, DstPort: k.dport, Opener: e.opener,
 				Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: k.l2,
 				Sampling: 1, Mult: 1, SamplingKnown: true, Exporter: b.exporter, Domain: b.domain, Source: flow.SrcCapture, Direction: 255})
 		}
 		if idle || all {
 			delete(b.table, k)
 		} else {
-			*e = fentry{first: now, last: now}
+			*e = fentry{first: now, last: now, opener: e.opener}
 		}
 	}
 	if len(out) > 0 {
