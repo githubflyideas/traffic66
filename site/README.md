@@ -2,7 +2,8 @@
 
 The site at https://githubflyideas.github.io/traffic66/ is built from this
 folder by `site/build.py` (Python standard library only) and published by
-`.github/workflows/pages.yml` on every push to `main` that touches `site/`
+`.github/workflows/pages.yml` on every push to `v0.1` (each merge to
+`main` fast-forwards it) that touches `site/`
 or `docs/images/`.
 
 ```
