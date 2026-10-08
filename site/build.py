@@ -3,18 +3,25 @@
 
 Standard library only. Pages and posts are HTML fragments; this script adds
 the shared header and footer, the blog index, the Atom feed and the
-sitemap. To add a post: write site/posts/<lang>/<slug>.html and add it to
-site/posts.json. Screenshots come from docs/images (assets/img on the site).
+sitemap. A post is either site/posts/<lang>/<slug>.md (Markdown with its
+title and date at the top, see site/README.md) or site/posts/<lang>/<slug>.html
+listed in site/posts.json. Screenshots come from docs/images (assets/img on
+the site).
 
     python3 site/build.py            # writes _site/
     python3 site/build.py --drafts   # also the posts marked "draft": true
     python3 -m http.server -d _site  # look at it on http://localhost:8000/
 """
+import datetime
+import glob
 import html
 import json
 import os
+import re
 import shutil
 import sys
+
+import mdlite
 
 SITE = "https://githubflyideas.github.io/traffic66/"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -108,6 +115,75 @@ def page(rel, title, desc, body, cur="", image="assets/img/overview.png", kind="
 """
 
 
+def md_posts():
+    """Posts written as site/posts/<lang>/<slug>.md, with their front matter."""
+    out = []
+    for path in sorted(glob.glob(os.path.join(HERE, "posts", "*", "*.md"))):
+        lang = os.path.basename(os.path.dirname(path))
+        rel = os.path.relpath(path, REPO)
+        with open(path, encoding="utf-8") as f:
+            meta, body = mdlite.front_matter(f.read())
+        lines = body.replace("\r\n", "\n").split("\n")
+        title = meta.get("title")
+        if not title:
+            # no title: line, so the first "# heading" is the title
+            for k, line in enumerate(lines):
+                if line.strip():
+                    if line.startswith("# "):
+                        title = line[2:].strip()
+                        del lines[k]
+                    break
+        if not title:
+            sys.exit(f"{rel}: no title (put 'title: ...' at the top, or start with '# Title')")
+        date = str(meta.get("date", ""))
+        try:
+            datetime.date.fromisoformat(date)
+        except ValueError:
+            sys.exit(f"{rel}: date must look like 2026-10-08, got {date!r}")
+        body = "\n".join(lines)
+        summary = meta.get("summary")
+        if not summary:
+            # the first paragraph, as plain text
+            first = re.split(r"\n\s*\n", body.strip(), maxsplit=1)[0]
+            summary = re.sub(r"<[^>]+>", "", mdlite.inline(first))
+            summary = html.unescape(re.sub(r"\s+", " ", summary)).strip()
+            if len(summary) > 160:
+                summary = summary[:157].rstrip() + "…"
+        p = {"date": date, "lang": lang, "slug": meta.get("slug") or os.path.basename(path)[:-3],
+             "title": title, "summary": summary, "md": body, "dir": os.path.dirname(path), "src": rel}
+        for k in ("image", "author", "lede"):
+            if meta.get(k):
+                p[k] = meta[k]
+        if meta.get("draft") is True:
+            p["draft"] = True
+        out.append(p)
+    return out
+
+
+def md_body(p, outdir):
+    """The HTML of a Markdown post. Pictures next to the .md are copied
+    beside the page; links starting with assets/ point at the site's assets."""
+    def link(u):
+        if re.match(r"^([a-z][a-z0-9+.-]*:|/|#|\{root\})", u, re.I):
+            return u
+        if u.startswith("assets/"):
+            return "{root}" + u
+        name = u.split("#")[0].split("?")[0]
+        src = os.path.normpath(os.path.join(p["dir"], name))
+        if name and os.path.isfile(src) and src.startswith(p["dir"] + os.sep):
+            dst = os.path.join(outdir, os.path.relpath(src, p["dir"]))
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copyfile(src, dst)
+        return u
+    e = html.escape
+    by = f'<div class="byline"><span>{e(p["author"])}</span></div>' if p.get("author") else ""
+    return (f'<article>\n<header class="hero col">\n'
+            f'<div class="kicker"><span><a href="{{root}}blog/" style="color:inherit">traffic66 blog</a></span>'
+            f'<b>{e(p["date"])}</b></div>\n<h1>{e(p["title"])}</h1>\n'
+            f'<p class="lede">{e(p.get("lede") or p["summary"])}</p>\n{by}</header>\n'
+            f'<div class="col md">\n{mdlite.to_html(p["md"], link)}\n</div>\n</article>\n')
+
+
 def post_list(posts, root):
     e = html.escape
     items = "".join(
@@ -120,7 +196,14 @@ def post_list(posts, root):
 def main():
     # a post with "draft": true is left out until it is published
     drafts = "--drafts" in sys.argv
-    posts = [p for p in json.loads(read("posts.json")) if drafts or not p.get("draft")]
+    posts = json.loads(read("posts.json")) + md_posts()
+    seen = {}
+    for p in posts:
+        key = (p["lang"], p["slug"])
+        if key in seen:
+            sys.exit(f"two posts at blog/{p['lang']}/{p['slug']}/: {seen[key]} and {p.get('src', 'posts.json')}")
+        seen[key] = p.get("src", "posts.json")
+    posts = [p for p in posts if drafts or not p.get("draft")]
     posts.sort(key=lambda p: p["date"], reverse=True)
     shutil.rmtree(OUT, ignore_errors=True)
     shutil.copytree(os.path.join(HERE, "assets"), os.path.join(OUT, "assets"))
@@ -138,7 +221,9 @@ def main():
           read("pages", "404.html"), root="/traffic66/"))
     for p in posts:
         rel = f'blog/{p["lang"]}/{p["slug"]}/index.html'
-        write(rel, page(rel, p["title"] + " · traffic66", p["summary"], read("posts", p["lang"], p["slug"] + ".html"),
+        body = (md_body(p, os.path.dirname(os.path.join(OUT, rel))) if "md" in p
+                else read("posts", p["lang"], p["slug"] + ".html"))
+        write(rel, page(rel, p["title"] + " · traffic66", p["summary"], body,
                         "blog", p.get("image", "assets/img/overview.png"), "article", p["lang"]))
 
     e = html.escape
