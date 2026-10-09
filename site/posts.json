@@ -24,13 +24,12 @@
     "image": "assets/shots/hi/overview.jpg"
   },
   {
-    "date": "2026-10-08",
+    "date": "2026-10-10",
     "lang": "es",
     "slug": "flow-analyzers-compared",
     "title": "Instalamos uno por uno los analizadores de flujos de GitHub",
     "summary": "Cuánto cuesta llegar de la descarga a un primer gráfico confiable con ntopng, Akvorado, ElastiFlow, GoFlow2 y traffic66, y dónde otros proyectos lo hacen mejor.",
-    "image": "assets/shots/es/overview.jpg",
-    "draft": true
+    "image": "assets/shots/es/overview.jpg"
   },
   {
     "date": "2026-10-08",
