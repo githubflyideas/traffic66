@@ -3,6 +3,16 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 1.6.1
+
+Fixes
+- Pages could fail with "value out of range" after a computer capturing its
+  own traffic slept with a connection open. The flow seemed to last through
+  the night, and spreading its bytes over the minutes could leave one minute
+  below zero, which was stored as a huge number. The shares are now exact
+  and never negative, capture starts a new flow after a gap, and the bad
+  values already stored are set to zero the first time 1.6.1 starts.
+
 ## 1.6.0
 
 Sign-in and users

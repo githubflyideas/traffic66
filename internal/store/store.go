@@ -190,6 +190,9 @@ func Open(opt Options) (*Store, error) {
 	if err := s.loadSegments(); err != nil {
 		return nil, err
 	}
+	if err := s.repairWrapped(); err != nil {
+		log.Printf("store: %v", err)
+	}
 	log.Printf("store: %s, DuckDB memory limit %d MB, %d threads", opt.Dir, memMB, opt.Threads)
 	return s, nil
 }
