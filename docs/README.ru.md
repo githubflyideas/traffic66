@@ -1,4 +1,4 @@
-[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | **Русский** | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | **Русский** | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | [한국어](README.ko.md)
 
 # traffic66 — коллектор и анализатор трафика NetFlow, sFlow и IPFIX
 
@@ -18,7 +18,7 @@ Grafana или модулям анализа потоков PRTG и SolarWinds N
 - Сверяет свои цифры со счётчиками интерфейсов (sFlow или SNMP) и объясняет, почему они расходятся.
 - Находит сканирования, подбор паролей, боковое перемещение, необычные выгрузки, флуд и трафик со списков угроз, в том числе при сэмплировании.
 - `traffic66 capture.pcap` анализирует захваты пакетов без какой-либо настройки.
-- 13 языков. Бесплатно для оценки и для организаций численностью менее 100 человек ([лицензия](#licence)).
+- 15 языков. Бесплатно для оценки и для организаций численностью менее 100 человек ([лицензия](#licence)).
 
 ![Обзор: открытые обнаружения, полоса по приложениям в сравнении с тем же временем вчера, основные клиенты и сервисы](images/overview.png)
 

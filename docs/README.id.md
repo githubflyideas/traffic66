@@ -1,4 +1,4 @@
-[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | **Bahasa Indonesia** | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | **Bahasa Indonesia** | [اردو](README.ur.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | [한국어](README.ko.md)
 
 # traffic66 — kolektor dan penganalisis trafik NetFlow, sFlow, dan IPFIX
 
@@ -18,7 +18,7 @@ pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 - Mencocokkan angkanya dengan counter interface (sFlow atau SNMP) dan menjelaskan penyebab selisihnya.
 - Menemukan pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman, juga melalui sampling.
 - `traffic66 capture.pcap` menganalisis tangkapan paket tanpa pengaturan apa pun.
-- 13 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 100 orang ([lisensi](#licence)).
+- 15 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 100 orang ([lisensi](#licence)).
 
 ![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding waktu yang sama kemarin, klien dan layanan teratas](images/overview.png)
 

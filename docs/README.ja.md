@@ -1,4 +1,4 @@
-[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | **日本語** | [한국어](README.ko.md)
+[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [Deutsch](README.de.md) | **日本語** | [Tiếng Việt](README.vi.md) | [한국어](README.ko.md)
 
 # traffic66 — NetFlow・sFlow・IPFIX コレクター兼トラフィックアナライザー
 
@@ -11,7 +11,7 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 - 自身の数値をインターフェースカウンター（sFlow または SNMP）と照合し、ずれの理由を示します。
 - スキャン、パスワード総当たり、横展開、不審なアップロード、フラッド、脅威リストとの通信を、サンプリング越しでも見つけます。
 - `traffic66 capture.pcap` で、設定なしにパケットキャプチャを分析できます。
-- 13 言語に対応。評価用途と 100 人未満の組織は無料です（[ライセンス](#licence)）。
+- 15 言語に対応。評価用途と 100 人未満の組織は無料です（[ライセンス](#licence)）。
 
 ![概要：未対応の検知、アプリケーション別の帯域と昨日の同じ時刻との比較、上位のクライアントとサービス](images/overview.png)
 
