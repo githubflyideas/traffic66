@@ -1,4 +1,4 @@
-[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | **한국어**
+[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | **한국어**
 
 # traffic66 — NetFlow, sFlow, IPFIX 수집기 및 트래픽 분석기
 
@@ -11,7 +11,7 @@ ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 �
 - 자체 수치를 인터페이스 카운터(sFlow 또는 SNMP)와 대조하고, 차이가 나는 이유를 알려 줍니다.
 - 스캔, 비밀번호 대입, 내부 확산, 비정상 업로드, 플러드, 위협 목록 트래픽을 샘플링을 거쳐서도 찾아냅니다.
 - `traffic66 capture.pcap`은 설정할 것 없이 패킷 캡처를 분석합니다.
-- 13개 언어 지원. 평가 용도와 100명 미만 조직은 무료입니다([라이선스](#licence)).
+- 15개 언어 지원. 평가 용도와 100명 미만 조직은 무료입니다([라이선스](#licence)).
 
 ![개요: 미처리 탐지, 어제 같은 시각과 비교한 애플리케이션별 대역폭, 상위 클라이언트와 서비스](images/overview.png)
 

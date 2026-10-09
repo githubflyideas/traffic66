@@ -24,8 +24,8 @@ func TestTranslationsComplete(t *testing.T) {
 	en := read("en.json")
 	ph := regexp.MustCompile(`\{\w+\}`)
 	files, _ := fs.Glob(FS(), "i18n/*.json")
-	// The eleven most spoken languages (Ethnologue, total speakers), plus Japanese and Korean.
-	for _, want := range []string{"en", "zh", "hi", "es", "ar", "fr", "bn", "pt", "ru", "id", "ur", "ja", "ko"} {
+	// The languages of the UI, by total number of speakers (Ethnologue).
+	for _, want := range []string{"en", "zh", "hi", "es", "ar", "fr", "bn", "pt", "ru", "id", "ur", "de", "ja", "vi", "ko"} {
 		if _, err := fs.Stat(FS(), "i18n/"+want+".json"); err != nil {
 			t.Errorf("missing language %s", want)
 		}

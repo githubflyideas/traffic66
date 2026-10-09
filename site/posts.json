@@ -97,6 +97,15 @@
   },
   {
     "date": "2026-10-08",
+    "lang": "de",
+    "slug": "flow-analyzers-compared",
+    "title": "Wir haben die Flow-Analysatoren auf GitHub der Reihe nach installiert",
+    "summary": "Zehn Flow-Analysatoren für NetFlow, sFlow und IPFIX im Vergleich: Weg zum ersten Diagramm, Abgleich mit Interface-Zählern, Erkennung, Grenzen. Mit Hinweisen zu DSGVO und Betrieb im eigenen Haus.",
+    "image": "assets/img/overview.png",
+    "draft": true
+  },
+  {
+    "date": "2026-10-08",
     "lang": "ja",
     "slug": "flow-analyzers-compared",
     "title": "GitHub のフロー分析ツールを、順番にインストールしてみました",
@@ -111,15 +120,6 @@
     "title": "GitHub의 플로 분석 도구를 하나씩 설치해 보았습니다",
     "summary": "ntopng, Akvorado, ElastiFlow, FastNetMon, pmacct, GoFlow2, nfdump와 traffic66 비교: 설치 경로, 카운터 대조, UI, 탐지, 망분리 환경, 그리고 다른 도구가 더 나은 점.",
     "image": "assets/shots/ko/overview.jpg",
-    "draft": true
-  },
-  {
-    "date": "2026-10-08",
-    "lang": "de",
-    "slug": "flow-analyzers-compared",
-    "title": "Wir haben die Flow-Analysatoren auf GitHub der Reihe nach installiert",
-    "summary": "Zehn Flow-Analysatoren für NetFlow, sFlow und IPFIX im Vergleich: Weg zum ersten Diagramm, Abgleich mit Interface-Zählern, Erkennung, Grenzen. Mit Hinweisen zu DSGVO und Betrieb im eigenen Haus.",
-    "image": "assets/img/overview.png",
     "draft": true
   }
 ]

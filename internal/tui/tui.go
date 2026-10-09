@@ -62,7 +62,7 @@ func detectLang(explicit string) string {
 			continue
 		}
 		code := c[:2]
-		for _, l := range []string{"en", "zh", "hi", "es", "ar", "fr", "bn", "pt", "ru", "id", "ur", "ja", "ko"} {
+		for _, l := range []string{"en", "zh", "hi", "es", "ar", "fr", "bn", "pt", "ru", "id", "ur", "de", "ja", "vi", "ko"} {
 			if code == l {
 				return l
 			}

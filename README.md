@@ -1,4 +1,4 @@
-**English** | [中文](docs/README.zh.md) | [हिन्दी](docs/README.hi.md) | [Español](docs/README.es.md) | [العربية](docs/README.ar.md) | [Français](docs/README.fr.md) | [বাংলা](docs/README.bn.md) | [Português](docs/README.pt.md) | [Русский](docs/README.ru.md) | [Bahasa Indonesia](docs/README.id.md) | [اردو](docs/README.ur.md) | [日本語](docs/README.ja.md) | [한국어](docs/README.ko.md)
+**English** | [中文](docs/README.zh.md) | [हिन्दी](docs/README.hi.md) | [Español](docs/README.es.md) | [العربية](docs/README.ar.md) | [Français](docs/README.fr.md) | [বাংলা](docs/README.bn.md) | [Português](docs/README.pt.md) | [Русский](docs/README.ru.md) | [Bahasa Indonesia](docs/README.id.md) | [اردو](docs/README.ur.md) | [Deutsch](docs/README.de.md) | [日本語](docs/README.ja.md) | [Tiếng Việt](docs/README.vi.md) | [한국어](docs/README.ko.md)
 
 # traffic66 — NetFlow, sFlow and IPFIX collector and traffic analyzer
 
@@ -16,7 +16,7 @@ analysis, without Elasticsearch, Kafka or a separate database.
 - Checks its numbers against interface counters (sFlow or SNMP) and says why they differ.
 - Finds scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic, also through sampling.
 - `traffic66 capture.pcap` analyses packet captures with nothing to set up.
-- 13 languages. Free for evaluation and for organizations under 100 people ([licence](#licence)).
+- 15 languages. Free for evaluation and for organizations under 100 people ([licence](#licence)).
 
 ![Overview: open findings, bandwidth by application compared with the same time yesterday, top clients and services](docs/images/overview.png)
 

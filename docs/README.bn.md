@@ -1,4 +1,4 @@
-[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | **বাংলা** | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | **বাংলা** | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | [한국어](README.ko.md)
 
 # traffic66 — NetFlow, sFlow ও IPFIX কালেক্টর এবং ট্রাফিক অ্যানালাইজার
 
@@ -17,7 +17,7 @@ Elasticsearch, Kafka বা আলাদা database ছাড়াই।
 - নিজের সংখ্যাগুলো interface counter (sFlow বা SNMP)-এর সাথে মিলিয়ে দেখে এবং পার্থক্য থাকলে কেন তা জানায়।
 - scan, পাসওয়ার্ড অনুমান, lateral movement, অস্বাভাবিক upload, flood ও threat list-এর ট্রাফিক খুঁজে বের করে, sampling-এর মধ্যেও।
 - `traffic66 capture.pcap` কোনো সেটআপ ছাড়াই প্যাকেট ক্যাপচার বিশ্লেষণ করে।
-- 13টি ভাষা। মূল্যায়নের জন্য এবং 100 জনের কম মানুষের প্রতিষ্ঠানের জন্য বিনামূল্যে ([লাইসেন্স](#licence))।
+- 15টি ভাষা। মূল্যায়নের জন্য এবং 100 জনের কম মানুষের প্রতিষ্ঠানের জন্য বিনামূল্যে ([লাইসেন্স](#licence))।
 
 ![সারসংক্ষেপ: খোলা সন্দেহজনক কার্যকলাপ, গতকাল একই সময়ের তুলনায় application অনুযায়ী bandwidth, শীর্ষ client ও service](images/overview.png)
 
