@@ -5,6 +5,10 @@ heading is the version number.
 
 ## 1.6.1
 
+Languages
+- The web UI, the terminal UI and the README are now also in German and
+  Vietnamese: 15 languages, ordered by number of speakers.
+
 Fixes
 - Pages could fail with "value out of range" after a computer capturing its
   own traffic slept with a connection open. The flow seemed to last through
