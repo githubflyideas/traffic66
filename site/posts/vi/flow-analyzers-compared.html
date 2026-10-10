@@ -1,0 +1,193 @@
+<article>
+<header class="hero col">
+  <div class="kicker"><span><a href="{root}blog/" style="color:inherit">Blog traffic66</a></span><span>NetFlow / sFlow / IPFIX</span><b>Tháng 10/2026</b></div>
+  <h1>Chúng tôi lần lượt cài thử các công cụ phân tích luồng trên GitHub</h1>
+  <p class="lede">Bài này chỉ đo một điều: một kỹ sư mạng phải đi bao xa, từ lúc tải về cho đến khi có <span class="far">biểu đồ đầu tiên với những con số đáng tin</span>. traffic66 có đường đi ngắn nhất. Về phát hiện tấn công, traffic66 ngang ntopng. Về khả năng mở rộng, phân tích gói sâu (DPI) và cộng đồng, các dự án khác đi trước. Mọi nhận định đều được đối chiếu với tài liệu chính thức của từng dự án, đường dẫn ở cuối bài.</p>
+  <div class="byline"><span>Nhóm phát triển traffic66</span><span>Chúng tôi là bên có lợi ích liên quan; hãy đọc với con mắt phản biện</span><span>Số liệu tính đến 8/10/2026</span></div>
+</header>
+
+<div class="col">
+<h2>Các dự án được so sánh</h2>
+<p>Chúng tôi chọn các dự án sFlow, NetFlow và IPFIX có nhiều sao nhất trên GitHub. Có dự án là sản phẩm hoàn chỉnh, có dự án chỉ là collector, có dự án đã lưu trữ (archived). Số sao lấy theo con số GitHub hiển thị.</p>
+</div>
+
+<div class="wide">
+<div class="tablewrap">
+<table>
+<thead><tr><th>Dự án</th><th style="text-align:right">Sao</th><th>Là gì</th><th>Phải cài gì trước</th><th>Trạng thái · giấy phép</th></tr></thead>
+<tbody>
+<tr><td class="name">ntopng</td><td class="num">8.1k</td><td>Công cụ giám sát lưu lượng qua web, có phân tích gói sâu nDPI</td><td>Redis; với NetFlow/sFlow thì cần nProbe, mà nProbe cần giấy phép</td><td><span class="tag ok">đang phát triển</span> GPL-3.0</td></tr>
+<tr><td class="name">FastNetMon</td><td class="num">3.7k</td><td>Phát hiện DDoS, có thể kích hoạt BGP blackholing</td><td>Linux; biểu đồ qua InfluxDB/Grafana hoặc công cụ tương tự</td><td><span class="tag ok">đang phát triển</span> GPL-2.0</td></tr>
+<tr><td class="name">ElastiFlow (bản cũ)</td><td class="num">2.5k</td><td>Pipeline Logstash và dashboard Kibana</td><td>Elasticsearch, Logstash, Kibana</td><td><span class="tag dead">archived 2024-03</span></td></tr>
+<tr><td class="name">Akvorado</td><td class="num">2.3k</td><td>Collector, bổ sung thông tin (enrich) và hiển thị</td><td>inlet, Kafka, outlet, ClickHouse; Redis trong bản compose chính thức</td><td><span class="tag ok">đang phát triển</span> AGPL-3.0</td></tr>
+<tr><td class="name">pmacct</td><td class="num">1.2k</td><td>Các daemon collector, hỗ trợ BGP và BMP</td><td>Cơ sở dữ liệu và dashboard tùy chọn (thường là Grafana)</td><td><span class="tag ok">đang phát triển</span> GPL (đang chuyển sang kiểu BSD)</td></tr>
+<tr><td class="name">vflow</td><td class="num">1.2k</td><td>Collector đẩy dữ liệu vào Kafka</td><td>Kafka, cộng thêm lưu trữ và dashboard phía sau</td><td>Apache-2.0</td></tr>
+<tr><td class="name">nfdump</td><td class="num">922</td><td>Bộ công cụ dòng lệnh để thu thập và truy vấn</td><td>Không có giao diện web riêng</td><td><span class="tag ok">đang phát triển</span> BSD</td></tr>
+<tr><td class="name">Cloudflare goflow</td><td class="num">919</td><td>Collector Cloudflare từng dùng nội bộ</td><td>Kafka, cộng thêm các thành phần phía sau</td><td><span class="tag dead">archived 2025-02</span></td></tr>
+<tr><td class="name">GoFlow2</td><td class="num">798</td><td>Collector hiệu năng cao</td><td>Xuất ra Kafka hoặc file; lưu trữ và giao diện bạn tự dựng</td><td><span class="tag ok">đang phát triển</span> BSD-3</td></tr>
+<tr class="us"><td class="name">traffic66</td><td class="num">mới</td><td>Collector, lưu trữ, giao diện web và giao diện terminal, phát hiện tấn công, phân tích pcap</td><td>Không cần gì: một file thực thi, DuckDB nhúng sẵn</td><td><span class="tag ok">đang phát triển</span> source-available (xem bên dưới)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">ElastiFlow hiện nay có tên NetObserv Flow. Phần mềm này là mã đóng; gói Community miễn phí giới hạn 500 bản ghi luồng mỗi giây.</p>
+</div>
+
+<div class="col">
+<h2>1. Từ lúc tải về đến biểu đồ đầu tiên</h2>
+<p>Đây là phần chúng tôi coi trọng nhất. Ba giờ chiều có người hỏi ai đang chiếm hết đường uplink, chẳng ai muốn phải học Kafka trước đã. Dưới đây là đường ngắn nhất theo tài liệu của từng dự án:</p>
+</div>
+<div class="wide">
+<div class="race" role="list">
+  <div class="lane us" role="listitem"><div class="who">traffic66</div><div class="bar"><span class="step">tải về, giải nén</span><span class="step">./traffic66</span><span class="step">mở trình duyệt ✓</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ntopng</div><div class="bar"><span class="step">thêm repository</span><span class="step">cài ntopng</span><span class="step">cài Redis</span><span class="step">cài nProbe</span><span class="step">mua giấy phép nProbe</span><span class="step">kết nối hai thành phần</span><span class="step">biểu đồ</span></div></div>
+  <div class="lane" role="listitem"><div class="who">Akvorado</div><div class="bar"><span class="step">cài Docker</span><span class="step">tải file compose</span><span class="step">chạy Kafka</span><span class="step">chạy ClickHouse</span><span class="step">chạy inlet/outlet</span><span class="step">cấu hình SNMP, GeoIP</span><span class="step">biểu đồ</span></div></div>
+  <div class="lane" role="listitem"><div class="who">ElastiFlow</div><div class="bar"><span class="step">cài Elasticsearch</span><span class="step">cài Kibana</span><span class="step">cài collector</span><span class="step">import dashboard</span><span class="step">để ý giới hạn 500 rec/s</span><span class="step">biểu đồ</span></div></div>
+  <div class="lane" role="listitem"><div class="who">GoFlow2 / pmacct</div><div class="bar"><span class="step">cài collector</span><span class="step">chọn cơ sở dữ liệu</span><span class="step">dựng pipeline</span><span class="step">cài Grafana</span><span class="step">tự vẽ dashboard</span><span class="step">biểu đồ</span></div></div>
+</div>
+</div>
+<div class="col">
+<p>Bản traffic66 mới cài đăng nhập bằng admin / traffic66 và yêu cầu bạn đặt mật khẩu riêng ở lần đăng nhập đầu tiên. Trên Windows, nhấp đúp vào <code>traffic66.exe</code> là trình duyệt tự mở. Muốn xem thử trước, lệnh <code>traffic66 demo</code> dựng một mạng doanh nghiệp mô phỏng với lịch sử một ngày và một cuộc tấn công đầy đủ.</p>
+<p>Về <strong>Windows</strong>: hầu hết các dự án trong bảng chỉ chạy trên Linux hoặc Docker. traffic66 build ra chương trình native cho Windows, Linux và macOS từ cùng một mã nguồn, không cần WSL, không cần Docker. Ở nhiều tổ chức nhỏ, máy giám sát chính là một chiếc PC Windows.</p>
+
+<div class="quote" aria-label="Con số chính">
+  <div class="big">3 <span>bước</span></div>
+  <div class="cap">từ lúc tải về đến biểu đồ đầu tiên</div>
+</div>
+
+<h2>Dữ liệu luồng nằm ở đâu: điều cần biết với mạng tại Việt Nam</h2>
+<p>Bản ghi luồng có địa chỉ IP nguồn và đích, cổng, thời gian và số byte. Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15, có hiệu lực từ ngày 01/01/2026, định nghĩa dữ liệu cá nhân là dữ liệu số hoặc thông tin dưới dạng khác xác định hoặc giúp xác định một con người cụ thể. Trong mạng của bạn, địa chỉ IP có gắn được với một thuê bao, sinh viên hay nhân viên cụ thể hay không, và bản ghi luồng vì thế có thuộc phạm vi luật này hay không, là câu hỏi nên đánh giá cùng bộ phận pháp chế.</p>
+<p>Với nhà mạng và nhà cung cấp dịch vụ, còn một quy định nữa. Luật An ninh mạng số 116/2025/QH15, có hiệu lực từ ngày 01/7/2026, tại khoản 3 Điều 25 yêu cầu doanh nghiệp trong nước và ngoài nước cung cấp dịch vụ viễn thông, Internet và dịch vụ gia tăng tại Việt Nam, khi thu thập, khai thác, phân tích, xử lý thông tin cá nhân, dữ liệu về mối quan hệ của người sử dụng dịch vụ và dữ liệu do người sử dụng dịch vụ tại Việt Nam tạo ra, phải lưu trữ các dữ liệu này tại Việt Nam trong thời gian theo quy định của Chính phủ. Bản ghi luồng của bạn có nằm trong các loại dữ liệu đó hay không, chúng tôi không kết luận thay bạn.</p>
+<p>Điều chúng tôi nói được là chương trình hoạt động thế nào. traffic66 chạy được hoàn toàn offline và lưu mọi thứ trong thư mục dữ liệu trên máy chủ của chính bạn, bằng DuckDB nhúng sẵn; không có dịch vụ đám mây nào ở giữa. Chi tiết luồng mặc định được giữ 30 ngày (<code>-retention-days</code>), trang <strong>Dọn dữ liệu</strong> dùng để xóa dữ liệu cũ. Bản ghi luồng không rời khỏi máy chủ đó, nên bạn biết chính xác dữ liệu nằm ở đâu và giữ trong bao lâu.</p>
+
+<h2>2. Con số có khớp với bộ đếm của interface không?</h2>
+<p>Câu hỏi mà công cụ phân tích luồng nào cũng gặp: biểu đồ nói uplink đang chạy 800 Mb/s, còn SNMP trong Zabbix báo 600. Bên nào đúng?</p>
+<p>Số liệu từ luồng là số ước tính: số gói lấy mẫu nhân với tỷ lệ sampling. traffic66 có một trang dành riêng cho việc này, <strong>Kiểm tra giao diện</strong>. Trang này vẽ ước tính từ luồng của từng interface và bộ đếm của chính thiết bị (counter sFlow hoặc SNMP) trên cùng một biểu đồ, rồi tính độ chênh lệch và sai số thống kê do sampling. Khi độ chênh lớn hơn mức sampling có thể giải thích, trang chỉ ra nguyên nhân có khả năng nhất: interface chưa bật sampling, cùng một lưu lượng bị lấy mẫu trên hai interface, gói export bị mất trên đường đi, hoặc chưa nhận được tỷ lệ sampling.</p>
+<p>Phía sau là vài chi tiết ít người để ý: dùng đúng tỷ lệ sampling mà thiết bị thực sự áp dụng; giữ lại bản ghi cho đến khi nhận được tỷ lệ sampling thay vì tính theo 1:1; bù cho các gói export bị mất; trải các luồng dài ra đúng những phút mà chúng kéo dài; và cộng phần overhead Ethernet vào số byte của NetFlow, vì bộ đếm interface có tính phần này.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/vi/interfaces.jpg" alt="Kiểm tra giao diện: bit mỗi giây và gói mỗi giây, danh sách interface và kết luận" width="1440" height="1450" loading="lazy">
+  <figcaption>Kiểm tra giao diện. Đường nét đứt là bộ đếm của thiết bị; kết luận nằm ở góc dưới bên phải.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Các dự án khác làm được đến đâu:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Ước tính từ luồng và bộ đếm thiết bị trên cùng một biểu đồ, tính sẵn độ chênh và sai số thống kê, nêu rõ nguyên nhân. Counter sFlow được dùng ngay khi tới; với thiết bị NetFlow, chỉ cần một dòng <code>snmp</code>.</span></div>
+  <div><b>ntopng</b><span>Bản Enterprise poll SNMP và vẽ biểu đồ interface của thiết bị; tài liệu không nhắc đến việc so sánh với luồng. SNMP trong bản Community không được mô tả trong tài liệu.</span></div>
+  <div><b>Akvorado</b><span>Dùng SNMP để lấy tên và mô tả interface cho bản ghi luồng, không dùng bộ đếm.</span></div>
+  <div><b>ElastiFlow</b><span>Cũng dùng SNMP để bổ sung thông tin interface; muốn so sánh thì phải tự dựng hai biểu đồ Kibana.</span></div>
+  <div><b>FastNetMon</b><span>Không phải việc của nó; nó theo dõi ngưỡng tấn công.</span></div>
+  <div><b>GoFlow2 và các collector khác</b><span>Không phải việc của chúng; chúng chỉ cung cấp bản ghi luồng.</span></div>
+</div>
+<p>Ở các dự án khác, bộ đếm interface hoặc không được đọc, hoặc chỉ là thêm một biểu đồ để bạn tự so bằng mắt. Chúng tôi không tìm thấy dự án nào khác giải thích vì sao các con số lệch nhau.</p>
+
+<h2>3. Mở ra là có kết luận, không cần ngôn ngữ truy vấn</h2>
+<p>Trang tổng quan trả lời ngay: lưu lượng hiện tại là bao nhiêu, ai đang dùng, và so với hôm qua thì thế nào. Mọi địa chỉ, cổng, ứng dụng và quốc gia đều bấm vào được: chỉ hiện mục này, loại trừ nó, mở các bản ghi luồng của nó, mở trang chi tiết của nó. Giao diện được thiết kế để bạn hiếm khi phải gõ phím.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/vi/overview.jpg" alt="Tổng quan: băng thông theo interface, băng thông theo ứng dụng so với hôm qua" width="1440" height="900" loading="lazy">
+  <figcaption>Tổng quan. Interface được chọn ở phía trên; interface gắn dấu sao là mặc định. Đường nét đứt là cùng giờ này hôm qua.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Cùng công việc đó ở các dự án khác:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Có sẵn giao diện web và giao diện terminal, mở ra là trang tóm tắt. 15 ngôn ngữ, có tiếng Việt.</span></div>
+  <div><b>ntopng</b><span>Giao diện đầy đủ, nhiều thông tin; là dự án duy nhất trong bảng có thể so sánh trực diện. Bảy ngôn ngữ theo các thông báo của dự án.</span></div>
+  <div><b>Akvorado</b><span>Bảng điều khiển web chỉn chu; phần visualizer cho phép kéo thả các chiều dữ liệu và vẽ biểu đồ Sankey. Cách dùng giống công cụ truy vấn hơn: bạn phải tự quyết định hỏi gì trước. Chỉ có tiếng Anh.</span></div>
+  <div><b>ElastiFlow</b><span>Dashboard Kibana; muốn sửa thì phải học Kibana.</span></div>
+  <div><b>FastNetMon</b><span>Bản Community không có giao diện web; biểu đồ qua Grafana. Giao diện web nằm trong bản thương mại.</span></div>
+  <div><b>GoFlow2, pmacct, vflow, nfdump</b><span>Không có giao diện; nfdump có truy vấn dòng lệnh. Dashboard do bạn tự dựng, thường bằng Grafana, mỗi biểu đồ một câu truy vấn.</span></div>
+</div>
+
+<h2>4. Tìm tấn công trong dữ liệu đã lấy mẫu</h2>
+<p>Phát hiện tấn công trên dữ liệu sampling rất khó: ở tỷ lệ 1:4096, một đợt quét có thể chỉ để lại vài gói. Các luật của traffic66 được hiệu chỉnh cho dữ liệu đã lấy mẫu. Trong bản demo, toàn bộ chuỗi tấn công được phát hiện qua sFlow 1:4096: quét mạng nội bộ, quét cổng, dò mật khẩu, di chuyển ngang (lateral movement), tải lên lượng lớn dữ liệu tới một địa chỉ mới, và lưu lượng tới các địa chỉ trong danh sách mối đe dọa. Một ngày lưu lượng bình thường của bản demo không sinh ra phát hiện nào khác, ngoài máy quét trên Internet gõ cửa website.</p>
+</div>
+<div class="wide">
+<figure class="shot">
+  <img src="{root}assets/shots/vi/findings.jpg" alt="Phát hiện: từng bước của cuộc tấn công, nghiêm trọng nhất ở trên cùng" width="1440" height="900" loading="lazy">
+  <figcaption>Phát hiện. Mọi bước trong cuộc tấn công từ một máy bị chiếm quyền trong bản demo, tất cả từ sFlow lấy mẫu 1:4096.</figcaption>
+</figure>
+</div>
+<div class="col">
+<p>Ở phần này, khoảng cách hẹp hơn:</p>
+<div class="vs">
+  <div class="us"><b>traffic66</b><span>Quét mạng, quét cổng, dò mật khẩu, di chuyển ngang, tải lên bất thường, tấn công flood và danh sách mối đe dọa, với ngưỡng dành cho dữ liệu đã lấy mẫu.</span></div>
+  <div><b>ntopng</b><span>Nhiều kiểu kiểm tra hơn chúng tôi: quét mạng, flood, blacklist, rò rỉ dữ liệu qua DNS và ICMP, di chuyển ngang, ngay trong bản Community. Ở mảng này ntopng đi trước.</span></div>
+  <div><b>FastNetMon</b><span>Chỉ DDoS, nhưng làm sâu: phát hiện trong vài giây và tự động BGP blackholing.</span></div>
+  <div><b>ElastiFlow</b><span>Bổ sung thông tin mối đe dọa NetIntel; cảnh báo qua các rule bạn tự thiết lập trong Elastic.</span></div>
+  <div><b>Akvorado và các collector</b><span>Không có phát hiện tấn công.</span></div>
+</div>
+<p>Về bảo mật, chúng tôi ngang ntopng. Điểm chúng tôi mang lại là các kiểm tra có sẵn trong một chương trình, không cần cấu hình, và được tinh chỉnh cho dữ liệu đã lấy mẫu.</p>
+<p>Thêm một tiện ích: <code>traffic66 capture.pcap</code> phân tích file bắt gói với cùng các trang như dữ liệu thật, nhưng tách riêng khỏi dữ liệu đang chạy. ntopng cũng đọc được file pcap, nên điểm này coi như hòa.</p>
+
+<h2>Bảng điểm</h2>
+<p>Những điểm ở trên và các điểm yếu ở dưới, gộp trong một bảng. Tô đầy là có, tô một nửa là có một phần, phải trả phí hoặc cài riêng, để trống là không có.</p>
+</div>
+<div class="wide">
+<div class="tablewrap">
+<table class="matrix">
+<thead><tr><th>Tính năng</th><th class="us">traffic66</th><th>ntopng</th><th>Akvorado</th><th>ElastiFlow (hiện tại)</th><th>FastNetMon</th><th>Collector<small>GoFlow2 · pmacct · vflow · nfdump</small></th></tr></thead>
+<tbody>
+<tr><td>Một chương trình, cài xong là dùng</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + giấy phép nProbe</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>Grafana để vẽ biểu đồ</small></td><td><i class="m"></i><small>tự dựng lưu trữ và giao diện</small></td></tr>
+<tr><td>Chạy native trên Windows</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>bản Windows là bản demo</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Giao diện web có sẵn</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>dashboard Kibana</small></td><td><i class="m h"></i><small>bản thương mại</small></td><td><i class="m"></i></td></tr>
+<tr><td>Giao diện đa ngôn ngữ</td><td class="us"><i class="m y"></i><small>15</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>tiếng Anh</small></td><td><i class="m h"></i><small>chỉ Kibana</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Đối chiếu luồng với bộ đếm interface</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>biểu đồ SNMP (Enterprise)</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>tự dựng</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Phát hiện tấn công</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>nhiều kiểm tra nhất</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>bổ sung thông tin mối đe dọa</small></td><td><i class="m h"></i><small>chỉ DDoS, có giảm thiểu</small></td><td><i class="m"></i></td></tr>
+<tr><td>Phân tích pcap offline</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Giao diện terminal</td><td class="us"><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m h"></i><small>client console</small></td><td><i class="m h"></i><small>CLI nfdump</small></td></tr>
+<tr><td>Nhận diện ứng dụng lớp 7</td><td class="us"><i class="m"></i></td><td><i class="m y"></i><small>nDPI</small></td><td><i class="m"></i></td><td><i class="m h"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Mở rộng theo chiều ngang</td><td class="us"><i class="m h"></i><small>5.000 bản ghi/giây, một máy</small></td><td><i class="m h"></i></td><td><i class="m y"></i></td><td><i class="m y"></i><small>gói trả phí</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+<tr><td>Giấy phép mã nguồn mở được OSI công nhận</td><td class="us"><i class="m"></i><small>source-available</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i><small>mã đóng</small></td><td><i class="m y"></i></td><td><i class="m y"></i></td></tr>
+</tbody>
+</table>
+</div>
+<div class="legend"><span><i class="m y"></i> có</span><span><i class="m h"></i> một phần, trả phí hoặc cài riêng</span><span><i class="m"></i> không có</span></div>
+</div>
+<div class="col">
+<p>traffic66 đáp ứng đủ tám hàng đầu; không cột nào khác làm được như vậy. Ba hàng cuối là điểm yếu của chúng tôi.</p>
+
+<h2>Những chỗ các dự án khác làm tốt hơn</h2>
+<p>Hãy đọc phần này trước khi chọn.</p>
+</div>
+<div class="wide">
+<div class="grid2">
+  <div class="card"><div class="who">Akvorado · GoFlow2</div><h4>Quy mô</h4><p>traffic66 được thiết kế cho 5.000 bản ghi luồng mỗi giây trên một máy với DuckDB nhúng sẵn. Với lưu lượng cỡ nhà mạng, kiến trúc Kafka và ClickHouse mở rộng theo chiều ngang mới là lựa chọn đúng.</p></div>
+  <div class="card"><div class="who">ntopng</div><h4>Phân tích gói sâu</h4><p>ntopng có nDPI và nhận diện hàng trăm giao thức lớp 7. traffic66 làm việc trên luồng; ứng dụng được nhận biết qua cổng, không phân tích nội dung gói.</p></div>
+  <div class="card"><div class="who">FastNetMon</div><h4>Tự động giảm thiểu DDoS</h4><p>FastNetMon có thể quảng bá route BGP blackhole hoặc rule FlowSpec ngay khi phát hiện tấn công. traffic66 báo cáo các đợt flood và không can thiệp vào định tuyến.</p></div>
+  <div class="card"><div class="who">pmacct</div><h4>Dữ liệu định tuyến và tính linh hoạt</h4><p>pmacct nhận BGP và BMP song song với luồng, bổ sung thông tin định tuyến vào bản ghi và ghi ra gần như mọi đích. traffic66 là sản phẩm hoàn chỉnh, không phải bộ công cụ.</p></div>
+  <div class="card"><div class="who">Các dự án lâu năm</div><h4>Tuổi đời và cộng đồng</h4><p>ntopng có gần 30.000 commit; nfdump đã tồn tại hai thập kỷ. traffic66 mới bắt đầu có sao và còn ít kinh nghiệm vận hành thực tế hơn nhiều.</p></div>
+  <div class="card"><div class="who">Phần lớn các dự án trong bảng</div><h4>Giấy phép</h4><p>Họ dùng giấy phép mã nguồn mở được OSI công nhận. traffic66 là source-available: miễn phí để đánh giá và cho tổ chức dưới 100 người; tổ chức lớn hơn đăng ký sau 30 ngày. Không tính năng nào bị khóa, nhưng đây không phải mã nguồn mở.</p></div>
+</div>
+</div>
+
+<div class="col">
+<h2>Nên chọn công cụ nào</h2>
+<div class="pick">
+  <div class="us"><span>Một máy chủ, vài chục đến vài trăm interface, cần biểu đồ ngay chiều nay, số liệu khớp với SNMP</span><b>traffic66</b></div>
+  <div><span>Cần nhìn đến lớp 7, hoặc chủ yếu lấy dữ liệu từ cổng mirror</span><b>ntopng</b></div>
+  <div><span>Nhà mạng hoặc backbone lớn, hàng trăm nghìn luồng mỗi giây</span><b>Akvorado</b></div>
+  <div><span>Phát hiện DDoS kèm tự động blackholing</span><b>FastNetMon</b></div>
+  <div><span>Đã có sẵn Kafka và nền tảng dữ liệu, chỉ cần collector</span><b>GoFlow2 / pmacct</b></div>
+  <div><span>Dòng lệnh, lưu bản ghi thô dài hạn</span><b>nfdump</b></div>
+</div>
+<p>Chúng tôi tự tin ở ba điều: cài nhanh, đọc dễ và số liệu khớp. Những phần còn lại, mời bạn gửi issue trên <a href="https://github.com/githubflyideas/traffic66" target="_blank" rel="noopener">GitHub</a>; chúng tôi sẽ lần lượt lấp các khoảng trống.</p>
+</div>
+
+<footer class="col">
+  Nguồn, kiểm tra ngày 8/10/2026:
+  <ol>
+    <li>Trang dự án trên GitHub: <a href="https://github.com/ntop/ntopng" target="_blank" rel="noopener">ntopng</a>, <a href="https://github.com/pavel-odintsov/fastnetmon" target="_blank" rel="noopener">FastNetMon</a>, <a href="https://github.com/robcowart/elastiflow" target="_blank" rel="noopener">ElastiFlow (bản cũ)</a>, <a href="https://github.com/akvorado/akvorado" target="_blank" rel="noopener">Akvorado</a>, <a href="https://github.com/pmacct/pmacct" target="_blank" rel="noopener">pmacct</a>, <a href="https://github.com/Edgio/vflow" target="_blank" rel="noopener">vflow</a>, <a href="https://github.com/phaag/nfdump" target="_blank" rel="noopener">nfdump</a>, <a href="https://github.com/cloudflare/goflow" target="_blank" rel="noopener">Cloudflare goflow</a>, <a href="https://github.com/netsampler/goflow2" target="_blank" rel="noopener">GoFlow2</a>.</li>
+    <li>ntopng cần giấy phép nProbe cho NetFlow/sFlow: <a href="https://www.ntop.org/guides/ntopng/use_cases/netflow_sflow_monitoring.html" target="_blank" rel="noopener">tài liệu ntop</a>.</li>
+    <li>Cảnh báo của ntopng theo từng phiên bản: <a href="https://ntop.org/guides/ntopng/alerts/alerts_list_per_license.html" target="_blank" rel="noopener">Alerts List per License</a>; giám sát SNMP: <a href="https://www.ntop.org/monitoring-network-devices-with-ntopng-and-snmp/" target="_blank" rel="noopener">blog ntop</a>; ngôn ngữ giao diện: <a href="https://www.ntop.org/extended-multilanguage-support-in-ntopng-korean-spanish-and-french/" target="_blank" rel="noopener">thông báo năm 2024</a>; bản demo cho Windows: <a href="https://en.wikipedia.org/wiki/Ntopng" target="_blank" rel="noopener">Wikipedia</a>.</li>
+    <li>Kiến trúc Akvorado 2.0 (inlet, Kafka, outlet, ClickHouse): <a href="https://vincent.bernat.ch/en/blog/2025-akvorado-2.0" target="_blank" rel="noopener">blog của tác giả</a>.</li>
+    <li>Bổ sung thông tin NetIntel của ElastiFlow: <a href="https://docs.elastiflow.com/flowcoll/configuration/enrichment-options/ip-address-enrichment/enrich_ip_netintel" target="_blank" rel="noopener">tài liệu ElastiFlow</a>; các gói giấy phép NetObserv Flow: <a href="https://docs.elastiflow.com/flowcoll/configuration/config_gen/license" target="_blank" rel="noopener">tài liệu ElastiFlow</a>.</li>
+    <li>Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15, khoản 1 Điều 2 (định nghĩa dữ liệu cá nhân) và Điều 38 (hiệu lực từ 01/01/2026): <a href="https://thuvienphapluat.vn/van-ban/Bo-may-hanh-chinh/Law-91-2025-QH15-Personal-Data-Protection-665440.aspx" target="_blank" rel="noopener">Thư Viện Pháp Luật</a>.</li>
+    <li>Luật An ninh mạng số 116/2025/QH15, khoản 3 Điều 25 (lưu trữ dữ liệu tại Việt Nam): <a href="https://thuvienphapluat.vn/van-ban/EN/Cong-nghe-thong-tin/Law-116-2025-QH15-Cybersecurity/688491/tieng-anh.aspx" target="_blank" rel="noopener">Thư Viện Pháp Luật</a>; hiệu lực từ 01/7/2026, thay thế Luật An ninh mạng 2018 và Luật An toàn thông tin mạng 2015: <a href="https://apolatlegal.com/vi/laws/luat-an-ninh-mang-2025-so-116-2025-qh15/" target="_blank" rel="noopener">Apolat Legal</a>, <a href="https://www.ey.com/vi_vn/technical/tax/tax-and-law-updates/luat-an-ninh-mang-2025-cua-viet-nam-cac-diem-chinh-va-yeu-cau-tuan-thu" target="_blank" rel="noopener">EY Việt Nam</a>.</li>
+  </ol>
+  Ảnh chụp màn hình lấy từ <code>traffic66 demo</code>, một mạng mô phỏng.
+</footer>
+</article>
