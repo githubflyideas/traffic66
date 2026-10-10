@@ -1,4 +1,4 @@
-[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | **العربية** | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | **العربية** | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | [한국어](README.ko.md)
 
 <div dir="rtl">
 
@@ -19,7 +19,7 @@ Kafka أو قاعدة بيانات منفصلة.
 - يقارن أرقامه بعدّادات الواجهات (sFlow أو SNMP) ويشرح سبب الاختلاف.
 - يكتشف عمليات المسح وتخمين كلمات المرور والتحرك الجانبي وعمليات الرفع غير المعتادة والإغراق وحركة قوائم التهديدات، حتى عبر أخذ العينات.
 - يحلّل `traffic66 capture.pcap` ملفات التقاط الحزم دون أي إعداد.
-- 13 لغة. مجاني للتقييم وللمؤسسات التي يقل عدد أفرادها عن 100 شخص ([الترخيص](#licence)).
+- 15 لغة. مجاني للتقييم وللمؤسسات التي يقل عدد أفرادها عن 100 شخص ([الترخيص](#licence)).
 
 ![نظرة عامة: الاكتشافات المفتوحة، واستهلاك عرض النطاق حسب التطبيق مقارنةً بالوقت نفسه أمس، وأبرز العملاء والخدمات](images/overview.png)
 

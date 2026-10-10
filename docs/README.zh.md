@@ -1,4 +1,4 @@
-[English](../README.md) | **中文** | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](../README.md) | **中文** | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | [한국어](README.ko.md)
 
 # traffic66 — NetFlow、sFlow 和 IPFIX 采集器与流量分析器
 
@@ -11,7 +11,7 @@
 - 用接口计数器（sFlow 或 SNMP）校验自己的统计结果，并说明对不上的原因。
 - 找出扫描、暴力破解、横向移动、异常上传、泛洪和威胁情报流量，采样数据同样适用。
 - `traffic66 capture.pcap` 直接分析抓包文件，无需任何配置。
-- 支持 13 种语言。评估免费，少于 100 人的组织免费（[许可](#licence)）。
+- 支持 15 种语言。评估免费，少于 100 人的组织免费（[许可](#licence)）。
 
 ![概览：未处理的发现、按应用划分的带宽与昨天同一时间对比、主要客户端和服务](images/overview.png)
 

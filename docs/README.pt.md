@@ -1,4 +1,4 @@
-[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | **Português** | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | **Português** | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | [اردو](README.ur.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | [한국어](README.ko.md)
 
 # traffic66 — coletor e analisador de tráfego NetFlow, sFlow e IPFIX
 
@@ -18,7 +18,7 @@ sem Elasticsearch, Kafka nem um banco de dados separado.
 - Confere os próprios números com os contadores de interface (sFlow ou SNMP) e explica por que diferem.
 - Encontra varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças, inclusive através da amostragem.
 - `traffic66 capture.pcap` analisa capturas de pacotes sem configurar nada.
-- 13 idiomas. Gratuito para avaliação e para organizações com menos de 100 pessoas ([licença](#licence)).
+- 15 idiomas. Gratuito para avaliação e para organizações com menos de 100 pessoas ([licença](#licence)).
 
 ![Visão geral: detecções abertas, banda por aplicação em comparação com o mesmo horário de ontem, principais clientes e serviços](images/overview.png)
 

@@ -1,4 +1,4 @@
-[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | **اردو** | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](../README.md) | [中文](README.zh.md) | [हिन्दी](README.hi.md) | [Español](README.es.md) | [العربية](README.ar.md) | [Français](README.fr.md) | [বাংলা](README.bn.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [Bahasa Indonesia](README.id.md) | **اردو** | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | [한국어](README.ko.md)
 
 <div dir="rtl">
 
@@ -19,7 +19,7 @@ Elasticsearch، Kafka یا الگ database کے۔
 - اپنے اعداد کو interface counters (sFlow یا SNMP) سے ملا کر جانچتا ہے اور بتاتا ہے کہ فرق کیوں ہے۔
 - scans، پاس ورڈ کا اندازہ، lateral movement، غیر معمولی uploads، floods اور threat list والی ٹریفک ڈھونڈتا ہے، sampling کے باوجود بھی۔
 - `traffic66 capture.pcap` بغیر کسی سیٹ اپ کے پیکٹ کیپچر کا تجزیہ کرتا ہے۔
-- 13 زبانیں۔ جانچ کے لیے اور 100 سے کم افراد والی تنظیموں کے لیے مفت ([لائسنس](#licence))۔
+- 15 زبانیں۔ جانچ کے لیے اور 100 سے کم افراد والی تنظیموں کے لیے مفت ([لائسنس](#licence))۔
 
 ![جائزہ: کھلی مشتبہ سرگرمیاں، کل اسی وقت کے مقابلے میں application کے حساب سے bandwidth، سرفہرست clients اور services](images/overview.png)
 
