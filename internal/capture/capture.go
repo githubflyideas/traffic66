@@ -53,6 +53,7 @@ type Capture struct {
 
 	mu     sync.Mutex
 	table  map[key]*entry
+	ended  []flow.Record // flows ended by a gap, sent with the next flush
 	errMsg atomic.Value
 }
 
@@ -114,6 +115,12 @@ func (c *Capture) readLoop(ctx context.Context) {
 				}
 				e = &entry{first: now, opener: opener(r.TCPFlags)}
 				c.table[k] = e
+			} else if e.pkts > 0 && now.Sub(e.last) >= idleTimeout {
+				// a gap the expiry did not see, such as the computer
+				// sleeping: end the flow at its last packet and start a
+				// new one, so it does not seem to last through the gap
+				c.ended = append(c.ended, c.record(k, e))
+				*e = entry{first: now, opener: e.opener}
 			}
 			e.last = now
 			e.pkts++
@@ -144,8 +151,9 @@ func (c *Capture) expireLoop(ctx context.Context) {
 }
 
 func (c *Capture) flush(now time.Time, all bool) {
-	var out []flow.Record
 	c.mu.Lock()
+	out := c.ended
+	c.ended = nil
 	// first learn who opened each connection from either direction, before
 	// any entry is removed below
 	for k, e := range c.table {
@@ -168,9 +176,7 @@ func (c *Capture) flush(now time.Time, all bool) {
 			continue
 		}
 		op := e.opener
-		out = append(out, flow.Record{Start: e.first, End: e.last, Src: k.src, Dst: k.dst, SrcPort: k.sport, DstPort: k.dport,
-			Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: true, Opener: op,
-			Sampling: 1, Mult: 1, SamplingKnown: true, Exporter: Exporter, Domain: c.domain, Source: flow.SrcCapture, Direction: 255})
+		out = append(out, c.record(k, e))
 		if idle || all {
 			delete(c.table, k)
 		} else {
@@ -179,6 +185,13 @@ func (c *Capture) flush(now time.Time, all bool) {
 	}
 	c.mu.Unlock()
 	c.sink.Submit(out)
+}
+
+// record is the flow record for one table entry.
+func (c *Capture) record(k key, e *entry) flow.Record {
+	return flow.Record{Start: e.first, End: e.last, Src: k.src, Dst: k.dst, SrcPort: k.sport, DstPort: k.dport,
+		Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: true, Opener: e.opener,
+		Sampling: 1, Mult: 1, SamplingKnown: true, Exporter: Exporter, Domain: c.domain, Source: flow.SrcCapture, Direction: 255}
 }
 
 // opener reads the first packet of a TCP connection seen in one direction:

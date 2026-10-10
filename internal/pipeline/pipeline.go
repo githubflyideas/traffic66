@@ -323,21 +323,23 @@ func (p *Pipeline) process(r *flow.Record) {
 	obsIf := observedIf(r)
 
 	slices := minuteSlices(r.Start, r.End)
-	var bLeft, wLeft, pLeft = l3, wire, pkts
+	// Each minute gets the rounded running total minus what earlier minutes
+	// got, so the shares are never negative and add up exactly. (Rounding
+	// each share on its own could leave the last one below zero, which
+	// wrapped to nearly 2^64 as an unsigned counter.)
+	var cum float64
+	var bDone, wDone, pDone uint64
 	for i, sl := range slices {
 		row := base
 		row.TS = sl.t
-		last := i == len(slices)-1
-		if last {
-			row.Bytes, row.Wire, row.Pkts = uint64(math.Round(bLeft)), uint64(math.Round(wLeft)), uint64(math.Round(pLeft))
+		cum += sl.frac
+		if i == len(slices)-1 {
+			cum = 1
 			row.Flows = 1
-		} else {
-			b, w, pk := l3*sl.frac, wire*sl.frac, pkts*sl.frac
-			row.Bytes, row.Wire, row.Pkts = uint64(math.Round(b)), uint64(math.Round(w)), uint64(math.Round(pk))
-			bLeft -= float64(row.Bytes)
-			wLeft -= float64(row.Wire)
-			pLeft -= float64(row.Pkts)
 		}
+		b, w, pk := share(l3, cum, bDone), share(wire, cum, wDone), share(pkts, cum, pDone)
+		bDone, wDone, pDone = bDone+b, wDone+w, pDone+pk
+		row.Bytes, row.Wire, row.Pkts = b, w, pk
 		row.Dup = p.isDup(sl.t, key, org2)
 		p.batch = append(p.batch, row)
 		p.noteObs(&row, obsIf)
@@ -355,6 +357,16 @@ type slice struct {
 }
 
 // minuteSlices splits [start, end] into minute buckets weighted by overlap.
+// share is how much of total belongs to this minute: the rounded running
+// total up to it, less what the minutes before it already got.
+func share(total, cum float64, done uint64) uint64 {
+	upTo := math.Round(total * min(cum, 1))
+	if upTo <= float64(done) {
+		return 0
+	}
+	return uint64(upTo) - done
+}
+
 func minuteSlices(start, end time.Time) []slice {
 	start, end = start.UTC(), end.UTC()
 	if end.IsZero() {
