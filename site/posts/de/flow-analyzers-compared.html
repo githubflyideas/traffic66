@@ -56,18 +56,18 @@
 
 <h2>Daten im eigenen Haus: was das für Netze in Deutschland, Österreich und der Schweiz heißt</h2>
 <p>Flow-Datensätze enthalten Quell- und Zieladressen, Ports und Zeitpunkte. Die DSGVO, die in Deutschland und Österreich unmittelbar gilt, nennt in Erwägungsgrund 30 IP-Adressen ausdrücklich als Online-Kennungen, über die sich natürliche Personen identifizieren lassen. In der Schweiz gilt seit dem 1. September 2023 das totalrevidierte Datenschutzgesetz (DSG). Wer Flussdaten auswertet, verarbeitet also in der Regel personenbezogene Daten; wo sie liegen, wie lange sie aufbewahrt werden und wer darauf zugreift, ist damit keine rein technische Frage.</p>
-<p>traffic66 läuft vollständig auf einem eigenen Server oder Windows-PC; einen Cloud-Dienst gibt es nicht, Telemetrie auch nicht. Alle Daten liegen in einem Datenverzeichnis: Flussdetails als stündliche Dateien, Zusammenfassungen und Zähler in <code>traffic66.duckdb</code>. Flussdetails werden standardmäßig 30 Tage aufbewahrt (<code>-retention-days</code>), Zusammenfassungen 400 Tage; <strong>Data cleanup</strong> löscht Daten, die älter als 7 bis 120 Tage sind, oder alles. Nach außen verbindet sich das Programm nur für Reverse-DNS-Abfragen (abschaltbar mit <code>-no-dns</code>) und wenn Sie unter <strong>Settings</strong> die Geodatenbanken aktualisieren. Auch die Lizenzregistrierung läuft ohne Online-Aktivierung: Sie schicken die achtstellige Installationsnummer und legen die erhaltene <code>license.json</code> selbst ab. Die Oberfläche gibt es in 13 Sprachen, Deutsch ist noch nicht darunter; Menünamen stehen in diesem Beitrag deshalb auf Englisch.</p>
-<p>Zur Ausrüstung: Laut Herstellerdokumentation senden LANCOM-Router unter LCOS Flussdaten per NetFlow/IPFIX an einen Collector, Cisco-Geräte mit IOS XE exportieren Flexible NetFlow als NetFlow v9 oder IPFIX, und Switches von Juniper (EX-Serie) und HPE Aruba (AOS-CX) liefern sFlow mit Abtastrate und Polling-Intervall für Interface-Zähler, also genau die Werte, die <strong>Interface check</strong> unten gegen die Flow-Schätzung stellt. Eigene Tests mit diesen Geräten sind nicht Teil dieses Vergleichs. Die dokumentierte Grenze gilt auch hier: 5.000 Flow-Datensätze pro Sekunde auf einer Maschine.</p>
+<p>traffic66 läuft vollständig auf einem eigenen Server oder Windows-PC; einen Cloud-Dienst gibt es nicht, Telemetrie auch nicht. Alle Daten liegen in einem Datenverzeichnis: Flussdetails als stündliche Dateien, Zusammenfassungen und Zähler in <code>traffic66.duckdb</code>. Flussdetails werden standardmäßig 30 Tage aufbewahrt (<code>-retention-days</code>), Zusammenfassungen 400 Tage; <strong>Datenbereinigung</strong> löscht Daten, die älter als 7 bis 120 Tage sind, oder alles. Nach außen verbindet sich das Programm nur für Reverse-DNS-Abfragen (abschaltbar mit <code>-no-dns</code>) und wenn Sie unter <strong>Einstellungen</strong> die Geodatenbanken aktualisieren. Auch die Lizenzregistrierung läuft ohne Online-Aktivierung: Sie schicken die achtstellige Installationsnummer und legen die erhaltene <code>license.json</code> selbst ab. Die Oberfläche gibt es in 15 Sprachen, darunter Deutsch.</p>
+<p>Zur Ausrüstung: Laut Herstellerdokumentation senden LANCOM-Router unter LCOS Flussdaten per NetFlow/IPFIX an einen Collector, Cisco-Geräte mit IOS XE exportieren Flexible NetFlow als NetFlow v9 oder IPFIX, und Switches von Juniper (EX-Serie) und HPE Aruba (AOS-CX) liefern sFlow mit Abtastrate und Polling-Intervall für Interface-Zähler, also genau die Werte, die <strong>Schnittstellenprüfung</strong> unten gegen die Flow-Schätzung stellt. Eigene Tests mit diesen Geräten sind nicht Teil dieses Vergleichs. Die dokumentierte Grenze gilt auch hier: 5.000 Flow-Datensätze pro Sekunde auf einer Maschine.</p>
 
 <h2>2. Stimmen die Zahlen mit den Interface-Zählern überein?</h2>
 <p>Die Frage, die jedes Flow-Werkzeug zu hören bekommt: Das Diagramm sagt, der Uplink trägt 800 Mbit/s, SNMP in Zabbix sagt 600. Was stimmt?</p>
-<p>Flow-Zahlen sind Schätzungen: abgetastete Pakete mal Abtastrate. traffic66 hat genau dafür eine Seite, <strong>Interface check</strong>. Sie zeichnet für jedes Interface die Flow-Schätzung und die geräteeigenen Zähler (sFlow-Zähler oder SNMP) in ein Diagramm und berechnet die Differenz sowie den statistischen Fehler der Abtastung. Ist die Differenz größer, als die Abtastung erklärt, nennt sie die wahrscheinliche Ursache: nicht abgetastete Interfaces, derselbe Verkehr auf zwei Interfaces abgetastet, Exportpakete unterwegs verloren oder eine noch nicht empfangene Abtastrate.</p>
+<p>Flow-Zahlen sind Schätzungen: abgetastete Pakete mal Abtastrate. traffic66 hat genau dafür eine Seite, <strong>Schnittstellenprüfung</strong>. Sie zeichnet für jedes Interface die Flow-Schätzung und die geräteeigenen Zähler (sFlow-Zähler oder SNMP) in ein Diagramm und berechnet die Differenz sowie den statistischen Fehler der Abtastung. Ist die Differenz größer, als die Abtastung erklärt, nennt sie die wahrscheinliche Ursache: nicht abgetastete Interfaces, derselbe Verkehr auf zwei Interfaces abgetastet, Exportpakete unterwegs verloren oder eine noch nicht empfangene Abtastrate.</p>
 <p>Dahinter stehen einige unauffällige Details: die Abtastrate, die das Gerät tatsächlich angewendet hat; Datensätze, die zurückgehalten werden, bis ihre Abtastrate eintrifft, statt 1:1 gezählt zu werden; ein Ausgleich für verlorene Exportpakete; lange Flows, verteilt auf die Minuten, die sie gedauert haben; und Ethernet-Overhead, der zu den NetFlow-Bytezahlen addiert wird, weil Interface-Zähler ihn enthalten.</p>
 </div>
 <div class="wide">
 <figure class="shot">
-  <img src="{root}assets/img/interfaces.png" alt="Interface check: Bit pro Sekunde und Pakete pro Sekunde, die Liste der Interfaces und das Ergebnis" width="1440" height="1450" loading="lazy">
-  <figcaption>Interface check. Gestrichelte Linien sind die Gerätezähler; das Ergebnis steht unten rechts.</figcaption>
+  <img src="{root}assets/shots/de/interfaces.jpg" alt="Schnittstellenprüfung: Bit pro Sekunde und Pakete pro Sekunde, die Liste der Interfaces und das Ergebnis" width="1440" height="1450" loading="lazy">
+  <figcaption>Schnittstellenprüfung. Gestrichelte Linien sind die Gerätezähler; das Ergebnis steht unten rechts.</figcaption>
 </figure>
 </div>
 <div class="col">
@@ -87,14 +87,14 @@
 </div>
 <div class="wide">
 <figure class="shot">
-  <img src="{root}assets/img/overview.png" alt="Overview: Bandbreite des Interfaces, Bandbreite nach Anwendung im Vergleich zu gestern" width="1440" height="900" loading="lazy">
-  <figcaption>Overview. Das Interface wird oben gewählt; das mit Stern markierte ist die Voreinstellung. Die gestrichelte Linie zeigt dieselbe Uhrzeit gestern.</figcaption>
+  <img src="{root}assets/shots/de/overview.jpg" alt="Übersicht: Bandbreite des Interfaces, Bandbreite nach Anwendung im Vergleich zu gestern" width="1440" height="900" loading="lazy">
+  <figcaption>Übersicht. Das Interface wird oben gewählt; das mit Stern markierte ist die Voreinstellung. Die gestrichelte Linie zeigt dieselbe Uhrzeit gestern.</figcaption>
 </figure>
 </div>
 <div class="col">
 <p>Dieselbe Aufgabe in den anderen Projekten:</p>
 <div class="vs">
-  <div class="us"><b>traffic66</b><span>Web- und Terminaloberfläche eingebaut, Einstieg mit einer Zusammenfassung. 13 Sprachen.</span></div>
+  <div class="us"><b>traffic66</b><span>Web- und Terminaloberfläche eingebaut, Einstieg mit einer Zusammenfassung. 15 Sprachen.</span></div>
   <div><b>ntopng</b><span>Eine vollständige Oberfläche mit vielen Informationen; das einzige Projekt in der Tabelle für einen direkten Vergleich. Laut seinen Ankündigungen sieben Sprachen.</span></div>
   <div><b>Akvorado</b><span>Eine ausgereifte Webkonsole; die Visualisierung lässt Dimensionen per Drag-and-drop wählen und zeichnet Sankey-Diagramme. Sie funktioniert eher wie ein Abfragewerkzeug: Man entscheidet zuerst, was man fragt. Nur Englisch.</span></div>
   <div><b>ElastiFlow</b><span>Kibana-Dashboards; wer sie ändern will, muss Kibana lernen.</span></div>
@@ -107,8 +107,8 @@
 </div>
 <div class="wide">
 <figure class="shot">
-  <img src="{root}assets/img/findings.png" alt="Findings: jeder Schritt eines Angriffs, die schwerwiegendsten zuerst" width="1440" height="900" loading="lazy">
-  <figcaption>Findings. Jeder Schritt eines Angriffs durch einen kompromittierten Host in der Demo, alles aus sFlow mit Abtastung 1:4096.</figcaption>
+  <img src="{root}assets/shots/de/findings.jpg" alt="Befunde: jeder Schritt eines Angriffs, die schwerwiegendsten zuerst" width="1440" height="900" loading="lazy">
+  <figcaption>Befunde. Jeder Schritt eines Angriffs durch einen kompromittierten Host in der Demo, alles aus sFlow mit Abtastung 1:4096.</figcaption>
 </figure>
 </div>
 <div class="col">
@@ -134,7 +134,7 @@
 <tr><td>Ein Programm, nach der Installation einsatzbereit</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Redis + nProbe-Lizenz</small></td><td><i class="m"></i><small>Kafka + ClickHouse</small></td><td><i class="m"></i><small>Elasticsearch + Kibana</small></td><td><i class="m h"></i><small>Grafana für Diagramme</small></td><td><i class="m"></i><small>Speicher und Oberfläche selbst bauen</small></td></tr>
 <tr><td>Läuft nativ unter Windows</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>Windows-Build ist eine Demo</small></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
 <tr><td>Eingebaute Weboberfläche</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m h"></i><small>Kibana-Dashboards</small></td><td><i class="m h"></i><small>kommerzielle Edition</small></td><td><i class="m"></i></td></tr>
-<tr><td>Oberfläche in vielen Sprachen</td><td class="us"><i class="m y"></i><small>13</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>Englisch</small></td><td><i class="m h"></i><small>nur Kibana</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
+<tr><td>Oberfläche in vielen Sprachen</td><td class="us"><i class="m y"></i><small>15</small></td><td><i class="m y"></i><small>7</small></td><td><i class="m"></i><small>Englisch</small></td><td><i class="m h"></i><small>nur Kibana</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
 <tr><td>Flows gegen Interface-Zähler geprüft</td><td class="us"><i class="m y"></i></td><td><i class="m h"></i><small>SNMP-Diagramme (Enterprise)</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>selbst bauen</small></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
 <tr><td>Sicherheitserkennung</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i><small>die meisten Prüfungen</small></td><td><i class="m"></i></td><td><i class="m h"></i><small>Anreicherung mit Bedrohungsdaten</small></td><td><i class="m h"></i><small>nur DDoS, mit Abwehr</small></td><td><i class="m"></i></td></tr>
 <tr><td>Offline-pcap-Analyse</td><td class="us"><i class="m y"></i></td><td><i class="m y"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td><td><i class="m"></i></td></tr>
@@ -188,6 +188,6 @@
     <li>Datenschutz: <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj/?locale=de" target="_blank" rel="noopener">Verordnung (EU) 2016/679 (DSGVO), Erwägungsgrund 30, EUR-Lex</a>; <a href="https://www.admin.ch/gov/de/start/dokumentation/medienmitteilungen.msg-id-97592.html" target="_blank" rel="noopener">Inkrafttreten des totalrevidierten DSG am 1. September 2023, admin.ch</a>.</li>
     <li>Flow-Export laut Herstellerdokumentation: <a href="https://www.lancom-systems.com/docs/LCOS/Refmanual/EN/topics/lanconfig_netflow.html" target="_blank" rel="noopener">LANCOM LCOS, NetFlow/IPFIX</a>; <a href="https://www.cisco.com/c/en/us/support/docs/quality-of-service-qos/netflow/226065-troubleshoot-netflow-on-ios-xe.pdf" target="_blank" rel="noopener">Cisco, NetFlow auf IOS XE</a>; <a href="https://juniper.net/documentation/en_US/junos12.2/topics/example/sflow-configuring-ex-series.html" target="_blank" rel="noopener">Juniper, sFlow auf der EX-Serie</a>; <a href="https://arubanetworking.hpe.com/techdocs/AOS-CX/10.07/HTML/5200-7861/Content/Chp_sFlow/sfl-sce-1-10.htm" target="_blank" rel="noopener">HPE Aruba, sFlow unter AOS-CX</a>.</li>
   </ol>
-  Die Screenshots stammen aus <code>traffic66 demo</code>, einem simulierten Netz, und zeigen die englische Oberfläche.
+  Die Screenshots stammen aus <code>traffic66 demo</code>, einem simulierten Netz, und zeigen die deutsche Oberfläche.
 </footer>
 </article>

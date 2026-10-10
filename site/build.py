@@ -9,7 +9,7 @@ listed in site/posts.json. Screenshots come from docs/images (assets/img on
 the site).
 
     python3 site/build.py            # writes _site/
-    python3 site/build.py --drafts   # also the posts marked "draft": true
+    python3 site/build.py --drafts   # also drafts and posts dated in the future
     python3 -m http.server -d _site  # look at it on http://localhost:8000/
 """
 import datetime
@@ -203,7 +203,10 @@ def main():
         if key in seen:
             sys.exit(f"two posts at blog/{p['lang']}/{p['slug']}/: {seen[key]} and {p.get('src', 'posts.json')}")
         seen[key] = p.get("src", "posts.json")
-    posts = [p for p in posts if drafts or not p.get("draft")]
+    # a post dated after today (Tokyo time) waits for that day: the site is
+    # rebuilt every morning, so dated posts go out one a day by themselves
+    today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=9)).date().isoformat()
+    posts = [p for p in posts if drafts or (not p.get("draft") and p["date"] <= today)]
     posts.sort(key=lambda p: p["date"], reverse=True)
     shutil.rmtree(OUT, ignore_errors=True)
     shutil.copytree(os.path.join(HERE, "assets"), os.path.join(OUT, "assets"))

@@ -73,10 +73,13 @@ Either way: look at it with `python3 site/build.py && python3 -m http.server -d 
 
 ## Drafts and serial publishing
 
-A post with `"draft": true` in `posts.json`, or `draft: true` at the top of
-a Markdown post, is in the repository but not on the site. To publish it,
-remove the draft mark and set the date to the day it goes out. `python3 site/build.py --drafts` builds a preview
-with the drafts included.
+A post dated in the future is in the repository but not on the site until
+that day (Tokyo time): the site is rebuilt every morning at 06:50 JST, so a
+series goes out one post a day by itself. To schedule a post, give it the
+day it should appear. A post with `"draft": true` in `posts.json`, or
+`draft: true` at the top of a Markdown post, stays off the site whatever
+its date. `python3 site/build.py --drafts` builds a preview with drafts and
+future posts included.
 
 Screenshots of the traffic66 UI in each language are in
 `assets/shots/<lang>/` (overview, interfaces, findings).
