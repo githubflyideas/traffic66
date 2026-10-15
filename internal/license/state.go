@@ -186,9 +186,14 @@ func (s State) FeatureList() []string {
 // travels with it: a page that must grey a tab out asks this, not the
 // licence file.
 type Public struct {
-	Kind           string   `json:"kind"`
-	Registered     bool     `json:"registered"`
-	Watermark      bool     `json:"watermark"`
+	Kind       string `json:"kind"`
+	Registered bool   `json:"registered"`
+	Watermark  bool   `json:"watermark"`
+	// Notice is the wording the pages put on anything they let somebody
+	// take away, so that a copied table and a downloaded file say the same
+	// thing as the server's own output rather than the browser inventing
+	// its own line. Empty when the installation is registered.
+	Notice         string   `json:"notice,omitempty"`
 	Reason         string   `json:"reason,omitempty"`
 	Customer       string   `json:"customer,omitempty"`
 	Product        string   `json:"product,omitempty"`
@@ -209,7 +214,7 @@ type Public struct {
 // Public returns the state for the API.
 func (s State) Public() Public {
 	return Public{
-		Kind: s.Kind, Registered: s.Registered(), Watermark: s.Watermark(),
+		Kind: s.Kind, Registered: s.Registered(), Watermark: s.Watermark(), Notice: s.Notice(),
 		Reason: s.Reason, Customer: s.Customer, Product: s.Product,
 		Type: s.Type, Tier: s.Tier, InstallationID: s.InstallationID,
 		KeyID: s.KeyID, Days: s.Days, Expires: s.Expires,

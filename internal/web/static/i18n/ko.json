@@ -749,5 +749,11 @@
 "bill.remove": "제거",
 "bill.nodata": "이 기간에 보고 없음",
 "geo.lines_scale": "국가 간",
-"ch.unsettled": "아직 도착 중"
+"ch.unsettled": "아직 도착 중",
+"mark.chip": "평가판",
+"mark.chip_hint": "미등록 — 소스 페이지에서 등록하세요.",
+"mark.note_title": "이 사본은 등록되지 않았습니다",
+"mark.note_body": "모든 측정, 탐지, 페이지는 그대로 작동하며 데이터도 삭제되지 않습니다. 등록하면 이 표시만 사라집니다. 내보내기·복사·인쇄에도 같은 표시가 붙습니다.",
+"mark.note_close": "평가 계속하기",
+"mark.note_go": "등록 방법"
 }

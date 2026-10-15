@@ -749,5 +749,11 @@
 "bill.remove": "Entfernen",
 "bill.nodata": "in diesem Zeitraum nichts gemeldet",
 "geo.lines_scale": "zwischen Ländern",
-"ch.unsettled": "trifft noch ein"
+"ch.unsettled": "trifft noch ein",
+"mark.chip": "EVALUIERUNGSKOPIE",
+"mark.chip_hint": "Nicht registriert — unter Quellen registrieren.",
+"mark.note_title": "Diese Kopie ist nicht registriert",
+"mark.note_body": "Alle Messungen, Erkennungen und Seiten funktionieren weiter, und es werden keine Daten gelöscht. Die Registrierung entfernt nur diese Markierung, die auch auf Exporte, Kopien und Ausdrucke kommt.",
+"mark.note_close": "Weiter evaluieren",
+"mark.note_go": "Registrierung"
 }

@@ -749,5 +749,11 @@
 "bill.remove": "Quitar",
 "bill.nodata": "sin datos en este periodo",
 "geo.lines_scale": "entre países",
-"ch.unsettled": "aún llegando"
+"ch.unsettled": "aún llegando",
+"mark.chip": "COPIA DE EVALUACIÓN",
+"mark.chip_hint": "Sin registrar: regístrelo en Fuentes.",
+"mark.note_title": "Esta copia no está registrada",
+"mark.note_body": "Todas las mediciones, detecciones y páginas siguen funcionando y no se borra ningún dato. Registrarse solo quita esta marca, que también se añade a lo que exporte, copie o imprima.",
+"mark.note_close": "Seguir evaluando",
+"mark.note_go": "Cómo registrarse"
 }

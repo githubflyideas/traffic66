@@ -749,5 +749,11 @@
 "bill.remove": "外す",
 "bill.nodata": "この期間の報告なし",
 "geo.lines_scale": "国どうし",
-"ch.unsettled": "まだ到着中"
+"ch.unsettled": "まだ到着中",
+"mark.chip": "評価版",
+"mark.chip_hint": "未登録です — 登録は「ソース」ページから。",
+"mark.note_title": "このコピーは登録されていません",
+"mark.note_body": "測定・検出・各ページはすべてそのまま動作し、データが削除されることもありません。登録で消えるのはこの表示だけです。エクスポート・コピー・印刷にも同じ表示が付きます。",
+"mark.note_close": "評価を続ける",
+"mark.note_go": "登録方法"
 }

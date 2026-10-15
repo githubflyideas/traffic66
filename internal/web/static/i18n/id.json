@@ -749,5 +749,11 @@
 "bill.remove": "Hapus",
 "bill.nodata": "tidak ada laporan pada periode ini",
 "geo.lines_scale": "antarnegara",
-"ch.unsettled": "masih berdatangan"
+"ch.unsettled": "masih berdatangan",
+"mark.chip": "SALINAN EVALUASI",
+"mark.chip_hint": "Belum terdaftar — daftarkan di Sumber.",
+"mark.note_title": "Salinan ini belum terdaftar",
+"mark.note_body": "Semua pengukuran, deteksi, dan halaman tetap berfungsi penuh dan tidak ada data yang dihapus. Pendaftaran hanya menghapus tanda ini, yang juga ditambahkan ke hasil ekspor, salinan, dan cetakan.",
+"mark.note_close": "Lanjutkan evaluasi",
+"mark.note_go": "Cara mendaftar"
 }

@@ -749,5 +749,11 @@
 "bill.remove": "Bỏ",
 "bill.nodata": "kỳ này không có báo cáo",
 "geo.lines_scale": "giữa các nước",
-"ch.unsettled": "vẫn đang về"
+"ch.unsettled": "vẫn đang về",
+"mark.chip": "BẢN DÙNG THỬ",
+"mark.chip_hint": "Chưa đăng ký — đăng ký tại Nguồn.",
+"mark.note_title": "Bản sao này chưa được đăng ký",
+"mark.note_body": "Mọi phép đo, phát hiện và trang đều hoạt động đầy đủ, không dữ liệu nào bị xóa. Đăng ký chỉ gỡ dấu này, dấu cũng được thêm vào nội dung bạn xuất, sao chép hoặc in.",
+"mark.note_close": "Tiếp tục dùng thử",
+"mark.note_go": "Cách đăng ký"
 }

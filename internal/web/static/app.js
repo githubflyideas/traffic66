@@ -14,6 +14,7 @@
 // the building looking finished when it is not.
 const NOMARK = new Set(['overview', 'sources', 'account']);
 let marked = false;  // from the licence: true until the installation is registered
+let markNotice = '';  // the server's wording, so a copy says what a file says
 
 // markTile draws the diagonal text once, as an SVG tile the page repeats.
 // It is built here rather than kept as a file because the wording is
@@ -40,7 +41,98 @@ function applyMark() {
   const on = marked && !NOMARK.has(state.v);
   document.body.classList.toggle('marked', on);
   if (on) document.body.style.setProperty('--mark', markTile());
+  markChip(on);
 }
+
+// The tile cannot be clicked: it lies over the whole view, and anything
+// that caught clicks there would take them away from the page underneath.
+// So the part somebody can act on is a small chip in the corner of the
+// marked view, which says the same thing and opens the registration note.
+function markChip(on) {
+  let chip = $('#markChip');
+  if (!on) { if (chip) chip.remove(); return; }
+  if (!chip) {
+    chip = document.createElement('button');
+    chip.id = 'markChip';
+    chip.type = 'button';
+    chip.className = 'markchip';
+    chip.onclick = markPrompt;
+    document.body.appendChild(chip);
+  }
+  chip.textContent = t('mark.chip');
+  chip.title = markNotice || t('mark.text');
+}
+
+// How long the full note stays away after it has been shown once. Somebody
+// evaluating the program works under the mark all day; a note that opened
+// on every click would be a reason to stop evaluating. Within the pause a
+// click gives the one-line version instead, so the click still answers.
+const MARK_PROMPT_PAUSE = 6 * 3600 * 1000;
+const MARK_PROMPT_KEY = 't66.markPromptAt';
+
+function markPromptDue(now) {
+  try {
+    const last = Number(localStorage.getItem(MARK_PROMPT_KEY) || 0);
+    return !(last > 0 && now - last < MARK_PROMPT_PAUSE);
+  } catch { return true; }  // private windows have no storage; still answer
+}
+
+function markPrompt() {
+  const now = Date.now();
+  if (!markPromptDue(now)) { toast(t('mark.chip_hint')); return; }
+  try { localStorage.setItem(MARK_PROMPT_KEY, String(now)); } catch {}
+  showMarkNote();
+}
+
+// The note itself: what the mark means, and where registering happens.
+function showMarkNote() {
+  let box = $('#markNote');
+  if (box) box.remove();
+  box = document.createElement('div');
+  box.id = 'markNote';
+  box.className = 'marknote';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.innerHTML = `<div class="marknote-in">
+    <h3></h3><p class="muted"></p><p class="small muted"></p>
+    <div class="marknote-act"><button class="btn" data-close></button>
+    <a class="btn primary" href="#v=sources"></a></div></div>`;
+  box.querySelector('h3').textContent = t('mark.note_title');
+  box.querySelector('p.muted').textContent = t('mark.note_body');
+  box.querySelector('p.small').textContent = markNotice;
+  box.querySelector('[data-close]').textContent = t('mark.note_close');
+  const go = box.querySelector('a.primary');
+  go.textContent = t('mark.note_go');
+  const close = () => box.remove();
+  box.querySelector('[data-close]').onclick = close;
+  go.onclick = close;
+  box.onclick = e => { if (e.target === box) close(); };
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+  document.body.appendChild(box);
+  box.querySelector('[data-close]').focus();
+}
+
+// A table copied out of the page used to paste in clean, which made the
+// mark a matter of not taking a screenshot. What is copied now carries the
+// notice, in both the text and the HTML flavour, so it arrives wherever it
+// is pasted. A copy of one short run of text — an address somebody is
+// pasting into a terminal — is left alone; the notice is for a copy big
+// enough to be a document.
+const MARK_COPY_MIN = 120;
+function onCopy(e) {
+  if (!marked || !markNotice) return;
+  const sel = String(document.getSelection() || '');
+  if (sel.length < MARK_COPY_MIN) return;
+  const note = '\n\n' + markNotice + '\n';
+  try {
+    e.clipboardData.setData('text/plain', sel + note);
+    e.clipboardData.setData('text/html', '<pre>' + esc(sel) + '</pre><p>' + esc(markNotice) + '</p>');
+    e.preventDefault();
+  } catch {}  // a browser that will not let us rewrite it still copies the text
+}
+document.addEventListener('copy', onCopy);
 
 // ------------------------------------------------------------ i18n
 // Ordered by total number of speakers (Ethnologue).
@@ -2599,6 +2691,7 @@ async function loadStatus() {
       $('#lic').className = 'lic ' + L.kind; $('#lic').hidden = false;
 
       marked = !!L.watermark;
+      markNotice = L.notice || '';
       applyMark();
       const b = $('#licBadge');
       b.textContent = L.registered ? (L.days < 0 ? t('lic.badge_ok') : t('lic.badge_days', {n: L.days})) : t('lic.badge_get');

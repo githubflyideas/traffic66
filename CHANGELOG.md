@@ -48,6 +48,34 @@ Charts
   point could not be hovered at all. The hover area started in the axis
   gutter while the arithmetic assumed it started at the plot.
 
+Licensing
+- The evaluation mark is no longer something only the browser draws. It
+  was a stylesheet over the view, so everything that left the page left it
+  behind: a findings list fetched from the API, a table selected and
+  copied into a document, anything a script asked for. The notice is now
+  produced by the server and travels with the output — on every API
+  response as a header, and inside the findings body, which is the part
+  that gets pasted into a ticket — and a copy taken from a marked page
+  carries it in the clipboard, in both the text and the HTML flavour. A
+  short copy, an address going into a terminal, is left alone.
+- The mark can now be asked what it means. The tiled text itself cannot
+  take a click without taking it from the page underneath, so a marked
+  view carries a small chip in the corner that opens a note: what still
+  works unregistered (everything), what registering removes (the mark),
+  and where to do it. Somebody evaluating works under the mark all day, so
+  the note opens at most once every six hours; a click inside that pause
+  gives the one-line version instead.
+
+Security
+- The session cookie is marked Secure when the connection is encrypted,
+  directly or through a proxy that says so in X-Forwarded-Proto, so it is
+  never sent in clear if anything downgrades the connection. It is
+  deliberately not marked on a plain HTTP installation, where the browser
+  would drop it and nobody could sign in; traffic66 is run both ways, so
+  this is decided per request rather than configured. The cookie that
+  signs you out now matches the one it replaces on the attributes browsers
+  compare, which is what makes a replacement take.
+
 Collection
 - Changing an sFlow agent's sampling rate no longer scales the samples
   that follow by the old one. The collector measures the rate the agent is

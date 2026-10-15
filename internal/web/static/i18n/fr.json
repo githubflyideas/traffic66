@@ -749,5 +749,11 @@
 "bill.remove": "Retirer",
 "bill.nodata": "rien de déclaré sur cette période",
 "geo.lines_scale": "entre pays",
-"ch.unsettled": "arrive encore"
+"ch.unsettled": "arrive encore",
+"mark.chip": "COPIE D'ÉVALUATION",
+"mark.chip_hint": "Non enregistré — voir Sources pour enregistrer.",
+"mark.note_title": "Cette copie n'est pas enregistrée",
+"mark.note_body": "Toutes les mesures, détections et pages continuent de fonctionner et aucune donnée n'est supprimée. L'enregistrement retire seulement cette marque, également ajoutée à ce que vous exportez, copiez ou imprimez.",
+"mark.note_close": "Continuer l'évaluation",
+"mark.note_go": "Comment s'enregistrer"
 }

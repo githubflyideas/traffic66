@@ -749,5 +749,11 @@
 "bill.remove": "Remove",
 "bill.nodata": "nothing reported in this period",
 "geo.lines_scale": "between countries",
-"ch.unsettled": "still arriving"
+"ch.unsettled": "still arriving",
+"mark.chip": "EVALUATION COPY",
+"mark.chip_hint": "Not registered — see Sources to register.",
+"mark.note_title": "This copy is not registered",
+"mark.note_body": "Every measurement, detection and page keeps working, and no data is deleted. What registering removes is this mark, which is also added to what you export, copy or print.",
+"mark.note_close": "Keep evaluating",
+"mark.note_go": "How to register"
 }

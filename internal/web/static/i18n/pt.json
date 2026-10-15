@@ -749,5 +749,11 @@
 "bill.remove": "Remover",
 "bill.nodata": "nada relatado neste período",
 "geo.lines_scale": "entre países",
-"ch.unsettled": "ainda a chegar"
+"ch.unsettled": "ainda a chegar",
+"mark.chip": "CÓPIA DE AVALIAÇÃO",
+"mark.chip_hint": "Não registado — registe em Fontes.",
+"mark.note_title": "Esta cópia não está registada",
+"mark.note_body": "Todas as medições, deteções e páginas continuam a funcionar e nenhum dado é apagado. Registar apenas remove esta marca, que também é adicionada ao que exportar, copiar ou imprimir.",
+"mark.note_close": "Continuar a avaliar",
+"mark.note_go": "Como registar"
 }
