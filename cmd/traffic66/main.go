@@ -47,7 +47,54 @@ import (
 	"github.com/githubflyideas/traffic66/internal/web"
 )
 
-var version = "0.1.0-dev"
+// version is the release this build claims. The release workflow and
+// scripts/build.sh set it at link time; left unset, as a plain `go build`
+// leaves it, it is filled in by buildVersion so a hand-built binary says
+// what it is rather than naming a release it is not.
+var version = ""
+
+// devVersion is the series being developed, the newest heading in
+// CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
+// default used to be a hardcoded 0.1.0-dev, and because nothing checked it
+// it stayed that way for two major versions.
+const devVersion = "2.1.0"
+
+func init() {
+	if version == "" {
+		version = buildVersion()
+	}
+}
+
+// buildVersion describes a build whose version was not set at link time: the
+// series under development, and the commit it came from when the checkout
+// carried one.
+func buildVersion() string {
+	v := devVersion + "-dev"
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return v
+	}
+	var rev string
+	var modified bool
+	for _, s := range bi.Settings {
+		switch s.Key {
+		case "vcs.revision":
+			rev = s.Value
+		case "vcs.modified":
+			modified = s.Value == "true"
+		}
+	}
+	if rev == "" {
+		return v
+	}
+	if len(rev) > 7 {
+		rev = rev[:7]
+	}
+	if modified {
+		rev += "-dirty"
+	}
+	return v + "+" + rev
+}
 
 // buildKind separates the binaries we release from one somebody built
 // themselves. It is set at link time by the release workflow and says

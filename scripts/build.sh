@@ -2,7 +2,12 @@
 # Build a self-contained traffic66 binary for the current platform.
 # Usage: scripts/build.sh [version] [output]
 set -euo pipefail
-version="${1:-0.1.0-dev}"
+# No version given: the series under development, from the newest heading in
+# CHANGELOG.md, which is also what cmd/traffic66 falls back to. Hardcoding it
+# here is how the default came to say 0.1.0 long after the program was at 2.x.
+default_version="$(sed -n 's/^## \([0-9][0-9.]*\)[[:space:]]*$/\1/p' \
+  "$(dirname "$0")/../CHANGELOG.md" | head -1)-dev"
+version="${1:-$default_version}"
 out="${2:-traffic66}"
 export CGO_ENABLED=1
 # The release workflow sets TRAFFIC66_BUILD_KIND=official; a plain build of
