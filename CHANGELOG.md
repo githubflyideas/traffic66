@@ -36,6 +36,18 @@ Billing
   going quiet is the thing you most want to see.
 
 Charts
+- The day and six-hour columns are cut on the viewer's clock rather than
+  on UTC. A day bucket that starts at UTC midnight starts at nine in the
+  morning in Tokyo, so a Japanese installation never saw a day's traffic
+  in one column: every day arrived split across two, and neither was a
+  day. The browser now says how far its clock is from UTC and the columns
+  follow it, which also fixes the zones that are not whole hours — India,
+  Nepal, Chatham. It is one offset for the range rather than a named zone,
+  for the same reason the month's boundaries are the browser's to decide:
+  the alternative is a zone database in the binary, which is a large
+  dependency for the hour a range spanning a daylight-saving change moves
+  one boundary by.
+
 - A live chart no longer stops short of now. It stopped where the data was
   complete — about three minutes back on a NetFlow exporter with a sixty
   second active timeout — which looked exactly like the analyser running

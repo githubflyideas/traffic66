@@ -23,6 +23,36 @@ type Query struct {
 	From, To   time.Time
 	Filters    []Filter
 	IncludeDup bool
+	// ZoneOffset is how far the viewer's clock is ahead of UTC, as the
+	// browser reports it. Buckets are cut on that clock, not on UTC's: a
+	// day cut at UTC midnight falls at nine in the morning in Tokyo, so
+	// every day of a Japanese installation was split across two columns
+	// and neither was a day's traffic. It is zero for a viewer on UTC and
+	// for callers that do not care, which is the behaviour this had.
+	//
+	// It is one offset for the whole range rather than a named zone: the
+	// boundaries of a range are already the browser's to decide here (see
+	// the billing endpoint), and a zone database in the binary would be a
+	// large dependency for the hour that a range spanning a daylight-saving
+	// change would move one boundary by.
+	ZoneOffset time.Duration
+}
+
+// localTrunc truncates t down to a multiple of step on the viewer's clock.
+func (q Query) localTrunc(t time.Time, step time.Duration) time.Time {
+	return t.UTC().Add(q.ZoneOffset).Truncate(step).Add(-q.ZoneOffset)
+}
+
+// bucketSQL is the expression that puts a row in its bucket, on the same
+// clock localTrunc uses, so the rows and the column they are counted into
+// agree.
+func (q Query) bucketSQL(step time.Duration) string {
+	secs := int64(step.Seconds())
+	off := int64(q.ZoneOffset.Seconds())
+	if off == 0 {
+		return fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts)", secs)
+	}
+	return fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts + INTERVAL '%d seconds') - INTERVAL '%d seconds'", secs, off, off)
 }
 
 func (q Query) span() time.Duration { return q.To.Sub(q.From) }
@@ -525,11 +555,11 @@ func StepFor(span time.Duration) time.Duration {
 // SeriesBy returns bits/s over time split by app (top k, rest as "__other__").
 func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 	step := StepFor(q.span())
-	q.From = q.From.UTC().Truncate(step)
+	q.From = q.localTrunc(q.From, step)
 	settled := settledTo(q.To, q.usesRollup())
 	var rows *sql.Rows
 	var err error
-	bucket := fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts)", int64(step.Seconds()))
+	bucket := q.bucketSQL(step)
 	if q.usesRollup() {
 		rows, err = s.DB.Query(fmt.Sprintf(`SELECT %s AS b, app, sum(wire) FROM r_ts WHERE ts >= ? AND ts < ? GROUP BY 1,2`, bucket), q.From.UTC(), q.To.UTC())
 	} else {
@@ -572,7 +602,7 @@ func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 	for i, n := range names {
 		idx[n] = i
 	}
-	start := q.From.UTC().Truncate(step)
+	start := q.localTrunc(q.From, step)
 	n := bucketCount(start, q.To, step)
 	se := &Series{Step: int64(step.Seconds()), Names: names, Values: make([][]float64, len(names))}
 	se.SettledTo = unsettledMark(settled, q.To)
@@ -773,13 +803,13 @@ func (s *Store) Sankey(q Query, mode string, n0, n2 int) ([]SankeyLink, error) {
 // bucket (the same buckets as the charts).
 func (s *Store) RecordCounts(q Query) (total int64, se *Series, err error) {
 	step := StepFor(q.span())
-	q.From = q.From.UTC().Truncate(step)
+	q.From = q.localTrunc(q.From, step)
 	where, args, err := q.where()
 	if err != nil {
 		return 0, nil, err
 	}
-	rows, err := s.DB.Query(fmt.Sprintf(`SELECT time_bucket(INTERVAL '%d seconds', ts), count(*) FROM %s WHERE %s GROUP BY 1`,
-		int64(step.Seconds()), s.Source(q.From, q.To), where), args...)
+	rows, err := s.DB.Query(fmt.Sprintf(`SELECT %s, count(*) FROM %s WHERE %s GROUP BY 1`,
+		q.bucketSQL(step), s.Source(q.From, q.To), where), args...)
 	if err != nil {
 		return 0, nil, err
 	}

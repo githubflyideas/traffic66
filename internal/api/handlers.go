@@ -66,7 +66,20 @@ func parseQuery(r *http.Request) (store.Query, error) {
 		}
 	}
 	q.IncludeDup = v.Get("dup") == "1"
+	q.ZoneOffset = zoneOffset(v.Get("tz"))
 	return q, nil
+}
+
+// zoneOffset reads the viewer's offset from UTC, in minutes ahead of it,
+// as the browser reports it. Anything outside the range real zones occupy
+// is ignored rather than refused: a wrong offset would only shift the
+// columns, and no chart is worth failing a request over.
+func zoneOffset(s string) time.Duration {
+	m, err := strconv.Atoi(s)
+	if err != nil || m < -14*60 || m > 14*60 {
+		return 0
+	}
+	return time.Duration(m) * time.Minute
 }
 
 func shift(q store.Query, d time.Duration) store.Query {

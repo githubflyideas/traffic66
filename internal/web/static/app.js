@@ -375,6 +375,11 @@ async function api(path, extra = {}, filters = state.f) {
   // a capture file holds no device counters, so there is no bill in it
   if (inSB() && path === 'billing') return {bills: []};
   const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : extra.range ? extra : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
+  // Which clock the day and six-hour columns are cut on. Without it they
+  // were cut on UTC, so a day in Tokyo arrived split across two of them
+  // and neither column was a day's traffic. getTimezoneOffset counts
+  // minutes behind UTC, so the sign is turned round here.
+  p.set('tz', String(-new Date().getTimezoneOffset()));
   if (ifScoped(path) && !filters.some(x => x.f === 'iface')) filters = [...filters, {f: 'iface', v: state.ifv, neg: false}];
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
   const res = await fetch('/api/' + path + '?' + p);
