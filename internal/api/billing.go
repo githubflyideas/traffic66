@@ -1,0 +1,106 @@
+package api
+
+import (
+	"errors"
+	"net/http"
+	"net/netip"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/githubflyideas/traffic66/internal/store"
+)
+
+// Billing reports the 95th percentile per interface over a period the
+// caller gives as an interval. A calendar month, the last thirty days and a
+// cycle that starts on the third are then the same request, and the month's
+// boundaries are worked out where the user's time zone is known — in the
+// browser — rather than guessed at here or pinned to a server flag.
+func (s *Server) billing(w http.ResponseWriter, r *http.Request) {
+	v := r.URL.Query()
+	ms := func(k string) (time.Time, error) {
+		n, err := strconv.ParseInt(v.Get(k), 10, 64)
+		if err != nil {
+			return time.Time{}, errors.New(k + " must be a millisecond timestamp")
+		}
+		return time.UnixMilli(n).UTC(), nil
+	}
+	from, err := ms("from")
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	to, err := ms("to")
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	// The boundaries are used exactly as given. parseQuery rounds long
+	// ranges to the hour, which would quietly move the start of a month.
+	bills, err := s.Store.Bills(from, to, v.Get("exporter"))
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	type out struct {
+		store.Bill
+		Name     string  `json:"name,omitempty"`
+		Device   string  `json:"device,omitempty"`
+		Coverage float64 `json:"coverage"`
+		// Not "billed": store.Bill already uses that for the figure, and an
+		// outer field of the same name would shadow it out of the JSON.
+		Marked bool `json:"marked,omitempty"`
+	}
+	// A device reports every interface it has; the two or three somebody
+	// pays a carrier for are the ones a bill is about. Marked interfaces
+	// win when there are any. When there are none the page shows
+	// everything and says so, because an empty page on the first visit
+	// teaches nobody anything.
+	var billed map[string]bool
+	if s.Inv != nil {
+		billed = s.Inv.Billed()
+	}
+	key := func(e string, i uint32) string { return e + "/" + strconv.FormatUint(uint64(i), 10) }
+	rows := make([]out, 0, len(bills))
+	seen := map[string]bool{}
+	for _, b := range bills {
+		k := key(b.Exporter, b.IfIndex)
+		if len(billed) > 0 && !billed[k] {
+			continue
+		}
+		seen[k] = true
+		o := out{Bill: b, Coverage: b.Coverage(), Marked: billed[k]}
+		if a, err := netip.ParseAddr(b.Exporter); err == nil && s.Inv != nil {
+			o.Name = s.Inv.Iface(a, b.IfIndex).Name
+			o.Device = s.Inv.Device(a)
+		}
+		rows = append(rows, o)
+	}
+	// A marked interface with nothing in the period is the thing an
+	// operator most needs to see: the circuit they are paying for stopped
+	// reporting. It gets a row saying so rather than quietly vanishing.
+	for k := range billed {
+		if seen[k] {
+			continue
+		}
+		e, idxs, ok := strings.Cut(k, "/")
+		if !ok {
+			continue
+		}
+		i, err := strconv.ParseUint(idxs, 10, 32)
+		if err != nil {
+			continue
+		}
+		o := out{Bill: store.Bill{Exporter: e, IfIndex: uint32(i), Possible: int(to.Sub(from) / (5 * time.Minute))}, Marked: true}
+		if a, err := netip.ParseAddr(e); err == nil && s.Inv != nil {
+			o.Name = s.Inv.Iface(a, uint32(i)).Name
+			o.Device = s.Inv.Device(a)
+		}
+		rows = append(rows, o)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"from": from.UnixMilli(), "to": to.UnixMilli(),
+		"bucket_minutes": 5, "retention_days": s.Store.RollupRetentionDays(),
+		"marked": len(billed), "bills": rows,
+	})
+}
