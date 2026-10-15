@@ -1,6 +1,9 @@
 package store
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -133,6 +136,53 @@ func TestTokyoDayIsOneColumn(t *testing.T) {
 	if len(hit) > 0 {
 		if got := time.UnixMilli(se.Times[hit[0]]).UTC(); !got.Equal(dayStart) {
 			t.Errorf("the column starts %v, want %v (midnight in Tokyo)", got, dayStart)
+		}
+	}
+}
+
+// Every charting path has to follow the viewer's clock, not just the one
+// that was fixed first. SeriesBy — the one the charts actually call — was
+// missed on the first pass and only turned up when the program was run.
+// This walks the source instead, so the next one added is caught here
+// rather than on a screen.
+func TestAllBucketingUsesTheViewersClock(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// rates.go buckets the billing counters, which are anchored to the
+	// exact period the browser asks for rather than to a chart column.
+	skip := map[string]bool{"rates.go": true}
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") || skip[f] {
+			continue
+		}
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		inHelper := false
+		for i, line := range strings.Split(string(b), "\n") {
+			// the helpers are where the two expressions are supposed to be
+			if strings.HasPrefix(line, "func (q Query) localTrunc") || strings.HasPrefix(line, "func (q Query) bucketSQL") {
+				inHelper = true
+			}
+			if inHelper {
+				if line == "}" {
+					inHelper = false
+				}
+				continue
+			}
+			code := line
+			if j := strings.Index(code, "//"); j >= 0 {
+				code = code[:j]
+			}
+			if strings.Contains(code, `time_bucket(INTERVAL '%d seconds'`) {
+				t.Errorf("%s:%d builds a bucket expression by hand; use q.bucketSQL so it follows the viewer's clock", f, i+1)
+			}
+			if strings.Contains(code, ".Truncate(step)") {
+				t.Errorf("%s:%d truncates to a step on UTC; use q.localTrunc", f, i+1)
+			}
 		}
 	}
 }

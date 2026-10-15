@@ -114,7 +114,7 @@ func (s *Store) Recon(q Query, exporter string, ifindex uint32) (*Recon, error) 
 	if step < 5*time.Minute {
 		step = 5 * time.Minute
 	}
-	start := q.From.UTC().Truncate(step)
+	start := q.localTrunc(q.From, step)
 	q.From = start
 	n := int(q.To.UTC().Sub(start)/step) + 1
 	// the last bucket counts only if it is complete
@@ -147,7 +147,7 @@ func (s *Store) Recon(q Query, exporter string, ifindex uint32) (*Recon, error) 
 		if !first && in >= pin && out >= pout && t.After(pt) && t.Sub(pt) < time.Hour {
 			span := t.Sub(pt).Seconds()
 			din, dout := float64(in-pin), float64(out-pout)
-			for b := pt.Truncate(step); b.Before(t); b = b.Add(step) {
+			for b := q.localTrunc(pt, step); b.Before(t); b = b.Add(step) {
 				lo, hi := maxT(b, pt), minT(b.Add(step), t)
 				ov := hi.Sub(lo).Seconds()
 				i := int(b.Sub(start) / step)
@@ -166,7 +166,7 @@ func (s *Store) Recon(q Query, exporter string, ifindex uint32) (*Recon, error) 
 	inF, outF := make([]float64, n), make([]float64, n)
 	var inPk, inSamp, outSamp float64
 	src := s.Source(q.From, q.To)
-	bucket := fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts)", int64(step.Seconds()))
+	bucket := q.bucketSQL(step)
 	for side, dst := range map[string][]float64{"in_if": inF, "out_if": outF} {
 		rows, err := s.DB.Query(fmt.Sprintf(`SELECT %s, sum(wire), sum(pkts), sum(pkts / greatest(mult, 1)) FROM %s
 			WHERE ts >= ? AND ts < ? AND exporter = ? AND %s = ? GROUP BY 1`, bucket, src, side),

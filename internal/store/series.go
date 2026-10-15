@@ -69,9 +69,9 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 		// hourly summaries in 5-minute buckets would show one spike an hour
 		step = time.Hour
 	}
-	q.From = q.From.UTC().Truncate(step)
+	q.From = q.localTrunc(q.From, step)
 	settled := settledTo(q.To, rollup)
-	bucket := fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts)", int64(step.Seconds()))
+	bucket := q.bucketSQL(step)
 	var inner string
 	var args []any
 	if rollup {
