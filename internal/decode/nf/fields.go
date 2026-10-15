@@ -99,9 +99,13 @@ type acc struct {
 	startMs, endMs     int64
 	startUp, endUp     uint32
 	hasStartUp, hasEnd bool
-	startDeltaUs       uint64
-	endDeltaUs         uint64
-	hasDeltaUs         bool
+	// startKnown says the exporter gave this flow a start time of its own,
+	// rather than the time falling back to when the report was sent. Only
+	// then can two reports be told to be the same flow (see totals.go).
+	startKnown   bool
+	startDeltaUs uint64
+	endDeltaUs   uint64
+	hasDeltaUs   bool
 
 	interval, pktInterval, pktSpace uint32
 	sampSize, sampPop               uint32
@@ -310,6 +314,7 @@ func (a *acc) times(h msgHeader, sysInitMs int64) {
 	if r.Start.After(r.End) {
 		r.Start = r.End
 	}
+	a.startKnown = (a.endMs > 0 && a.startMs > 0) || a.hasDeltaUs || (a.hasEnd && a.hasStartUp)
 }
 
 // parseTemplateSet reads (options) template records into s.
@@ -500,7 +505,8 @@ func (d *Decoder) emit(s *session, a *acc, h msgHeader, addr netip.Addr, domain 
 	case a.postBytes > 0:
 		r.Bytes, r.Packets = a.postBytes, a.postPkts
 	default:
-		r.Bytes, r.Packets = a.totBytes, a.totPkts
+		// Running totals, not this report's traffic: see totals.go.
+		r.Bytes, r.Packets = s.totalDelta(a, now)
 	}
 	ref := samplerRef{samplerID: a.samplerID, hasSampler: a.hasSampler, inIf: r.InIf, outIf: r.OutIf}
 	inRec := a.rate()

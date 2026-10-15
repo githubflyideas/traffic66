@@ -280,6 +280,7 @@ func tooMany(w http.ResponseWriter) {
 
 func (s *Server) auth(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.markHeader(w)
 		if tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "); tok != "" && s.LocalTok != "" &&
 			subtle.ConstantTimeCompare([]byte(tok), []byte(s.LocalTok)) == 1 {
 			next(w, r.WithContext(context.WithValue(r.Context(), localKey{}, true)))
@@ -383,7 +384,8 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	must := s.mustChangeNow(in.Password)
 	s.sessions[tok] = session{user: in.User, exp: now.Add(12 * time.Hour), mustChange: must}
 	s.mu.Unlock()
-	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true,
+		SameSite: http.SameSiteStrictMode, Secure: secureCookie(r)})
 	writeJSON(w, http.StatusOK, map[string]any{"user": in.User, "must_change": must})
 }
 
@@ -399,10 +401,27 @@ func (s *Server) autoLogin(w http.ResponseWriter, r *http.Request) {
 		rand.Read(b)
 		tok := hex.EncodeToString(b)
 		s.sessions[tok] = session{user: "admin", exp: time.Now().Add(12 * time.Hour)}
-		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true,
+			SameSite: http.SameSiteLaxMode, Secure: secureCookie(r)})
 	}
 	s.mu.Unlock()
 	http.Redirect(w, r, "/#v=sandbox", http.StatusSeeOther)
+}
+
+// secureCookie says whether the session cookie may carry the Secure
+// attribute. It is set whenever the request reached us over TLS, directly
+// or through a proxy that says so, and not otherwise: a Secure cookie on a
+// plain HTTP installation is dropped by the browser, and nobody could sign
+// in. traffic66 is run both ways, so this is decided per request rather
+// than configured.
+func secureCookie(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	// Only the first value counts; a proxy appends and the one it added is
+	// the one describing the hop we can see.
+	proto, _, _ := strings.Cut(r.Header.Get("X-Forwarded-Proto"), ",")
+	return strings.EqualFold(strings.TrimSpace(proto), "https")
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
@@ -411,7 +430,10 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 		delete(s.sessions, c.Value)
 		s.mu.Unlock()
 	}
-	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: -1})
+	// The clearing cookie must match the one it replaces on the attributes
+	// browsers compare, or the real one is left in place.
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: -1,
+		HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: secureCookie(r)})
 	writeJSON(w, http.StatusOK, map[string]string{})
 }
 

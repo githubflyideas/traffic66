@@ -492,3 +492,28 @@ body.marked .view.on::after{
      survive it — still far below what would obscure a number. */
   body.marked .view.on::after{opacity:.2;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+/* The mark's clickable part. The tile itself cannot take clicks without
+   taking them from the page under it, so this sits in the corner of a
+   marked view and is the thing somebody presses to find out why the page
+   is marked. Quiet by default: it is on screen all day while somebody
+   evaluates. */
+.markchip{
+  position:fixed;right:14px;bottom:14px;z-index:41;
+  font:600 12px/1 system-ui,sans-serif;letter-spacing:.04em;
+  padding:7px 11px;border-radius:999px;cursor:pointer;
+  color:var(--ink-3,#8a8a8a);background:var(--bg-1,#fff);
+  border:1px solid var(--ink-3,#8a8a8a);opacity:.65}
+.markchip:hover,.markchip:focus-visible{opacity:1;border-color:var(--warn,#b9770e);color:var(--warn,#b9770e)}
+@media print{.markchip{display:none}}
+
+/* The note the chip opens. */
+.marknote{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.45);padding:16px}
+.marknote-in{max-width:460px;width:100%;background:var(--bg-1,#fff);color:var(--ink-1,#111);
+  border:1px solid var(--ink-3,#8a8a8a);border-radius:10px;padding:18px 20px}
+.marknote-in h3{margin:0 0 8px;font-size:16px}
+.marknote-in p{margin:0 0 10px;font-size:13px;line-height:1.5}
+.marknote-in p.small{font-size:12px}
+.marknote-act{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+@media print{.marknote{display:none}}

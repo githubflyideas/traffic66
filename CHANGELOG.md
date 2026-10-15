@@ -3,6 +3,133 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.2.0
+
+Collection
+- Changing an sFlow agent's sampling rate no longer scales the samples
+  that follow by the old one. The collector measures the rate the agent is
+  really sampling at, from the packets it says it offered per sample
+  received, and recomputes it every 30 seconds once it has 30 more samples
+  to work from. That measurement was kept across a change of the
+  configured rate, so for up to half a minute after the change the new
+  samples were multiplied by the old rate: ten times the real traffic when
+  1 in 1000 became 1 in 100, and a tenth of it the other way. The
+  measurement is now dropped when the agent's declared rate changes, which
+  falls straight back to the newly declared rate until there is enough to
+  measure again, and the window restarts so the next measurement is not a
+  blend of the two settings.
+- A NetFlow v5 device that samples without declaring it in the message
+  header is no longer recorded at a fraction of its traffic. The header's
+  sampling interval was forced to one when the device left it empty, which
+  both scaled the counts as though every packet had been seen — a tenth of
+  a percent of the real traffic for a device sampling 1 in 1000 — and
+  stopped the rate set by hand for that device from ever being reached. A
+  rate given in the header still wins; failing that the hand-set rate is
+  used, then whether the device is known to export every packet, and
+  failing all three the counts are recorded as they arrived and marked as
+  having no known rate, so the interface comparison can say why its
+  numbers differ instead of asserting a rate of one. The sources page
+  shows such a device as hand-set rather than as declaring 1 in 1.
+- IPFIX exporters that report a flow's running totals (octetTotalCount and
+  packetTotalCount, rather than the per-interval delta counts) no longer
+  have their traffic counted several times over. Those fields carry the
+  flow's counts since it started, so a long flow re-reported on the
+  exporter's active timeout repeats everything it has already sent: a flow
+  reported three times was recorded as 7,500 bytes when it had moved
+  4,000, and one still running after ten reports was off by about five
+  times. The collector now records the increase since the same flow was
+  last reported. An exporter that reports each interval separately gives
+  every report its own start time and is unaffected, as is any exporter
+  sending the delta counts, which is most of them.
+
+Charts
+- The day and six-hour columns are cut on the viewer's clock rather than
+  on UTC. A day bucket that starts at UTC midnight starts at nine in the
+  morning in Tokyo, so a Japanese installation never saw a day's traffic
+  in one column: every day arrived split across two, and neither was a
+  day. The browser now says how far its clock is from UTC and the columns
+  follow it, which also fixes the zones that are not whole hours — India,
+  Nepal, Chatham. It is one offset for the range rather than a named zone,
+  for the same reason the month's boundaries are the browser's to decide:
+  the alternative is a zone database in the binary, which is a large
+  dependency for the hour a range spanning a daylight-saving change moves
+  one boundary by.
+
+Detection
+- Four rules about work done by a program rather than by a person at a
+  keyboard, which is what an agent driving a network looks like in flow
+  data. None of them claims to identify what the program is; each says
+  that the shape of the traffic is one a person does not produce.
+  - Fast scan: many hosts AND many ports inside a single minute, with
+    probe-sized packets. The scan rules already report a sweep however
+    long it takes; this is about the speed, so a sweep spread over the
+    window is not reported here twice.
+  - Regular check-in: small exchanges with one outside service at a
+    steady cadence. The regularity is the whole signal — a person's
+    traffic to a service is bursty, a timer is not — so a connection that
+    is regular but carries real traffic (a sync, a download) is not
+    reported, and neither is an irregular one however small.
+  - Hop chain: a host reached on an administration service it had never
+    offered, which then reaches another host the same way within five
+    minutes. One such hop is what lateral movement reports; the second one,
+    minutes later, is the part a person does over hours. It counts the same
+    hops the lateral rule does, so ordinary file sharing — a workstation
+    reaching a file server which reaches a backup host — is not a chain,
+    and it reports one finding per middle host rather than one per path
+    through it.
+  - Model API: traffic to a machine-learning API, matched on the
+    organisation the address belongs to. It is reported to be known
+    about rather than as a fault — the severity is the lowest — because
+    what leaves for one is prompt text. The list of organisations is a
+    starting point that will age and is meant to be edited; an empty list
+    turns the rule off rather than matching everything.
+- The port-scan rule's room is under test again. It asks for five distinct
+  ports on sampled data, and what keeps that from reporting ordinary
+  traffic is the two qualifications beside it: only ports below 32768
+  count, and the packets have to be probe-sized. The test asserting that a
+  host using ten real services and a server answering forty ephemeral
+  ports are both left alone — while a real scan is still reported — had
+  gone missing.
+
+Pages
+- A page with nothing on it says why. For the first several minutes of a
+  new installation the honest answer is not "no data" but "not yet": the
+  collector is waiting for the device's templates, or for the sampling
+  rate, or for the most recent minutes to finish arriving. Saying only
+  "No data in this period." read as a fault, and the first thing anybody
+  does about a fault is start changing ports and firewall rules — while
+  the collector was doing exactly what it should and was nearly done. Each
+  of the three now says which it is, how many records are being held, that
+  none are being lost, and that there is nothing to do.
+
+Licensing
+- The evaluation mark is no longer something only the browser draws. It
+  was a stylesheet over the view, so everything that left the page left it
+  behind: a findings list fetched from the API, a table selected and
+  copied into a document, anything a script asked for. The notice is now
+  produced by the server and travels with the output — on every API
+  response as a header, and inside the findings body, which is the part
+  that gets pasted into a ticket — and a copy taken from a marked page
+  carries it in the clipboard, in both the text and the HTML flavour. A
+  short copy, an address going into a terminal, is left alone.
+- The mark can now be asked what it means. The tiled text itself cannot
+  take a click without taking it from the page underneath, so a marked
+  view carries a small chip in the corner that opens a note: what still
+  works unregistered (everything), what registering removes (the mark),
+  and where to do it. Somebody evaluating works under the mark all day, so
+  the note opens at most once every six hours; a click inside that pause
+  gives the one-line version instead.
+
+Security
+- The session cookie is marked Secure when the connection is encrypted,
+  directly or through a proxy that says so in X-Forwarded-Proto, so it is
+  never sent in clear if anything downgrades the connection. It is
+  deliberately not marked on a plain HTTP installation, where the browser
+  would drop it and nobody could sign in; traffic66 is run both ways, so
+  this is decided per request rather than configured. The cookie that
+  signs you out now matches the one it replaces on the attributes browsers
+  compare, which is what makes a replacement take.
+
 ## 2.1.0
 
 Billing

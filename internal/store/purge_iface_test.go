@@ -15,7 +15,12 @@ func TestPurgeIface(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer s.Close()
-	now := time.Now().UTC().Truncate(time.Minute)
+	// Half past the hour, not the minute the test happens to run in: Seal
+	// rounds down to the hour after subtracting five minutes, so a base time
+	// in the first five minutes of an hour put the first Seal's boundary an
+	// hour earlier than this test needs and sealed nothing. That made the
+	// test fail for five minutes in every sixty with nothing wrong.
+	now := time.Now().UTC().Truncate(time.Hour).Add(-30 * time.Minute)
 	old := now.Add(-3 * time.Hour)
 	row := func(ts time.Time, in, out uint32, exp string) Row {
 		return Row{TS: ts, Src: "10.0.0.1", Dst: "10.0.0.2", Client: "10.0.0.1", Server: "10.0.0.2",

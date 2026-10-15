@@ -36,7 +36,7 @@ type Stats struct {
 	// the interface each flow was sampled on is known; "no" when they do
 	// not; "" before any data template.
 	DirField string
-	Manual        bool     // the rate was set by hand (sampling= in the names)
+	Manual   bool // the rate was set by hand (sampling= in the names)
 	// LossComp is the multiplier currently applied to make up for records
 	// lost in transit (1 = no loss).
 	LossComp  float64
@@ -106,6 +106,9 @@ type session struct {
 	nextSeq    uint32
 	lastRecs   uint32
 	recsPerPkt float64
+
+	// running totals per flow, for exporters that send octetTotalCount
+	tot totals
 
 	// loss compensation window
 	winRecv, winLost float64

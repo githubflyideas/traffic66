@@ -36,6 +36,12 @@ func (s *Server) findings(w http.ResponseWriter, r *http.Request) {
 		counts[f.Sev]++
 	}
 	out := map[string]any{"findings": fs, "open": map[string]int{"high": counts[3], "medium": counts[2], "low": counts[1]}}
+	// Findings are the part of this that gets pasted into a ticket or a
+	// report, so the notice travels in the body as well as the header: a
+	// copy of the JSON keeps it, a copy of the headers does not.
+	if n := s.notice(); n != "" {
+		out["notice"] = n
+	}
 	if s.Det != nil {
 		out["detector"] = s.Det.Status()
 	}

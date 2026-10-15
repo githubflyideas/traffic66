@@ -66,7 +66,20 @@ func parseQuery(r *http.Request) (store.Query, error) {
 		}
 	}
 	q.IncludeDup = v.Get("dup") == "1"
+	q.ZoneOffset = zoneOffset(v.Get("tz"))
 	return q, nil
+}
+
+// zoneOffset reads the viewer's offset from UTC, in minutes ahead of it,
+// as the browser reports it. Anything outside the range real zones occupy
+// is ignored rather than refused: a wrong offset would only shift the
+// columns, and no chart is worth failing a request over.
+func zoneOffset(s string) time.Duration {
+	m, err := strconv.Atoi(s)
+	if err != nil || m < -14*60 || m > 14*60 {
+		return 0
+	}
+	return time.Duration(m) * time.Minute
 }
 
 func shift(q store.Query, d time.Duration) store.Query {
@@ -632,7 +645,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"disk_bytes": u.DiskBytes, "disk_free": free, "disk_need": need, "retention_days": s.Store.RetentionDays(), "oldest": u.Oldest.UnixMilli(),
 		"hot_rows": u.HotRows, "segments": u.Segments, "segment_rows": u.SegmentRows,
 		"dns_upstream": s.DNS.Upstream(), "dns_queries": s.DNS.Queries, "asn_ranges": s.ASN.Size(), "threat_lists": s.Thr.Lists(),
-		"source_warnings": warn, "offline": s.Offline, "findings_open": s.Store.OpenFindings(2, time.Now().Add(-24*time.Hour)), "hosts": names, "skewed": s.Col.Skewed.Load(), "go": runtime.Version(),
+		"waiting": s.waitingOn(), "source_warnings": warn, "offline": s.Offline, "findings_open": s.Store.OpenFindings(2, time.Now().Add(-24*time.Hour)), "hosts": names, "skewed": s.Col.Skewed.Load(), "go": runtime.Version(),
 	})
 }
 

@@ -14,6 +14,7 @@
 // the building looking finished when it is not.
 const NOMARK = new Set(['overview', 'sources', 'account']);
 let marked = false;  // from the licence: true until the installation is registered
+let markNotice = '';  // the server's wording, so a copy says what a file says
 
 // markTile draws the diagonal text once, as an SVG tile the page repeats.
 // It is built here rather than kept as a file because the wording is
@@ -40,7 +41,98 @@ function applyMark() {
   const on = marked && !NOMARK.has(state.v);
   document.body.classList.toggle('marked', on);
   if (on) document.body.style.setProperty('--mark', markTile());
+  markChip(on);
 }
+
+// The tile cannot be clicked: it lies over the whole view, and anything
+// that caught clicks there would take them away from the page underneath.
+// So the part somebody can act on is a small chip in the corner of the
+// marked view, which says the same thing and opens the registration note.
+function markChip(on) {
+  let chip = $('#markChip');
+  if (!on) { if (chip) chip.remove(); return; }
+  if (!chip) {
+    chip = document.createElement('button');
+    chip.id = 'markChip';
+    chip.type = 'button';
+    chip.className = 'markchip';
+    chip.onclick = markPrompt;
+    document.body.appendChild(chip);
+  }
+  chip.textContent = t('mark.chip');
+  chip.title = markNotice || t('mark.text');
+}
+
+// How long the full note stays away after it has been shown once. Somebody
+// evaluating the program works under the mark all day; a note that opened
+// on every click would be a reason to stop evaluating. Within the pause a
+// click gives the one-line version instead, so the click still answers.
+const MARK_PROMPT_PAUSE = 6 * 3600 * 1000;
+const MARK_PROMPT_KEY = 't66.markPromptAt';
+
+function markPromptDue(now) {
+  try {
+    const last = Number(localStorage.getItem(MARK_PROMPT_KEY) || 0);
+    return !(last > 0 && now - last < MARK_PROMPT_PAUSE);
+  } catch { return true; }  // private windows have no storage; still answer
+}
+
+function markPrompt() {
+  const now = Date.now();
+  if (!markPromptDue(now)) { toast(t('mark.chip_hint')); return; }
+  try { localStorage.setItem(MARK_PROMPT_KEY, String(now)); } catch {}
+  showMarkNote();
+}
+
+// The note itself: what the mark means, and where registering happens.
+function showMarkNote() {
+  let box = $('#markNote');
+  if (box) box.remove();
+  box = document.createElement('div');
+  box.id = 'markNote';
+  box.className = 'marknote';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.innerHTML = `<div class="marknote-in">
+    <h3></h3><p class="muted"></p><p class="small muted"></p>
+    <div class="marknote-act"><button class="btn" data-close></button>
+    <a class="btn primary" href="#v=sources"></a></div></div>`;
+  box.querySelector('h3').textContent = t('mark.note_title');
+  box.querySelector('p.muted').textContent = t('mark.note_body');
+  box.querySelector('p.small').textContent = markNotice;
+  box.querySelector('[data-close]').textContent = t('mark.note_close');
+  const go = box.querySelector('a.primary');
+  go.textContent = t('mark.note_go');
+  const close = () => box.remove();
+  box.querySelector('[data-close]').onclick = close;
+  go.onclick = close;
+  box.onclick = e => { if (e.target === box) close(); };
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+  document.body.appendChild(box);
+  box.querySelector('[data-close]').focus();
+}
+
+// A table copied out of the page used to paste in clean, which made the
+// mark a matter of not taking a screenshot. What is copied now carries the
+// notice, in both the text and the HTML flavour, so it arrives wherever it
+// is pasted. A copy of one short run of text — an address somebody is
+// pasting into a terminal — is left alone; the notice is for a copy big
+// enough to be a document.
+const MARK_COPY_MIN = 120;
+function onCopy(e) {
+  if (!marked || !markNotice) return;
+  const sel = String(document.getSelection() || '');
+  if (sel.length < MARK_COPY_MIN) return;
+  const note = '\n\n' + markNotice + '\n';
+  try {
+    e.clipboardData.setData('text/plain', sel + note);
+    e.clipboardData.setData('text/html', '<pre>' + esc(sel) + '</pre><p>' + esc(markNotice) + '</p>');
+    e.preventDefault();
+  } catch {}  // a browser that will not let us rewrite it still copies the text
+}
+document.addEventListener('copy', onCopy);
 
 // ------------------------------------------------------------ i18n
 // Ordered by total number of speakers (Ethnologue).
@@ -146,6 +238,22 @@ function ago(ms) {
   if (s < 86400) return rtf.format(-Math.round(s / 3600), 'hour');
   return rtf.format(-Math.round(s / 86400), 'day');
 }
+// emptyText is what a page with nothing to show says. For the first
+// several minutes of a new installation the honest answer is not "no
+// data" but "not yet": the collector is waiting for a template, for a
+// sampling rate, or for the most recent minutes to settle. Saying only
+// "no data" there reads as a fault, and sends somebody to change ports
+// and firewall rules while the collector is about to finish.
+function emptyText() {
+  const w = waiting;
+  if (!w || !w.reason) return emptyText();
+  if (w.reason === 'nothing') return t('empty.first');
+  if (w.reason === 'templates') return t('wait.templates', {n: nf(w.records || 0)});
+  if (w.reason === 'sampling') return t('wait.sampling', {n: nf(w.records || 0)});
+  if (w.reason === 'settling') return t('wait.settling', {n: Math.ceil((w.seconds || 0) / 60)});
+  return emptyText();
+}
+
 function toast(msg) {
   const el = $('#toast'); el.textContent = msg; el.style.display = 'block';
   clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = 'none', 1800);
@@ -247,6 +355,7 @@ const ifScoped = path => state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state
 // thing that decides: this keeps the page from offering what would be
 // refused.
 let lic = null;
+let waiting = null;  // what the collector is still waiting for, from /api/status
 const licOK = f => !!lic && lic.registered && (lic.features || []).includes(f);
 
 let ifList = null, ifListKey = '';
@@ -283,6 +392,11 @@ async function api(path, extra = {}, filters = state.f) {
   // a capture file holds no device counters, so there is no bill in it
   if (inSB() && path === 'billing') return {bills: []};
   const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : extra.range ? extra : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
+  // Which clock the day and six-hour columns are cut on. Without it they
+  // were cut on UTC, so a day in Tokyo arrived split across two of them
+  // and neither column was a day's traffic. getTimezoneOffset counts
+  // minutes behind UTC, so the sign is turned round here.
+  p.set('tz', String(-new Date().getTimezoneOffset()));
   if (ifScoped(path) && !filters.some(x => x.f === 'iface')) filters = [...filters, {f: 'iface', v: state.ifv, neg: false}];
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
   const res = await fetch('/api/' + path + '?' + p);
@@ -431,7 +545,7 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
 }
 function donut(el, parts, field) {
   const tot = parts.reduce((s, p) => s + p.v, 0);
-  if (!tot) { el.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  if (!tot) { el.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
   const R = 52, r = 34, C = 56; let a0 = -Math.PI / 2;
   let s = `<svg viewBox="0 0 112 112" role="img" aria-label="${esc(parts.map(p => p.n + ' ' + nf(p.v / tot * 100) + '%').join(', '))}">`;
   parts.forEach(p => {
@@ -653,9 +767,9 @@ views.overview = async (el) => {
     ${panel('c6', t('ov.dir'), '', '<div class="donut" id="dDir"></div>')}
     ${panel('c6', t('ov.proto'), '', '<div class="donut" id="dProto"></div>')}
     ${panel('c6', t('ov.top_clients'), t('ov.top_clients_sub'), `<table><tr><th></th><th>${t('col.client')}</th><th class="num">${t('col.traffic')}</th><th style="width:34%">${t('col.share')}</th></tr>
-      ${cl.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
+      ${cl.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
-      ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
+      ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${fd ? findingsPanel(fd) : ''}
   </div>`;
   tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to});
@@ -702,6 +816,10 @@ function findingText(f) {
     case 'exfil': return tHtml('fd.k.exfil', {src, dst, bytes: esc(fmtBytes(e.up))});
     case 'flood': return tHtml('fd.k.flood', {dst, port, pps: esc(nf(e.pps))});
     case 'threat': return tHtml(e.dir === 2 ? 'fd.k.threat_in' : 'fd.k.threat_out', {src, dst, list: esc(f.port)});
+    case 'fastscan': return tHtml('fd.k.fastscan', {src, n: nf(e.targets), p: nf(e.ports)});
+    case 'beacon': return tHtml('fd.k.beacon', {src, dst, s: nf(Math.round(e.period_s || 0)), n: nf(e.checkins)});
+    case 'chain': return tHtml('fd.k.chain', {b: ipCell(e.via), n: nf(e.onward), port});
+    case 'llm': return tHtml('fd.k.llm', {src, org: esc(e.org || ''), bytes: esc(fmtBytes(e.bytes))});
   }
   return esc(f.kind);
 }
@@ -719,6 +837,16 @@ function findingEvidence(f) {
     case 'exfil': parts.push(esc(t('fd.e.down', {n: fmtBytes(e.down)}))); if (e.cc || e.org) parts.push(esc([e.cc ? country(e.cc) : '', e.org].filter(Boolean).join(', '))); break;
     case 'flood': parts.push(esc(t('fd.e.sources', {n: nf(e.sources)})), esc(t('fd.e.avg', {n: nf(e.avg)})), esc(t('fd.e.usual', {n: nf(e.usual)}))); break;
     case 'threat': parts.push(esc(t('fd.e.up', {n: fmtBytes(e.up)})), esc(t('fd.e.down', {n: fmtBytes(e.down)}))); break;
+    case 'fastscan':
+      parts.push(esc(t('fd.e.pkts', {n: nf(e.pkts)})), esc(t('fd.e.avg', {n: nf(e.avg)})));
+      if ((e.examples || []).length) parts.push(tHtml('fd.e.examples', {list: list(e.examples)}));
+      break;
+    case 'beacon': parts.push(esc(t('fd.e.jitter', {n: nf((e.jitter || 0) * 100, 1)})), esc(t('fd.e.bytes', {n: fmtBytes(e.bytes)}))); if (e.org) parts.push(esc(e.org)); break;
+    case 'chain':
+      parts.push(tHtml('fd.e.reached_by', {list: list(e.from)}), tHtml('fd.e.targets', {list: list(e.to)}));
+      parts.push(esc(t('fd.e.hops', {a: e.in_port, b: e.out_port})));
+      break;
+    case 'llm': parts.push(esc(t('fd.e.up', {n: fmtBytes(e.bytes)})), esc(t('fd.e.minutes', {n: nf(e.minutes)}))); break;
   }
   parts.push(esc(e.sampling > 1 ? t('fd.e.sampling', {n: nf(e.sampling)}) : t('fd.e.unsampled')));
   return parts.join(' · ');
@@ -797,7 +925,7 @@ const seriesPanel = (id, cls, title, sub = '') => `<div class="panel ${cls}" id=
 function fillSeries(id, d, by, measure) {
   const el = document.getElementById(id); if (!el || !d) return;
   const pk = measure === 'pkts';
-  if (!d.names.length) { el.querySelector('.chart').innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  if (!d.names.length) { el.querySelector('.chart').innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
   // with thousands of hosts the rest dwarfs the top 8: draw only those and
   // give the rest's total in the legend
   const hideOther = by === 'client' || by === 'server';
@@ -864,7 +992,7 @@ views.traffic = async (el) => {
   drawRings($('#rgB'), db, 'service', null);  // one ring: the services
 };
 function drawRings(el, d, inDim, outDim) {
-  if (!d.total) { el.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  if (!d.total) { el.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
   const draw = () => {
     const W = el.clientWidth; if (W < 200) return;
     // room for the outer labels on both sides
@@ -954,7 +1082,7 @@ async function talkers(el) {
   const [cl, srv, ov] = await Promise.all([api('topn', {dim: 'client', limit: 30}), api('topn', {dim: 'server', limit: 30}), api('overview')]);
   const tot = ov.totals || {};
   const table = (rows, head, f) => `<table class="talk"><tr><th></th><th>${t(head)}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.pkts')}</th><th class="num">${t('col.flows')}</th></tr>
-    ${(rows || []).map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}
+    ${(rows || []).map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}
     <tr class="sum"><td></td><td>${t('topn.all')}</td><td class="num">${fmtBytes(tot.wire)}</td><td class="num">${nf(tot.pkts)}</td><td class="num">${nf(tot.flows)}</td></tr></table>`;
   el.innerHTML = `<div class="grid">
     <div class="c12"><div style="display:inline-block">${modeSeg()}</div></div>
@@ -1003,7 +1131,7 @@ async function topTable(el, dim) {
     <div class="ph"><h2>${t('topn.title', {n: 66})}</h2><span class="sub">${esc(t('topn.hint'))}${slow}</span>
       <div class="tools" style="display:flex;gap:12px;align-items:center">${modeSeg()}<label>${t('topn.group')} <select class="dimsel" id="dimSel">${DIMS.map(k => `<option value="${k}" ${k === dim ? 'selected' : ''}>${t('dim.' + k)}</option>`).join('')}</select></label></div></div>
     <table><tr><th></th>${heads.map((h, i) => sortTh('t' + i, h && t(h), '')).join('')}${sortTh('wire', t('col.traffic'))}<th class="num">%</th><th style="width:16%">${t('col.share')}</th>${sortTh('pkts', t('col.pkts'))}${sortTh('avg', t('col.avg'))}${showPeers ? sortTh('peers', t('col.peers')) : ''}${sortTh('flows', t('col.flows'))}</tr>
-    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(avg(r))}&nbsp;B</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${t('empty.nodata')}</td></tr>`}
+    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(avg(r))}&nbsp;B</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${emptyText()}</td></tr>`}
     </table></div>`;
   $('#dimSel').onchange = e => { state.dim = e.target.value; state.sort = {k: 'wire', asc: false}; render(); };
   bindMode(el);
@@ -1040,7 +1168,7 @@ views.sankey = async (el) => {
     <div class="chart sankey" id="chSankey" style="height:${mode === 'segment' ? 550 : 650}px" aria-label="${esc(title)}"></div></div>`;
   el.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { state.sk = b.dataset.sk; render(); });
   const sEl = $('#chSankey');
-  if (!(d.seg_app || []).length) { sEl.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  if (!(d.seg_app || []).length) { sEl.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
   const cols = [[], [], []], ids = [{}, {}, {}];
   const node = (c, k) => { if (!(k in ids[c])) { ids[c][k] = cols[c].length; cols[c].push({k, in: 0, out: 0}); } return cols[c][ids[c][k]]; };
   d.seg_app.forEach(l => { node(0, l.S).out += l.V; node(1, l.T).in += l.V; });
@@ -1203,7 +1331,7 @@ views.geo = async (el) => {
     ${panel('c6', t('geo.as'), '', `<table><tr><th></th><th>${t('col.asn')}</th><th>${t('col.org')}</th><th class="num">${t('col.traffic')}</th><th style="width:32%">${t('col.share')}</th></tr>
       ${ar.map((r, i) => `<tr><td class="rank">${i + 1}</td><td class="nw">${r.key === '0' ? `<span class="muted">${t('unknown')}</span>` : V('asn', r.key, 'AS' + r.key)}</td><td>${esc(r.extra)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, am)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
   </div>`;
-  if (w) drawMap($('#wmap'), w, all, gl); else $('#wmap').innerHTML = `<div class="empty">${t('empty.nodata')}</div>`;
+  if (w) drawMap($('#wmap'), w, all, gl); else $('#wmap').innerHTML = `<div class="empty">${emptyText()}</div>`;
   asCharts.forEach(([by, m], i) => fillSeries('asr' + i, ad[i], by, m));
 };
 
@@ -2011,7 +2139,7 @@ views.records = async (el) => {
     <div class="panel"><div class="ph"><h2>${t('rec.title')}</h2><span class="sub">${esc(t('rec.sorted'))}</span>
       <div class="cols"><button class="btn" id="colBtn">${t('rec.columns')}</button><div class="menu" id="colMenu" hidden>${REC_COLS.map(c => `<label><input type="checkbox" value="${c[0]}" ${on.has(c[0]) ? 'checked' : ''}>${t('rc.' + c[0])}</label>`).join('')}</div></div></div>
     <div style="overflow-x:auto"><table><tr>${cols.map(c => `<th class="${num.has(c) ? 'num' : ''}">${t('rc.' + c)}</th>`).join('')}</tr>
-    ${rows.map(r => `<tr>${cols.map(c => `<td class="${num.has(c) ? 'num' : ''}">${cell(c, r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="empty">${t('empty.nodata')}</td></tr>`}</table></div>${pager}</div>`;
+    ${rows.map(r => `<tr>${cols.map(c => `<td class="${num.has(c) ? 'num' : ''}">${cell(c, r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="empty">${emptyText()}</td></tr>`}</table></div>${pager}</div>`;
   if (d.hist) barChart($('#chRec'), d.hist.times, d.hist.values[0], v => t('rec.n', {n: nf(v)}));
   $('#recPer').onchange = e => { state.rps = +e.target.value; state.rp = 0; render(); };
   if ($('#recLive')) $('#recLive').onclick = () => { state.rl = true; state.rp = 0; render(); };
@@ -2472,7 +2600,7 @@ views.detail = async (el) => {
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
   const lines = d.baseline && d.basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
   const table = (rows, heads, cell) => { const m = Math.max(1, ...rows.map(r => r.wire)); return `<table><tr><th></th>${heads.map(h => `<th>${t(h)}</th>`).join('')}<th class="num">${t('col.traffic')}</th><th style="width:26%">${t('col.share')}</th></tr>
-    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, m)}</td></tr>`).join('') || `<tr><td colspan="${heads.length + 3}" class="empty">${t('empty.nodata')}</td></tr>`}</table>`; };
+    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, m)}</td></tr>`).join('') || `<tr><td colspan="${heads.length + 3}" class="empty">${emptyText()}</td></tr>`}</table>`; };
   const s1 = side1.rows || [], s2 = side2.rows || [], cv = conv.rows || [], rr = rec.rows || [];
   el.innerHTML = `<div class="grid">
     <div class="panel c12"><div class="dhead"><h2>${title}</h2>
@@ -2492,7 +2620,7 @@ views.detail = async (el) => {
       ? panel('c6', t('det.services'), '', table(s1, ['col.port', 'col.app'], r => [V('port', r.key, r.key), esc(r.extra)])) + panel('c6', t('ov.country'), '', table(s2, ['col.country'], r => [V('country', r.key, country(r.key))]))
       : panel('c6', t('det.clients'), '', table(s1, ['col.client'], r => [ipCell(r.key)])) + panel('c6', t('det.servers'), '', table(s2, ['col.server', 'col.country'], r => [ipCell(r.key), r.extra ? esc(country(r.extra)) : '']))}
     ${panel('c12', t('det.flows'), esc(t('rec.latest', {n: rr.length})), `<div style="overflow-x:auto"><table><tr><th>${t('rc.time')}</th><th>${t('rc.client')}</th><th>${t('rc.server')}</th><th class="num">${t('rc.port')}</th><th>${t('rc.app')}</th><th>${t('rc.country')}</th><th class="num">${t('rc.traffic')}</th></tr>
-      ${rr.map(r => `<tr><td class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</td><td>${ipCell(r.client)}</td><td>${ipCell(r.server)}</td><td class="num">${r.port ? V('port', r.port + '/' + (r.proto === 17 ? 'udp' : 'tcp'), r.port) : '—'}</td><td>${V('app', r.app, r.app)}</td><td>${r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—')}</td><td class="num">${fmtBytes(r.wire)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">${t('empty.nodata')}</td></tr>`}</table></div>`)}
+      ${rr.map(r => `<tr><td class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</td><td>${ipCell(r.client)}</td><td>${ipCell(r.server)}</td><td class="num">${r.port ? V('port', r.port + '/' + (r.proto === 17 ? 'udp' : 'tcp'), r.port) : '—'}</td><td>${V('app', r.app, r.app)}</td><td>${r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—')}</td><td class="num">${fmtBytes(r.wire)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">${emptyText()}</td></tr>`}</table></div>`)}
   </div>`;
   tsChart($('#chDet'), {times: series.times, areas, lines, settledTo: series.settled_to});
   bindFindings(el);
@@ -2587,6 +2715,7 @@ async function loadStatus() {
     for (const [ip, n] of Object.entries(s.hosts || {})) names.set(ip, n);
     $('#demo').hidden = !s.demo; $('#demo').textContent = t('demo.badge');
     offlineMode = !!s.offline;
+    waiting = s.waiting || null;
     const L = lic = s.license || null;
     if (L) {
       const id = `<span class="muted">${esc(t('lic.id', {id: L.installation_id}))}</span>`;
@@ -2599,6 +2728,7 @@ async function loadStatus() {
       $('#lic').className = 'lic ' + L.kind; $('#lic').hidden = false;
 
       marked = !!L.watermark;
+      markNotice = L.notice || '';
       applyMark();
       const b = $('#licBadge');
       b.textContent = L.registered ? (L.days < 0 ? t('lic.badge_ok') : t('lic.badge_days', {n: L.days})) : t('lic.badge_get');
