@@ -765,9 +765,10 @@
 "fd.kind.llm": "API mô hình",
 "fd.k.fastscan": "{src} đã chạm tới {n} máy trên {p} cổng trong một phút",
 "fd.k.beacon": "{src} liên lạc {dst} mỗi {s} giây, {n} lần",
-"fd.k.chain": "{a} tới {b}, sau đó {b} tới {c} trên {port}",
+"fd.k.chain": "{b} bị tiếp cận qua {port} rồi tiếp cận thêm {n} máy khác theo cùng cách",
 "fd.k.llm": "{src} đã gửi {bytes} tới {org}",
 "fd.e.jitter": "khoảng cách dao động {n}%",
 "fd.e.hops": "vào ở {a}, ra ở {b}",
-"fd.e.minutes": "trong {n} phút"
+"fd.e.minutes": "trong {n} phút",
+"fd.e.reached_by": "bị tiếp cận bởi {list}"
 }

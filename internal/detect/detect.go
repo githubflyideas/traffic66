@@ -236,7 +236,7 @@ func (d *Detector) Run(end time.Time) (int, error) {
 	learned := !oldest.IsZero() && from.Sub(oldest) >= d.Cfg.Learn
 	var all []store.Finding
 	for _, rule := range []func() ([]store.Finding, error){w.scans, w.portScans, w.brute, w.flood, w.threats,
-		w.fastScan, w.beacon, w.chain, w.llm} {
+		w.fastScan, w.beacon, w.llm} {
 		fs, err := rule()
 		if err != nil {
 			return 0, d.fail(err)
@@ -244,7 +244,9 @@ func (d *Detector) Run(end time.Time) (int, error) {
 		all = append(all, fs...)
 	}
 	if learned {
-		for _, rule := range []func() ([]store.Finding, error){w.lateral, w.exfil} {
+		// chain is built on the same hops lateral reports, so it needs the
+		// same history to know which of them are unusual.
+		for _, rule := range []func() ([]store.Finding, error){w.lateral, w.exfil, w.chain} {
 			fs, err := rule()
 			if err != nil {
 				return 0, d.fail(err)

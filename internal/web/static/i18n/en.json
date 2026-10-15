@@ -765,9 +765,10 @@
 "fd.kind.llm": "Model API",
 "fd.k.fastscan": "{src} reached {n} hosts on {p} ports within one minute",
 "fd.k.beacon": "{src} contacted {dst} every {s} s, {n} times",
-"fd.k.chain": "{a} reached {b}, then {b} reached {c} on {port}",
+"fd.k.chain": "{b} was reached on {port} and then reached {n} other hosts the same way",
 "fd.k.llm": "{src} sent {bytes} to {org}",
 "fd.e.jitter": "spacing varies by {n}%",
 "fd.e.hops": "in on {a}, out on {b}",
-"fd.e.minutes": "over {n} minutes"
+"fd.e.minutes": "over {n} minutes",
+"fd.e.reached_by": "reached by {list}"
 }

@@ -765,9 +765,10 @@
 "fd.kind.llm": "모델 API",
 "fd.k.fastscan": "{src}이(가) 1분 안에 {n}개 호스트의 {p}개 포트에 도달했습니다",
 "fd.k.beacon": "{src}이(가) {s}초마다 {dst}에 접속했습니다({n}회)",
-"fd.k.chain": "{a}이(가) {b}에 도달한 뒤 {b}이(가) {port}로 {c}에 도달했습니다",
+"fd.k.chain": "{b}이(가) {port}로 접근당한 뒤 같은 방식으로 다른 호스트 {n}대에 접근했습니다",
 "fd.k.llm": "{src}이(가) {org}에 {bytes}를 보냈습니다",
 "fd.e.jitter": "간격 편차 {n}%",
 "fd.e.hops": "{a}로 들어와 {b}로 나감",
-"fd.e.minutes": "{n}분 동안"
+"fd.e.minutes": "{n}분 동안",
+"fd.e.reached_by": "접근 출처 {list}"
 }

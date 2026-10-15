@@ -69,11 +69,14 @@ Detection
     traffic to a service is bursty, a timer is not — so a connection that
     is regular but carries real traffic (a sync, a download) is not
     reported, and neither is an irregular one however small.
-  - Hop chain: A reached B on an administration service and then B reached
-    C on one, within five minutes. One hop is lateral movement and is
-    already reported; the second hop inside minutes is the part a person
-    does over hours. The middle host is what the finding names, because
-    that is the one that was taken and then used.
+  - Hop chain: a host reached on an administration service it had never
+    offered, which then reaches another host the same way within five
+    minutes. One such hop is what lateral movement reports; the second one,
+    minutes later, is the part a person does over hours. It counts the same
+    hops the lateral rule does, so ordinary file sharing — a workstation
+    reaching a file server which reaches a backup host — is not a chain,
+    and it reports one finding per middle host rather than one per path
+    through it.
   - Model API: traffic to a machine-learning API, matched on the
     organisation the address belongs to. It is reported to be known
     about rather than as a fault — the severity is the lowest — because

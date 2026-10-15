@@ -230,8 +230,69 @@ func TestChainFires(t *testing.T) {
 	if f.Src != "10.1.0.6" || f.Dst != "10.1.0.7" {
 		t.Errorf("want the middle host reported: %+v", f)
 	}
-	if f.Ev["from"] != "10.1.0.5" || f.Ev["via"] != "10.1.0.6" || f.Ev["to"] != "10.1.0.7" {
+	if f.Ev["via"] != "10.1.0.6" {
 		t.Errorf("evidence %+v", f.Ev)
+	}
+	if got := f.Ev["from"].([]string); len(got) != 1 || got[0] != "10.1.0.5" {
+		t.Errorf("from %v, want [10.1.0.5]", got)
+	}
+	if got := f.Ev["to"].([]string); len(got) != 1 || got[0] != "10.1.0.7" {
+		t.Errorf("to %v, want [10.1.0.7]", got)
+	}
+	if f.Ev["in_port"] != "22/tcp" || f.Ev["out_port"] != "22/tcp" {
+		t.Errorf("ports %v %v", f.Ev["in_port"], f.Ev["out_port"])
+	}
+}
+
+// Ordinary file sharing is not a chain. A workstation reaching a file
+// server which reaches a backup host is the shape the first version of
+// this rule fired on, a hundred times over on a capture with three real
+// problems in it. What separates them is that these are services the hosts
+// already offered, which is what the seen history records.
+func TestChainIgnoresOrdinaryFileSharing(t *testing.T) {
+	base := time.Now().UTC().Truncate(24 * time.Hour).Add(10 * time.Hour)
+	var rows []store.Row
+	// twenty workstations use the file server, which backs up to two hosts
+	for i := 0; i < 20; i++ {
+		rows = append(rows, row(base, "10.1.1."+itoa(i), "10.1.0.6", 445, 200, 200*900))
+	}
+	rows = append(rows, row(base.Add(time.Minute), "10.1.0.6", "10.1.0.7", 445, 200, 200*900))
+	rows = append(rows, row(base.Add(time.Minute), "10.1.0.6", "10.1.0.8", 445, 200, 200*900))
+	w := agentWindow(t, rows, base.Add(-time.Minute), base.Add(10*time.Minute))
+	fs, err := w.chain()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fs) != 0 {
+		t.Errorf("%d findings on ordinary file sharing, want none: %+v", len(fs), fs[0].Ev)
+	}
+}
+
+// One finding per middle host, however many paths run through it: the
+// explosion the first version produced was one finding per path.
+func TestChainReportsOneFindingPerMiddleHost(t *testing.T) {
+	base := time.Now().UTC().Truncate(24 * time.Hour).Add(10 * time.Hour)
+	var rows []store.Row
+	// three hosts reach B, and B goes on to three others
+	for i := 0; i < 3; i++ {
+		rows = append(rows, row(base, "10.1.2."+itoa(i), "10.1.0.6", 22, 50, 50*400))
+	}
+	for i := 0; i < 3; i++ {
+		rows = append(rows, row(base.Add(time.Minute), "10.1.0.6", "10.1.3."+itoa(i), 22, 50, 50*400))
+	}
+	w := agentWindow(t, rows, base.Add(-time.Minute), base.Add(10*time.Minute))
+	fs, err := w.chain()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fs) != 1 {
+		t.Fatalf("%d findings for nine paths through one host, want 1", len(fs))
+	}
+	if got := fs[0].Ev["onward"].(float64); got != 3 {
+		t.Errorf("onward %v, want 3", got)
+	}
+	if got := len(fs[0].Ev["from"].([]string)); got != 3 {
+		t.Errorf("from holds %d, want 3", got)
 	}
 }
 

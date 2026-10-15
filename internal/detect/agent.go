@@ -3,6 +3,7 @@ package detect
 import (
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -157,44 +158,103 @@ func cadence(mins []time.Time) (time.Duration, float64, bool) {
 	return time.Duration(mean * float64(time.Second)), dev / float64(len(gaps)) / mean, true
 }
 
-// chain: A reaches B on an administration service, and then B reaches C on
-// one, inside the same window. One hop is lateral movement and the lateral
-// rule reports it; the second hop is the thing a person does over hours
-// and a program does in seconds. The rule reports the middle host, because
-// that is the one that was taken and then used.
+// chain: a host that was reached on an administration service it had
+// never offered, and which then reached another host the same way inside
+// a few minutes. One such hop is what the lateral rule reports; the second
+// one, minutes later, is the part a person does over hours.
+//
+// The first version of this rule joined raw administration traffic with
+// itself, and on an ordinary network that is an explosion rather than a
+// signal: file sharing means most hosts are both reached and reaching, so
+// a workstation talking to a file server which talks to a backup host is a
+// chain by that definition. It reported a hundred findings on a capture
+// with three things wrong in it.
+//
+// So a hop here is the same hop the lateral rule counts — internal, TCP, an
+// administration port, enough bytes per packet to be a session rather than
+// a probe, and to a service that host had not offered before — including
+// lateral's guard that a service many hosts take up at once is a new
+// server rather than an intruder. The rule is the join of those, and it
+// reports one finding per middle host rather than one per path through it.
 func (w *window) chain() ([]store.Finding, error) {
 	c := w.d.Cfg
-	q := fmt.Sprintf(`WITH hops AS (
+	q := fmt.Sprintf(`WITH hop AS (
 			SELECT client AS a, server AS b, svc_port AS port, min(ts) AS first, max(ts) AS last
-			FROM %s WHERE %s AND proto = 6 AND cli_int AND srv_int AND svc_port IN (%s)
-			GROUP BY client, server, svc_port
+			FROM %s WHERE %s AND dir = %d AND proto = 6 AND svc_port IN (%s)
+			GROUP BY client, server, svc_port HAVING sum(wire) > %d * sum(pkts)
+		), fresh AS (
+			SELECT h.* FROM hop h
+			LEFT JOIN seen s ON s.kind = 'svc' AND s.a = h.b AND s.b = '' AND s.port = h.port
+			WHERE s.first_ts IS NULL OR s.first_ts >= ?
+		), users AS (
+			SELECT b, port, count(DISTINCT a) AS n FROM fresh GROUP BY b, port
+		), narrow AS (
+			SELECT f.* FROM fresh f JOIN users u ON u.b = f.b AND u.port = f.port WHERE u.n < %d
 		)
-		SELECT i.a, i.b, o.b, i.port, o.port, i.first, o.last,
-			array_to_string(list_slice(list(DISTINCT o.b), 1, 6), ',')
-		FROM hops i JOIN hops o ON i.b = o.a
+		SELECT i.a, i.b, o.b, i.port, o.port, i.first, o.last
+		FROM narrow i JOIN narrow o ON i.b = o.a
 		WHERE o.b <> i.a AND o.first >= i.first AND o.first <= i.first + INTERVAL '%d seconds'
-		GROUP BY i.a, i.b, o.b, i.port, o.port, i.first, o.last
-		LIMIT 50`,
-		w.src, w.base(), intList(adminPorts), int(c.ChainWithin.Seconds()))
-	rows, err := w.d.St.DB.Query(q, w.args()...)
+		LIMIT 200`,
+		w.src, w.base(), store.DirInternal, intList(adminPorts), sessionMinAvg,
+		c.NewServiceClients, int(c.ChainWithin.Seconds()))
+	rows, err := w.d.St.DB.Query(q, w.args(w.from.Add(-24*time.Hour))...)
 	if err != nil {
 		return nil, fmt.Errorf("chain rule: %w", err)
 	}
 	defer rows.Close()
-	var out []store.Finding
+	type agg struct {
+		f       store.Finding
+		from    map[string]bool
+		to      []string
+		inPort  int
+		outPort int
+	}
+	by := map[string]*agg{}
+	var order []string
 	for rows.Next() {
-		var a, b, cc, ex string
+		var a, b, cc string
 		var inPort, outPort int
 		var first, last time.Time
-		if err := rows.Scan(&a, &b, &cc, &inPort, &outPort, &first, &last, &ex); err != nil {
+		if err := rows.Scan(&a, &b, &cc, &inPort, &outPort, &first, &last); err != nil {
 			return nil, err
 		}
-		out = append(out, store.Finding{Kind: KindChain, Sev: 3, Src: b, Dst: cc,
-			Port: portLabel(outPort, 6), First: first, Last: last.Add(time.Minute),
-			Ev: map[string]any{"from": a, "via": b, "to": cc,
-				"in_port": portLabel(inPort, 6), "out_port": portLabel(outPort, 6), "examples": split(ex)}})
+		x := by[b]
+		if x == nil {
+			x = &agg{from: map[string]bool{}, inPort: inPort, outPort: outPort,
+				f: store.Finding{Kind: KindChain, Sev: 3, Src: b, Dst: cc,
+					Port: portLabel(outPort, 6), First: first, Last: last.Add(time.Minute)}}
+			by[b] = x
+			order = append(order, b)
+		}
+		x.from[a] = true
+		if !slices.Contains(x.to, cc) {
+			x.to = append(x.to, cc)
+		}
+		if first.Before(x.f.First) {
+			x.f.First = first
+		}
+		if t := last.Add(time.Minute); t.After(x.f.Last) {
+			x.f.Last = t
+		}
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	out := make([]store.Finding, 0, len(by))
+	for _, b := range order {
+		x := by[b]
+		from := make([]string, 0, len(x.from))
+		for a := range x.from {
+			from = append(from, a)
+		}
+		sort.Strings(from)
+		sort.Strings(x.to)
+		x.f.Ev = map[string]any{"via": b, "from": from, "to": x.to,
+			"in_port": portLabel(x.inPort, 6), "out_port": portLabel(x.outPort, 6),
+			"onward": float64(len(x.to))}
+		out = append(out, x.f)
+	}
+	return out, nil
 }
 
 // llm: an internal host sending its traffic to a machine-learning API.

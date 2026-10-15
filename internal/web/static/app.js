@@ -818,7 +818,7 @@ function findingText(f) {
     case 'threat': return tHtml(e.dir === 2 ? 'fd.k.threat_in' : 'fd.k.threat_out', {src, dst, list: esc(f.port)});
     case 'fastscan': return tHtml('fd.k.fastscan', {src, n: nf(e.targets), p: nf(e.ports)});
     case 'beacon': return tHtml('fd.k.beacon', {src, dst, s: nf(Math.round(e.period_s || 0)), n: nf(e.checkins)});
-    case 'chain': return tHtml('fd.k.chain', {a: ipCell(e.from), b: ipCell(e.via), c: ipCell(e.to), port});
+    case 'chain': return tHtml('fd.k.chain', {b: ipCell(e.via), n: nf(e.onward), port});
     case 'llm': return tHtml('fd.k.llm', {src, org: esc(e.org || ''), bytes: esc(fmtBytes(e.bytes))});
   }
   return esc(f.kind);
@@ -842,7 +842,10 @@ function findingEvidence(f) {
       if ((e.examples || []).length) parts.push(tHtml('fd.e.examples', {list: list(e.examples)}));
       break;
     case 'beacon': parts.push(esc(t('fd.e.jitter', {n: nf((e.jitter || 0) * 100, 1)})), esc(t('fd.e.bytes', {n: fmtBytes(e.bytes)}))); if (e.org) parts.push(esc(e.org)); break;
-    case 'chain': parts.push(esc(t('fd.e.hops', {a: e.in_port, b: e.out_port}))); break;
+    case 'chain':
+      parts.push(tHtml('fd.e.reached_by', {list: list(e.from)}), tHtml('fd.e.targets', {list: list(e.to)}));
+      parts.push(esc(t('fd.e.hops', {a: e.in_port, b: e.out_port})));
+      break;
     case 'llm': parts.push(esc(t('fd.e.up', {n: fmtBytes(e.bytes)})), esc(t('fd.e.minutes', {n: nf(e.minutes)}))); break;
   }
   parts.push(esc(e.sampling > 1 ? t('fd.e.sampling', {n: nf(e.sampling)}) : t('fd.e.unsampled')));

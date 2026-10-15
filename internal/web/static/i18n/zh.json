@@ -765,9 +765,10 @@
 "fd.kind.llm": "模型 API",
 "fd.k.fastscan": "{src} 在一分钟内触达了 {n} 台主机的 {p} 个端口",
 "fd.k.beacon": "{src} 每 {s} 秒连接 {dst} 一次，共 {n} 次",
-"fd.k.chain": "{a} 连到 {b}，随后 {b} 通过 {port} 连到 {c}",
+"fd.k.chain": "{b} 被人经 {port} 连入,随后用同样方式连了另外 {n} 台主机",
 "fd.k.llm": "{src} 向 {org} 发送了 {bytes}",
 "fd.e.jitter": "间隔波动 {n}%",
 "fd.e.hops": "进入经 {a}，外出经 {b}",
-"fd.e.minutes": "持续 {n} 分钟"
+"fd.e.minutes": "持续 {n} 分钟",
+"fd.e.reached_by": "来自 {list}"
 }

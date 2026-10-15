@@ -765,9 +765,10 @@
 "fd.kind.llm": "API model",
 "fd.k.fastscan": "{src} menjangkau {n} host pada {p} porta dalam satu menit",
 "fd.k.beacon": "{src} menghubungi {dst} setiap {s} d, {n} kali",
-"fd.k.chain": "{a} menjangkau {b}, lalu {b} menjangkau {c} di {port}",
+"fd.k.chain": "{b} dijangkau pada {port} lalu menjangkau {n} host lain dengan cara yang sama",
 "fd.k.llm": "{src} mengirim {bytes} ke {org}",
 "fd.e.jitter": "jarak bervariasi {n}%",
 "fd.e.hops": "masuk di {a}, keluar di {b}",
-"fd.e.minutes": "selama {n} menit"
+"fd.e.minutes": "selama {n} menit",
+"fd.e.reached_by": "dijangkau oleh {list}"
 }

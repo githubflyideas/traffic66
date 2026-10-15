@@ -765,9 +765,10 @@
 "fd.kind.llm": "Modell-API",
 "fd.k.fastscan": "{src} erreichte {n} Hosts auf {p} Ports innerhalb einer Minute",
 "fd.k.beacon": "{src} kontaktierte {dst} alle {s} s, {n} Mal",
-"fd.k.chain": "{a} erreichte {b}, dann erreichte {b} {c} auf {port}",
+"fd.k.chain": "{b} wurde auf {port} erreicht und erreichte dann {n} weitere Hosts auf dieselbe Weise",
 "fd.k.llm": "{src} sendete {bytes} an {org}",
 "fd.e.jitter": "Abstand schwankt um {n}%",
 "fd.e.hops": "herein über {a}, hinaus über {b}",
-"fd.e.minutes": "über {n} Minuten"
+"fd.e.minutes": "über {n} Minuten",
+"fd.e.reached_by": "erreicht von {list}"
 }

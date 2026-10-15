@@ -765,9 +765,10 @@
 "fd.kind.llm": "モデル API",
 "fd.k.fastscan": "{src} が 1 分以内に {n} ホストの {p} ポートへ到達しました",
 "fd.k.beacon": "{src} が {s} 秒ごとに {dst} へ接続しました（{n} 回）",
-"fd.k.chain": "{a} が {b} に到達し、続いて {b} が {port} で {c} に到達しました",
+"fd.k.chain": "{b} が {port} で到達され、その後同じ方法で他の {n} ホストへ到達しました",
 "fd.k.llm": "{src} が {org} へ {bytes} を送信しました",
 "fd.e.jitter": "間隔のばらつき {n}%",
 "fd.e.hops": "{a} で着信、{b} で発信",
-"fd.e.minutes": "{n} 分間"
+"fd.e.minutes": "{n} 分間",
+"fd.e.reached_by": "接続元 {list}"
 }
