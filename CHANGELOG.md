@@ -49,6 +49,18 @@ Charts
   gutter while the arithmetic assumed it started at the plot.
 
 Collection
+- Changing an sFlow agent's sampling rate no longer scales the samples
+  that follow by the old one. The collector measures the rate the agent is
+  really sampling at, from the packets it says it offered per sample
+  received, and recomputes it every 30 seconds once it has 30 more samples
+  to work from. That measurement was kept across a change of the
+  configured rate, so for up to half a minute after the change the new
+  samples were multiplied by the old rate: ten times the real traffic when
+  1 in 1000 became 1 in 100, and a tenth of it the other way. The
+  measurement is now dropped when the agent's declared rate changes, which
+  falls straight back to the newly declared rate until there is enough to
+  measure again, and the window restarts so the next measurement is not a
+  blend of the two settings.
 - A NetFlow v5 device that samples without declaring it in the message
   header is no longer recorded at a fraction of its traffic. The header's
   sampling interval was forced to one when the device left it empty, which

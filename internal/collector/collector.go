@@ -298,6 +298,20 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 // (sample_pool) per sample actually received. Lost datagrams and samples
 // dropped by the agent both raise it, compensating for the missing data.
 func (st *sfState) update(s *sflow.FlowSample, now time.Time) {
+	if st.init && s.Rate != st.rate {
+		// The agent's configured rate changed. Everything measured so far
+		// was measured against the old one, and the effective rate is only
+		// recomputed every 30 seconds and after 30 more samples, so
+		// carrying it over scaled the new samples by the old rate for up to
+		// half a minute — ten times the traffic when 1 in 1000 became 1 in
+		// 100, and a tenth of it the other way. Dropping it falls straight
+		// back to the rate the agent now declares, which the decoder has
+		// already put on the record, until there is enough to measure
+		// again.
+		st.eff = 0
+		st.winPool, st.winRecv = 0, 0
+		st.evalAt = now
+	}
 	st.rate = s.Rate
 	if st.init {
 		dp := s.Pool - st.lastPool
