@@ -103,22 +103,15 @@ Pages
   none are being lost, and that there is nothing to do.
 
 Licensing
-- The evaluation mark is no longer something only the browser draws. It
-  was a stylesheet over the view, so everything that left the page left it
-  behind: a findings list fetched from the API, a table selected and
-  copied into a document, anything a script asked for. The notice is now
-  produced by the server and travels with the output — on every API
-  response as a header, and inside the findings body, which is the part
-  that gets pasted into a ticket — and a copy taken from a marked page
-  carries it in the clipboard, in both the text and the HTML flavour. A
-  short copy, an address going into a terminal, is left alone.
-- The mark can now be asked what it means. The tiled text itself cannot
-  take a click without taking it from the page underneath, so a marked
-  view carries a small chip in the corner that opens a note: what still
-  works unregistered (everything), what registering removes (the mark),
-  and where to do it. Somebody evaluating works under the mark all day, so
-  the note opens at most once every six hours; a click inside that pause
-  gives the one-line version instead.
+- The evaluation notice is now produced by the server as well as drawn by
+  the browser: it is sent on every API response as a header and included
+  in the findings body, and a copy taken from a marked page carries it in
+  the clipboard, in both the text and the HTML flavour. A copy shorter
+  than 120 characters is left as it is.
+- A marked view carries a chip in the corner that opens a short note on
+  what the mark means and where to register. The tiled text itself is not
+  clickable, because it covers the whole view. The note opens at most once
+  every six hours; a click inside that interval shows a one-line summary.
 
 Security
 - The session cookie is marked Secure when the connection is encrypted,

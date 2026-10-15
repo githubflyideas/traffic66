@@ -26,9 +26,8 @@ function markTile() {
   // read here and written into the tile instead, which is also why the
   // tile is rebuilt whenever the theme changes.
   const ink = getComputedStyle(document.body).getPropertyValue('--ink-3').trim() || '#8a8a8a';
-  // Sparser and lighter than it was: now that the mark is on nearly every
-  // page, somebody works under it all day. Fewer and larger reads as a
-  // watermark; smaller and denser reads as damage to the page.
+  // One large glyph per tile rather than many small ones: the tile is
+  // repeated across the whole view.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="460" height="300">` +
     `<text x="230" y="150" transform="rotate(-24 230 150)" text-anchor="middle" ` +
     `font-family="system-ui,sans-serif" font-size="23" font-weight="600" ` +
