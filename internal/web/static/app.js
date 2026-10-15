@@ -238,6 +238,22 @@ function ago(ms) {
   if (s < 86400) return rtf.format(-Math.round(s / 3600), 'hour');
   return rtf.format(-Math.round(s / 86400), 'day');
 }
+// emptyText is what a page with nothing to show says. For the first
+// several minutes of a new installation the honest answer is not "no
+// data" but "not yet": the collector is waiting for a template, for a
+// sampling rate, or for the most recent minutes to settle. Saying only
+// "no data" there reads as a fault, and sends somebody to change ports
+// and firewall rules while the collector is about to finish.
+function emptyText() {
+  const w = waiting;
+  if (!w || !w.reason) return emptyText();
+  if (w.reason === 'nothing') return t('empty.first');
+  if (w.reason === 'templates') return t('wait.templates', {n: nf(w.records || 0)});
+  if (w.reason === 'sampling') return t('wait.sampling', {n: nf(w.records || 0)});
+  if (w.reason === 'settling') return t('wait.settling', {n: Math.ceil((w.seconds || 0) / 60)});
+  return emptyText();
+}
+
 function toast(msg) {
   const el = $('#toast'); el.textContent = msg; el.style.display = 'block';
   clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = 'none', 1800);
@@ -339,6 +355,7 @@ const ifScoped = path => state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state
 // thing that decides: this keeps the page from offering what would be
 // refused.
 let lic = null;
+let waiting = null;  // what the collector is still waiting for, from /api/status
 const licOK = f => !!lic && lic.registered && (lic.features || []).includes(f);
 
 let ifList = null, ifListKey = '';
@@ -528,7 +545,7 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
 }
 function donut(el, parts, field) {
   const tot = parts.reduce((s, p) => s + p.v, 0);
-  if (!tot) { el.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  if (!tot) { el.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
   const R = 52, r = 34, C = 56; let a0 = -Math.PI / 2;
   let s = `<svg viewBox="0 0 112 112" role="img" aria-label="${esc(parts.map(p => p.n + ' ' + nf(p.v / tot * 100) + '%').join(', '))}">`;
   parts.forEach(p => {
@@ -750,9 +767,9 @@ views.overview = async (el) => {
     ${panel('c6', t('ov.dir'), '', '<div class="donut" id="dDir"></div>')}
     ${panel('c6', t('ov.proto'), '', '<div class="donut" id="dProto"></div>')}
     ${panel('c6', t('ov.top_clients'), t('ov.top_clients_sub'), `<table><tr><th></th><th>${t('col.client')}</th><th class="num">${t('col.traffic')}</th><th style="width:34%">${t('col.share')}</th></tr>
-      ${cl.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
+      ${cl.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
-      ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}</table>`)}
+      ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${fd ? findingsPanel(fd) : ''}
   </div>`;
   tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to});
@@ -894,7 +911,7 @@ const seriesPanel = (id, cls, title, sub = '') => `<div class="panel ${cls}" id=
 function fillSeries(id, d, by, measure) {
   const el = document.getElementById(id); if (!el || !d) return;
   const pk = measure === 'pkts';
-  if (!d.names.length) { el.querySelector('.chart').innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  if (!d.names.length) { el.querySelector('.chart').innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
   // with thousands of hosts the rest dwarfs the top 8: draw only those and
   // give the rest's total in the legend
   const hideOther = by === 'client' || by === 'server';
@@ -961,7 +978,7 @@ views.traffic = async (el) => {
   drawRings($('#rgB'), db, 'service', null);  // one ring: the services
 };
 function drawRings(el, d, inDim, outDim) {
-  if (!d.total) { el.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  if (!d.total) { el.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
   const draw = () => {
     const W = el.clientWidth; if (W < 200) return;
     // room for the outer labels on both sides
@@ -1051,7 +1068,7 @@ async function talkers(el) {
   const [cl, srv, ov] = await Promise.all([api('topn', {dim: 'client', limit: 30}), api('topn', {dim: 'server', limit: 30}), api('overview')]);
   const tot = ov.totals || {};
   const table = (rows, head, f) => `<table class="talk"><tr><th></th><th>${t(head)}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.pkts')}</th><th class="num">${t('col.flows')}</th></tr>
-    ${(rows || []).map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('empty.nodata')}</td></tr>`}
+    ${(rows || []).map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}
     <tr class="sum"><td></td><td>${t('topn.all')}</td><td class="num">${fmtBytes(tot.wire)}</td><td class="num">${nf(tot.pkts)}</td><td class="num">${nf(tot.flows)}</td></tr></table>`;
   el.innerHTML = `<div class="grid">
     <div class="c12"><div style="display:inline-block">${modeSeg()}</div></div>
@@ -1100,7 +1117,7 @@ async function topTable(el, dim) {
     <div class="ph"><h2>${t('topn.title', {n: 66})}</h2><span class="sub">${esc(t('topn.hint'))}${slow}</span>
       <div class="tools" style="display:flex;gap:12px;align-items:center">${modeSeg()}<label>${t('topn.group')} <select class="dimsel" id="dimSel">${DIMS.map(k => `<option value="${k}" ${k === dim ? 'selected' : ''}>${t('dim.' + k)}</option>`).join('')}</select></label></div></div>
     <table><tr><th></th>${heads.map((h, i) => sortTh('t' + i, h && t(h), '')).join('')}${sortTh('wire', t('col.traffic'))}<th class="num">%</th><th style="width:16%">${t('col.share')}</th>${sortTh('pkts', t('col.pkts'))}${sortTh('avg', t('col.avg'))}${showPeers ? sortTh('peers', t('col.peers')) : ''}${sortTh('flows', t('col.flows'))}</tr>
-    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(avg(r))}&nbsp;B</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${t('empty.nodata')}</td></tr>`}
+    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(avg(r))}&nbsp;B</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${emptyText()}</td></tr>`}
     </table></div>`;
   $('#dimSel').onchange = e => { state.dim = e.target.value; state.sort = {k: 'wire', asc: false}; render(); };
   bindMode(el);
@@ -1137,7 +1154,7 @@ views.sankey = async (el) => {
     <div class="chart sankey" id="chSankey" style="height:${mode === 'segment' ? 550 : 650}px" aria-label="${esc(title)}"></div></div>`;
   el.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { state.sk = b.dataset.sk; render(); });
   const sEl = $('#chSankey');
-  if (!(d.seg_app || []).length) { sEl.innerHTML = `<div class="empty">${t('empty.nodata')}</div>`; return; }
+  if (!(d.seg_app || []).length) { sEl.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
   const cols = [[], [], []], ids = [{}, {}, {}];
   const node = (c, k) => { if (!(k in ids[c])) { ids[c][k] = cols[c].length; cols[c].push({k, in: 0, out: 0}); } return cols[c][ids[c][k]]; };
   d.seg_app.forEach(l => { node(0, l.S).out += l.V; node(1, l.T).in += l.V; });
@@ -1300,7 +1317,7 @@ views.geo = async (el) => {
     ${panel('c6', t('geo.as'), '', `<table><tr><th></th><th>${t('col.asn')}</th><th>${t('col.org')}</th><th class="num">${t('col.traffic')}</th><th style="width:32%">${t('col.share')}</th></tr>
       ${ar.map((r, i) => `<tr><td class="rank">${i + 1}</td><td class="nw">${r.key === '0' ? `<span class="muted">${t('unknown')}</span>` : V('asn', r.key, 'AS' + r.key)}</td><td>${esc(r.extra)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, am)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
   </div>`;
-  if (w) drawMap($('#wmap'), w, all, gl); else $('#wmap').innerHTML = `<div class="empty">${t('empty.nodata')}</div>`;
+  if (w) drawMap($('#wmap'), w, all, gl); else $('#wmap').innerHTML = `<div class="empty">${emptyText()}</div>`;
   asCharts.forEach(([by, m], i) => fillSeries('asr' + i, ad[i], by, m));
 };
 
@@ -2108,7 +2125,7 @@ views.records = async (el) => {
     <div class="panel"><div class="ph"><h2>${t('rec.title')}</h2><span class="sub">${esc(t('rec.sorted'))}</span>
       <div class="cols"><button class="btn" id="colBtn">${t('rec.columns')}</button><div class="menu" id="colMenu" hidden>${REC_COLS.map(c => `<label><input type="checkbox" value="${c[0]}" ${on.has(c[0]) ? 'checked' : ''}>${t('rc.' + c[0])}</label>`).join('')}</div></div></div>
     <div style="overflow-x:auto"><table><tr>${cols.map(c => `<th class="${num.has(c) ? 'num' : ''}">${t('rc.' + c)}</th>`).join('')}</tr>
-    ${rows.map(r => `<tr>${cols.map(c => `<td class="${num.has(c) ? 'num' : ''}">${cell(c, r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="empty">${t('empty.nodata')}</td></tr>`}</table></div>${pager}</div>`;
+    ${rows.map(r => `<tr>${cols.map(c => `<td class="${num.has(c) ? 'num' : ''}">${cell(c, r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="empty">${emptyText()}</td></tr>`}</table></div>${pager}</div>`;
   if (d.hist) barChart($('#chRec'), d.hist.times, d.hist.values[0], v => t('rec.n', {n: nf(v)}));
   $('#recPer').onchange = e => { state.rps = +e.target.value; state.rp = 0; render(); };
   if ($('#recLive')) $('#recLive').onclick = () => { state.rl = true; state.rp = 0; render(); };
@@ -2569,7 +2586,7 @@ views.detail = async (el) => {
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
   const lines = d.baseline && d.basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
   const table = (rows, heads, cell) => { const m = Math.max(1, ...rows.map(r => r.wire)); return `<table><tr><th></th>${heads.map(h => `<th>${t(h)}</th>`).join('')}<th class="num">${t('col.traffic')}</th><th style="width:26%">${t('col.share')}</th></tr>
-    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, m)}</td></tr>`).join('') || `<tr><td colspan="${heads.length + 3}" class="empty">${t('empty.nodata')}</td></tr>`}</table>`; };
+    ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, m)}</td></tr>`).join('') || `<tr><td colspan="${heads.length + 3}" class="empty">${emptyText()}</td></tr>`}</table>`; };
   const s1 = side1.rows || [], s2 = side2.rows || [], cv = conv.rows || [], rr = rec.rows || [];
   el.innerHTML = `<div class="grid">
     <div class="panel c12"><div class="dhead"><h2>${title}</h2>
@@ -2589,7 +2606,7 @@ views.detail = async (el) => {
       ? panel('c6', t('det.services'), '', table(s1, ['col.port', 'col.app'], r => [V('port', r.key, r.key), esc(r.extra)])) + panel('c6', t('ov.country'), '', table(s2, ['col.country'], r => [V('country', r.key, country(r.key))]))
       : panel('c6', t('det.clients'), '', table(s1, ['col.client'], r => [ipCell(r.key)])) + panel('c6', t('det.servers'), '', table(s2, ['col.server', 'col.country'], r => [ipCell(r.key), r.extra ? esc(country(r.extra)) : '']))}
     ${panel('c12', t('det.flows'), esc(t('rec.latest', {n: rr.length})), `<div style="overflow-x:auto"><table><tr><th>${t('rc.time')}</th><th>${t('rc.client')}</th><th>${t('rc.server')}</th><th class="num">${t('rc.port')}</th><th>${t('rc.app')}</th><th>${t('rc.country')}</th><th class="num">${t('rc.traffic')}</th></tr>
-      ${rr.map(r => `<tr><td class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</td><td>${ipCell(r.client)}</td><td>${ipCell(r.server)}</td><td class="num">${r.port ? V('port', r.port + '/' + (r.proto === 17 ? 'udp' : 'tcp'), r.port) : '—'}</td><td>${V('app', r.app, r.app)}</td><td>${r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—')}</td><td class="num">${fmtBytes(r.wire)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">${t('empty.nodata')}</td></tr>`}</table></div>`)}
+      ${rr.map(r => `<tr><td class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</td><td>${ipCell(r.client)}</td><td>${ipCell(r.server)}</td><td class="num">${r.port ? V('port', r.port + '/' + (r.proto === 17 ? 'udp' : 'tcp'), r.port) : '—'}</td><td>${V('app', r.app, r.app)}</td><td>${r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—')}</td><td class="num">${fmtBytes(r.wire)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">${emptyText()}</td></tr>`}</table></div>`)}
   </div>`;
   tsChart($('#chDet'), {times: series.times, areas, lines, settledTo: series.settled_to});
   bindFindings(el);
@@ -2684,6 +2701,7 @@ async function loadStatus() {
     for (const [ip, n] of Object.entries(s.hosts || {})) names.set(ip, n);
     $('#demo').hidden = !s.demo; $('#demo').textContent = t('demo.badge');
     offlineMode = !!s.offline;
+    waiting = s.waiting || null;
     const L = lic = s.license || null;
     if (L) {
       const id = `<span class="muted">${esc(t('lic.id', {id: L.installation_id}))}</span>`;

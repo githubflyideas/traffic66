@@ -755,5 +755,8 @@
 "mark.note_title": "Esta cópia não está registada",
 "mark.note_body": "Todas as medições, deteções e páginas continuam a funcionar e nenhum dado é apagado. Registar apenas remove esta marca, que também é adicionada ao que exportar, copiar ou imprimir.",
 "mark.note_close": "Continuar a avaliar",
-"mark.note_go": "Como registar"
+"mark.note_go": "Como registar",
+"wait.templates": "Ainda não — à espera dos modelos do equipamento. NetFlow v9 e IPFIX descrevem os seus registos em modelos enviados de poucos em poucos minutos; {n} registos ficam retidos até chegar um, e nenhum se perde. Nada a fazer.",
+"wait.sampling": "Ainda não — à espera da taxa de amostragem. {n} registos ficam retidos para serem escalados quando o equipamento a comunicar, em vez de contados a 1:1 e subavaliados. Os equipamentos costumam reenviá-la em poucos minutos. Nada a fazer.",
+"wait.settling": "Ainda não — os minutos mais recentes ainda estão a chegar. Os exportadores reportam um fluxo depois de ele terminar, por isso os últimos {n} minutos vão-se preenchendo. Nada a fazer."
 }

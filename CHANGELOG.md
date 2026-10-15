@@ -176,6 +176,16 @@ Registration and the evaluation mark
   handed in as a finished document, not nag the person reading it.
 
 Pages
+- A page with nothing on it says why. For the first several minutes of a
+  new installation the honest answer is not "no data" but "not yet": the
+  collector is waiting for the device's templates, or for the sampling
+  rate, or for the most recent minutes to finish arriving. Saying only
+  "No data in this period." read as a fault, and the first thing anybody
+  does about a fault is start changing ports and firewall rules — while
+  the collector was doing exactly what it should and was nearly done. Each
+  of the three now says which it is, how many records are being held, that
+  none are being lost, and that there is nothing to do.
+
 - Names moved out of the settings and into asset management, where
   recording what an address is belongs. It is the one page in that group an
   unregistered installation keeps: an analyser that cannot tell you which

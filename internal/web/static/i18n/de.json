@@ -755,5 +755,8 @@
 "mark.note_title": "Diese Kopie ist nicht registriert",
 "mark.note_body": "Alle Messungen, Erkennungen und Seiten funktionieren weiter, und es werden keine Daten gelöscht. Die Registrierung entfernt nur diese Markierung, die auch auf Exporte, Kopien und Ausdrucke kommt.",
 "mark.note_close": "Weiter evaluieren",
-"mark.note_go": "Registrierung"
+"mark.note_go": "Registrierung",
+"wait.templates": "Noch nicht — es fehlen die Templates des Geräts. NetFlow v9 und IPFIX beschreiben ihre Datensätze in Templates, die alle paar Minuten gesendet werden; {n} Datensätze werden bis dahin zurückgehalten und gehen nicht verloren. Nichts zu tun.",
+"wait.sampling": "Noch nicht — die Sampling-Rate fehlt. {n} Datensätze werden zurückgehalten, um sie mit der Rate hochzurechnen, sobald das Gerät sie meldet, statt sie als 1:1 zu zählen und zu niedrig auszuweisen. Geräte senden sie meist binnen weniger Minuten erneut. Nichts zu tun.",
+"wait.settling": "Noch nicht — die letzten Minuten treffen noch ein. Exporter melden einen Fluss, nachdem er endet, daher füllen sich die letzten {n} Minuten nach und nach. Nichts zu tun."
 }

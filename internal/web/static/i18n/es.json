@@ -755,5 +755,8 @@
 "mark.note_title": "Esta copia no está registrada",
 "mark.note_body": "Todas las mediciones, detecciones y páginas siguen funcionando y no se borra ningún dato. Registrarse solo quita esta marca, que también se añade a lo que exporte, copie o imprima.",
 "mark.note_close": "Seguir evaluando",
-"mark.note_go": "Cómo registrarse"
+"mark.note_go": "Cómo registrarse",
+"wait.templates": "Todavía no: esperando las plantillas del dispositivo. NetFlow v9 e IPFIX describen sus registros en plantillas que se envían cada pocos minutos; se retienen {n} registros hasta que llegue una, y no se pierde ninguno. No hay nada que hacer.",
+"wait.sampling": "Todavía no: esperando la tasa de muestreo. Se retienen {n} registros para escalarlos cuando el equipo la comunique, en lugar de contarlos como 1:1 y quedarse corto. Los equipos suelen reenviarla en pocos minutos. No hay nada que hacer.",
+"wait.settling": "Todavía no: los últimos minutos aún están llegando. Los exportadores informan un flujo cuando termina, así que los últimos {n} minutos se van completando. No hay nada que hacer."
 }
