@@ -43,7 +43,7 @@ func TestRepairWrapped(t *testing.T) {
 	}
 	defer s.Close()
 	var b, w uint64
-	if err := s.DB.QueryRow(`SELECT sum(bytes)::UBIGINT, sum(wire)::UBIGINT FROM ` + s.Source(old.Add(-time.Hour), now.Add(time.Hour))).Scan(&b, &w); err != nil {
+	if err := s.DB.QueryRow(`SELECT sum(bytes)::UBIGINT, sum(wire)::UBIGINT FROM `+s.Source(old.Add(-time.Hour), now.Add(time.Hour))).Scan(&b, &w); err != nil {
 		t.Fatal(err)
 	}
 	if b != 1500 || w != 1500 {

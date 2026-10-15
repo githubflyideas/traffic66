@@ -28,7 +28,7 @@ func TestPeers(t *testing.T) {
 	}
 	h := ts.Truncate(time.Hour)
 	dim := map[DimKey]*Counters{
-		{TS: h, Dim: "obsunk", Val: "10.0.0.5"}: {Wire: 1100},
+		{TS: h, Dim: "obsunk", Val: "10.0.0.5"}:  {Wire: 1100},
 		{TS: h, Dim: "obsif", Val: "10.0.0.6/1"}: {Wire: 400},
 		{TS: h, Dim: "obsif", Val: "10.0.0.6/2"}: {Wire: 400},
 	}
