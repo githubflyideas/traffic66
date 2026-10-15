@@ -758,5 +758,16 @@
 "mark.note_go": "Cómo registrarse",
 "wait.templates": "Todavía no: esperando las plantillas del dispositivo. NetFlow v9 e IPFIX describen sus registros en plantillas que se envían cada pocos minutos; se retienen {n} registros hasta que llegue una, y no se pierde ninguno. No hay nada que hacer.",
 "wait.sampling": "Todavía no: esperando la tasa de muestreo. Se retienen {n} registros para escalarlos cuando el equipo la comunique, en lugar de contarlos como 1:1 y quedarse corto. Los equipos suelen reenviarla en pocos minutos. No hay nada que hacer.",
-"wait.settling": "Todavía no: los últimos minutos aún están llegando. Los exportadores informan un flujo cuando termina, así que los últimos {n} minutos se van completando. No hay nada que hacer."
+"wait.settling": "Todavía no: los últimos minutos aún están llegando. Los exportadores informan un flujo cuando termina, así que los últimos {n} minutos se van completando. No hay nada que hacer.",
+"fd.kind.fastscan": "Escaneo rápido",
+"fd.kind.beacon": "Conexión periódica",
+"fd.kind.chain": "Cadena de saltos",
+"fd.kind.llm": "API de modelo",
+"fd.k.fastscan": "{src} alcanzó {n} hosts en {p} puertos en un minuto",
+"fd.k.beacon": "{src} contactó con {dst} cada {s} s, {n} veces",
+"fd.k.chain": "{a} alcanzó {b} y después {b} alcanzó {c} en {port}",
+"fd.k.llm": "{src} envió {bytes} a {org}",
+"fd.e.jitter": "el intervalo varía un {n}%",
+"fd.e.hops": "entrada por {a}, salida por {b}",
+"fd.e.minutes": "durante {n} minutos"
 }

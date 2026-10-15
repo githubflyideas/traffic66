@@ -816,6 +816,10 @@ function findingText(f) {
     case 'exfil': return tHtml('fd.k.exfil', {src, dst, bytes: esc(fmtBytes(e.up))});
     case 'flood': return tHtml('fd.k.flood', {dst, port, pps: esc(nf(e.pps))});
     case 'threat': return tHtml(e.dir === 2 ? 'fd.k.threat_in' : 'fd.k.threat_out', {src, dst, list: esc(f.port)});
+    case 'fastscan': return tHtml('fd.k.fastscan', {src, n: nf(e.targets), p: nf(e.ports)});
+    case 'beacon': return tHtml('fd.k.beacon', {src, dst, s: nf(Math.round(e.period_s || 0)), n: nf(e.checkins)});
+    case 'chain': return tHtml('fd.k.chain', {a: ipCell(e.from), b: ipCell(e.via), c: ipCell(e.to), port});
+    case 'llm': return tHtml('fd.k.llm', {src, org: esc(e.org || ''), bytes: esc(fmtBytes(e.bytes))});
   }
   return esc(f.kind);
 }
@@ -833,6 +837,13 @@ function findingEvidence(f) {
     case 'exfil': parts.push(esc(t('fd.e.down', {n: fmtBytes(e.down)}))); if (e.cc || e.org) parts.push(esc([e.cc ? country(e.cc) : '', e.org].filter(Boolean).join(', '))); break;
     case 'flood': parts.push(esc(t('fd.e.sources', {n: nf(e.sources)})), esc(t('fd.e.avg', {n: nf(e.avg)})), esc(t('fd.e.usual', {n: nf(e.usual)}))); break;
     case 'threat': parts.push(esc(t('fd.e.up', {n: fmtBytes(e.up)})), esc(t('fd.e.down', {n: fmtBytes(e.down)}))); break;
+    case 'fastscan':
+      parts.push(esc(t('fd.e.pkts', {n: nf(e.pkts)})), esc(t('fd.e.avg', {n: nf(e.avg)})));
+      if ((e.examples || []).length) parts.push(tHtml('fd.e.examples', {list: list(e.examples)}));
+      break;
+    case 'beacon': parts.push(esc(t('fd.e.jitter', {n: nf((e.jitter || 0) * 100, 1)})), esc(t('fd.e.bytes', {n: fmtBytes(e.bytes)}))); if (e.org) parts.push(esc(e.org)); break;
+    case 'chain': parts.push(esc(t('fd.e.hops', {a: e.in_port, b: e.out_port}))); break;
+    case 'llm': parts.push(esc(t('fd.e.up', {n: fmtBytes(e.bytes)})), esc(t('fd.e.minutes', {n: nf(e.minutes)}))); break;
   }
   parts.push(esc(e.sampling > 1 ? t('fd.e.sampling', {n: nf(e.sampling)}) : t('fd.e.unsampled')));
   return parts.join(' · ');

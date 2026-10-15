@@ -758,5 +758,16 @@
 "mark.note_go": "Cara mendaftar",
 "wait.templates": "Belum — menunggu templat perangkat. NetFlow v9 dan IPFIX menjelaskan rekamannya lewat templat yang dikirim tiap beberapa menit; {n} rekaman ditahan sampai templat tiba, dan tidak ada yang hilang. Tidak perlu tindakan.",
 "wait.sampling": "Belum — menunggu laju sampling. {n} rekaman ditahan agar dapat diskalakan saat perangkat melaporkannya, bukan dihitung 1:1 dan jadi terlalu kecil. Perangkat biasanya mengirim ulang dalam beberapa menit. Tidak perlu tindakan.",
-"wait.settling": "Belum — menit-menit terakhir masih berdatangan. Eksportir melaporkan aliran setelah selesai, jadi {n} menit terakhir terisi bertahap. Tidak perlu tindakan."
+"wait.settling": "Belum — menit-menit terakhir masih berdatangan. Eksportir melaporkan aliran setelah selesai, jadi {n} menit terakhir terisi bertahap. Tidak perlu tindakan.",
+"fd.kind.fastscan": "Pemindaian cepat",
+"fd.kind.beacon": "Check-in berkala",
+"fd.kind.chain": "Rantai lompatan",
+"fd.kind.llm": "API model",
+"fd.k.fastscan": "{src} menjangkau {n} host pada {p} porta dalam satu menit",
+"fd.k.beacon": "{src} menghubungi {dst} setiap {s} d, {n} kali",
+"fd.k.chain": "{a} menjangkau {b}, lalu {b} menjangkau {c} di {port}",
+"fd.k.llm": "{src} mengirim {bytes} ke {org}",
+"fd.e.jitter": "jarak bervariasi {n}%",
+"fd.e.hops": "masuk di {a}, keluar di {b}",
+"fd.e.minutes": "selama {n} menit"
 }

@@ -758,5 +758,16 @@
 "mark.note_go": "How to register",
 "wait.templates": "Not yet — waiting for the device's templates. NetFlow v9 and IPFIX describe their records in templates sent every few minutes; {n} records are held until one arrives, and none are lost. Nothing to do.",
 "wait.sampling": "Not yet — waiting for the sampling rate. {n} records are held so they can be scaled when the device reports it, rather than counted as 1:1 and under-reported. Devices usually resend it within a few minutes. Nothing to do.",
-"wait.settling": "Not yet — the most recent minutes are still arriving. Exporters report a flow after it ends, so the last {n} minutes fill in as they come. Nothing to do."
+"wait.settling": "Not yet — the most recent minutes are still arriving. Exporters report a flow after it ends, so the last {n} minutes fill in as they come. Nothing to do.",
+"fd.kind.fastscan": "Fast scan",
+"fd.kind.beacon": "Regular check-in",
+"fd.kind.chain": "Hop chain",
+"fd.kind.llm": "Model API",
+"fd.k.fastscan": "{src} reached {n} hosts on {p} ports within one minute",
+"fd.k.beacon": "{src} contacted {dst} every {s} s, {n} times",
+"fd.k.chain": "{a} reached {b}, then {b} reached {c} on {port}",
+"fd.k.llm": "{src} sent {bytes} to {org}",
+"fd.e.jitter": "spacing varies by {n}%",
+"fd.e.hops": "in on {a}, out on {b}",
+"fd.e.minutes": "over {n} minutes"
 }

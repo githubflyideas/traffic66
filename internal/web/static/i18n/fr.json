@@ -758,5 +758,16 @@
 "mark.note_go": "Comment s'enregistrer",
 "wait.templates": "Pas encore : en attente des modèles de l'équipement. NetFlow v9 et IPFIX décrivent leurs enregistrements dans des modèles envoyés toutes les quelques minutes ; {n} enregistrements sont conservés en attendant, aucun n'est perdu. Rien à faire.",
 "wait.sampling": "Pas encore : en attente du taux d'échantillonnage. {n} enregistrements sont conservés pour être mis à l'échelle dès que l'équipement l'annonce, plutôt que comptés en 1:1 et sous-évalués. Les équipements le renvoient généralement en quelques minutes. Rien à faire.",
-"wait.settling": "Pas encore : les dernières minutes arrivent encore. Les exportateurs signalent un flux après sa fin, donc les {n} dernières minutes se complètent au fur et à mesure. Rien à faire."
+"wait.settling": "Pas encore : les dernières minutes arrivent encore. Les exportateurs signalent un flux après sa fin, donc les {n} dernières minutes se complètent au fur et à mesure. Rien à faire.",
+"fd.kind.fastscan": "Balayage rapide",
+"fd.kind.beacon": "Connexion périodique",
+"fd.kind.chain": "Chaîne de rebonds",
+"fd.kind.llm": "API de modèle",
+"fd.k.fastscan": "{src} a atteint {n} hôtes sur {p} ports en une minute",
+"fd.k.beacon": "{src} a contacté {dst} toutes les {s} s, {n} fois",
+"fd.k.chain": "{a} a atteint {b}, puis {b} a atteint {c} sur {port}",
+"fd.k.llm": "{src} a envoyé {bytes} à {org}",
+"fd.e.jitter": "intervalle variant de {n}%",
+"fd.e.hops": "entrée sur {a}, sortie sur {b}",
+"fd.e.minutes": "sur {n} minutes"
 }

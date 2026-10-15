@@ -88,6 +88,39 @@ Security
   signs you out now matches the one it replaces on the attributes browsers
   compare, which is what makes a replacement take.
 
+Detection
+- Four rules about work done by a program rather than by a person at a
+  keyboard, which is what an agent driving a network looks like in flow
+  data. None of them claims to identify what the program is; each says
+  that the shape of the traffic is one a person does not produce.
+  - Fast scan: many hosts AND many ports inside a single minute, with
+    probe-sized packets. The scan rules already report a sweep however
+    long it takes; this is about the speed, so a sweep spread over the
+    window is not reported here twice.
+  - Regular check-in: small exchanges with one outside service at a
+    steady cadence. The regularity is the whole signal — a person's
+    traffic to a service is bursty, a timer is not — so a connection that
+    is regular but carries real traffic (a sync, a download) is not
+    reported, and neither is an irregular one however small.
+  - Hop chain: A reached B on an administration service and then B reached
+    C on one, within five minutes. One hop is lateral movement and is
+    already reported; the second hop inside minutes is the part a person
+    does over hours. The middle host is what the finding names, because
+    that is the one that was taken and then used.
+  - Model API: traffic to a machine-learning API, matched on the
+    organisation the address belongs to. It is reported to be known
+    about rather than as a fault — the severity is the lowest — because
+    what leaves for one is prompt text. The list of organisations is a
+    starting point that will age and is meant to be edited; an empty list
+    turns the rule off rather than matching everything.
+- The port-scan rule's room is under test again. It asks for five distinct
+  ports on sampled data, and what keeps that from reporting ordinary
+  traffic is the two qualifications beside it: only ports below 32768
+  count, and the packets have to be probe-sized. The test asserting that a
+  host using ten real services and a server answering forty ephemeral
+  ports are both left alone — while a real scan is still reported — had
+  gone missing.
+
 Collection
 - Changing an sFlow agent's sampling rate no longer scales the samples
   that follow by the old one. The collector measures the rate the agent is

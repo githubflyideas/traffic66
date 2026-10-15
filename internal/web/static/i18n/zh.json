@@ -758,5 +758,16 @@
 "mark.note_go": "如何注册",
 "wait.templates": "还没到时候——正在等设备的模板。NetFlow v9 和 IPFIX 每隔几分钟才发一次模板来描述记录格式；在模板到达前有 {n} 条记录被暂存，不会丢失。无需操作。",
 "wait.sampling": "还没到时候——正在等采样率。有 {n} 条记录被暂存，等设备报告采样率后再按比例换算，而不是先按 1:1 计入（那样会严重少算）。设备通常几分钟内会重发。无需操作。",
-"wait.settling": "还没到时候——最近几分钟的数据还在陆续到达。导出器是在流结束后才上报的，所以最后 {n} 分钟会逐步补齐。无需操作。"
+"wait.settling": "还没到时候——最近几分钟的数据还在陆续到达。导出器是在流结束后才上报的，所以最后 {n} 分钟会逐步补齐。无需操作。",
+"fd.kind.fastscan": "高速扫描",
+"fd.kind.beacon": "定时回连",
+"fd.kind.chain": "跳板链",
+"fd.kind.llm": "模型 API",
+"fd.k.fastscan": "{src} 在一分钟内触达了 {n} 台主机的 {p} 个端口",
+"fd.k.beacon": "{src} 每 {s} 秒连接 {dst} 一次，共 {n} 次",
+"fd.k.chain": "{a} 连到 {b}，随后 {b} 通过 {port} 连到 {c}",
+"fd.k.llm": "{src} 向 {org} 发送了 {bytes}",
+"fd.e.jitter": "间隔波动 {n}%",
+"fd.e.hops": "进入经 {a}，外出经 {b}",
+"fd.e.minutes": "持续 {n} 分钟"
 }

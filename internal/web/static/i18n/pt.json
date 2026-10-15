@@ -758,5 +758,16 @@
 "mark.note_go": "Como registar",
 "wait.templates": "Ainda não — à espera dos modelos do equipamento. NetFlow v9 e IPFIX descrevem os seus registos em modelos enviados de poucos em poucos minutos; {n} registos ficam retidos até chegar um, e nenhum se perde. Nada a fazer.",
 "wait.sampling": "Ainda não — à espera da taxa de amostragem. {n} registos ficam retidos para serem escalados quando o equipamento a comunicar, em vez de contados a 1:1 e subavaliados. Os equipamentos costumam reenviá-la em poucos minutos. Nada a fazer.",
-"wait.settling": "Ainda não — os minutos mais recentes ainda estão a chegar. Os exportadores reportam um fluxo depois de ele terminar, por isso os últimos {n} minutos vão-se preenchendo. Nada a fazer."
+"wait.settling": "Ainda não — os minutos mais recentes ainda estão a chegar. Os exportadores reportam um fluxo depois de ele terminar, por isso os últimos {n} minutos vão-se preenchendo. Nada a fazer.",
+"fd.kind.fastscan": "Varrimento rápido",
+"fd.kind.beacon": "Ligação periódica",
+"fd.kind.chain": "Cadeia de saltos",
+"fd.kind.llm": "API de modelo",
+"fd.k.fastscan": "{src} alcançou {n} anfitriões em {p} portas num minuto",
+"fd.k.beacon": "{src} contactou {dst} a cada {s} s, {n} vezes",
+"fd.k.chain": "{a} alcançou {b} e depois {b} alcançou {c} em {port}",
+"fd.k.llm": "{src} enviou {bytes} para {org}",
+"fd.e.jitter": "o intervalo varia {n}%",
+"fd.e.hops": "entrada em {a}, saída em {b}",
+"fd.e.minutes": "ao longo de {n} minutos"
 }

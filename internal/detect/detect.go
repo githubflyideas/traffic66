@@ -47,7 +47,27 @@ type Config struct {
 	FloodMaxAvg                     float64 // average frame size of a flood (120)
 	FloodRatio                      float64 // times the address's usual packet rate (10)
 	NewServiceClients               int     // a new service used by this many hosts is a new server, not lateral movement (5)
+
+	// Work done by a program rather than by a person (see agent.go).
+	FastScanTargets      int           // distinct hosts in one minute (40)
+	FastScanPorts        int           // and distinct ports in that minute (10)
+	BeaconMinutes        int           // minutes a check-in must appear in (6)
+	BeaconMaxBytesPerMin float64       // and how little it may carry per minute (4 KB)
+	BeaconJitter         float64       // how uneven the cadence may be, as a fraction (0.2)
+	ChainWithin          time.Duration // B must reach C this soon after A reached B (5 min)
+	// LLMOrgs are the organisation names counted as machine-learning APIs,
+	// matched as substrings and case-insensitively against the owner of the
+	// address. It is a starting point and is meant to be edited; empty
+	// turns the rule off rather than matching everything.
+	LLMOrgs  []string
+	LLMBytes float64 // sent to one of them before it is worth a finding (1 MB)
 }
+
+// defaultLLMOrgs is the starting list. It names the organisations that run
+// the public model APIs an agent is most often pointed at. It is certain to
+// be incomplete and will age; it is a default, not an authority, and an
+// installation that cares should set Config.LLMOrgs to its own list.
+var defaultLLMOrgs = []string{"openai", "anthropic", "mistral", "cohere", "perplexity", "huggingface"}
 
 func (c *Config) defaults() {
 	def := func(p *time.Duration, v time.Duration) {
@@ -72,6 +92,13 @@ func (c *Config) defaults() {
 	defi(&c.BruteConns, 30)
 	defi(&c.BruteConnsSampled, 5)
 	defi(&c.NewServiceClients, 5)
+	defi(&c.FastScanTargets, 40)
+	defi(&c.FastScanPorts, 10)
+	defi(&c.BeaconMinutes, 6)
+	def(&c.ChainWithin, 5*time.Minute)
+	if c.LLMOrgs == nil {
+		c.LLMOrgs = defaultLLMOrgs
+	}
 	deff := func(p *float64, v float64) {
 		if *p <= 0 {
 			*p = v
@@ -84,6 +111,9 @@ func (c *Config) defaults() {
 	deff(&c.FloodPPS, 20000)
 	deff(&c.FloodMaxAvg, 120)
 	deff(&c.FloodRatio, 10)
+	deff(&c.BeaconMaxBytesPerMin, 4096)
+	deff(&c.BeaconJitter, 0.2)
+	deff(&c.LLMBytes, 1e6)
 }
 
 // Kinds of findings.
@@ -95,6 +125,13 @@ const (
 	KindExfil    = "exfil"    // large upload to a destination never used before
 	KindFlood    = "flood"    // packet flood to one address
 	KindThreat   = "threat"   // traffic with an address on a threat list
+
+	// The rules below are about work done by a program rather than by a
+	// person at a keyboard. See agent.go.
+	KindFastScan = "fastscan" // many hosts and many ports inside one minute
+	KindBeacon   = "beacon"   // small exchanges with one service at a steady cadence
+	KindChain    = "chain"    // A reached B on an admin service, then B reached C
+	KindLLM      = "llm"      // traffic to a machine-learning API
 )
 
 // Ports of login services (password guessing).
@@ -198,7 +235,8 @@ func (d *Detector) Run(end time.Time) (int, error) {
 	oldest := d.oldest()
 	learned := !oldest.IsZero() && from.Sub(oldest) >= d.Cfg.Learn
 	var all []store.Finding
-	for _, rule := range []func() ([]store.Finding, error){w.scans, w.portScans, w.brute, w.flood, w.threats} {
+	for _, rule := range []func() ([]store.Finding, error){w.scans, w.portScans, w.brute, w.flood, w.threats,
+		w.fastScan, w.beacon, w.chain, w.llm} {
 		fs, err := rule()
 		if err != nil {
 			return 0, d.fail(err)

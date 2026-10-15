@@ -758,5 +758,16 @@
 "mark.note_go": "Registrierung",
 "wait.templates": "Noch nicht — es fehlen die Templates des Geräts. NetFlow v9 und IPFIX beschreiben ihre Datensätze in Templates, die alle paar Minuten gesendet werden; {n} Datensätze werden bis dahin zurückgehalten und gehen nicht verloren. Nichts zu tun.",
 "wait.sampling": "Noch nicht — die Sampling-Rate fehlt. {n} Datensätze werden zurückgehalten, um sie mit der Rate hochzurechnen, sobald das Gerät sie meldet, statt sie als 1:1 zu zählen und zu niedrig auszuweisen. Geräte senden sie meist binnen weniger Minuten erneut. Nichts zu tun.",
-"wait.settling": "Noch nicht — die letzten Minuten treffen noch ein. Exporter melden einen Fluss, nachdem er endet, daher füllen sich die letzten {n} Minuten nach und nach. Nichts zu tun."
+"wait.settling": "Noch nicht — die letzten Minuten treffen noch ein. Exporter melden einen Fluss, nachdem er endet, daher füllen sich die letzten {n} Minuten nach und nach. Nichts zu tun.",
+"fd.kind.fastscan": "Schneller Scan",
+"fd.kind.beacon": "Regelmäßige Meldung",
+"fd.kind.chain": "Sprungkette",
+"fd.kind.llm": "Modell-API",
+"fd.k.fastscan": "{src} erreichte {n} Hosts auf {p} Ports innerhalb einer Minute",
+"fd.k.beacon": "{src} kontaktierte {dst} alle {s} s, {n} Mal",
+"fd.k.chain": "{a} erreichte {b}, dann erreichte {b} {c} auf {port}",
+"fd.k.llm": "{src} sendete {bytes} an {org}",
+"fd.e.jitter": "Abstand schwankt um {n}%",
+"fd.e.hops": "herein über {a}, hinaus über {b}",
+"fd.e.minutes": "über {n} Minuten"
 }

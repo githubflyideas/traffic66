@@ -758,5 +758,16 @@
 "mark.note_go": "Cách đăng ký",
 "wait.templates": "Chưa có — đang chờ mẫu (template) từ thiết bị. NetFlow v9 và IPFIX mô tả bản ghi bằng mẫu gửi vài phút một lần; {n} bản ghi được giữ lại cho tới khi mẫu đến và không mất bản nào. Không cần làm gì.",
 "wait.sampling": "Chưa có — đang chờ tỷ lệ lấy mẫu. {n} bản ghi được giữ lại để nhân đúng tỷ lệ khi thiết bị báo, thay vì tính 1:1 và bị thiếu hụt. Thiết bị thường gửi lại trong vài phút. Không cần làm gì.",
-"wait.settling": "Chưa có — những phút gần nhất vẫn đang về. Thiết bị xuất báo cáo luồng sau khi luồng kết thúc, nên {n} phút cuối sẽ dần đầy. Không cần làm gì."
+"wait.settling": "Chưa có — những phút gần nhất vẫn đang về. Thiết bị xuất báo cáo luồng sau khi luồng kết thúc, nên {n} phút cuối sẽ dần đầy. Không cần làm gì.",
+"fd.kind.fastscan": "Quét nhanh",
+"fd.kind.beacon": "Kết nối định kỳ",
+"fd.kind.chain": "Chuỗi nhảy",
+"fd.kind.llm": "API mô hình",
+"fd.k.fastscan": "{src} đã chạm tới {n} máy trên {p} cổng trong một phút",
+"fd.k.beacon": "{src} liên lạc {dst} mỗi {s} giây, {n} lần",
+"fd.k.chain": "{a} tới {b}, sau đó {b} tới {c} trên {port}",
+"fd.k.llm": "{src} đã gửi {bytes} tới {org}",
+"fd.e.jitter": "khoảng cách dao động {n}%",
+"fd.e.hops": "vào ở {a}, ra ở {b}",
+"fd.e.minutes": "trong {n} phút"
 }
