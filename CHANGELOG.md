@@ -3,123 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 2.1.0
-
-Billing
-- A 95th-percentile page: what a carrier would charge for each circuit,
-  over a period the browser works out, so this month, last month, the last
-  thirty days and a cycle that starts on the third are all the same
-  question and a calendar month means the customer's midnights rather than
-  UTC's. The figure is the usual one — sort the five-minute samples,
-  discard the top five per cent, charge the highest that is left, and
-  charge the greater of the two directions. It rests on the device's own
-  counters, not on sampled flow, so it is a number a carrier can be argued
-  with using their own figures.
-- Those counters are kept as five-minute rates for as long as the
-  summaries are, four hundred days by default. The snapshots they are
-  derived from are deleted with the flow detail after thirty, which cannot
-  cover a thirty-one day month, let alone "last month" asked for on the
-  second of this one.
-- The derivation drops rather than guesses: a counter that went backwards
-  is a wrap or a reboot and the two cannot be told apart from here; an
-  interval over fifteen minutes is a hole in collection; a rate above the
-  interface's own speed is a reset the backwards test cannot see. Buckets
-  with no measurement are left out rather than counted as zero, which would
-  lower the figure in the paying customer's favour — so the page shows how
-  much of the period each figure rests on, and says what it does with a
-  gap.
-- A device reports every interface it has; the two or three a carrier
-  invoices for are marked by hand, as a word on the interface's line in the
-  names file beside its name and its speed. With none marked the page lists
-  everything and says so. A marked circuit that reported nothing still gets
-  a row saying it reported nothing, because a circuit you are paying for
-  going quiet is the thing you most want to see.
-
-Charts
-- The day and six-hour columns are cut on the viewer's clock rather than
-  on UTC. A day bucket that starts at UTC midnight starts at nine in the
-  morning in Tokyo, so a Japanese installation never saw a day's traffic
-  in one column: every day arrived split across two, and neither was a
-  day. The browser now says how far its clock is from UTC and the columns
-  follow it, which also fixes the zones that are not whole hours — India,
-  Nepal, Chatham. It is one offset for the range rather than a named zone,
-  for the same reason the month's boundaries are the browser's to decide:
-  the alternative is a zone database in the binary, which is a large
-  dependency for the hour a range spanning a daylight-saving change moves
-  one boundary by.
-
-- A live chart no longer stops short of now. It stopped where the data was
-  complete — about three minutes back on a NetFlow exporter with a sixty
-  second active timeout — which looked exactly like the analyser running
-  three minutes behind. The newest buckets are drawn now, under a hatched
-  wash with the boundary marked, and their tooltip says the data is still
-  arriving. A half-counted minute is still not allowed to read as a fall in
-  traffic; it is just said out loud instead of hidden.
-- Hovering a time chart near its right-hand edge read a value from an
-  earlier point, by as much as an hour on a wide chart, and the newest
-  point could not be hovered at all. The hover area started in the axis
-  gutter while the arithmetic assumed it started at the plot.
-
-Licensing
-- The evaluation mark is no longer something only the browser draws. It
-  was a stylesheet over the view, so everything that left the page left it
-  behind: a findings list fetched from the API, a table selected and
-  copied into a document, anything a script asked for. The notice is now
-  produced by the server and travels with the output — on every API
-  response as a header, and inside the findings body, which is the part
-  that gets pasted into a ticket — and a copy taken from a marked page
-  carries it in the clipboard, in both the text and the HTML flavour. A
-  short copy, an address going into a terminal, is left alone.
-- The mark can now be asked what it means. The tiled text itself cannot
-  take a click without taking it from the page underneath, so a marked
-  view carries a small chip in the corner that opens a note: what still
-  works unregistered (everything), what registering removes (the mark),
-  and where to do it. Somebody evaluating works under the mark all day, so
-  the note opens at most once every six hours; a click inside that pause
-  gives the one-line version instead.
-
-Security
-- The session cookie is marked Secure when the connection is encrypted,
-  directly or through a proxy that says so in X-Forwarded-Proto, so it is
-  never sent in clear if anything downgrades the connection. It is
-  deliberately not marked on a plain HTTP installation, where the browser
-  would drop it and nobody could sign in; traffic66 is run both ways, so
-  this is decided per request rather than configured. The cookie that
-  signs you out now matches the one it replaces on the attributes browsers
-  compare, which is what makes a replacement take.
-
-Detection
-- Four rules about work done by a program rather than by a person at a
-  keyboard, which is what an agent driving a network looks like in flow
-  data. None of them claims to identify what the program is; each says
-  that the shape of the traffic is one a person does not produce.
-  - Fast scan: many hosts AND many ports inside a single minute, with
-    probe-sized packets. The scan rules already report a sweep however
-    long it takes; this is about the speed, so a sweep spread over the
-    window is not reported here twice.
-  - Regular check-in: small exchanges with one outside service at a
-    steady cadence. The regularity is the whole signal — a person's
-    traffic to a service is bursty, a timer is not — so a connection that
-    is regular but carries real traffic (a sync, a download) is not
-    reported, and neither is an irregular one however small.
-  - Hop chain: A reached B on an administration service and then B reached
-    C on one, within five minutes. One hop is lateral movement and is
-    already reported; the second hop inside minutes is the part a person
-    does over hours. The middle host is what the finding names, because
-    that is the one that was taken and then used.
-  - Model API: traffic to a machine-learning API, matched on the
-    organisation the address belongs to. It is reported to be known
-    about rather than as a fault — the severity is the lowest — because
-    what leaves for one is prompt text. The list of organisations is a
-    starting point that will age and is meant to be edited; an empty list
-    turns the rule off rather than matching everything.
-- The port-scan rule's room is under test again. It asks for five distinct
-  ports on sampled data, and what keeps that from reporting ordinary
-  traffic is the two qualifications beside it: only ports below 32768
-  count, and the packets have to be probe-sized. The test asserting that a
-  host using ten real services and a server answering forty ephemeral
-  ports are both left alone — while a real scan is still reported — had
-  gone missing.
+## 2.2.0
 
 Collection
 - Changing an sFlow agent's sampling rate no longer scales the samples
@@ -157,6 +41,138 @@ Collection
   last reported. An exporter that reports each interval separately gives
   every report its own start time and is unaffected, as is any exporter
   sending the delta counts, which is most of them.
+
+Charts
+- The day and six-hour columns are cut on the viewer's clock rather than
+  on UTC. A day bucket that starts at UTC midnight starts at nine in the
+  morning in Tokyo, so a Japanese installation never saw a day's traffic
+  in one column: every day arrived split across two, and neither was a
+  day. The browser now says how far its clock is from UTC and the columns
+  follow it, which also fixes the zones that are not whole hours — India,
+  Nepal, Chatham. It is one offset for the range rather than a named zone,
+  for the same reason the month's boundaries are the browser's to decide:
+  the alternative is a zone database in the binary, which is a large
+  dependency for the hour a range spanning a daylight-saving change moves
+  one boundary by.
+
+Detection
+- Four rules about work done by a program rather than by a person at a
+  keyboard, which is what an agent driving a network looks like in flow
+  data. None of them claims to identify what the program is; each says
+  that the shape of the traffic is one a person does not produce.
+  - Fast scan: many hosts AND many ports inside a single minute, with
+    probe-sized packets. The scan rules already report a sweep however
+    long it takes; this is about the speed, so a sweep spread over the
+    window is not reported here twice.
+  - Regular check-in: small exchanges with one outside service at a
+    steady cadence. The regularity is the whole signal — a person's
+    traffic to a service is bursty, a timer is not — so a connection that
+    is regular but carries real traffic (a sync, a download) is not
+    reported, and neither is an irregular one however small.
+  - Hop chain: A reached B on an administration service and then B reached
+    C on one, within five minutes. One hop is lateral movement and is
+    already reported; the second hop inside minutes is the part a person
+    does over hours. The middle host is what the finding names, because
+    that is the one that was taken and then used.
+  - Model API: traffic to a machine-learning API, matched on the
+    organisation the address belongs to. It is reported to be known
+    about rather than as a fault — the severity is the lowest — because
+    what leaves for one is prompt text. The list of organisations is a
+    starting point that will age and is meant to be edited; an empty list
+    turns the rule off rather than matching everything.
+- The port-scan rule's room is under test again. It asks for five distinct
+  ports on sampled data, and what keeps that from reporting ordinary
+  traffic is the two qualifications beside it: only ports below 32768
+  count, and the packets have to be probe-sized. The test asserting that a
+  host using ten real services and a server answering forty ephemeral
+  ports are both left alone — while a real scan is still reported — had
+  gone missing.
+
+Pages
+- A page with nothing on it says why. For the first several minutes of a
+  new installation the honest answer is not "no data" but "not yet": the
+  collector is waiting for the device's templates, or for the sampling
+  rate, or for the most recent minutes to finish arriving. Saying only
+  "No data in this period." read as a fault, and the first thing anybody
+  does about a fault is start changing ports and firewall rules — while
+  the collector was doing exactly what it should and was nearly done. Each
+  of the three now says which it is, how many records are being held, that
+  none are being lost, and that there is nothing to do.
+
+Licensing
+- The evaluation mark is no longer something only the browser draws. It
+  was a stylesheet over the view, so everything that left the page left it
+  behind: a findings list fetched from the API, a table selected and
+  copied into a document, anything a script asked for. The notice is now
+  produced by the server and travels with the output — on every API
+  response as a header, and inside the findings body, which is the part
+  that gets pasted into a ticket — and a copy taken from a marked page
+  carries it in the clipboard, in both the text and the HTML flavour. A
+  short copy, an address going into a terminal, is left alone.
+- The mark can now be asked what it means. The tiled text itself cannot
+  take a click without taking it from the page underneath, so a marked
+  view carries a small chip in the corner that opens a note: what still
+  works unregistered (everything), what registering removes (the mark),
+  and where to do it. Somebody evaluating works under the mark all day, so
+  the note opens at most once every six hours; a click inside that pause
+  gives the one-line version instead.
+
+Security
+- The session cookie is marked Secure when the connection is encrypted,
+  directly or through a proxy that says so in X-Forwarded-Proto, so it is
+  never sent in clear if anything downgrades the connection. It is
+  deliberately not marked on a plain HTTP installation, where the browser
+  would drop it and nobody could sign in; traffic66 is run both ways, so
+  this is decided per request rather than configured. The cookie that
+  signs you out now matches the one it replaces on the attributes browsers
+  compare, which is what makes a replacement take.
+
+## 2.1.0
+
+Billing
+- A 95th-percentile page: what a carrier would charge for each circuit,
+  over a period the browser works out, so this month, last month, the last
+  thirty days and a cycle that starts on the third are all the same
+  question and a calendar month means the customer's midnights rather than
+  UTC's. The figure is the usual one — sort the five-minute samples,
+  discard the top five per cent, charge the highest that is left, and
+  charge the greater of the two directions. It rests on the device's own
+  counters, not on sampled flow, so it is a number a carrier can be argued
+  with using their own figures.
+- Those counters are kept as five-minute rates for as long as the
+  summaries are, four hundred days by default. The snapshots they are
+  derived from are deleted with the flow detail after thirty, which cannot
+  cover a thirty-one day month, let alone "last month" asked for on the
+  second of this one.
+- The derivation drops rather than guesses: a counter that went backwards
+  is a wrap or a reboot and the two cannot be told apart from here; an
+  interval over fifteen minutes is a hole in collection; a rate above the
+  interface's own speed is a reset the backwards test cannot see. Buckets
+  with no measurement are left out rather than counted as zero, which would
+  lower the figure in the paying customer's favour — so the page shows how
+  much of the period each figure rests on, and says what it does with a
+  gap.
+- A device reports every interface it has; the two or three a carrier
+  invoices for are marked by hand, as a word on the interface's line in the
+  names file beside its name and its speed. With none marked the page lists
+  everything and says so. A marked circuit that reported nothing still gets
+  a row saying it reported nothing, because a circuit you are paying for
+  going quiet is the thing you most want to see.
+
+Charts
+- A live chart no longer stops short of now. It stopped where the data was
+  complete — about three minutes back on a NetFlow exporter with a sixty
+  second active timeout — which looked exactly like the analyser running
+  three minutes behind. The newest buckets are drawn now, under a hatched
+  wash with the boundary marked, and their tooltip says the data is still
+  arriving. A half-counted minute is still not allowed to read as a fall in
+  traffic; it is just said out loud instead of hidden.
+- Hovering a time chart near its right-hand edge read a value from an
+  earlier point, by as much as an hour on a wide chart, and the newest
+  point could not be hovered at all. The hover area started in the axis
+  gutter while the arithmetic assumed it started at the plot.
+
+Collection
 - A malformed packet could take the whole analyser down. A message that
   defines an IPFIX template and withdraws it again, with a data set already
   waiting for that template, left the template's id on the replay list
@@ -209,16 +225,6 @@ Registration and the evaluation mark
   handed in as a finished document, not nag the person reading it.
 
 Pages
-- A page with nothing on it says why. For the first several minutes of a
-  new installation the honest answer is not "no data" but "not yet": the
-  collector is waiting for the device's templates, or for the sampling
-  rate, or for the most recent minutes to finish arriving. Saying only
-  "No data in this period." read as a fault, and the first thing anybody
-  does about a fault is start changing ports and firewall rules — while
-  the collector was doing exactly what it should and was nearly done. Each
-  of the three now says which it is, how many records are being held, that
-  none are being lost, and that there is nothing to do.
-
 - Names moved out of the settings and into asset management, where
   recording what an address is belongs. It is the one page in that group an
   unregistered installation keeps: an analyser that cannot tell you which
