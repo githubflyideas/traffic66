@@ -49,6 +49,18 @@ Charts
   gutter while the arithmetic assumed it started at the plot.
 
 Collection
+- A NetFlow v5 device that samples without declaring it in the message
+  header is no longer recorded at a fraction of its traffic. The header's
+  sampling interval was forced to one when the device left it empty, which
+  both scaled the counts as though every packet had been seen — a tenth of
+  a percent of the real traffic for a device sampling 1 in 1000 — and
+  stopped the rate set by hand for that device from ever being reached. A
+  rate given in the header still wins; failing that the hand-set rate is
+  used, then whether the device is known to export every packet, and
+  failing all three the counts are recorded as they arrived and marked as
+  having no known rate, so the interface comparison can say why its
+  numbers differ instead of asserting a rate of one. The sources page
+  shows such a device as hand-set rather than as declaring 1 in 1.
 - IPFIX exporters that report a flow's running totals (octetTotalCount and
   packetTotalCount, rather than the per-interval delta counts) no longer
   have their traffic counted several times over. Those fields carry the

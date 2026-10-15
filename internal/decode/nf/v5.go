@@ -33,10 +33,14 @@ func (d *Decoder) decodeV5(b []byte, addr netip.Addr, now time.Time) (Result, er
 	if len(b) < v5HeaderLen+int(count)*v5RecordLen {
 		return Result{}, errors.New("nf: v5 records truncated")
 	}
-	rate := uint32(sampling & 0x3FFF)
-	if rate == 0 {
-		rate = 1
-	}
+	// The header's sampling field is a mode in the top two bits and an
+	// interval in the low fourteen. An interval of zero means the device
+	// declared no rate, which is not the same as declaring one packet in
+	// one: forcing it to 1 here threw that away, so a device sampling 1 in
+	// 1000 without saying so had its traffic recorded at a thousandth,
+	// a rate set by hand for it was never reached, and the 1 went on to
+	// stand as a declared rate everywhere s.def is read.
+	declared := uint32(sampling & 0x3FFF)
 	exportMs := int64(secs)*1000 + int64(nsecs)/1e6
 	at := func(up uint32) time.Time {
 		return time.UnixMilli(exportMs - int64(uptime-up))
@@ -50,8 +54,24 @@ func (d *Decoder) decodeV5(b []byte, addr netip.Addr, now time.Time) (Result, er
 	}
 	s.touch(now, time.Unix(int64(secs), int64(nsecs)))
 	s.seq(seq, uint32(count), uint32(count), now)
-	s.def = rate
+	s.def = declared
 	s.stats.Records += uint64(count)
+
+	// With nothing declared, fall back the way the v9 and IPFIX path does
+	// in rateFor: a rate set by hand for a device that does not declare one
+	// counts as known, as does one known to export every packet. Failing
+	// both, the counts are taken as they came but not claimed to be known,
+	// so the interface comparison can say why its numbers differ.
+	rate, known := declared, declared > 0
+	switch {
+	case known:
+	case d.Manual[addr] > 0:
+		rate, known = d.Manual[addr], true
+	case d.Unsampled[addr]:
+		rate, known = 1, true
+	default:
+		rate = 1
+	}
 
 	res := Result{Records: make([]flow.Record, 0, count)}
 	for i := 0; i < int(count); i++ {
@@ -75,7 +95,7 @@ func (d *Decoder) decodeV5(b []byte, addr netip.Addr, now time.Time) (Result, er
 		rec.SrcAS = uint32(rr.U16())
 		rec.DstAS = uint32(rr.U16())
 		rec.Start, rec.End = at(first), at(last)
-		rec.Sampling, rec.Mult, rec.SamplingKnown = rate, float64(rate)*s.comp, true
+		rec.Sampling, rec.Mult, rec.SamplingKnown = rate, float64(rate)*s.comp, known
 		packet.EncapFromTuple(&rec)
 		res.Records = append(res.Records, rec)
 	}
