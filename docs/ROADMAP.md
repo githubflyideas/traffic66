@@ -4,8 +4,6 @@ Work goes top to bottom, one small item a day (split anything larger).
 Tick an item in the same pull request that completes it. Releases are
 separate: merged work reaches users with the next release.
 
-## Benchmark (target 24 Oct)
-- [ ] Gap list against ElastiFlow and Noction: what they have that we lack, marked "must have" or "not for us" (delivered privately, not in this repository)
 
 ## Reports (target 7 Nov)
 - [ ] Make `TestAttackFound` deterministic (it fails now and then with sampled scans)
@@ -27,10 +25,3 @@ separate: merged work reaches users with the next release.
 - [ ] Read-only user role
 - [ ] Audit log of sign-ins and setting changes
 - [ ] LDAP / Active Directory sign-in
-
-## Japan (target 21 Nov)
-- [ ] Japanese home page on the site, for company IT teams and system integrators
-- [ ] Japanese product sheet: requirements, performance, tested devices, support policy (printable / PDF)
-- [ ] Japanese how-to article draft: Zabbix shows a full uplink, traffic66 finds who (for Qiita / Zenn)
-- [ ] Pricing page in yen and an enquiry form (waiting for prices)
-- [ ] Enquiry → quote → licence issue, documented end to end
