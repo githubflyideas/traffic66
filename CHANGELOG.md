@@ -49,6 +49,17 @@ Charts
   gutter while the arithmetic assumed it started at the plot.
 
 Collection
+- IPFIX exporters that report a flow's running totals (octetTotalCount and
+  packetTotalCount, rather than the per-interval delta counts) no longer
+  have their traffic counted several times over. Those fields carry the
+  flow's counts since it started, so a long flow re-reported on the
+  exporter's active timeout repeats everything it has already sent: a flow
+  reported three times was recorded as 7,500 bytes when it had moved
+  4,000, and one still running after ten reports was off by about five
+  times. The collector now records the increase since the same flow was
+  last reported. An exporter that reports each interval separately gives
+  every report its own start time and is unaffected, as is any exporter
+  sending the delta counts, which is most of them.
 - A malformed packet could take the whole analyser down. A message that
   defines an IPFIX template and withdraws it again, with a data set already
   waiting for that template, left the template's id on the replay list
