@@ -1,6 +1,7 @@
 package nf
 
 import (
+	"math"
 	"net/netip"
 	"time"
 )
@@ -82,17 +83,23 @@ func (t *totals) delta(k totKey, bytes, pkts uint64, now time.Time) (uint64, uin
 }
 
 // totalDelta turns a report's running totals into the traffic since the same
-// flow was last reported. Without a start time from the exporter two reports
-// cannot be told apart from one flow reported twice, so the total is taken
-// whole, which is what this did before it tracked anything.
+// flow was last reported. A report without a start time is keyed with no
+// start (noStart) on the same session (exporter and observation domain),
+// 5-tuple and interfaces: a total that grew is a running total and only the
+// growth is counted; one that shrank is a reset or a new flow and is taken
+// whole. Without this, every re-report of such a flow added its whole total
+// again.
 func (s *session) totalDelta(a *acc, now time.Time) (uint64, uint64) {
-	if !a.startKnown {
-		return a.totBytes, a.totPkts
-	}
 	r := &a.rec
 	k := totKey{
 		src: r.Src, dst: r.Dst, sport: r.SrcPort, dport: r.DstPort, proto: r.Proto,
-		inIf: r.InIf, outIf: r.OutIf, startMs: r.Start.UnixMilli(),
+		inIf: r.InIf, outIf: r.OutIf, startMs: noStart,
+	}
+	if a.startKnown {
+		k.startMs = r.Start.UnixMilli()
 	}
 	return s.tot.delta(k, a.totBytes, a.totPkts, now)
 }
+
+// noStart stands in for the start time of a flow whose exporter sent none.
+const noStart = math.MinInt64
