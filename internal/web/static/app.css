@@ -408,29 +408,16 @@ dialog.aedit h2{margin:0 0 14px;font-size:16px}
 .rgleg .muted{text-align:end;font-variant-numeric:tabular-nums}
 .rgleg .v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
 .nmform select[hidden]{display:block!important;visibility:hidden}
-/* The lines between countries carry how much traffic twice over: five
-   steps of colour and three widths. Both are needed — colour alone is hard
-   to judge against a choropleth that is itself five steps of colour, and
-   width alone runs out of room on a crowded map.
-   The five steps are mixed from the line hue rather than written out per
-   theme, so all five themes follow their own colours: towards the surface
-   for the quiet end, towards the ink for the loud one. In a dark theme
-   that runs light rather than dark, which is the direction the map's own
-   ramp runs there too. A browser without color-mix gets the plain line
-   colour, which is what every line had before. */
-.mlines path{fill:none;stroke:var(--c2);stroke-linecap:round;cursor:pointer;filter:drop-shadow(0 0 1px rgba(255,255,255,.8))}
-.mlines path.l1{stroke:color-mix(in oklab, var(--c2) 55%, var(--surface))}
-.mlines path.l2{stroke:color-mix(in oklab, var(--c2) 75%, var(--surface))}
-.mlines path.l3{stroke:var(--c2)}
-.mlines path.l4{stroke:color-mix(in oklab, var(--c2) 82%, var(--ink))}
-.mlines path.l5{stroke:color-mix(in oklab, var(--c2) 62%, var(--ink))}
-.mlines path:hover{stroke:var(--c8);stroke-opacity:1}
-.maplegend .lw{display:inline-block;border-radius:999px;background:var(--c2);vertical-align:middle;width:18px}
-.maplegend .lw.l1{background:color-mix(in oklab, var(--c2) 55%, var(--surface))}
-.maplegend .lw.l2{background:color-mix(in oklab, var(--c2) 75%, var(--surface))}
-.maplegend .lw.l4{background:color-mix(in oklab, var(--c2) 82%, var(--ink))}
-.maplegend .lw.l5{background:color-mix(in oklab, var(--c2) 62%, var(--ink))}
-.mend{fill:var(--c2);stroke:var(--surface);stroke-width:1;pointer-events:none}
+/* The lines between countries: 15 levels, three widths (1.5/4/8px) times
+   five shades light to dark. app.js puts each line's width and colour in
+   --lw and --lc; the palette follows the theme (or the legend's choice). */
+.mlines path{fill:none;stroke:var(--lc,var(--c2));stroke-width:var(--lw,1.5px);stroke-linecap:round;stroke-opacity:.9;cursor:pointer;filter:drop-shadow(0 0 1px var(--surface))}
+.mlines path:hover{stroke-opacity:1;filter:drop-shadow(0 0 2px var(--ink))}
+.maplegend .lw,.lgrid .lw{display:inline-block;border-radius:999px;vertical-align:middle;width:22px;height:var(--lw);background:var(--lc)}
+.lgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px 10px;font-size:11px;margin-top:6px}
+.lgrid .lcell{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+.lgrid small{color:var(--ink-3);overflow:hidden;text-overflow:ellipsis}
+.mend{fill:var(--lc,var(--c2));stroke:var(--surface);stroke-width:1;pointer-events:none}
 .morigin{fill:var(--c2);stroke:var(--surface);stroke-width:1.5;pointer-events:none}
 .morigin-ring{fill:none;stroke:var(--c2);stroke-width:1.5;opacity:.6;transform-box:fill-box;transform-origin:center;animation:mpulse 2s ease-out infinite;pointer-events:none}
 @keyframes mpulse{from{transform:scale(.6);opacity:.8}to{transform:scale(2.2);opacity:0}}
