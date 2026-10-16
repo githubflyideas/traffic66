@@ -648,7 +648,6 @@
 "rec.go_live": "실시간으로 돌아가기",
 "theme.label": "테마",
 "theme.light": "라이트",
-"theme.gray": "회색",
 "base.day": "어제 같은 시간",
 "base.week": "지난주 같은 시간",
 "base.prev": "그 전 {n}일",

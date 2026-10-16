@@ -14,16 +14,6 @@
   --sb-bg:#fff4e0; --sb-line:#f0c27a; --sb-ink:#8a4b00;
   --shadow:rgba(20,30,50,.16);
 }
-/* Grey: graphite, a muted accent, for long sessions */
-:root[data-theme=gray]{
-  --bg:#e8e9ec; --surface:#e8e9ec; --surface-2:#dcdde1; --line:#c9cacf; --line-2:#b3b4ba;
-  --ink:#1c1c1e; --ink-2:#3a3a3c; --ink-3:#5c5c61;
-  --accent:#4a5160; --accent-soft:#dcdde2; --accent-ink:#2c313b;
-  --side:#cfd0d5; --side-hover:#c1c2c8; --side-line:#bbbcc2;
-  --c1:#3a7bd5; --c2:#e08a2e; --c3:#3fa66b; --c4:#c9a227; --c5:#d4567a; --c6:#2f7d4f; --c7:#6a62c7; --c8:#d2463d; --other:#aeaeb2; --map-none:#e6e7ea;
-  --m1:#d5dbe5; --m2:#a6b4c8; --m3:#6f86a6; --m4:#465d80; --m5:#26364f;
-  --sb-bg:#ece4d6; --sb-line:#cbb48c;
-}
 /* Black: iOS dark mode, black background (wall screens, OLED) */
 :root[data-theme=black]{
   color-scheme:dark;

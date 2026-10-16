@@ -648,7 +648,6 @@
 "rec.go_live": "Volver a tiempo real",
 "theme.label": "Tema",
 "theme.light": "Claro",
-"theme.gray": "Gris",
 "base.day": "Ayer a la misma hora",
 "base.week": "La semana pasada a la misma hora",
 "base.prev": "Los {n} días anteriores",
