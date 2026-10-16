@@ -336,4 +336,4 @@ Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windo
 | `address already in use` | `-addr` 또는 `-listen`으로 다른 포트 지정 |
 | Windows: "Windows의 PC 보호" | **추가 정보** → **실행** |
 
-소스에서 빌드: Go 1.24와 C 컴파일러를 준비한 뒤 `scripts/build.sh 0.1.0 traffic66`.
+소스에서 빌드: Go 1.25와 C 컴파일러를 준비한 뒤 `scripts/build.sh 0.1.0 traffic66`.

@@ -336,4 +336,4 @@ Web 界面使用明文 HTTP：在不可信的网络中，请使用 `-addr 127.0.
 | `address already in use` | 用 `-addr` 或 `-listen` 换用其他端口 |
 | Windows："Windows 已保护你的电脑" | **更多信息** → **仍要运行** |
 
-从源码构建：需要 Go 1.24 和 C 编译器，然后运行 `scripts/build.sh 0.1.0 traffic66`。
+从源码构建：需要 Go 1.25 和 C 编译器，然后运行 `scripts/build.sh 0.1.0 traffic66`。

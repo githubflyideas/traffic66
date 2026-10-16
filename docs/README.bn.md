@@ -445,4 +445,4 @@ overview 0.2 s-এর কম সময় নেয়; সব conversation-এ�
 | `address already in use` | `-addr` বা `-listen` দিয়ে অন্য port বেছে নিন |
 | Windows "protected your PC" | **More info** (আরও তথ্য) → **Run anyway** (তবুও চালান) |
 
-সোর্স থেকে বিল্ড: Go 1.24 ও একটি C compiler, তারপর `scripts/build.sh 0.1.0 traffic66`।
+সোর্স থেকে বিল্ড: Go 1.25 ও একটি C compiler, তারপর `scripts/build.sh 0.1.0 traffic66`।

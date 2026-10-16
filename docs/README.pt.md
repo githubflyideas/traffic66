@@ -455,4 +455,4 @@ todas as conversas, cerca de 9 s.
 | `address already in use` | Escolha outras portas com `-addr` ou `-listen` |
 | Windows: "O Windows protegeu o computador" | **Mais informações** → **Executar assim mesmo** |
 
-Compilar a partir do código-fonte: Go 1.24 e um compilador C, depois `scripts/build.sh 0.1.0 traffic66`.
+Compilar a partir do código-fonte: Go 1.25 e um compilador C, depois `scripts/build.sh 0.1.0 traffic66`.

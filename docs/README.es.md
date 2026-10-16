@@ -457,4 +457,4 @@ de todas las conversaciones, unos 9 s.
 | `address already in use` | Elija otros puertos con `-addr` o `-listen` |
 | Windows: "Windows protegió su PC" | **Más información** → **Ejecutar de todas formas** |
 
-Compilar desde el código fuente: Go 1.24 y un compilador de C, luego `scripts/build.sh 0.1.0 traffic66`.
+Compilar desde el código fuente: Go 1.25 y un compilador de C, luego `scripts/build.sh 0.1.0 traffic66`.

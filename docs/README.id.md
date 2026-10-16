@@ -454,4 +454,4 @@ selama 1 jam sekitar 9 detik.
 | `address already in use` | Pilih port lain dengan `-addr` atau `-listen` |
 | Windows: "Windows protected your PC" (Windows melindungi PC Anda) | **More info** (info selengkapnya) → **Run anyway** (tetap jalankan) |
 
-Build dari source: Go 1.24 dan compiler C, lalu `scripts/build.sh 0.1.0 traffic66`.
+Build dari source: Go 1.25 dan compiler C, lalu `scripts/build.sh 0.1.0 traffic66`.

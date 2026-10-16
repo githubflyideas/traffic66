@@ -471,4 +471,4 @@ d'une heure de toutes les conversations, environ 9 s.
 | `address already in use` | Choisissez d'autres ports avec `-addr` ou `-listen` |
 | Windows : "Windows a protégé votre ordinateur" | **Informations complémentaires** → **Exécuter quand même** |
 
-Compiler depuis les sources : Go 1.24 et un compilateur C, puis `scripts/build.sh 0.1.0 traffic66`.
+Compiler depuis les sources : Go 1.25 et un compilateur C, puis `scripts/build.sh 0.1.0 traffic66`.

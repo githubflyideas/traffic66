@@ -445,4 +445,4 @@ communities इस्तेमाल करें।
 | `address already in use` | `-addr` या `-listen` से दूसरे ports चुनें |
 | Windows: "Windows protected your PC" (Windows ने आपके PC को सुरक्षित किया) | **More info** (अधिक जानकारी) → **Run anyway** (फिर भी चलाएँ) |
 
-सोर्स से बिल्ड करें: Go 1.24 और एक C compiler, फिर `scripts/build.sh 0.1.0 traffic66`।
+सोर्स से बिल्ड करें: Go 1.25 और एक C compiler, फिर `scripts/build.sh 0.1.0 traffic66`।
