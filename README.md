@@ -337,12 +337,16 @@ works on flows, not packet contents.
 
 **Terminal UI**: `traffic66 tui` on the traffic66 machine, or
 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
-Keys: 1–8 pages, Enter actions, f show only, x exclude, t time range, w open
-in a browser, q quit; `-lang` picks the language.
-
-![Terminal UI: overview](docs/images/tui-overview.png)
-
-![Terminal UI: Top 66 conversations](docs/images/tui-topn.png)
+Three pages: **1 Top** (busiest clients, servers, applications, ports,
+networks and countries/regions by rate; ← → switch, Enter for actions),
+**2 Interfaces** (rates, utilisation and reconciliation per device and
+interface, with each device's sampling and loss; Enter expands the trend and
+top talkers) and **3 Search** (flow records for typed filters such as
+`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1`).
+Keys: `/` filter, Backspace/`c` remove/clear, `t` time range (5 min to
+24 hours), `u` bits/s, bytes or packets/s, `p` pause, `+`/`-` refresh
+interval, `w` open the same view in the browser, `?` help, `q` quit; `-lang`
+picks the language and `NO_COLOR` turns colours off.
 
 **Local capture** builds flows from a local interface, best a port
 connected to a switch's mirror port: `traffic66 interfaces` lists them,
