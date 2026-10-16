@@ -1214,7 +1214,7 @@ views.sankey = async (el) => {
       }
     }));
     sEl.innerHTML = s + '</svg>';
-    sEl.querySelectorAll('path[data-l]').forEach(p => { p.onmousemove = e => showTip(e, `<div class="t">${esc(p.dataset.l)}</div><b>${fmtBytes(+p.dataset.v)}</b>`); p.onmouseleave = hideTip; });
+    sEl.querySelectorAll('path[data-l]').forEach(p => { p.onmousemove = e => showTip(e, `<div class="t">${esc(p.dataset.l)}</div><b>${fmtBytes(+p.dataset.v)}</b> <span class="muted">${esc(t('sb.avg'))} ${fmtBps(+p.dataset.v * 8 / Math.max(1, spanMs() / 1000))}</span>`); p.onmouseleave = hideTip; });
     sEl.querySelectorAll('[data-k]').forEach(r => r.onclick = e => {
       e.stopPropagation(); const ci = +r.dataset.c, kk = r.dataset.k; if (kk === '__other__') return;
       openPop({k: field[ci], v: kk, label: label(ci, kk)}, r.getBoundingClientRect());
@@ -1257,7 +1257,7 @@ function drawMap(el, w, rows, gl) {
     else p.style.cursor = 'default';
   });
   el.querySelectorAll('.mlines path').forEach(p => {
-    p.onmousemove = e => showTip(e, `<div class="t">${esc(country(p.dataset.from))} ↔ ${esc(country(p.dataset.to))}</div><b>${fmtBytes(+p.dataset.v)}</b>`);
+    p.onmousemove = e => showTip(e, `<div class="t">${esc(country(p.dataset.from))} ↔ ${esc(country(p.dataset.to))}</div><b>${fmtBytes(+p.dataset.v)}</b> <span class="muted">${esc(t('sb.avg'))} ${fmtBps(+p.dataset.v * 8 / Math.max(1, spanMs() / 1000))}</span>`);
     p.onmouseleave = hideTip;
   });
   if (gl && !(gl.origins || []).length) el.insertAdjacentHTML('beforeend', `<p class="muted maphint">${esc(t('geo.lines_hint'))}</p>`);
@@ -1272,42 +1272,37 @@ function drawMap(el, w, rows, gl) {
 // map's are over the countries': the quietest line and the busiest are
 // usually orders of magnitude apart, and a linear scale would put every
 // line but one in the bottom step.
-const LINE_W = [2, 2, 3.5, 5.5, 5.5]; // three widths across the five steps
+// Width is continuous: 1px for no traffic up to 9px for the busiest line,
+// on the square root of its share of the busiest, so area-like perception
+// tracks bytes. Lines are drawn quietest first so busy lines sit on top.
+const lineW = (v, vmax) => 1 + 8 * Math.sqrt(Math.max(0, v) / (vmax || 1));
+const geoLines = (w, gl) => (gl && gl.lines || []).filter(l => w.p[l.from] && w.p[l.to]).slice(0, 60);
 
 // The lines have a scale of their own, over their own range: a line is one
 // country pair's traffic and a country's fill is all of its, so the two
 // scales do not meet and one legend cannot speak for both.
 function lineLegend(w, gl) {
-  const lines = (gl && gl.lines || []).filter(l => w.p[l.from] && w.p[l.to]).slice(0, 60);
-  const edges = lineBins(lines.map(l => l.v));
-  if (!edges.length) return '';
+  const vals = geoLines(w, gl).map(l => l.v).filter(x => x > 0);
+  if (!vals.length) return '';
+  const vmax = Math.max(...vals), vmin = Math.min(...vals);
+  const samples = vmin < vmax ? [vmin, vmin + (vmax - vmin) / 4, vmax / 4 > vmin ? vmax / 4 : (vmin + vmax) / 2, vmax] : [vmax];
   return `<div class="maplegend"><span class="muted">${t('geo.lines_scale')}</span>` +
-    LINE_W.map((px, i) => `<i class="lw l${i + 1}" style="height:${px}px" title="${esc(i ? '≥ ' + fmtBytes(edges[i - 1]) : '< ' + fmtBytes(edges[0]))}"></i>`).join('') +
-    `<span class="muted">${t('geo.map_more')}</span></div>`;
-}
-function lineBins(vals) {
-  const v = vals.filter(x => x > 0).sort((a, b) => a - b);
-  if (!v.length) return [];
-  const lo = Math.log10(v[0]), hi = Math.log10(v[v.length - 1]);
-  if (!(hi > lo)) return [];
-  return [1, 2, 3, 4].map(i => Math.pow(10, lo + (hi - lo) * i / 5));
+    samples.map(v => `<i class="lw" style="height:${lineW(v, vmax).toFixed(1)}px" title="${esc(fmtBytes(v))}"></i>`).join('') +
+    `<span class="muted">${esc(fmtBytes(vmin))} – ${esc(fmtBytes(vmax))}</span></div>`;
 }
 function mapLines(w, gl) {
-  const lines = (gl && gl.lines || []).filter(l => w.p[l.from] && w.p[l.to]).slice(0, 60);
+  const lines = geoLines(w, gl);
   if (!lines.length) return '';
-  const edges = lineBins(lines.map(l => l.v));
+  const vmax = Math.max(...lines.map(l => l.v), 0);
   let s = '<g class="mlines">';
-  [...lines].reverse().forEach(l => {
+  [...lines].sort((a, b) => a.v - b.v).forEach(l => {
     const [x0, y0] = w.p[l.from], [x1, y1] = w.p[l.to], dx = x1 - x0, dy = y1 - y0, dist = Math.hypot(dx, dy);
     // bend each line upwards by a fifth of its length
     const mx = (x0 + x1) / 2 + dy * .2 * Math.sign(dx || 1) * -1, my = (y0 + y1) / 2 - Math.abs(dx) * .2 - dist * .05;
-    const step = edges.length ? mapStep(l.v, edges) : 4;
-    s += `<path class="l${step + 1}" d="M${x0} ${y0}Q${mx.toFixed(1)} ${my.toFixed(1)} ${x1} ${y1}" stroke-width="${LINE_W[step]}" stroke-opacity="${(0.62 + 0.33 * (step / 4)).toFixed(2)}" data-from="${l.from}" data-to="${l.to}" data-v="${l.v}"/>`;
-    // The dot at the far end is sized from the line's own width. It used
-    // to slide along a continuous scale while the line is in steps, so two
-    // lines drawn deliberately alike ended in dots of different sizes, and
-    // a reader comparing them had no way to know which to believe.
-    s += `<circle cx="${x1}" cy="${y1}" r="${(LINE_W[step] / 2 + 1.5).toFixed(1)}" class="mend"/>`;
+    const lw = lineW(l.v, vmax), r = vmax > 0 ? Math.sqrt(l.v / vmax) : 1;
+    s += `<path d="M${x0} ${y0}Q${mx.toFixed(1)} ${my.toFixed(1)} ${x1} ${y1}" style="stroke-width:${lw.toFixed(2)}px;stroke-opacity:${(0.55 + 0.4 * r).toFixed(2)}" data-from="${l.from}" data-to="${l.to}" data-v="${l.v}"/>`;
+    // the dot at the far end is sized from the line's own width
+    s += `<circle cx="${x1}" cy="${y1}" r="${(lw / 2 + 1.5).toFixed(1)}" class="mend"/>`;
   });
   (gl.origins || []).filter(cc => w.p[cc]).forEach(cc => { const [x, y] = w.p[cc]; s += `<circle cx="${x}" cy="${y}" r="9" class="morigin-ring"/><circle cx="${x}" cy="${y}" r="5" class="morigin"/>`; });
   return s + '</g>';
