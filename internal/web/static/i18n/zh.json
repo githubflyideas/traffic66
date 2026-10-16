@@ -816,5 +816,6 @@
 "tui.h.refresh": "刷新变慢 · 变快（2–30 秒）",
 "tui.h.pause": "暂停或继续刷新",
 "tui.h.web": "在网页界面中打开当前视图",
-"tui.h.quit": "退出"
+"tui.h.quit": "退出",
+"tui.ifaces_bps": "接口速率以比特/秒显示：设备未按接口提供包数。"
 }

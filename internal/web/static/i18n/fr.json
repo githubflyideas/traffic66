@@ -816,5 +816,6 @@
 "tui.h.refresh": "rafraîchir plus lentement · plus vite (2–30 s)",
 "tui.h.pause": "suspendre ou reprendre",
 "tui.h.web": "ouvrir cette vue dans l’interface web",
-"tui.h.quit": "quitter"
+"tui.h.quit": "quitter",
+"tui.ifaces_bps": "Les débits des interfaces sont en bits/s : les équipements ne comptent pas les paquets par interface."
 }

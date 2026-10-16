@@ -816,5 +816,6 @@
 "tui.h.refresh": "atualizar mais devagar · mais rápido (2–30 s)",
 "tui.h.pause": "pausar ou retomar",
 "tui.h.web": "abrir esta vista na interface web",
-"tui.h.quit": "sair"
+"tui.h.quit": "sair",
+"tui.ifaces_bps": "As taxas das interfaces estão em bits/s: os dispositivos não informam pacotes por interface."
 }

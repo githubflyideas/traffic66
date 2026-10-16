@@ -816,5 +816,6 @@
 "tui.h.refresh": "làm mới chậm hơn · nhanh hơn (2–30 giây)",
 "tui.h.pause": "tạm dừng hoặc tiếp tục",
 "tui.h.web": "mở chế độ xem này trên web",
-"tui.h.quit": "thoát"
+"tui.h.quit": "thoát",
+"tui.ifaces_bps": "Tốc độ giao diện tính bằng bit/s: thiết bị không báo số gói theo giao diện."
 }

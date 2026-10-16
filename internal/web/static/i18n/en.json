@@ -816,5 +816,6 @@
 "tui.h.refresh": "refresh slower · faster (2–30 s)",
 "tui.h.pause": "pause or resume refreshing",
 "tui.h.web": "open this view in the web UI",
-"tui.h.quit": "quit"
+"tui.h.quit": "quit",
+"tui.ifaces_bps": "Interface rates are in bits/s: devices report no packet counts per interface."
 }

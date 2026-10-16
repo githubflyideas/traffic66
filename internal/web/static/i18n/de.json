@@ -816,5 +816,6 @@
 "tui.h.refresh": "seltener · öfter aktualisieren (2–30 s)",
 "tui.h.pause": "Aktualisierung anhalten/fortsetzen",
 "tui.h.web": "diese Ansicht im Web öffnen",
-"tui.h.quit": "Beenden"
+"tui.h.quit": "Beenden",
+"tui.ifaces_bps": "Schnittstellenraten in Bit/s: Geräte melden keine Paketzahlen pro Schnittstelle."
 }

@@ -816,5 +816,6 @@
 "tui.h.refresh": "segarkan lebih lambat · lebih cepat (2–30 dtk)",
 "tui.h.pause": "jeda atau lanjutkan",
 "tui.h.web": "buka tampilan ini di UI web",
-"tui.h.quit": "keluar"
+"tui.h.quit": "keluar",
+"tui.ifaces_bps": "Laju antarmuka dalam bit/dtk: perangkat tidak melaporkan jumlah paket per antarmuka."
 }

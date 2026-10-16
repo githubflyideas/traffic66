@@ -126,19 +126,32 @@ func (a *app) load(v view) page {
 		if err := a.get("topn", q(map[string]string{"dim": "dir", "limit": "10"}), &dir); err != nil {
 			return fail(err)
 		}
-		var in, out, all topRow
+		// in + out + internal + other = total: internal is traffic between
+		// internal networks, other is transit and flows of unknown direction
+		var in, out, internal, other, all topRow
 		for _, r := range dir.Rows {
 			switch r.Key {
 			case "2":
 				in = r
 			case "1":
 				out = r
+			case "3":
+				internal = r
+			default:
+				other.Wire += r.Wire
+				other.Pkts += r.Pkts
 			}
 			all.Wire += r.Wire
 			all.Pkts += r.Pkts
 		}
-		hl := line{{dim, a.t("tui.in") + " "}, {bold + green, m.fmt(m.val(in.Wire, in.Pkts))}, {dim, "   " + a.t("tui.out") + " "}, {bold + blue, m.fmt(m.val(out.Wire, out.Pkts))},
-			{dim, "   " + a.t("tui.total") + " "}, {bold, m.fmt(m.val(all.Wire, all.Pkts))}}
+		hl := line{{dim, a.t("tui.in") + " "}, {bold + green, m.fmt(m.val(in.Wire, in.Pkts))}, {dim, "  " + a.t("tui.out") + " "}, {bold + blue, m.fmt(m.val(out.Wire, out.Pkts))}}
+		if internal.Wire > 0 {
+			hl = append(hl, seg{dim, "  " + a.t("internal") + " "}, seg{bold, m.fmt(m.val(internal.Wire, internal.Pkts))})
+		}
+		if other.Wire > 0 {
+			hl = append(hl, seg{dim, "  " + a.t("other") + " "}, seg{bold, m.fmt(m.val(other.Wire, other.Pkts))})
+		}
+		hl = append(hl, seg{dim, "  = " + a.t("tui.total") + " "}, seg{bold, m.fmt(m.val(all.Wire, all.Pkts))})
 		if units[v.unit] != "bytes" {
 			hl = append(hl, seg{dim, "   " + a.t("tui.avg", "r", a.t("range."+ranges[v.rng]))})
 		}
@@ -323,6 +336,9 @@ func (a *app) loadIfaces(v view, m measure, q func(map[string]string) map[string
 		{head: a.t("tui.util"), width: 6, right: true}, {head: "", width: 10, optional: true}, {head: a.t("tui.recon"), width: 15, right: true, optional: true}}
 	if len(order) == 0 {
 		p.top = append(p.top, styled(dim, a.t("empty.first")))
+	}
+	if units[m.unit] == "pps" {
+		p.top = append(p.top, styled(dim, a.t("tui.ifaces_bps")))
 	}
 	for _, exp := range order {
 		title := line{}

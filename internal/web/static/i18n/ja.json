@@ -816,5 +816,6 @@
 "tui.h.refresh": "更新を遅く · 速く（2–30 秒）",
 "tui.h.pause": "更新を一時停止・再開",
 "tui.h.web": "この表示を Web UI で開く",
-"tui.h.quit": "終了"
+"tui.h.quit": "終了",
+"tui.ifaces_bps": "インターフェースの速度は bit/s 表示です（機器はインターフェースごとのパケット数を送りません）。"
 }
