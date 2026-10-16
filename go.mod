@@ -2,6 +2,8 @@ module github.com/githubflyideas/traffic66
 
 go 1.24.0
 
+toolchain go1.24.9
+
 require github.com/duckdb/duckdb-go/v2 v2.10506.0
 
 require (
