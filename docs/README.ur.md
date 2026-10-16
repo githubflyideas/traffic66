@@ -365,12 +365,11 @@ Threat lists متن کی فائلیں ہیں، ہر لائن میں ایک addre
 
 **Terminal UI**: traffic66 مشین پر `traffic66 tui`، یا
 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`۔
-Keys: 1–8 صفحات، Enter actions، f صرف یہ دکھائیں، x خارج کریں، t وقت کی حد، w
-browser میں کھولیں، q باہر نکلیں؛ `-lang` زبان چنتا ہے۔
+تین صفحات: **1 ٹاپ** (کلائنٹ، سرور، ایپلیکیشنز، پورٹس، نیٹ ورکس (AS) اور ممالک/علاقے شرح کے لحاظ سے؛ ← → بدلیں، Enter اعمال)، **2 انٹرفیس** (ہر آلے اور انٹرفیس کی شرح، استعمال اور مطابقت، ساتھ ہر آلے کی سیمپلنگ اور نقصان؛ Enter رجحان اور سرفہرست ہوسٹ/ایپس کھولتا ہے) اور **3 تلاش** (`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` جیسے فلٹرز سے فلو ریکارڈ)۔ کلیدیں: `/` فلٹر، Backspace/`c` ہٹائیں/صاف، `t` وقت کی حد (5 منٹ سے 24 گھنٹے)، `u` بٹ/س، بائٹس یا پیکٹ/س، `p` روکیں، `+`/`-` ریفریش وقفہ، `w` وہی منظر براؤزر میں، `?` مدد، `q` باہر؛ `-lang` زبان چنتا ہے اور `NO_COLOR` رنگ بند کرتا ہے۔
 
-![Terminal UI: جائزہ](images/tui-overview.png)
+![Terminal UI: ٹاپ](images/tui-top.png)
 
-![Terminal UI: ٹاپ 66 conversations](images/tui-topn.png)
+![Terminal UI: انٹرفیس](images/tui-interfaces.png)
 
 **Local capture** ایک local interface سے flows بناتا ہے، بہترین ہے کہ وہ کسی
 switch کے mirror port سے جڑا port ہو: `traffic66 interfaces` ان کی فہرست دیتا

@@ -363,12 +363,11 @@ NetFlow/IPFIX के साथ उतनी देर तक जितनी द
 
 **Terminal UI**: traffic66 मशीन पर `traffic66 tui`, या
 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`।
-Keys: 1–8 पेज, Enter actions, f केवल यही दिखाएँ, x हटाएँ, t time range, w
-browser में खोलें, q बाहर निकलें; `-lang` भाषा चुनता है।
+तीन पेज: **1 टॉप** (क्लाइंट, सर्वर, ऐप्लिकेशन, पोर्ट, नेटवर्क (AS) और देश/क्षेत्र दर के क्रम में; ← → बदलें, Enter क्रियाएँ), **2 इंटरफ़ेस** (हर डिवाइस और इंटरफ़ेस की दर, उपयोग और मिलान, साथ में हर डिवाइस की सैंपलिंग और हानि; Enter ट्रेंड और टॉप होस्ट/ऐप खोलता है) और **3 खोज** (`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` जैसे फ़िल्टर से फ़्लो रिकॉर्ड)। कुंजियाँ: `/` फ़िल्टर, Backspace/`c` हटाएँ/साफ़, `t` अवधि (5 मिनट से 24 घंटे), `u` बिट/से, बाइट या पैकेट/से, `p` रोकें, `+`/`-` रीफ़्रेश अंतराल, `w` वही दृश्य ब्राउज़र में, `?` मदद, `q` बाहर; `-lang` भाषा चुनता है और `NO_COLOR` रंग बंद करता है।
 
-![Terminal UI: सारांश](images/tui-overview.png)
+![Terminal UI: टॉप](images/tui-top.png)
 
-![Terminal UI: शीर्ष 66 conversations](images/tui-topn.png)
+![Terminal UI: इंटरफ़ेस](images/tui-interfaces.png)
 
 **Local capture** किसी local interface से flows बनाता है, सबसे अच्छा किसी
 switch के mirror port से जुड़ा port: `traffic66 interfaces` उनकी सूची देता है,

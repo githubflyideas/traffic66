@@ -25,7 +25,7 @@ In one sentence: it collects sFlow, NetFlow, and IPFIX flow data and tells you w
 * ✅ **One executable.** Single-file builds for Windows, Linux, and macOS. No Elasticsearch, no Kafka, no separate database. It runs offline too.
 * ✅ **Running in 30 seconds.** Unzip → run → open `127.0.0.1:8066` → log in with `admin / traffic66`. Done.
 * ✅ **Want to see it first?** One command: `traffic66 demo` simulates a company network with a day of historical data, 4 devices, and a full attack scenario, so you can explore right away.
-* ✅ **Two interfaces.** A web UI in the browser, plus a terminal UI on the server (`traffic66 tui`). Connect over SSH and press 1–8 to switch pages. No browser needed.
+* ✅ **Two interfaces.** A web UI in the browser, plus a terminal UI on the server (`traffic66 tui`). Connect over SSH: Top, Interfaces and Search are on keys 1–3. No browser needed.
 * ✅ **Interface reconciliation (this one is rare).** Flow statistics are estimates by nature. traffic66 places those estimates side by side with your device's interface counters (sFlow or SNMP). When they don't match, it tells you why: an interface isn't being sampled, traffic is being counted twice, or packets are being dropped along the way.
 * ✅ **Geo and ASN out of the box.** Ships with the free DB-IP database. The world map shows which countries your traffic goes to. You can swap in MaxMind GeoLite2 if you prefer.
 * ✅ **13 languages**, with native Chinese UI. No guessing at English menus.

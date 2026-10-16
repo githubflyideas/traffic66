@@ -278,11 +278,12 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ![离线分析：抓包文件及其包数、流数和时间](images/sandbox.png)
 
-**终端界面**：在 traffic66 主机上运行 `traffic66 tui`，或 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`。按键：1–8 切换页面，Enter 执行操作，f 只看，x 排除，t 时间范围，w 在浏览器中打开，q 退出；`-lang` 选择语言。
+**终端界面**：在 traffic66 主机上运行 `traffic66 tui`，或 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`。
+三个页面：**1 Top**（按速率排列的客户端、服务端、应用、端口、运营商（AS）和国家/地区，← → 切换，Enter 打开操作），**2 接口**（每台设备、每个接口的速率、利用率和对账，以及设备的采样率和丢失；Enter 展开趋势和 Top 主机/应用），**3 搜索**（按 `ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` 这类条件查流记录）。按键：`/` 筛选，Backspace/`c` 删除/清除，`t` 时间范围（5 分钟到 24 小时），`u` 比特/秒、字节或包/秒，`p` 暂停，`+`/`-` 刷新间隔，`w` 在浏览器中打开同一视图，`?` 帮助，`q` 退出；`-lang` 选择语言，`NO_COLOR` 关闭颜色。
 
-![终端界面：概览](images/tui-overview.png)
+![终端界面：Top](images/tui-top.png)
 
-![终端界面：Top 66 会话](images/tui-topn.png)
+![终端界面：接口](images/tui-interfaces.png)
 
 **本地抓包** 从本机网卡生成流，最好是接到交换机镜像端口的网口：`traffic66 interfaces` 列出网卡，`-capture eth1` 开始抓包。在 Windows 上：
 

@@ -369,12 +369,11 @@ bekerja pada flow, bukan isi paket.
 
 **Antarmuka terminal**: `traffic66 tui` di mesin traffic66, atau
 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
-Tombol: 1–8 halaman, Enter aksi, f tampilkan hanya ini, x kecualikan, t
-rentang waktu, w buka di browser, q keluar; `-lang` memilih bahasa.
+Tiga halaman: **1 Teratas** (klien, server, aplikasi, port, jaringan (AS), dan negara/wilayah menurut laju; ← → berganti, Enter membuka aksi), **2 Antarmuka** (laju, utilisasi, dan rekonsiliasi per perangkat dan antarmuka, beserta sampling dan kehilangan tiap perangkat; Enter membentangkan tren dan host/aplikasi teratas), dan **3 Cari** (catatan flow untuk filter seperti `ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1`). Tombol: `/` filter, Backspace/`c` hapus/bersihkan, `t` periode (5 menit hingga 24 jam), `u` bit/dtk, byte, atau paket/dtk, `p` jeda, `+`/`-` interval penyegaran, `w` buka tampilan yang sama di peramban, `?` bantuan, `q` keluar; `-lang` memilih bahasa dan `NO_COLOR` mematikan warna.
 
-![Antarmuka terminal: ringkasan](images/tui-overview.png)
+![Antarmuka terminal: Teratas](images/tui-top.png)
 
-![Antarmuka terminal: percakapan Top 66](images/tui-topn.png)
+![Antarmuka terminal: antarmuka](images/tui-interfaces.png)
 
 **Capture lokal** membuat flow dari interface lokal, paling baik port yang
 terhubung ke port mirror sebuah switch: `traffic66 interfaces` menampilkan

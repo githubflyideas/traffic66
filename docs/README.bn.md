@@ -363,12 +363,11 @@ browser খোলে (সর্বোচ্চ 3টি ফাইল, 3 GB; Ctrl+
 
 **Terminal UI**: traffic66 মেশিনে `traffic66 tui`, অথবা
 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`।
-Key: 1–8 পেজ, Enter action, f শুধু এটি দেখান, x বাদ দিন, t time range, w
-browser-এ খুলুন, q বেরিয়ে যান; `-lang` ভাষা বেছে নেয়।
+তিনটি পেজ: **1 টপ** (ক্লায়েন্ট, সার্ভার, অ্যাপ্লিকেশন, পোর্ট, নেটওয়ার্ক (AS) ও দেশ/অঞ্চল রেট অনুযায়ী; ← → বদলান, Enter কাজ), **2 ইন্টারফেস** (প্রতিটি ডিভাইস ও ইন্টারফেসের রেট, ব্যবহার ও মিলান, সঙ্গে প্রতিটি ডিভাইসের স্যাম্পলিং ও ক্ষতি; Enter ট্রেন্ড ও শীর্ষ হোস্ট/অ্যাপ খোলে) এবং **3 অনুসন্ধান** (`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` ধরনের ফিল্টারে ফ্লো রেকর্ড)। কী: `/` ফিল্টার, Backspace/`c` সরান/মুছুন, `t` সময়সীমা (৫ মিনিট থেকে ২৪ ঘণ্টা), `u` বিট/সে, বাইট বা প্যাকেট/সে, `p` বিরতি, `+`/`-` রিফ্রেশ বিরতি, `w` একই ভিউ ব্রাউজারে, `?` সাহায্য, `q` বের হন; `-lang` ভাষা বাছে এবং `NO_COLOR` রং বন্ধ করে।
 
-![Terminal UI: সারসংক্ষেপ](images/tui-overview.png)
+![Terminal UI: টপ](images/tui-top.png)
 
-![Terminal UI: শীর্ষ 66 conversation](images/tui-topn.png)
+![Terminal UI: ইন্টারফেস](images/tui-interfaces.png)
 
 **Local capture** একটি local interface থেকে flow তৈরি করে, সবচেয়ে ভালো হয়
 switch-এর mirror port-এ যুক্ত একটি port: `traffic66 interfaces` সেগুলোর তালিকা

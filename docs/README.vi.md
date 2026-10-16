@@ -365,12 +365,11 @@ dung gói tin.
 
 **Giao diện terminal**: `traffic66 tui` trên máy chạy traffic66, hoặc
 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
-Phím: 1–8 chuyển trang, Enter mở thao tác, f chỉ hiện, x loại trừ, t khoảng
-thời gian, w mở trong trình duyệt, q thoát; `-lang` chọn ngôn ngữ.
+Ba trang: **1 Top** (máy khách, máy chủ, ứng dụng, cổng, mạng (AS) và quốc gia/vùng lãnh thổ theo tốc độ; ← → chuyển, Enter mở thao tác), **2 Giao diện** (tốc độ, mức sử dụng và đối soát theo thiết bị và giao diện, cùng tỷ lệ lấy mẫu và mất mát của từng thiết bị; Enter mở rộng xu hướng và máy/ứng dụng hàng đầu) và **3 Tìm kiếm** (bản ghi flow theo bộ lọc như `ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1`). Phím: `/` lọc, Backspace/`c` bỏ/xóa hết, `t` khoảng thời gian (5 phút đến 24 giờ), `u` bit/s, byte hoặc gói/s, `p` tạm dừng, `+`/`-` chu kỳ làm mới, `w` mở cùng chế độ xem trên trình duyệt, `?` trợ giúp, `q` thoát; `-lang` chọn ngôn ngữ, `NO_COLOR` tắt màu.
 
-![Giao diện terminal: tổng quan](images/tui-overview.png)
+![Giao diện terminal: Top](images/tui-top.png)
 
-![Giao diện terminal: Top 66 phiên hội thoại](images/tui-topn.png)
+![Giao diện terminal: giao diện mạng](images/tui-interfaces.png)
 
 **Bắt gói tin cục bộ** dựng luồng từ một giao diện trên máy, tốt nhất là một
 cổng nối với cổng mirror của switch: `traffic66 interfaces` liệt kê các giao
