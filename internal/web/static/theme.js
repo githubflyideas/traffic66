@@ -1,12 +1,12 @@
 // Applies the colour theme before the page is drawn, so it does not flash.
 // The choice is kept per browser; clicking the theme button goes to the next.
 (function () {
-  var THEMES = ['light', 'gray', 'black', 'teal', 'orange'];
-  var OLD = {bright: 'light', dim: 'black', dark: 'black', auto: 'light'};
+  var THEMES = ['light', 'black', 'teal', 'orange'];
+  var OLD = {bright: 'light', dim: 'black', dark: 'black', auto: 'light', gray: 'light'};
   function get() {
     var v = 'light';
     try { v = localStorage.getItem('t66.theme') || 'light'; } catch (e) {}
-    v = OLD[v] || v;
+    if (OLD[v]) { v = OLD[v]; try { localStorage.setItem('t66.theme', v); } catch (e) {} }
     return THEMES.indexOf(v) < 0 ? 'light' : v;
   }
   function apply(x) {

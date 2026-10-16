@@ -285,7 +285,7 @@ online**, **Copy**.
 Above the pages: **Interface** (all, or one sampled interface; the traffic
 pages then show only traffic through it), the time range (15 minutes to 30
 days, or custom), refresh every 30 s and **Copy link** for the exact view.
-The language, and five colour themes, are at the foot of the menu. Charts
+The language, and four colour themes, are at the foot of the menu. Charts
 end where the data is complete: with NetFlow/IPFIX as late as the devices
 export (at most 2 minutes). Ranges over 6 hours start on a whole hour; one
 interface over 7 or 30 days reads the flow detail, so it is slower and

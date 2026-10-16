@@ -648,7 +648,6 @@
 "rec.go_live": "リアルタイムに戻る",
 "theme.label": "テーマ",
 "theme.light": "ライト",
-"theme.gray": "グレー",
 "base.day": "昨日の同時刻",
 "base.week": "先週の同時刻",
 "base.prev": "その前の {n} 日間",

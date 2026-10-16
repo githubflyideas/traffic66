@@ -1293,7 +1293,7 @@ const LINE_PAL = {
   pp: ['#f7a8d0', '#e57ab8', '#c34fa8', '#8e3a9e', '#5a2585']
 };
 // theme -> palette when the choice is "follow theme"
-const THEME_PAL = {light: 'or', gray: 'gb', black: 'pp', teal: 'gb', orange: 'or'};
+const THEME_PAL = {light: 'or', black: 'pp', teal: 'gb', orange: 'or'};
 const curTheme = () => window.t66Theme ? t66Theme.get() : 'light';
 function linePalName() {
   let v = 'auto';
