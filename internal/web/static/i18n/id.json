@@ -822,5 +822,12 @@
 "tui.h.pause": "jeda atau lanjutkan",
 "tui.h.web": "buka tampilan ini di UI web",
 "tui.h.quit": "keluar",
-"tui.ifaces_bps": "Laju antarmuka dalam bit/dtk: perangkat tidak melaporkan jumlah paket per antarmuka."
+"tui.ifaces_bps": "Laju antarmuka dalam bit/dtk: perangkat tidak melaporkan jumlah paket per antarmuka.",
+"ob.title": "Kirim flow pertama",
+"ob.step1": "Arahkan ekspor sFlow, NetFlow, atau IPFIX perangkat ke mesin ini:",
+"ob.ports": "Port UDP:",
+"ob.step2": "Perangkat muncul di Pengaturan dalam hitungan detik, dan halaman ini terisi satu-dua menit kemudian.",
+"ob.try": "Atau tempel salah satu perintah ini, sudah berisi alamat dan port mesin ini:",
+"ob.copy": "Salin",
+"nav.help": "Bantuan"
 }

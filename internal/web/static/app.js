@@ -12,7 +12,7 @@
 // marked unless somebody decides otherwise, which is the right way round —
 // the cost of forgetting is then an extra mark, not a report that leaves
 // the building looking finished when it is not.
-const NOMARK = new Set(['overview', 'sources', 'account']);
+const NOMARK = new Set(['overview', 'sources', 'account', 'help']);
 let marked = false;  // from the licence: true until the installation is registered
 let markNotice = '';  // the server's wording, so a copy says what a file says
 
@@ -264,7 +264,7 @@ function waitHint(msg, elapsed) {
 function emptyText() {
   const w = waiting;
   if (!w || !w.reason) return t('empty.nodata');
-  if (w.reason === 'nothing') return waitHint(t('empty.first'));
+  if (w.reason === 'nothing') return waitHint(firstText());
   if (w.reason === 'templates') return waitHint(t('wait.templates', {n: nf(w.records || 0)}), waitedFor(w));
   if (w.reason === 'sampling') return waitHint(t('wait.sampling', {n: nf(w.records || 0)}), waitedFor(w));
   if (w.reason === 'settling') { const n = Math.max(1, Math.ceil((w.seconds || 0) / 60)); return t(plural('wait.settling', n), {n}); }
@@ -313,7 +313,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'ipam', 'cleanup', 'sandbox', 'ifaces', 'billing', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'ipam', 'cleanup', 'sandbox', 'ifaces', 'billing', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'both', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
@@ -373,6 +373,7 @@ const ifScoped = path => state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state
 // refused.
 let lic = null;
 let waiting = null;  // what the collector is still waiting for, from /api/status
+let setup = null;    // sources, UDP ports and addresses, for the first-run guide
 const licOK = f => !!lic && lic.registered && (lic.features || []).includes(f);
 
 let ifList = null, ifListKey = '';
@@ -776,6 +777,150 @@ const baseText = (d, kind) => {
   const k = {day: 'day', week: 'week', prev: 'prev'}[d.basis];
   return k ? t({line: 'base.', kpi: 'kpi.vs_', sub: 'ov.bw_sub_'}[kind] + k, {n: d.base_days || ''}) : '';
 };
+// "Nothing received yet": the default ports are in the text; other ports
+// are named as they were given to -listen.
+function firstText() {
+  const l = setup?.listen || [], ports = l.map(x => x.port).sort().join(',');
+  if (!l.length || ports === '2055,4739,6343') return t('empty.first');
+  return t('ob.step1') + ' ' + t('ob.ports') + ' ' + l.map(x => x.name + ' ' + x.port).join(', ');
+}
+// A new installation with no device yet: say exactly where to send flows,
+// with this machine's addresses and the collectors' ports, ready to copy.
+function onboardGuide(tot) {
+  const s = setup;
+  if (!s || s.demo || s.offline || inSB() || s.sources > 0 || (tot && tot.wire > 0) || !(s.listen || []).length) return '';
+  const ips = (s.addrs || []).length ? s.addrs : [location.hostname];
+  const code = v => `<code class="ob-c">${esc(v)}</code><button class="ob-copy" data-copy="${esc(v)}">${esc(t('ob.copy'))}</button>`;
+  const ports = s.listen.map(l => `<span class="ob-p">${esc(l.name)} ${code(l.port)}</span>`).join(' ');
+  // ready-made export commands for this machine's address and ports
+  const port = n => (s.listen.find(l => l.name === n) || s.listen[0]).port, ip = ips[0];
+  const cfg = [
+    `/ip traffic-flow target add dst-address=${ip} port=${port('netflow')} version=9`,
+    `set protocols sflow collector ${ip} udp-port ${port('sflow')}`,
+    `sflow destination ${ip} ${port('sflow')}`,
+    `softflowd -i eth0 -n ${ip}:${port('ipfix')} -v 10 -t maxlife=60`,
+  ];
+  const lab = ['MikroTik, NetFlow v9', 'Juniper, sFlow', 'Arista, sFlow', 'Linux, IPFIX'];
+  return `<div class="panel c12 onboard"><div class="ph"><h2>${esc(t('ob.title'))}</h2></div>
+    <ol class="ob">
+      <li>${esc(t('ob.step1'))}<div class="ob-row">${ips.map(code).join(' ')}</div><div class="ob-row">${esc(t('ob.ports'))} ${ports}</div></li>
+      <li>${esc(t('ob.try'))}${cfg.map((c, i) => `<div class="ob-row"><span class="muted">${esc(lab[i])}</span> ${code(c)}</div>`).join('')}
+        <div class="ob-row"><a href="#v=help" data-obgo="help">${esc(t('nav.help'))}: Cisco, Huawei, H3C, Juniper …</a></div></li>
+      <li>${esc(t('ob.step2'))} <a href="#v=sources" data-obgo="sources">${esc(t('nav.sources'))}</a></li>
+    </ol></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.ob-copy');
+  if (b) navigator.clipboard?.writeText(b.dataset.copy).then(() => toast(t('top.copied')), () => toast(b.dataset.copy));
+  const g = e.target.closest('[data-obgo]');
+  if (g) { e.preventDefault(); go(g.dataset.obgo); }
+});
+// ---- Help: the user manual (docs/MANUAL*.md, built into the program) ----
+// A small markdown renderer for exactly what the manual uses: headings,
+// paragraphs, lists, tables, fenced code, images, links, **bold**, `code`
+// and <a id> anchors. Everything is escaped first and only these tags are
+// made, so nothing in the text can run or load anything else.
+const GH = 'https://github.com/githubflyideas/traffic66/blob/main/';
+let helpLang = null;  // a language picked on the page; else the UI language
+const mdSlug = (s, seen) => {
+  let b = s.toLowerCase().replace(/<[^>]*>/g, '').replace(/[^\p{L}\p{N}\s_-]/gu, '').trim().replace(/\s/g, '-'), k = b, n = 0;
+  while (seen.has(k)) k = b + '-' + (++n);
+  seen.add(k);
+  return k;
+};
+function mdHref(u) {
+  let m;
+  if (u.startsWith('#')) return {href: u, cls: 'mdin'};
+  if ((m = /^MANUAL(?:\.([a-z]{2}))?\.md(#.*)?$/.exec(u))) return {href: '#v=help', lang: m[1] || 'en'};
+  if (/^https?:\/\//.test(u)) return {href: u, ext: true};
+  if ((m = /^\.\.\/([\w.-]+\.md)$/.exec(u))) return {href: GH + m[1], ext: true};
+  return null;
+}
+function mdInline(s) {
+  // code spans first, kept aside so nothing inside them is formatted
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+  s = esc(s.replace(/<\/?sub>/g, ''));
+  s = s.replace(/!\[([^\]]*)\]\(images\/([\w.-]+\.png)\)/g, (_, alt, f) => `<img src="/api/manual/images/${f}" alt="${alt}">`);
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (all, txt, u) => {
+    const h = mdHref(u.replace(/&amp;/g, '&'));
+    if (!h) return txt;
+    return `<a href="${esc(h.href)}"${h.cls ? ` class="${h.cls}"` : ''}${h.lang ? ` data-hlang="${h.lang}"` : ''}${h.ext ? ' target="_blank" rel="noopener"' : ''}>${txt}</a>`;
+  });
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[\s(])\*([^*\s][^*]*)\*(?=[\s).,;:]|$)/g, '$1<i>$2</i>');
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${esc(codes[+i])}</code>`);
+}
+function mdRender(md) {
+  const lines = md.replace(/\r/g, '').split('\n'), out = [], toc = [], seen = new Set();
+  let i = 0, para = [];
+  const flush = () => { if (para.length) { out.push(`<p>${mdInline(para.join(' '))}</p>`); para = []; } };
+  while (i < lines.length) {
+    const l = lines[i];
+    let m;
+    if (/^```/.test(l)) {
+      flush();
+      const code = [];
+      for (i++; i < lines.length && !/^```/.test(lines[i]); i++) code.push(lines[i]);
+      i++;
+      out.push(`<div class="mdcode"><button class="mdcopy" type="button">${esc(t('ob.copy'))}</button><pre><code>${esc(code.join('\n'))}</code></pre></div>`);
+      continue;
+    }
+    if ((m = /^<a id="([\w-]+)"><\/a>$/.exec(l.trim()))) { flush(); seen.add(m[1]); out.push(`<span class="mdanchor" id="h-${esc(m[1])}"></span>`); i++; continue; }
+    if (/^<\/?div[^>]*>$/.test(l.trim())) { i++; continue; }
+    if ((m = /^(#{1,4}) (.*)$/.exec(l))) {
+      flush();
+      const n = m[1].length, id = mdSlug(m[2], seen);
+      if (n === 2) toc.push({id, text: m[2]});
+      out.push(`<h${n} id="h-${esc(id)}">${mdInline(m[2])}</h${n}>`);
+      i++; continue;
+    }
+    if (/^\|.*\|\s*$/.test(l) && /^\|[\s:|-]+\|\s*$/.test(lines[i + 1] || '')) {
+      flush();
+      const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const head = cells(l);
+      let html = `<div class="mdtable"><table><tr>${head.map(c => `<th>${mdInline(c)}</th>`).join('')}</tr>`;
+      for (i += 2; i < lines.length && /^\|.*\|\s*$/.test(lines[i]); i++) html += `<tr>${cells(lines[i]).map(c => `<td>${mdInline(c)}</td>`).join('')}</tr>`;
+      out.push(html + '</table></div>');
+      continue;
+    }
+    if ((m = /^\s*([-*]|\d+\.) (.*)$/.exec(l))) {
+      flush();
+      const ol = /\d/.test(m[1]), items = [];
+      while (i < lines.length && (m = /^\s*([-*]|\d+\.) (.*)$/.exec(lines[i]))) {
+        let it = m[2];
+        for (i++; i < lines.length && /^\s{2,}\S/.test(lines[i]) && !/^\s*([-*]|\d+\.) /.test(lines[i]); i++) it += ' ' + lines[i].trim();
+        items.push(`<li>${mdInline(it)}</li>`);
+      }
+      out.push(`<${ol ? 'ol' : 'ul'}>${items.join('')}</${ol ? 'ol' : 'ul'}>`);
+      continue;
+    }
+    if (!l.trim()) { flush(); i++; continue; }
+    para.push(l.trim());
+    i++;
+  }
+  flush();
+  return {html: out.join('\n'), toc};
+}
+views.help = async (el) => {
+  const lang = helpLang || LANG;
+  const res = await fetch('/api/manual?lang=' + encodeURIComponent(lang));
+  if (!res.ok) throw new Error('manual: ' + res.status);
+  const {html, toc} = mdRender(await res.text());
+  const rtl = ['ar', 'ur'].includes(lang);
+  el.innerHTML = `<div class="help">
+    <nav class="helptoc" aria-label="${esc(t('nav.help'))}">${toc.map(h => `<a href="#h-${esc(h.id)}" class="mdin">${mdInline(h.text)}</a>`).join('')}</nav>
+    <article class="manual panel"${rtl ? ' dir="rtl"' : ''}>${html}</article></div>`;
+  el.querySelectorAll('.mdcopy').forEach(b => b.onclick = () => {
+    const txt = b.nextElementSibling.textContent;
+    navigator.clipboard?.writeText(txt).then(() => toast(t('top.copied')), () => toast(txt.slice(0, 80)));
+  });
+  el.querySelectorAll('a.mdin').forEach(a => a.onclick = e => {
+    e.preventDefault();
+    const id = a.getAttribute('href').slice(1), tg = document.getElementById(id.startsWith('h-') ? id : 'h-' + id);
+    tg?.scrollIntoView({block: 'start'});
+  });
+  el.querySelectorAll('a[data-hlang]').forEach(a => a.onclick = e => { e.preventDefault(); helpLang = a.dataset.hlang; render(); window.scrollTo(0, 0); });
+};
 views.overview = async (el) => {
   // total, or only inbound or only outbound traffic (direction from your networks' point of view)
   const od = ['inbound', 'outbound'].includes(state.od) ? state.od : '';
@@ -810,6 +955,7 @@ views.overview = async (el) => {
   const cl = d.top_clients || [], cmax = Math.max(1, ...cl.map(r => r.wire));
   const sv = d.top_services || [], smax = Math.max(1, ...sv.map(r => r.wire));
   el.innerHTML = `<div class="grid">
+    ${onboardGuide(tot)}
     <div class="panel c12"><div class="kpis">
       ${inSB() ? `<div class="kpi"><div class="lab">${t('sb.avg')}</div><div class="n">${fmtBps(tot.wire * 8 / (spanMs() / 1000))}</div><div class="d muted">&nbsp;</div></div>`
         : `<div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(baseText(d, 'kpi').split('{p}').join(changeTxt))}</div></div>`}
@@ -2470,7 +2616,7 @@ views.sources = async (el) => {
     : '<span style="color:var(--crit)">✖</span> ' + esc(t('src.snmp_fail'))}</span>`).join(' ');
   el.innerHTML = `<div class="grid">
     ${panel('c12', t('src.title'), t('src.sub'), `<table><tr><th>${t('col.device')}</th><th>${t('col.proto')}</th><th class="num">${t('col.rate')}</th><th>${t('col.sampling')}</th><th class="num">${t('col.lost')}</th><th>${t('col.last')}</th><th>${t('col.status')}</th>${admOnly('<th></th>')}</tr>
-      ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${waitHint(t('empty.first'))}</td></tr>`}</table>
+      ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${waitHint(firstText())}</td></tr>`}</table>
       <p style="margin:12px 0 0;font-size:12.5px"><span class="muted">${t('src.listeners')}</span> ${lis || '—'} ${caps}</p>
       ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
@@ -2740,7 +2886,7 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['sources', 'cleanup', 'sandbox', 'account', 'racks', 'devices', 'ipam', 'billing', 'names']);
+const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'devices', 'ipam', 'billing', 'names']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
@@ -2827,6 +2973,7 @@ async function loadStatus() {
     $('#demo').hidden = !s.demo; $('#demo').textContent = t('demo.badge');
     offlineMode = !!s.offline;
     waiting = s.waiting || null;
+    setup = s;
     const L = lic = s.license || null;
     if (L) {
       const id = `<span class="muted">${esc(t('lic.id', {id: L.installation_id}))}</span>`;
@@ -2893,6 +3040,10 @@ $('#loginForm').addEventListener('submit', async e => {
   $('#login').hidden = true; $('#app').hidden = false;
   if (j.must_change) sessionStorage.setItem('t66.old', f.get('password'));
   await Promise.all([loadStatus(), loadSB(), loadMe()]);
+  // A new installation has minutes of data, a sliver at the edge of a day's
+  // chart: it opens on the last hour until it has two hours of history.
+  // A range in the link still wins.
+  if (!new URLSearchParams(location.hash.slice(1)).get('r') && setup && !setup.demo && !setup.offline && !(setup.oldest > 0 && Date.now() - setup.oldest > 2 * 3600e3)) state.r = '1h';
   render();
   startTimers();
 });
@@ -2913,6 +3064,7 @@ function startTimers() {
     // not while something is being typed or picked (the names form, filters)
     if (document.hidden || pop.style.display === 'block' || ['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName)) return;
     if (state.v === 'records' && state.rl) return;
+    if (state.v === 'help') return;
     if (state.v === 'sources' || state.v === 'records' || state.v === 'overview' || state.v === 'findings' || state.r === '15m' || state.r === '1h') render();
   }, 30000);
 }

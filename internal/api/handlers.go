@@ -625,7 +625,8 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	warn := 0
-	for _, si := range s.Col.Sources() {
+	srcs := s.Col.Sources()
+	for _, si := range srcs {
 		if si.SamplingState == "waiting" || si.LostPct >= 1 || time.Since(si.LastSeen) > 2*time.Minute {
 			warn++
 		}
@@ -649,6 +650,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		"hot_rows": u.HotRows, "segments": u.Segments, "segment_rows": u.SegmentRows,
 		"dns_upstream": s.DNS.Upstream(), "dns_queries": s.DNS.Queries, "asn_ranges": s.ASN.Size(), "threat_lists": s.Thr.Lists(),
 		"waiting": s.waitingOn(), "source_warnings": warn, "offline": s.Offline, "findings_open": s.Store.OpenFindings(2, time.Now().Add(-24*time.Hour)), "hosts": names, "skewed": s.Col.Skewed.Load(), "go": runtime.Version(),
+		"sources": len(srcs), "listen": s.Listen, "addrs": LocalIPs(),
 	})
 }
 

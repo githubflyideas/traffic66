@@ -822,5 +822,12 @@
 "tui.h.pause": "suspendre ou reprendre",
 "tui.h.web": "ouvrir cette vue dans l’interface web",
 "tui.h.quit": "quitter",
-"tui.ifaces_bps": "Les débits des interfaces sont en bits/s : les équipements ne comptent pas les paquets par interface."
+"tui.ifaces_bps": "Les débits des interfaces sont en bits/s : les équipements ne comptent pas les paquets par interface.",
+"ob.title": "Envoyez vos premiers flux",
+"ob.step1": "Dirigez l'export sFlow, NetFlow ou IPFIX d'un équipement vers cette machine :",
+"ob.ports": "Ports UDP :",
+"ob.step2": "Il apparaît dans Réglages en quelques secondes, et cette page se remplit une ou deux minutes plus tard.",
+"ob.try": "Ou collez l'une de ces commandes, déjà réglées sur l'adresse et les ports de cette machine :",
+"ob.copy": "Copier",
+"nav.help": "Aide"
 }

@@ -822,5 +822,12 @@
 "tui.h.pause": "tạm dừng hoặc tiếp tục",
 "tui.h.web": "mở chế độ xem này trên web",
 "tui.h.quit": "thoát",
-"tui.ifaces_bps": "Tốc độ giao diện tính bằng bit/s: thiết bị không báo số gói theo giao diện."
+"tui.ifaces_bps": "Tốc độ giao diện tính bằng bit/s: thiết bị không báo số gói theo giao diện.",
+"ob.title": "Gửi những flow đầu tiên",
+"ob.step1": "Trỏ export sFlow, NetFlow hoặc IPFIX của thiết bị về máy này:",
+"ob.ports": "Cổng UDP:",
+"ob.step2": "Thiết bị sẽ hiện trong Cài đặt sau vài giây, và trang này có dữ liệu sau một hai phút.",
+"ob.try": "Hoặc dán một trong các lệnh sau, đã điền sẵn địa chỉ và cổng của máy này:",
+"ob.copy": "Sao chép",
+"nav.help": "Trợ giúp"
 }

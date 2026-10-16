@@ -57,7 +57,7 @@ var version = ""
 // CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
 // default used to be a hardcoded 0.1.0-dev, and because nothing checked it
 // it stayed that way for two major versions.
-const devVersion = "2.3.3"
+const devVersion = "2.3.4"
 
 func init() {
 	if version == "" {
@@ -426,6 +426,7 @@ func serve(args []string, demo bool) {
 	go pipe.Run(ctx)
 	go det.Loop(ctx)
 
+	var listens []api.ListenInfo
 	for _, part := range strings.Split(f.listen, ",") {
 		part = strings.TrimSpace(part)
 		if part == "" {
@@ -441,6 +442,9 @@ func serve(args []string, demo bool) {
 			continue
 		}
 		log.Printf("collector: %s listening on UDP %s", name, addr)
+		if _, port, err := net.SplitHostPort(addr); err == nil {
+			listens = append(listens, api.ListenInfo{Name: name, Port: port})
+		}
 		go col.Serve(ctx, l)
 	}
 	go func() {
@@ -512,7 +516,7 @@ func serve(args []string, demo bool) {
 		dns = dnsres.New(dnsres.Options{Upstream: f.dnsUpstream, PerSecond: f.dnsRate, TTL: f.dnsTTL})
 	}
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Det: det, Static: web.FS(), Version: version, BuildKind: buildKind,
-		Demo: demo, Check: checker.Check, Exists: checker.Exists, Accounts: checker, LocalTok: tok, DataDir: f.data, Started: time.Now()}
+		Demo: demo, Check: checker.Check, Exists: checker.Exists, Accounts: checker, LocalTok: tok, DataDir: f.data, Started: time.Now(), Listen: listens}
 	srv.SNMP = poller.Status
 	srv.License = lic
 	if lic != nil {
@@ -586,6 +590,9 @@ func serve(args []string, demo bool) {
 		if offline.browser {
 			tui.OpenBrowser(u + "/auto?t=" + srv.AutoLogin)
 		}
+	}
+	if offline == nil {
+		printStartup(os.Stdout, scheme, ln.Addr(), listens, demo, f.user, firstStart)
 	}
 	if doubleClick {
 		log.Printf("opening the web UI in your browser; close this window to stop traffic66")
@@ -833,6 +840,7 @@ func loginChecker(dir, user, flagPw string, demo bool) *auth.FileChecker {
 	}
 	if pw != "" {
 		log.Printf("login: user %q with the password given at start", user)
+		fixedPassword = true
 		return auth.NewFileChecker(dir, map[string]string{user: pw})
 	}
 	file := filepath.Join(dir, auth.FileName)
@@ -844,6 +852,7 @@ func loginChecker(dir, user, flagPw string, demo bool) *auth.FileChecker {
 		if err := auth.Set(dir, user, auth.DefaultPassword); err != nil {
 			fatalf("saving the password: %v", err)
 		}
+		firstStart = true
 		if demo {
 			log.Printf("demo: sign in as user %q with password %q", user, auth.DefaultPassword)
 		} else {

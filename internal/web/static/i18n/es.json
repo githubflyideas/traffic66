@@ -822,5 +822,12 @@
 "tui.h.pause": "pausar o reanudar",
 "tui.h.web": "abrir esta vista en la interfaz web",
 "tui.h.quit": "salir",
-"tui.ifaces_bps": "Las tasas de interfaz están en bits/s: los equipos no informan paquetes por interfaz."
+"tui.ifaces_bps": "Las tasas de interfaz están en bits/s: los equipos no informan paquetes por interfaz.",
+"ob.title": "Envíe sus primeros flujos",
+"ob.step1": "Dirija la exportación sFlow, NetFlow o IPFIX de un equipo a esta máquina:",
+"ob.ports": "Puertos UDP:",
+"ob.step2": "Aparece en Configuración en segundos, y esta página se llena uno o dos minutos después.",
+"ob.try": "O pegue uno de estos comandos, ya con la dirección y los puertos de esta máquina:",
+"ob.copy": "Copiar",
+"nav.help": "Ayuda"
 }
