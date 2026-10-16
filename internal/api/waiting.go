@@ -44,8 +44,10 @@ type Waiting struct {
 	// Since is when the earliest exporter still held at this stage first
 	// sent anything, and ElapsedSec how long ago that was, so a page can
 	// say "waiting x minutes" rather than leave somebody guessing.
-	Since      time.Time `json:"since,omitempty"`
-	ElapsedSec int       `json:"elapsed_sec,omitempty"`
+	// A pointer, because omitempty never omits a time.Time struct: in the
+	// settling state it went out as "0001-01-01T00:00:00Z".
+	Since      *time.Time `json:"since,omitempty"`
+	ElapsedSec int        `json:"elapsed_sec,omitempty"`
 }
 
 // waitingOn asks the collector what it has and works out which stage it is
@@ -84,7 +86,8 @@ func waitingFor(srcs []collector.SourceInfo, settle time.Duration, now time.Time
 	}
 	withSince := func(w Waiting, since time.Time) Waiting {
 		if !since.IsZero() {
-			w.Since = since
+			t := since
+			w.Since = &t
 			if d := now.Sub(since); d > 0 {
 				w.ElapsedSec = int(d.Seconds())
 			}

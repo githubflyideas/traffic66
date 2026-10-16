@@ -92,7 +92,7 @@ func TestWaitingReportsElapsed(t *testing.T) {
 		{Exporter: "10.0.0.2", NoTemplate: 5, FirstSeen: now.Add(-7 * time.Minute)},
 		{Exporter: "10.0.0.3", Templates: 2, SamplingState: "waiting", Pending: 1, FirstSeen: now.Add(-20 * time.Minute)},
 	}, settleFor, now)
-	if w.Reason != WaitTemplates || w.ElapsedSec != 420 || !w.Since.Equal(now.Add(-7*time.Minute)) {
+	if w.Reason != WaitTemplates || w.ElapsedSec != 420 || w.Since == nil || !w.Since.Equal(now.Add(-7*time.Minute)) {
 		t.Errorf("got %+v, want templates, 420 s since -7m", w)
 	}
 	w = waitingFor(srcList{{Exporter: "10.0.0.3", Templates: 2, SamplingState: "waiting", Pending: 1, FirstSeen: now.Add(-90 * time.Second)}}, settleFor, now)
@@ -100,7 +100,7 @@ func TestWaitingReportsElapsed(t *testing.T) {
 		t.Errorf("got %+v, want sampling, 90 s", w)
 	}
 	// settling and unknown start times carry no elapsed time
-	if w := waitingFor(srcList{{Exporter: "10.0.0.1", Templates: 3, SamplingState: "known", FirstSeen: now}}, settleFor, now); w.ElapsedSec != 0 || !w.Since.IsZero() {
+	if w := waitingFor(srcList{{Exporter: "10.0.0.1", Templates: 3, SamplingState: "known", FirstSeen: now}}, settleFor, now); w.ElapsedSec != 0 || w.Since != nil {
 		t.Errorf("settling got %+v", w)
 	}
 }
@@ -128,5 +128,19 @@ func TestWaitStep(t *testing.T) {
 		if g := collector.WaitStep(c.tm, c.nt, c.st); g != c.want {
 			t.Errorf("WaitStep(%d,%d,%q) = %q, want %q", c.tm, c.nt, c.st, g, c.want)
 		}
+	}
+}
+
+// In the settling state there is no "since", and it must be left out of the
+// JSON rather than sent as the zero time 0001-01-01.
+func TestWaitingSettlingOmitsSince(t *testing.T) {
+	now := time.Now()
+	w := waitingFor(srcList{{Exporter: "10.0.0.1", Templates: 3, SamplingState: "known", FirstSeen: now}}, time.Minute, now)
+	b, err := json.Marshal(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Reason != WaitSettling || strings.Contains(string(b), "since") || strings.Contains(string(b), "0001-01-01") {
+		t.Fatalf("settling waiting = %s", b)
 	}
 }

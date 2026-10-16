@@ -248,12 +248,18 @@ function ago(ms) {
 function waitedFor(w) {
   return w.elapsed_sec > 0 ? ' ' + t('wait.elapsed', {m: Math.max(1, Math.floor(w.elapsed_sec / 60))}) : '';
 }
+// waitHint wraps a first-run waiting message in a prominent callout, so a
+// new installation reads "not yet, and here is why" at a glance rather than
+// a grey "no data". Ordinary empty periods keep the plain muted text.
+function waitHint(msg, elapsed) {
+  return `<span class="waithint" role="status"><span class="waithint-ic" aria-hidden="true">⏳</span><span>${msg}${elapsed ? `<span class="waithint-el">${elapsed}</span>` : ''}</span></span>`;
+}
 function emptyText() {
   const w = waiting;
   if (!w || !w.reason) return t('empty.nodata');
-  if (w.reason === 'nothing') return t('empty.first');
-  if (w.reason === 'templates') return t('wait.templates', {n: nf(w.records || 0)}) + waitedFor(w);
-  if (w.reason === 'sampling') return t('wait.sampling', {n: nf(w.records || 0)}) + waitedFor(w);
+  if (w.reason === 'nothing') return waitHint(t('empty.first'));
+  if (w.reason === 'templates') return waitHint(t('wait.templates', {n: nf(w.records || 0)}), waitedFor(w));
+  if (w.reason === 'sampling') return waitHint(t('wait.sampling', {n: nf(w.records || 0)}), waitedFor(w));
   if (w.reason === 'settling') return t('wait.settling', {n: Math.ceil((w.seconds || 0) / 60)});
   return t('empty.nodata');
 }
@@ -2396,7 +2402,7 @@ views.sources = async (el) => {
     : '<span style="color:var(--crit)">✖</span> ' + esc(t('src.snmp_fail'))}</span>`).join(' ');
   el.innerHTML = `<div class="grid">
     ${panel('c12', t('src.title'), t('src.sub'), `<table><tr><th>${t('col.device')}</th><th>${t('col.proto')}</th><th class="num">${t('col.rate')}</th><th>${t('col.sampling')}</th><th class="num">${t('col.lost')}</th><th>${t('col.last')}</th><th>${t('col.status')}</th>${admOnly('<th></th>')}</tr>
-      ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${t('empty.first')}</td></tr>`}</table>
+      ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${waitHint(t('empty.first'))}</td></tr>`}</table>
       <p style="margin:12px 0 0;font-size:12.5px"><span class="muted">${t('src.listeners')}</span> ${lis || '—'} ${caps}</p>
       ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
