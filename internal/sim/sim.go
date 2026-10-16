@@ -401,10 +401,7 @@ func (s *Sim) Live(ctx context.Context, deliver Deliver, optionsDelay time.Durat
 						m.AddData(ipfixOptTmpl.ID, []encode.Values{{encode.U(7, 4), encode.U(1, 4), encode.U(0, 4)}})
 					}
 				}
-				var vals []encode.Values
-				for _, p := range pairs[i:min(i+20, len(pairs))] {
-					vals = append(vals, p)
-				}
+				vals := append([]encode.Values(nil), pairs[i:min(i+20, len(pairs))]...)
 				if len(vals) > 0 {
 					m.AddData(ipfixDataTmpl.ID, vals)
 				}

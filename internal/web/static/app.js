@@ -144,6 +144,13 @@ const t = (k, p) => {
   if (p) for (const [a, b] of Object.entries(p)) s = s.split('{' + a + '}').join(b);
   return s;
 };
+// the key for n of something: k_one, k_few, ... where the language has
+// that form, else k itself
+const plural = (k, n) => {
+  let f = '';
+  try { f = new Intl.PluralRules(LANG).select(n); } catch (e) {}
+  return f && f !== 'other' && (DICT[k + '_' + f] ?? (LANG === 'en' ? EN[k + '_' + f] : undefined)) != null ? k + '_' + f : k;
+};
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function loadLang(code) {
   const get = async c => (await fetch('i18n/' + c + '.json')).json();
@@ -260,7 +267,7 @@ function emptyText() {
   if (w.reason === 'nothing') return waitHint(t('empty.first'));
   if (w.reason === 'templates') return waitHint(t('wait.templates', {n: nf(w.records || 0)}), waitedFor(w));
   if (w.reason === 'sampling') return waitHint(t('wait.sampling', {n: nf(w.records || 0)}), waitedFor(w));
-  if (w.reason === 'settling') return t('wait.settling', {n: Math.ceil((w.seconds || 0) / 60)});
+  if (w.reason === 'settling') { const n = Math.max(1, Math.ceil((w.seconds || 0) / 60)); return t(plural('wait.settling', n), {n}); }
   return t('empty.nodata');
 }
 
@@ -779,7 +786,11 @@ views.overview = async (el) => {
   const ifSel = ifl.find(f => ikey(f) === ifk);
   const [iIn, iOut] = ifk && !inSB() ? await Promise.all(['if_in', 'if_out'].map(by => api('series', {by, measure: 'wire', top: 20, dup: 1}, [...state.f, {f: 'iface', v: ifk, neg: false}]).catch(() => null))) : [null, null];
   const tot = d.totals, base = d.base_totals, basis = d.basis;
-  const change = basis && base.wire > 0 ? (tot.wire - base.wire) / base.wire : null;
+  // a baseline that was nearly idle gives figures like +57,695%: more than
+  // ten times the baseline reads ">10×", and a baseline under 1 kB is no
+  // baseline at all (as in the terminal UI)
+  const change = basis && base.wire >= 1000 ? (tot.wire - base.wire) / base.wire : null;
+  const changeTxt = change == null ? '' : change > 9 ? '>10×' : fmtPct(change, 0);
   // accuracy: worst interface deviation relative to its statistical error
   let acc = {n: '—', d: t('kpi.no_counters'), kind: null};
   const withCtr = (ifs?.ifaces || []).filter(f => f.has_counters);
@@ -801,7 +812,7 @@ views.overview = async (el) => {
   el.innerHTML = `<div class="grid">
     <div class="panel c12"><div class="kpis">
       ${inSB() ? `<div class="kpi"><div class="lab">${t('sb.avg')}</div><div class="n">${fmtBps(tot.wire * 8 / (spanMs() / 1000))}</div><div class="d muted">&nbsp;</div></div>`
-        : `<div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(baseText(d, 'kpi').split('{p}').join(fmtPct(change, 0)))}</div></div>`}
+        : `<div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(baseText(d, 'kpi').split('{p}').join(changeTxt))}</div></div>`}
       <div class="kpi"><div class="lab">${t('kpi.total', {r: rangeLabel()})}</div><div class="n">${fmtBytes(tot.wire)}</div><div class="d muted">${esc(peakTxt)}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.hosts')}</div><div class="n">${nf(tot.hosts)}</div><div class="d muted">&nbsp;</div></div>
       <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
@@ -2339,7 +2350,9 @@ views.ifaces = async (el) => {
 // period is worked out here rather than on the server, because this is
 // where the user's time zone is known — a calendar month means the
 // customer's midnights, not UTC's.
-let billSel = {p: 'last', from: '', to: ''};
+// last month by default, this month while last month has no counter
+// samples yet (a new installation)
+let billSel = {p: 'last', from: '', to: '', auto: true};
 const billPeriod = () => {
   const now = new Date(), mStart = off => new Date(now.getFullYear(), now.getMonth() + off, 1);
   if (billSel.p === 'this') return [mStart(0), now];
@@ -2358,6 +2371,10 @@ views.billing = async (el) => {
     api('ifaces').catch(() => ({ifaces: []})),
   ]);
   const rows = d.bills || [];
+  if (billSel.auto) {
+    billSel = {...billSel, auto: false};
+    if (billSel.p === 'last' && !d.error && !rows.some(b => b.buckets)) { billSel = {...billSel, p: 'this'}; return views.billing(el); }
+  }
   const ikey = f => f.exporter + '/' + f.ifindex;
   // A device reports every interface it has. Which of them somebody pays a
   // carrier for is not something that can be worked out from the traffic,

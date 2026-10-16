@@ -767,6 +767,8 @@
 "src.wait_templates": "menunggu templat",
 "src.wait_sampling": "menunggu laju sampling",
 "wait.settling": "Belum — menit-menit terakhir masih berdatangan. Eksportir melaporkan aliran setelah selesai, jadi {n} menit terakhir terisi bertahap. Tidak perlu tindakan.",
+"wait.settling_one": "Belum — menit-menit terakhir masih berdatangan. Eksportir melaporkan aliran setelah selesai, jadi 1 menit terakhir terisi bertahap. Tidak perlu tindakan.",
+"nav.names": "Nama",
 "fd.kind.fastscan": "Pemindaian cepat",
 "fd.kind.beacon": "Check-in berkala",
 "fd.kind.chain": "Rantai lompatan",

@@ -12,7 +12,6 @@ import (
 // (bucket, key, wire, pkts) for the given bucket expression and range.
 type seriesDim struct {
 	key, cond string
-	distinct  string // expression counted for the "how many" number ("" = key)
 	rollup    func(bucket string) string
 	hourly    bool // the rollup has one row per hour: no finer buckets
 }

@@ -767,6 +767,8 @@
 "src.wait_templates": "esperando plantillas",
 "src.wait_sampling": "esperando la tasa de muestreo",
 "wait.settling": "Todavía no: los últimos minutos aún están llegando. Los exportadores informan un flujo cuando termina, así que los últimos {n} minutos se van completando. No hay nada que hacer.",
+"nav.names": "Nombres",
+"wait.settling_one": "Todavía no: el último minuto aún está llegando. Los exportadores informan un flujo cuando termina, así que el último minuto se va completando. No hay nada que hacer.",
 "fd.kind.fastscan": "Escaneo rápido",
 "fd.kind.beacon": "Conexión periódica",
 "fd.kind.chain": "Cadena de saltos",

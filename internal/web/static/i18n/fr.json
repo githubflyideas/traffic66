@@ -767,6 +767,8 @@
 "src.wait_templates": "en attente des modèles",
 "src.wait_sampling": "en attente du taux d'échantillonnage",
 "wait.settling": "Pas encore : les dernières minutes arrivent encore. Les exportateurs signalent un flux après sa fin, donc les {n} dernières minutes se complètent au fur et à mesure. Rien à faire.",
+"nav.names": "Noms",
+"wait.settling_one": "Pas encore : la dernière minute arrive encore. Les exportateurs signalent un flux après sa fin, donc la dernière minute se complète au fur et à mesure. Rien à faire.",
 "fd.kind.fastscan": "Balayage rapide",
 "fd.kind.beacon": "Connexion périodique",
 "fd.kind.chain": "Chaîne de rebonds",

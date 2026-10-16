@@ -107,7 +107,6 @@ type session struct {
 
 	seqInit    bool
 	nextSeq    uint32
-	lastRecs   uint32
 	recsPerPkt float64
 
 	// running totals per flow, for exporters that send octetTotalCount

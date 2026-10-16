@@ -3,6 +3,19 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.3.3
+
+- Built with Go 1.26.9, which fixes standard library vulnerabilities in Go 1.25.14 (among them HTTP/2 and TLS issues) that traffic66 can reach.
+- Terminal UI: three pages built for the terminal — Top (the default; current rates by host, server, application, port, AS or country), Interfaces (rates, utilization and reconciliation per device and interface, with sampling and loss) and Search (raw records, paged). Default range 15 minutes, `u` switches bits/bytes/packets, the active filters are shown on top, `p` pauses refreshing.
+- Overview charts: no flat zero line before collection started, no slow ramp at the first point, the still-arriving last interval is drawn as a thin dashed line instead of a drop, the "same time yesterday" line no longer turns up at the end, an empty chart shows the empty state instead of a 1,1,1,0,0 axis, and time ticks fall on round minutes.
+- Interfaces with device counters but no flows show "no flows — check the device's flow export" instead of a -100% deviation, and are left out of the overview's deviation figure.
+- The overview's change against the baseline reads ">10×" above ten times and is hidden when the baseline is nearly empty, instead of figures like +57,695%.
+- `traffic66 --version` and `traffic66 --help` work.
+- Billing opens on this month while last month has no counter samples (a new installation).
+- The names settings page has a title in all languages instead of `nav.names`.
+- sFlow sources show when they were first seen instead of 0001-01-01.
+- "the last 1 minutes" reads "the last minute".
+
 ## 2.3.2
 
 - First-run waiting hint: while no data has arrived yet, the hint (waiting for templates, waiting for sampling rate, or nothing received) is now a prominent callout — bold, larger text with an icon and the theme's accent background and border, in all five themes. The elapsed waiting time is shown on its own line.
