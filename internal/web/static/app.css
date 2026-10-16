@@ -72,7 +72,8 @@ aside{background:var(--side);border-inline-end:1px solid var(--side-line);displa
 .brand .logo{display:block;flex:1 1 100%;width:100%;max-width:208px;height:auto;max-height:72px;object-fit:contain;object-position:left center}
 [dir=rtl] .brand .logo{object-position:right center}
 .brand b{color:var(--accent)}
-.brand .demo{position:absolute;top:8px;inset-inline-end:10px;font-size:11px;font-weight:600;background:var(--warn);color:#1b2432;border-radius:4px;padding:1px 6px;letter-spacing:0}
+nav.dash .demo{display:inline-block;margin:6px 12px 0;font-size:11px;font-weight:600;background:var(--warn);color:#1b2432;border-radius:4px;padding:1px 6px;letter-spacing:0;opacity:.85}
+nav.dash .demo[hidden]{display:none}
 nav.dash{padding:8px 10px;overflow-y:auto;flex:1}
 nav.dash hr{border:0;border-top:1px solid var(--side-line);margin:8px 8px}
 nav.dash button{position:relative;display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;text-align:start;color:var(--ink-2);font-size:14.5px;line-height:1.25;font-weight:600;letter-spacing:.005em;transition:background .18s,color .18s,transform .18s}
