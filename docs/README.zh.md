@@ -21,8 +21,8 @@
 
 ## 目录
 
-1. [试用演示](#1-try-the-demo)
-2. [安装](#2-install)
+1. [快速开始](#1-quick-start)
+2. [示例](#2-examples)
 3. [用户与密码](#3-users-and-passwords)
 4. [在设备上配置流导出](#4-send-flows-from-your-devices)
 5. [确认流数据已到达](#5-check-that-flows-arrive)
@@ -33,35 +33,109 @@
 10. [选项与数据](#10-options-and-data)
 11. [安全、容量规划、故障排查](#11-security-sizing-troubleshooting)
 
+<a id="1-quick-start"></a>
+
 <a id="1-try-the-demo"></a>
 
-## 1. 试用演示
-
-从 [Releases 页面](https://github.com/githubflyideas/traffic66/releases) 下载对应系统的压缩包（Windows x64、内核 3.2 及以上的 Linux x86-64/ARM64、macOS 11 及以上），解压后运行：
+## 1. 快速开始
 
 ```
-./traffic66 demo          # Linux, macOS
-.\traffic66.exe demo      # Windows
+# Linux、macOS：下载到 ./traffic66 并启动演示（模拟网络）
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
 ```
 
-在 macOS 上请先运行 `xattr -dr com.apple.quarantine <folder>`。打开 http://127.0.0.1:8066，用 `admin` / `traffic66` 登录：可以看到一天的历史数据和四台模拟设备的实时流量，其中包括一次攻击，在 **发现** 中一步步展示。按 Ctrl+C 停止；删除 `traffic66-demo` 即可从头开始。要和正式安装同时运行：`-addr :8067 -listen ""`。
+```
+# Windows，PowerShell
+$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+打开 http://127.0.0.1:8066，用 `admin` / `traffic66` 登录。按 Ctrl+C 停止。 采集自己设备的流量：把同一条命令里的 `demo` 换成 `serve`（Windows：`$env:TRAFFIC66_RUN='serve'`）。
+
+```
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
+```
+
+端口：TCP 8066 Web 界面，UDP 6343 sFlow、2055 NetFlow、4739 IPFIX（每个 UDP 端口都接收所有协议）。终端会打印设备应指向的地址；首次登录会要求设置新密码。
+
+手动下载（压缩包：`linux-amd64`、`linux-arm64`、`darwin-amd64`、`darwin-arm64`、`windows-amd64.zip`）：
+
+```
+curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
+cd traffic66-linux-amd64 && ./traffic66 demo
+```
+
+macOS 手动安装时先运行 `xattr -dr com.apple.quarantine traffic66-darwin-*`。Windows 提示「已保护你的电脑」：**更多信息** → **仍要运行**。
+
+<a id="2-examples"></a>
 
 <a id="2-install"></a>
 
-## 2. 安装
+## 2. 示例
 
-traffic66 只有一个文件。端口：UDP 6343（sFlow）、2055（NetFlow）、4739（IPFIX），TCP 8066（Web 界面）；每个 UDP 端口都能接收所有协议。
-
-**Linux**（systemd）：
+### 与正式安装同时运行演示
 
 ```
-sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+./traffic66 demo -addr :8067 -listen ""
+```
+
+### 采集 sFlow、NetFlow v5/v9 和 IPFIX（默认端口）
+
+```
+./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
+```
+
+### 自定义端口和数据目录
+
+```
+./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
+./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
+```
+
+### 分析抓包文件
+
+```
+./traffic66 capture.pcap other.pcapng
+```
+
+### 终端界面
+
+```
+./traffic66 tui
+./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
+```
+
+### 没有设备时测试链路（在另一台机器上运行）
+
+```
+./traffic66 simulate -to 192.0.2.50
+```
+
+### 开放防火墙
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Web 界面只在本机，通过 SSH 访问
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### 作为服务运行：Linux（systemd）
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
 ```
 
-`/etc/systemd/system/traffic66.service`：
+`/etc/systemd/system/traffic66.service`:
 
 ```
 [Unit]
@@ -82,23 +156,95 @@ WantedBy=multi-user.target
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
+journalctl -u traffic66 -f
 ```
 
-**Windows**（以管理员身份运行 PowerShell）：解压到 `C:\traffic66`，运行 `C:\traffic66\traffic66.exe passwd`，放通端口，并设置开机启动：
+### 作为服务运行：Windows
 
 ```
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
 $a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-也可以直接双击 `traffic66.exe`：它会打开 Web 界面。
+### 作为服务运行：macOS
 
-**macOS**：解压到 `/usr/local/traffic66`，去掉隔离标记，运行 `traffic66 passwd -data "/Library/Application Support/traffic66"`，然后用一个 LaunchDaemon 启动它：其 `ProgramArguments` 为程序、`-data` 和该目录，并设置 `RunAtLoad` 和 `KeepAlive`。
+解压到 `/usr/local/traffic66`，去掉隔离标记，运行 `traffic66 passwd -data "/Library/Application Support/traffic66"`，再用 LaunchDaemon 启动：`ProgramArguments` 为程序、`-data` 和该目录，并设置 `RunAtLoad` 和 `KeepAlive`。
+
+<a id="device-configuration"></a>
+
+### 设备配置
+
+`192.0.2.50` 为 traffic66，`192.0.2.1` 为设备；超时和采样率见[第 4 节](#4-send-flows-from-your-devices)。
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
 
 <a id="3-users-and-passwords"></a>
 
@@ -123,50 +269,7 @@ Start-ScheduledTask -TaskName traffic66
 
 `192.0.2.50` 为 traffic66，`192.0.2.1` 为设备。活动流超时设为 60 秒，让 NetFlow/IPFIX 设备导出采样器选项，并在**每个接口上做入向采样**（或只在边界接口上）：这样每个报文只计算一次。sFlow 采样率：1 Gb/s 约 1:1000，10 Gb/s 用 1:4096，40/100 Gb/s 用 1:8192。
 
-```
-! Cisco IOS-XE, NetFlow v9
-flow exporter T66
- destination 192.0.2.50
- transport udp 2055
- option sampler-table
-flow monitor T66
- exporter T66
- record netflow ipv4 original-input
- cache timeout active 60
-interface GigabitEthernet0/0/0
- ip flow monitor T66 input
-```
-
-```
-# Huawei CloudEngine, sFlow (H3C Comware is similar)
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50
-interface 10GE1/0/1
- sflow sampling collector 1
- sflow sampling rate 4096
- sflow sampling inbound
- sflow counter collector 1
- sflow counter interval 30
-```
-
-```
-# Juniper EX/QFX, sFlow
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow interfaces ge-0/0/0
-
-# Arista EOS, sFlow
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow run
-
-# MikroTik RouterOS 7
-/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
-/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-
-# Linux host, softflowd
-softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
-```
+Cisco、华为、H3C、Juniper、Arista、MikroTik 和 softflowd 的配置：[示例 → 设备配置](#device-configuration)。
 
 <a id="5-check-that-flows-arrive"></a>
 
@@ -337,4 +440,4 @@ Web 界面使用明文 HTTP：在不可信的网络中，请使用 `-addr 127.0.
 | `address already in use` | 用 `-addr` 或 `-listen` 换用其他端口 |
 | Windows："Windows 已保护你的电脑" | **更多信息** → **仍要运行** |
 
-从源码构建：需要 Go 1.25 和 C 编译器，然后运行 `scripts/build.sh 0.1.0 traffic66`。
+从源码构建：需要 Go 1.26 和 C 编译器，然后运行 `scripts/build.sh 0.1.0 traffic66`。

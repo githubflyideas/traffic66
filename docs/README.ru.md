@@ -28,8 +28,8 @@ Grafana или модулям анализа потоков PRTG и SolarWinds N
 
 ## Содержание
 
-1. [Попробовать демо](#1-try-the-demo)
-2. [Установка](#2-install)
+1. [Быстрый старт](#1-quick-start)
+2. [Примеры](#2-examples)
 3. [Пользователи и пароли](#3-users-and-passwords)
 4. [Отправка потоков с устройств](#4-send-flows-from-your-devices)
 5. [Проверка поступления потоков](#5-check-that-flows-arrive)
@@ -40,37 +40,103 @@ Grafana или модулям анализа потоков PRTG и SolarWinds N
 10. [Параметры и данные](#10-options-and-data)
 11. [Безопасность, оценка ресурсов, устранение неполадок](#11-security-sizing-troubleshooting)
 
+<a id="1-quick-start"></a>
+
 <a id="1-try-the-demo"></a>
 
-## 1. Попробовать демо
-
-Скачайте архив для своей системы со
-[страницы релизов](https://github.com/githubflyideas/traffic66/releases)
-(Windows x64, Linux x86-64/ARM64 с ядром 3.2+, macOS 11+), распакуйте его и запустите:
+## 1. Быстрый старт
 
 ```
-./traffic66 demo          # Linux, macOS
-.\traffic66.exe demo      # Windows
+# Linux, macOS: скачать в ./traffic66 и запустить демо (имитация сети)
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
 ```
 
-В macOS сначала выполните `xattr -dr com.apple.quarantine <folder>`. Откройте
-http://127.0.0.1:8066 и войдите как `admin` / `traffic66`: сутки истории и живой
-трафик от четырёх имитируемых устройств, включая атаку, показанную шаг за
-шагом на странице **Обнаружения**. Ctrl+C останавливает демо; удалите
-`traffic66-demo`, чтобы начать заново. Чтобы запустить его рядом с
-настоящей установкой: `-addr :8067 -listen ""`.
+```
+# Windows, PowerShell
+$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+Откройте http://127.0.0.1:8066 и войдите как `admin` / `traffic66`. Ctrl+C — остановить. Сбор с ваших устройств: та же команда с `serve` вместо `demo` (Windows: `$env:TRAFFIC66_RUN='serve'`).
+
+```
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
+```
+
+Порты: TCP 8066 веб-интерфейс, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (каждый UDP-порт принимает любой протокол). Терминал показывает адреса для устройств; при первом входе нужно задать новый пароль.
+
+Вручную (архивы: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
+
+```
+curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
+cd traffic66-linux-amd64 && ./traffic66 demo
+```
+
+macOS вручную: сначала `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows «защитила ваш компьютер»: **Подробнее** → **Выполнить в любом случае**.
+
+<a id="2-examples"></a>
 
 <a id="2-install"></a>
 
-## 2. Установка
+## 2. Примеры
 
-traffic66 — это один файл. Порты: UDP 6343 (sFlow), 2055 (NetFlow), 4739
-(IPFIX), TCP 8066 (веб-интерфейс); каждый UDP-порт принимает любой протокол.
-
-**Linux** (systemd):
+### Демо рядом с рабочей установкой
 
 ```
-sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+./traffic66 demo -addr :8067 -listen ""
+```
+
+### Сбор sFlow, NetFlow v5/v9 и IPFIX (порты по умолчанию)
+
+```
+./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
+```
+
+### Свои порты и каталог данных
+
+```
+./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
+./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
+```
+
+### Анализ файла захвата
+
+```
+./traffic66 capture.pcap other.pcapng
+```
+
+### Терминальный интерфейс
+
+```
+./traffic66 tui
+./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
+```
+
+### Проверка пути без устройства (с другой машины)
+
+```
+./traffic66 simulate -to 192.0.2.50
+```
+
+### Открыть брандмауэр
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Веб-интерфейс только на этой машине, доступ через SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### Как служба: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
@@ -97,29 +163,95 @@ WantedBy=multi-user.target
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
+journalctl -u traffic66 -f
 ```
 
-**Windows** (PowerShell от имени администратора): распакуйте в `C:\traffic66`,
-выполните `C:\traffic66\traffic66.exe passwd`, откройте порты и настройте
-запуск при загрузке:
+### Как служба: Windows
 
 ```
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
 $a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-Можно также просто дважды щёлкнуть `traffic66.exe`: он откроет
-веб-интерфейс.
+### Как служба: macOS
 
-**macOS**: распакуйте в `/usr/local/traffic66`, снимите флаг карантина,
-выполните `traffic66 passwd -data "/Library/Application Support/traffic66"` и
-запускайте его через LaunchDaemon, у которого `ProgramArguments` — это
-программа, `-data` и этот каталог, с `RunAtLoad` и `KeepAlive`.
+Распакуйте в `/usr/local/traffic66`, снимите атрибут карантина, выполните `traffic66 passwd -data "/Library/Application Support/traffic66"` и запускайте через LaunchDaemon, где `ProgramArguments` — программа, `-data` и этот каталог, с `RunAtLoad` и `KeepAlive`.
+
+<a id="device-configuration"></a>
+
+### Настройка устройств
+
+`192.0.2.50` — traffic66, `192.0.2.1` — устройство; таймауты и частота выборки: [раздел 4](#4-send-flows-from-your-devices).
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
 
 <a id="3-users-and-passwords"></a>
 
@@ -159,50 +291,7 @@ Directory в разработке.
 sFlow: примерно 1:1000 для 1 Гбит/с, 1:4096 для 10 Гбит/с, 1:8192 для
 40/100 Гбит/с.
 
-```
-! Cisco IOS-XE, NetFlow v9
-flow exporter T66
- destination 192.0.2.50
- transport udp 2055
- option sampler-table
-flow monitor T66
- exporter T66
- record netflow ipv4 original-input
- cache timeout active 60
-interface GigabitEthernet0/0/0
- ip flow monitor T66 input
-```
-
-```
-# Huawei CloudEngine, sFlow (H3C Comware is similar)
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50
-interface 10GE1/0/1
- sflow sampling collector 1
- sflow sampling rate 4096
- sflow sampling inbound
- sflow counter collector 1
- sflow counter interval 30
-```
-
-```
-# Juniper EX/QFX, sFlow
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow interfaces ge-0/0/0
-
-# Arista EOS, sFlow
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow run
-
-# MikroTik RouterOS 7
-/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
-/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-
-# Linux host, softflowd
-softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
-```
+Настройка Cisco, Huawei, H3C, Juniper, Arista, MikroTik и softflowd: [Примеры → Настройка устройств](#device-configuration).
 
 <a id="5-check-that-flows-arrive"></a>
 
@@ -453,4 +542,4 @@ traffic66 и скопируйте каталог; обновление: заме
 | `address already in use` | Выберите другие порты с помощью `-addr` или `-listen` |
 | Windows: "Система Windows защитила ваш компьютер" | **Подробнее** → **Выполнить в любом случае** |
 
-Сборка из исходников: Go 1.25 и компилятор C, затем `scripts/build.sh 0.1.0 traffic66`.
+Сборка из исходников: Go 1.26 и компилятор C, затем `scripts/build.sh 0.1.0 traffic66`.

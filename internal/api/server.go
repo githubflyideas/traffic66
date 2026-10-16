@@ -65,6 +65,8 @@ type Server struct {
 	SNMP     func() []snmp.Status
 	Started  time.Time
 	DataDir  string
+	// Listen is the UDP collectors, for the first-run guide on Overview.
+	Listen []ListenInfo
 
 	mu       sync.Mutex
 	sessions map[string]session

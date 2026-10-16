@@ -822,5 +822,11 @@
 "tui.h.pause": "Aktualisierung anhalten/fortsetzen",
 "tui.h.web": "diese Ansicht im Web öffnen",
 "tui.h.quit": "Beenden",
-"tui.ifaces_bps": "Schnittstellenraten in Bit/s: Geräte melden keine Paketzahlen pro Schnittstelle."
+"tui.ifaces_bps": "Schnittstellenraten in Bit/s: Geräte melden keine Paketzahlen pro Schnittstelle.",
+"ob.title": "Erste Flows senden",
+"ob.step1": "Richten Sie den sFlow-, NetFlow- oder IPFIX-Export eines Geräts auf diesen Rechner:",
+"ob.ports": "UDP-Ports:",
+"ob.step2": "Es erscheint binnen Sekunden unter Einstellungen; diese Seite füllt sich ein bis zwei Minuten später.",
+"ob.try": "Kein Gerät zur Hand? Senden Sie Testflows von einem anderen Rechner oder probieren Sie die Demo:",
+"ob.copy": "Kopieren"
 }

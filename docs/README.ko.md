@@ -21,8 +21,8 @@ ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 �
 
 ## 목차
 
-1. [데모 실행해 보기](#1-try-the-demo)
-2. [설치](#2-install)
+1. [빠른 시작](#1-quick-start)
+2. [예제](#2-examples)
 3. [사용자와 비밀번호](#3-users-and-passwords)
 4. [장비에서 플로 보내기](#4-send-flows-from-your-devices)
 5. [플로 수신 확인](#5-check-that-flows-arrive)
@@ -33,29 +33,103 @@ ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 �
 10. [옵션과 데이터](#10-options-and-data)
 11. [보안, 용량 산정, 문제 해결](#11-security-sizing-troubleshooting)
 
+<a id="1-quick-start"></a>
+
 <a id="1-try-the-demo"></a>
 
-## 1. 데모 실행해 보기
-
-[Releases 페이지](https://github.com/githubflyideas/traffic66/releases)에서 시스템에 맞는 압축 파일(Windows x64, 커널 3.2 이상의 Linux x86-64/ARM64, macOS 11 이상)을 내려받아 풀고 실행합니다:
+## 1. 빠른 시작
 
 ```
-./traffic66 demo          # Linux, macOS
-.\traffic66.exe demo      # Windows
+# Linux, macOS: ./traffic66 에 내려받고 데모(가상 네트워크) 실행
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
 ```
 
-macOS에서는 먼저 `xattr -dr com.apple.quarantine <folder>`를 실행하십시오. http://127.0.0.1:8066을 열고 `admin` / `traffic66`으로 로그인하면, 하루치 이력과 가상 장비 네 대의 실시간 트래픽이 보입니다. 여기에는 공격이 하나 포함되어 있으며 **탐지**에서 단계별로 보여 줍니다. Ctrl+C로 중지하고, `traffic66-demo`를 삭제하면 처음부터 다시 시작합니다. 실제 설치와 나란히 실행하려면: `-addr :8067 -listen ""`.
+```
+# Windows, PowerShell
+$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+http://127.0.0.1:8066 을 열고 `admin` / `traffic66` 로 로그인합니다. Ctrl+C 로 멈춥니다. 내 장비에서 수집하려면 같은 명령에서 `demo` 대신 `serve` 를 씁니다(Windows: `$env:TRAFFIC66_RUN='serve'`).
+
+```
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
+```
+
+포트: TCP 8066 웹 UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX(모든 UDP 포트가 모든 프로토콜을 받음). 장비가 보낼 주소는 터미널에 표시되고, 첫 로그인 때 새 비밀번호를 정합니다.
+
+직접 내려받기(압축 파일: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
+
+```
+curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
+cd traffic66-linux-amd64 && ./traffic66 demo
+```
+
+macOS 에서 직접 설치할 때는 먼저 `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "PC 보호" 창: **추가 정보** → **실행**.
+
+<a id="2-examples"></a>
 
 <a id="2-install"></a>
 
-## 2. 설치
+## 2. 예제
 
-traffic66은 파일 하나입니다. 포트: UDP 6343(sFlow), 2055(NetFlow), 4739(IPFIX), TCP 8066(웹 UI). 모든 UDP 포트가 모든 프로토콜을 받습니다.
-
-**Linux**(systemd):
+### 실제 설치 옆에서 데모 실행
 
 ```
-sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+./traffic66 demo -addr :8067 -listen ""
+```
+
+### sFlow, NetFlow v5/v9, IPFIX 수집(기본 포트)
+
+```
+./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
+```
+
+### 포트와 데이터 디렉터리 변경
+
+```
+./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
+./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
+```
+
+### 캡처 파일 분석
+
+```
+./traffic66 capture.pcap other.pcapng
+```
+
+### 터미널 UI
+
+```
+./traffic66 tui
+./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
+```
+
+### 장비 없이 경로 테스트(다른 컴퓨터에서)
+
+```
+./traffic66 simulate -to 192.0.2.50
+```
+
+### 방화벽 열기
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### 웹 UI 는 이 컴퓨터에서만, SSH 로 접속
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### 서비스로 실행: Linux(systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
@@ -82,23 +156,95 @@ WantedBy=multi-user.target
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
+journalctl -u traffic66 -f
 ```
 
-**Windows**(관리자 권한 PowerShell): `C:\traffic66`에 압축을 풀고, `C:\traffic66\traffic66.exe passwd`를 실행하고, 포트를 연 다음, 부팅 시 시작하도록 등록합니다:
+### 서비스로 실행: Windows
 
 ```
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
 $a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`traffic66.exe`를 더블클릭해도 됩니다. 웹 UI가 열립니다.
+### 서비스로 실행: macOS
 
-**macOS**: `/usr/local/traffic66`에 압축을 풀고, quarantine 플래그를 제거하고, `traffic66 passwd -data "/Library/Application Support/traffic66"`를 실행한 뒤, LaunchDaemon으로 시작합니다. `ProgramArguments`는 프로그램, `-data`, 그 디렉터리로 하고 `RunAtLoad`와 `KeepAlive`를 지정합니다.
+`/usr/local/traffic66` 에 풀고 격리 속성을 지운 뒤 `traffic66 passwd -data "/Library/Application Support/traffic66"` 를 실행하고, `ProgramArguments` 가 프로그램, `-data`, 그 디렉터리이며 `RunAtLoad` 와 `KeepAlive` 가 켜진 LaunchDaemon 으로 시작합니다.
+
+<a id="device-configuration"></a>
+
+### 장비 설정
+
+`192.0.2.50` 은 traffic66, `192.0.2.1` 은 장비입니다. 타임아웃과 샘플링 비율: [4장](#4-send-flows-from-your-devices).
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
 
 <a id="3-users-and-passwords"></a>
 
@@ -123,50 +269,7 @@ Start-ScheduledTask -TaskName traffic66
 
 `192.0.2.50`은 traffic66, `192.0.2.1`은 장비입니다. 액티브 타임아웃을 60초로 설정하고, NetFlow/IPFIX 장비가 샘플러 옵션을 익스포트하게 하고, **모든 인터페이스의 수신 방향**(또는 에지 인터페이스만)을 샘플링하십시오. 그러면 각 패킷이 한 번만 집계됩니다. sFlow 샘플링 비율: 1 Gb/s는 약 1:1000, 10 Gb/s는 1:4096, 40/100 Gb/s는 1:8192.
 
-```
-! Cisco IOS-XE, NetFlow v9
-flow exporter T66
- destination 192.0.2.50
- transport udp 2055
- option sampler-table
-flow monitor T66
- exporter T66
- record netflow ipv4 original-input
- cache timeout active 60
-interface GigabitEthernet0/0/0
- ip flow monitor T66 input
-```
-
-```
-# Huawei CloudEngine, sFlow (H3C Comware is similar)
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50
-interface 10GE1/0/1
- sflow sampling collector 1
- sflow sampling rate 4096
- sflow sampling inbound
- sflow counter collector 1
- sflow counter interval 30
-```
-
-```
-# Juniper EX/QFX, sFlow
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow interfaces ge-0/0/0
-
-# Arista EOS, sFlow
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow run
-
-# MikroTik RouterOS 7
-/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
-/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-
-# Linux host, softflowd
-softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
-```
+Cisco, Huawei, H3C, Juniper, Arista, MikroTik, softflowd 설정: [예제 → 장비 설정](#device-configuration).
 
 <a id="5-check-that-flows-arrive"></a>
 
@@ -337,4 +440,4 @@ Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windo
 | `address already in use` | `-addr` 또는 `-listen`으로 다른 포트 지정 |
 | Windows: "Windows의 PC 보호" | **추가 정보** → **실행** |
 
-소스에서 빌드: Go 1.25와 C 컴파일러를 준비한 뒤 `scripts/build.sh 0.1.0 traffic66`.
+소스에서 빌드: Go 1.26와 C 컴파일러를 준비한 뒤 `scripts/build.sh 0.1.0 traffic66`.

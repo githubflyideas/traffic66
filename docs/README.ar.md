@@ -29,8 +29,8 @@ Kafka أو قاعدة بيانات منفصلة.
 
 ## المحتويات
 
-1. [جرّب العرض التوضيحي](#1-try-the-demo)
-2. [التثبيت](#2-install)
+1. [بدء سريع](#1-quick-start)
+2. [أمثلة](#2-examples)
 3. [المستخدمون وكلمات المرور](#3-users-and-passwords)
 4. [إرسال التدفقات من أجهزتك](#4-send-flows-from-your-devices)
 5. [التحقق من وصول التدفقات](#5-check-that-flows-arrive)
@@ -41,36 +41,103 @@ Kafka أو قاعدة بيانات منفصلة.
 10. [الخيارات والبيانات](#10-options-and-data)
 11. [الأمان، تقدير الموارد، استكشاف الأخطاء](#11-security-sizing-troubleshooting)
 
+<a id="1-quick-start"></a>
+
 <a id="1-try-the-demo"></a>
 
-## 1. جرّب العرض التوضيحي
-
-نزّل الأرشيف المناسب لنظامك من
-[صفحة الإصدارات](https://github.com/githubflyideas/traffic66/releases)
-(Windows x64، وLinux x86-64/ARM64 بنواة 3.2+، وmacOS 11+)، وفكّ ضغطه وشغّل:
+## 1. بدء سريع
 
 ```
-./traffic66 demo          # Linux, macOS
-.\traffic66.exe demo      # Windows
+# لينكس وmacOS: نزّله في ./traffic66 وشغّل العرض التوضيحي (شبكة محاكاة)
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
 ```
 
-على macOS شغّل أولًا `xattr -dr com.apple.quarantine <folder>`. افتح
-http://127.0.0.1:8066 وسجّل الدخول بـ `admin` / `traffic66`: سجلّ يوم كامل وحركة
-حية من أربعة أجهزة محاكاة، ومنها هجوم يُعرض خطوةً خطوة في **الاكتشافات**. يوقفه
-Ctrl+C؛ احذف `traffic66-demo` لتبدأ من جديد. لتشغيله بجوار تثبيت حقيقي:
-`-addr :8067 -listen ""`.
+```
+# ويندوز، PowerShell
+$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+افتح http://127.0.0.1:8066 وسجّل الدخول باسم `admin` / `traffic66`. يوقفه Ctrl+C. للجمع من أجهزتك: الأمر نفسه مع `serve` بدل `demo` (ويندوز: `$env:TRAFFIC66_RUN='serve'`).
+
+```
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
+```
+
+المنافذ: TCP 8066 لواجهة الويب، UDP 6343 لـ sFlow و2055 لـ NetFlow و4739 لـ IPFIX (كل منفذ UDP يقبل كل البروتوكولات). تطبع الطرفية العناوين التي توجَّه إليها الأجهزة، ويطلب أول تسجيل دخول كلمة مرور جديدة.
+
+يدويًا (الأرشيفات: `linux-amd64` و`linux-arm64` و`darwin-amd64` و`darwin-arm64` و`windows-amd64.zip`):
+
+```
+curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
+cd traffic66-linux-amd64 && ./traffic66 demo
+```
+
+على macOS يدويًا: أولًا `xattr -dr com.apple.quarantine traffic66-darwin-*`. رسالة ويندوز «حمى جهاز الكمبيوتر»: **مزيد من المعلومات** ← **التشغيل على أي حال**.
+
+<a id="2-examples"></a>
 
 <a id="2-install"></a>
 
-## 2. التثبيت
+## 2. أمثلة
 
-traffic66 ملف واحد. المنافذ: UDP 6343 (sFlow)، و2055 (NetFlow)، و4739
-(IPFIX)، وTCP 8066 (واجهة الويب)؛ وكل منفذ UDP يقبل كل البروتوكولات.
-
-**Linux** (systemd):
+### العرض التوضيحي بجانب تثبيت حقيقي
 
 ```
-sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+./traffic66 demo -addr :8067 -listen ""
+```
+
+### جمع sFlow وNetFlow v5/v9 وIPFIX (المنافذ الافتراضية)
+
+```
+./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
+```
+
+### منافذ ومجلد بيانات مخصّصان
+
+```
+./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
+./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
+```
+
+### تحليل ملف التقاط
+
+```
+./traffic66 capture.pcap other.pcapng
+```
+
+### الواجهة الطرفية
+
+```
+./traffic66 tui
+./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
+```
+
+### اختبار المسار دون جهاز (من جهاز آخر)
+
+```
+./traffic66 simulate -to 192.0.2.50
+```
+
+### فتح الجدار الناري
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### واجهة الويب على هذا الجهاز فقط، عبر SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### كخدمة: لينكس (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
@@ -97,28 +164,95 @@ WantedBy=multi-user.target
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
+journalctl -u traffic66 -f
 ```
 
-**Windows** (PowerShell بصلاحيات المسؤول): فكّ الضغط إلى `C:\traffic66`،
-وشغّل `C:\traffic66\traffic66.exe passwd`، وافتح المنافذ، واجعله يبدأ مع
-الإقلاع:
+### كخدمة: ويندوز
 
 ```
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
 $a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-النقر المزدوج على `traffic66.exe` يعمل أيضًا: يفتح واجهة الويب.
+### كخدمة: macOS
 
-**macOS**: فكّ الضغط إلى `/usr/local/traffic66`، وأزل علامة الحجر،
-وشغّل `traffic66 passwd -data "/Library/Application Support/traffic66"`، ثم
-شغّله من LaunchDaemon تكون `ProgramArguments` فيه البرنامج و`-data` وذلك
-الدليل، مع `RunAtLoad` و`KeepAlive`.
+فك الضغط في `/usr/local/traffic66`، وأزل علامة الحجر، وشغّل `traffic66 passwd -data "/Library/Application Support/traffic66"`، ثم ابدأه من LaunchDaemon تكون `ProgramArguments` فيه البرنامج و`-data` وذلك المجلد، مع `RunAtLoad` و`KeepAlive`.
+
+<a id="device-configuration"></a>
+
+### إعداد الأجهزة
+
+`192.0.2.50` هو traffic66 و`192.0.2.1` الجهاز؛ المهل ومعدلات أخذ العينات: [القسم 4](#4-send-flows-from-your-devices).
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
 
 <a id="3-users-and-passwords"></a>
 
@@ -156,50 +290,7 @@ LDAP / Active Directory قيد التطوير.
 واحدة. نسب sFlow: نحو 1:1000 لـ 1 Gb/s، و1:4096 لـ 10 Gb/s، و1:8192 لـ
 40/100 Gb/s.
 
-```
-! Cisco IOS-XE, NetFlow v9
-flow exporter T66
- destination 192.0.2.50
- transport udp 2055
- option sampler-table
-flow monitor T66
- exporter T66
- record netflow ipv4 original-input
- cache timeout active 60
-interface GigabitEthernet0/0/0
- ip flow monitor T66 input
-```
-
-```
-# Huawei CloudEngine, sFlow (H3C Comware is similar)
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50
-interface 10GE1/0/1
- sflow sampling collector 1
- sflow sampling rate 4096
- sflow sampling inbound
- sflow counter collector 1
- sflow counter interval 30
-```
-
-```
-# Juniper EX/QFX, sFlow
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow interfaces ge-0/0/0
-
-# Arista EOS, sFlow
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow run
-
-# MikroTik RouterOS 7
-/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
-/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-
-# Linux host, softflowd
-softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
-```
+إعدادات Cisco وHuawei وH3C وJuniper وArista وMikroTik وsoftflowd: [أمثلة ← إعداد الأجهزة](#device-configuration).
 
 <a id="5-check-that-flows-arrive"></a>
 
@@ -432,6 +523,6 @@ SNMP نصًا صريحًا؛ استخدم مجتمعات للقراءة فقط.
 | `address already in use` | اختر منافذ أخرى بـ `-addr` أو `-listen` |
 | Windows "protected your PC" | **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال) |
 
-البناء من المصدر: Go 1.25 ومترجم C، ثم `scripts/build.sh 0.1.0 traffic66`.
+البناء من المصدر: Go 1.26 ومترجم C، ثم `scripts/build.sh 0.1.0 traffic66`.
 
 </div>

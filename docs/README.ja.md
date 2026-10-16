@@ -21,8 +21,8 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 
 ## 目次
 
-1. [デモを試す](#1-try-the-demo)
-2. [インストール](#2-install)
+1. [クイックスタート](#1-quick-start)
+2. [例](#2-examples)
 3. [ユーザーとパスワード](#3-users-and-passwords)
 4. [機器からフローを送る](#4-send-flows-from-your-devices)
 5. [フローの受信を確認する](#5-check-that-flows-arrive)
@@ -33,35 +33,109 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 10. [オプションとデータ](#10-options-and-data)
 11. [セキュリティ、サイジング、トラブルシューティング](#11-security-sizing-troubleshooting)
 
+<a id="1-quick-start"></a>
+
 <a id="1-try-the-demo"></a>
 
-## 1. デモを試す
-
-[Releases ページ](https://github.com/githubflyideas/traffic66/releases) から自分のシステム用のアーカイブ（Windows x64、カーネル 3.2 以上の Linux x86-64/ARM64、macOS 11 以上）をダウンロードし、展開して実行します：
+## 1. クイックスタート
 
 ```
-./traffic66 demo          # Linux, macOS
-.\traffic66.exe demo      # Windows
+# Linux・macOS：./traffic66 にダウンロードしてデモ（模擬ネットワーク）を起動
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
 ```
 
-macOS では先に `xattr -dr com.apple.quarantine <folder>` を実行してください。http://127.0.0.1:8066 を開いて `admin` / `traffic66` でサインインすると、1 日分の履歴と、シミュレートした 4 台の機器からのライブトラフィックが表示されます。その中には攻撃が含まれ、**検知** で段階ごとに示されます。Ctrl+C で停止し、`traffic66-demo` を削除すると最初からやり直せます。本番インストールと並べて動かすには：`-addr :8067 -listen ""`。
+```
+# Windows（PowerShell）
+$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+http://127.0.0.1:8066 を開き、`admin` / `traffic66` でサインインします。Ctrl+C で停止します。 自分の機器から収集するには、同じコマンドの `demo` を `serve` に替えます（Windows：`$env:TRAFFIC66_RUN='serve'`）。
+
+```
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
+```
+
+ポート：TCP 8066 Web UI、UDP 6343 sFlow、2055 NetFlow、4739 IPFIX（どの UDP ポートもすべてのプロトコルを受信）。機器の送信先アドレスはターミナルに表示されます。初回サインイン時に新しいパスワードを設定します。
+
+手動の場合（アーカイブ：`linux-amd64`、`linux-arm64`、`darwin-amd64`、`darwin-arm64`、`windows-amd64.zip`）：
+
+```
+curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
+cd traffic66-linux-amd64 && ./traffic66 demo
+```
+
+macOS で手動の場合は先に `xattr -dr com.apple.quarantine traffic66-darwin-*`。Windows の「PC が保護されました」：**詳細情報** → **実行**。
+
+<a id="2-examples"></a>
 
 <a id="2-install"></a>
 
-## 2. インストール
+## 2. 例
 
-traffic66 はファイル 1 つです。ポート：UDP 6343（sFlow）、2055（NetFlow）、4739（IPFIX）、TCP 8066（Web UI）。どの UDP ポートもすべてのプロトコルを受け付けます。
-
-**Linux**（systemd）：
+### 本番環境と並べてデモを動かす
 
 ```
-sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+./traffic66 demo -addr :8067 -listen ""
+```
+
+### sFlow・NetFlow v5/v9・IPFIX を収集（既定ポート）
+
+```
+./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
+```
+
+### ポートとデータディレクトリを変更
+
+```
+./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
+./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
+```
+
+### キャプチャファイルを解析
+
+```
+./traffic66 capture.pcap other.pcapng
+```
+
+### ターミナル UI
+
+```
+./traffic66 tui
+./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
+```
+
+### 機器なしで経路をテスト（別のマシンから）
+
+```
+./traffic66 simulate -to 192.0.2.50
+```
+
+### ファイアウォールを開ける
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Web UI はこのマシンだけで、SSH 経由でアクセス
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### サービスとして実行：Linux（systemd）
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
 ```
 
-`/etc/systemd/system/traffic66.service`：
+`/etc/systemd/system/traffic66.service`:
 
 ```
 [Unit]
@@ -82,23 +156,95 @@ WantedBy=multi-user.target
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
+journalctl -u traffic66 -f
 ```
 
-**Windows**（管理者として PowerShell を実行）：`C:\traffic66` に展開し、`C:\traffic66\traffic66.exe passwd` を実行し、ポートを開けて、起動時に開始するよう登録します：
+### サービスとして実行：Windows
 
 ```
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
 $a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`traffic66.exe` をダブルクリックしても動きます。Web UI が開きます。
+### サービスとして実行：macOS
 
-**macOS**：`/usr/local/traffic66` に展開し、quarantine フラグを外し、`traffic66 passwd -data "/Library/Application Support/traffic66"` を実行して、LaunchDaemon から起動します。`ProgramArguments` にはプログラム、`-data`、そのディレクトリを指定し、`RunAtLoad` と `KeepAlive` を付けます。
+`/usr/local/traffic66` に展開し、quarantine 属性を外して `traffic66 passwd -data "/Library/Application Support/traffic66"` を実行し、`ProgramArguments` にプログラム・`-data`・そのディレクトリを指定し `RunAtLoad` と `KeepAlive` を有効にした LaunchDaemon から起動します。
+
+<a id="device-configuration"></a>
+
+### 機器の設定
+
+`192.0.2.50` が traffic66、`192.0.2.1` が機器です。タイムアウトとサンプリングレートは[第 4 章](#4-send-flows-from-your-devices)。
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
 
 <a id="3-users-and-passwords"></a>
 
@@ -123,50 +269,7 @@ Start-ScheduledTask -TaskName traffic66
 
 `192.0.2.50` が traffic66、`192.0.2.1` が機器です。アクティブタイムアウトは 60 秒に設定し、NetFlow/IPFIX の機器にはサンプラーオプションをエクスポートさせ、**すべてのインターフェースで受信方向**（またはエッジのインターフェースだけ）をサンプリングしてください。こうすると各パケットが 1 回だけ数えられます。sFlow のレート：1 Gb/s で約 1:1000、10 Gb/s で 1:4096、40/100 Gb/s で 1:8192。
 
-```
-! Cisco IOS-XE, NetFlow v9
-flow exporter T66
- destination 192.0.2.50
- transport udp 2055
- option sampler-table
-flow monitor T66
- exporter T66
- record netflow ipv4 original-input
- cache timeout active 60
-interface GigabitEthernet0/0/0
- ip flow monitor T66 input
-```
-
-```
-# Huawei CloudEngine, sFlow (H3C Comware is similar)
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50
-interface 10GE1/0/1
- sflow sampling collector 1
- sflow sampling rate 4096
- sflow sampling inbound
- sflow counter collector 1
- sflow counter interval 30
-```
-
-```
-# Juniper EX/QFX, sFlow
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow interfaces ge-0/0/0
-
-# Arista EOS, sFlow
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow run
-
-# MikroTik RouterOS 7
-/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
-/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-
-# Linux host, softflowd
-softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
-```
+Cisco・Huawei・H3C・Juniper・Arista・MikroTik・softflowd の設定：[例 → 機器の設定](#device-configuration)。
 
 <a id="5-check-that-flows-arrive"></a>
 
@@ -337,4 +440,4 @@ Web UI は平文の HTTP です。信頼できないネットワークでは `-a
 | `address already in use` | `-addr` または `-listen` で別のポートを指定 |
 | Windows："Windows によって PC が保護されました" | **詳細情報** → **実行** |
 
-ソースからのビルド：Go 1.25 と C コンパイラーを用意し、`scripts/build.sh 0.1.0 traffic66` を実行します。
+ソースからのビルド：Go 1.26 と C コンパイラーを用意し、`scripts/build.sh 0.1.0 traffic66` を実行します。

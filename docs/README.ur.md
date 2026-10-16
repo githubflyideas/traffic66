@@ -29,8 +29,8 @@ Elasticsearch، Kafka یا الگ database کے۔
 
 ## فہرست
 
-1. [ڈیمو چلا کر دیکھیں](#1-try-the-demo)
-2. [انسٹال کریں](#2-install)
+1. [فوری آغاز](#1-quick-start)
+2. [مثالیں](#2-examples)
 3. [یوزرز اور پاس ورڈ](#3-users-and-passwords)
 4. [اپنی ڈیوائسز سے flows بھیجیں](#4-send-flows-from-your-devices)
 5. [جانچیں کہ flows پہنچ رہے ہیں](#5-check-that-flows-arrive)
@@ -41,38 +41,103 @@ Elasticsearch، Kafka یا الگ database کے۔
 10. [آپشنز اور ڈیٹا](#10-options-and-data)
 11. [سکیورٹی، گنجائش کا اندازہ، مسائل کا حل](#11-security-sizing-troubleshooting)
 
+<a id="1-quick-start"></a>
+
 <a id="1-try-the-demo"></a>
 
-## 1. ڈیمو چلا کر دیکھیں
-
-اپنے سسٹم کا archive
-[releases صفحے](https://github.com/githubflyideas/traffic66/releases) سے
-ڈاؤن لوڈ کریں (Windows x64، kernel 3.2+ والا Linux x86-64/ARM64، macOS 11+)،
-اسے unpack کریں اور چلائیں:
+## 1. فوری آغاز
 
 ```
-./traffic66 demo          # Linux, macOS
-.\traffic66.exe demo      # Windows
+# Linux، macOS: ./traffic66 میں ڈاؤن لوڈ کر کے ڈیمو (فرضی نیٹ ورک) چلائیں
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
 ```
 
-macOS پر پہلے `xattr -dr com.apple.quarantine <folder>` چلائیں۔
-http://127.0.0.1:8066 کھولیں اور `admin` / `traffic66` سے سائن اِن کریں: ایک دن کی
-تاریخ اور چار simulated ڈیوائسز سے live ٹریفک، جس میں ایک حملہ بھی ہے جو
-**مشتبہ سرگرمی** پر قدم بہ قدم دکھایا جاتا ہے۔ Ctrl+C اسے روکتا ہے؛ نئے سرے سے
-شروع کرنے کے لیے `traffic66-demo` حذف کر دیں۔ اصل installation کے ساتھ ساتھ
-چلانے کے لیے: `-addr :8067 -listen ""`۔
+```
+# Windows، PowerShell
+$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+http://127.0.0.1:8066 کھولیں اور `admin` / `traffic66` سے سائن اِن کریں۔ Ctrl+C روکتا ہے۔ اپنے آلات سے flows لینے کے لیے: یہی کمانڈ، `demo` کی جگہ `serve` (Windows: `$env:TRAFFIC66_RUN='serve'`)۔
+
+```
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
+```
+
+پورٹس: TCP 8066 ویب UI، UDP 6343 sFlow، 2055 NetFlow، 4739 IPFIX (ہر UDP پورٹ ہر پروٹوکول لیتا ہے)۔ ٹرمینل وہ پتے دکھاتا ہے جن پر آلات بھیجیں؛ پہلی سائن اِن پر نیا پاس ورڈ مانگا جاتا ہے۔
+
+ہاتھ سے (آرکائیو: `linux-amd64`، `linux-arm64`، `darwin-amd64`، `darwin-arm64`، `windows-amd64.zip`):
+
+```
+curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
+cd traffic66-linux-amd64 && ./traffic66 demo
+```
+
+macOS پر ہاتھ سے: پہلے `xattr -dr com.apple.quarantine traffic66-darwin-*`۔ Windows "protected your PC": **More info** ← **Run anyway**۔
+
+<a id="2-examples"></a>
 
 <a id="2-install"></a>
 
-## 2. انسٹال کریں
+## 2. مثالیں
 
-traffic66 ایک ہی فائل ہے۔ Ports: UDP 6343 (sFlow)، 2055 (NetFlow)، 4739
-(IPFIX)، TCP 8066 (web UI)؛ ہر UDP port ہر protocol قبول کرتا ہے۔
-
-**Linux** (systemd):
+### اصل انسٹالیشن کے ساتھ ڈیمو
 
 ```
-sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+./traffic66 demo -addr :8067 -listen ""
+```
+
+### sFlow، NetFlow v5/v9 اور IPFIX جمع کریں (ڈیفالٹ پورٹس)
+
+```
+./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
+```
+
+### اپنے پورٹس اور ڈیٹا ڈائریکٹری
+
+```
+./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
+./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
+```
+
+### کیپچر فائل کا تجزیہ
+
+```
+./traffic66 capture.pcap other.pcapng
+```
+
+### ٹرمینل UI
+
+```
+./traffic66 tui
+./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
+```
+
+### بغیر آلے کے راستہ جانچیں (دوسری مشین سے)
+
+```
+./traffic66 simulate -to 192.0.2.50
+```
+
+### فائر وال کھولیں
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### ویب UI صرف اسی مشین پر، SSH کے ذریعے
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### سروس کے طور پر: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
@@ -99,28 +164,95 @@ WantedBy=multi-user.target
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
+journalctl -u traffic66 -f
 ```
 
-**Windows** (PowerShell، Administrator کے طور پر): `C:\traffic66` میں unpack
-کریں، `C:\traffic66\traffic66.exe passwd` چلائیں، ports کھولیں، اور اسے boot
-پر شروع ہونے کے لیے سیٹ کریں:
+### سروس کے طور پر: Windows
 
 ```
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
 $a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-`traffic66.exe` پر double-click بھی کام کرتا ہے: یہ web UI کھولتا ہے۔
+### سروس کے طور پر: macOS
 
-**macOS**: `/usr/local/traffic66` میں unpack کریں، quarantine flag ہٹائیں،
-`traffic66 passwd -data "/Library/Application Support/traffic66"` چلائیں، اور
-اسے ایک LaunchDaemon سے شروع کریں جس کے `ProgramArguments` پروگرام، `-data` اور
-وہ directory ہوں، ساتھ `RunAtLoad` اور `KeepAlive`۔
+`/usr/local/traffic66` میں کھولیں، quarantine فلیگ ہٹائیں، `traffic66 passwd -data "/Library/Application Support/traffic66"` چلائیں، اور ایسے LaunchDaemon سے شروع کریں جس کے `ProgramArguments` پروگرام، `-data` اور وہ ڈائریکٹری ہوں، `RunAtLoad` اور `KeepAlive` کے ساتھ۔
+
+<a id="device-configuration"></a>
+
+### آلات کی ترتیب
+
+`192.0.2.50` traffic66 ہے، `192.0.2.1` آلہ؛ ٹائم آؤٹ اور سیمپلنگ ریٹ: [حصہ 4](#4-send-flows-from-your-devices)۔
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
 
 <a id="3-users-and-passwords"></a>
 
@@ -158,50 +290,7 @@ LDAP / Active Directory سے سائن اِن زیرِ تیاری ہے۔
 packet ایک ہی بار گنا جاتا ہے۔ sFlow rates: 1 Gb/s کے لیے تقریباً 1:1000،
 10 Gb/s کے لیے 1:4096، 40/100 Gb/s کے لیے 1:8192۔
 
-```
-! Cisco IOS-XE, NetFlow v9
-flow exporter T66
- destination 192.0.2.50
- transport udp 2055
- option sampler-table
-flow monitor T66
- exporter T66
- record netflow ipv4 original-input
- cache timeout active 60
-interface GigabitEthernet0/0/0
- ip flow monitor T66 input
-```
-
-```
-# Huawei CloudEngine, sFlow (H3C Comware is similar)
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50
-interface 10GE1/0/1
- sflow sampling collector 1
- sflow sampling rate 4096
- sflow sampling inbound
- sflow counter collector 1
- sflow counter interval 30
-```
-
-```
-# Juniper EX/QFX, sFlow
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow interfaces ge-0/0/0
-
-# Arista EOS, sFlow
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow run
-
-# MikroTik RouterOS 7
-/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
-/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-
-# Linux host, softflowd
-softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
-```
+Cisco، Huawei، H3C، Juniper، Arista، MikroTik اور softflowd کی ترتیب: [مثالیں ← آلات کی ترتیب](#device-configuration)۔
 
 <a id="5-check-that-flows-arrive"></a>
 
@@ -445,6 +534,6 @@ traffic66.example.com --to 127.0.0.1:8066`) یا SSH tunnel کے ذریعے۔ UD
 | `address already in use` | `-addr` یا `-listen` سے دوسرے ports چنیں |
 | Windows "protected your PC" | **More info** (مزید معلومات) → **Run anyway** (پھر بھی چلائیں) |
 
-سورس سے بِلڈ: Go 1.25 اور ایک C compiler، پھر `scripts/build.sh 0.1.0 traffic66`۔
+سورس سے بِلڈ: Go 1.26 اور ایک C compiler، پھر `scripts/build.sh 0.1.0 traffic66`۔
 
 </div>

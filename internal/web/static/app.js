@@ -264,7 +264,7 @@ function waitHint(msg, elapsed) {
 function emptyText() {
   const w = waiting;
   if (!w || !w.reason) return t('empty.nodata');
-  if (w.reason === 'nothing') return waitHint(t('empty.first'));
+  if (w.reason === 'nothing') return waitHint(firstText());
   if (w.reason === 'templates') return waitHint(t('wait.templates', {n: nf(w.records || 0)}), waitedFor(w));
   if (w.reason === 'sampling') return waitHint(t('wait.sampling', {n: nf(w.records || 0)}), waitedFor(w));
   if (w.reason === 'settling') { const n = Math.max(1, Math.ceil((w.seconds || 0) / 60)); return t(plural('wait.settling', n), {n}); }
@@ -373,6 +373,7 @@ const ifScoped = path => state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state
 // refused.
 let lic = null;
 let waiting = null;  // what the collector is still waiting for, from /api/status
+let setup = null;    // sources, UDP ports and addresses, for the first-run guide
 const licOK = f => !!lic && lic.registered && (lic.features || []).includes(f);
 
 let ifList = null, ifListKey = '';
@@ -776,6 +777,35 @@ const baseText = (d, kind) => {
   const k = {day: 'day', week: 'week', prev: 'prev'}[d.basis];
   return k ? t({line: 'base.', kpi: 'kpi.vs_', sub: 'ov.bw_sub_'}[kind] + k, {n: d.base_days || ''}) : '';
 };
+// "Nothing received yet": the default ports are in the text; other ports
+// are named as they were given to -listen.
+function firstText() {
+  const l = setup?.listen || [], ports = l.map(x => x.port).sort().join(',');
+  if (!l.length || ports === '2055,4739,6343') return t('empty.first');
+  return t('ob.step1') + ' ' + t('ob.ports') + ' ' + l.map(x => x.name + ' ' + x.port).join(', ');
+}
+// A new installation with no device yet: say exactly where to send flows,
+// with this machine's addresses and the collectors' ports, ready to copy.
+function onboardGuide(tot) {
+  const s = setup;
+  if (!s || s.demo || s.offline || inSB() || s.sources > 0 || (tot && tot.wire > 0) || !(s.listen || []).length) return '';
+  const ips = (s.addrs || []).length ? s.addrs : [location.hostname];
+  const code = v => `<code class="ob-c">${esc(v)}</code><button class="ob-copy" data-copy="${esc(v)}" ">${esc(t('ob.copy'))}</button>`;
+  const ports = s.listen.map(l => `<span class="ob-p">${esc(l.name)} ${code(l.port)}</span>`).join(' ');
+  const sim = `traffic66 simulate -to ${ips[0]}`;
+  return `<div class="panel c12 onboard"><div class="ph"><h2>${esc(t('ob.title'))}</h2></div>
+    <ol class="ob">
+      <li>${esc(t('ob.step1'))}<div class="ob-row">${ips.map(code).join(' ')}</div><div class="ob-row">${esc(t('ob.ports'))} ${ports}</div></li>
+      <li>${esc(t('ob.step2'))} <a href="#v=sources" data-obgo="sources">${esc(t('nav.sources'))}</a></li>
+      <li>${esc(t('ob.try'))}<div class="ob-row">${code(sim)} ${code('traffic66 demo -addr :8067 -listen ""')}</div></li>
+    </ol></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.ob-copy');
+  if (b) navigator.clipboard?.writeText(b.dataset.copy).then(() => toast(t('top.copied')), () => toast(b.dataset.copy));
+  const g = e.target.closest('[data-obgo]');
+  if (g) { e.preventDefault(); go(g.dataset.obgo); }
+});
 views.overview = async (el) => {
   // total, or only inbound or only outbound traffic (direction from your networks' point of view)
   const od = ['inbound', 'outbound'].includes(state.od) ? state.od : '';
@@ -810,6 +840,7 @@ views.overview = async (el) => {
   const cl = d.top_clients || [], cmax = Math.max(1, ...cl.map(r => r.wire));
   const sv = d.top_services || [], smax = Math.max(1, ...sv.map(r => r.wire));
   el.innerHTML = `<div class="grid">
+    ${onboardGuide(tot)}
     <div class="panel c12"><div class="kpis">
       ${inSB() ? `<div class="kpi"><div class="lab">${t('sb.avg')}</div><div class="n">${fmtBps(tot.wire * 8 / (spanMs() / 1000))}</div><div class="d muted">&nbsp;</div></div>`
         : `<div class="kpi"><div class="lab">${t('kpi.now')}</div><div class="n">${fmtBps(d.now_bps)}</div><div class="d ${change > 0.1 ? 'up' : 'muted'}">${change == null ? '&nbsp;' : esc(baseText(d, 'kpi').split('{p}').join(changeTxt))}</div></div>`}
@@ -2470,7 +2501,7 @@ views.sources = async (el) => {
     : '<span style="color:var(--crit)">✖</span> ' + esc(t('src.snmp_fail'))}</span>`).join(' ');
   el.innerHTML = `<div class="grid">
     ${panel('c12', t('src.title'), t('src.sub'), `<table><tr><th>${t('col.device')}</th><th>${t('col.proto')}</th><th class="num">${t('col.rate')}</th><th>${t('col.sampling')}</th><th class="num">${t('col.lost')}</th><th>${t('col.last')}</th><th>${t('col.status')}</th>${admOnly('<th></th>')}</tr>
-      ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${waitHint(t('empty.first'))}</td></tr>`}</table>
+      ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${waitHint(firstText())}</td></tr>`}</table>
       <p style="margin:12px 0 0;font-size:12.5px"><span class="muted">${t('src.listeners')}</span> ${lis || '—'} ${caps}</p>
       ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
@@ -2827,6 +2858,7 @@ async function loadStatus() {
     $('#demo').hidden = !s.demo; $('#demo').textContent = t('demo.badge');
     offlineMode = !!s.offline;
     waiting = s.waiting || null;
+    setup = s;
     const L = lic = s.license || null;
     if (L) {
       const id = `<span class="muted">${esc(t('lic.id', {id: L.installation_id}))}</span>`;
@@ -2893,6 +2925,10 @@ $('#loginForm').addEventListener('submit', async e => {
   $('#login').hidden = true; $('#app').hidden = false;
   if (j.must_change) sessionStorage.setItem('t66.old', f.get('password'));
   await Promise.all([loadStatus(), loadSB(), loadMe()]);
+  // A new installation has minutes of data, a sliver at the edge of a day's
+  // chart: it opens on the last hour until it has two hours of history.
+  // A range in the link still wins.
+  if (!new URLSearchParams(location.hash.slice(1)).get('r') && setup && !setup.demo && !setup.offline && !(setup.oldest > 0 && Date.now() - setup.oldest > 2 * 3600e3)) state.r = '1h';
   render();
   startTimers();
 });

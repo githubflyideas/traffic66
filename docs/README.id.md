@@ -28,8 +28,8 @@ pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 
 ## Daftar isi
 
-1. [Coba demo](#1-try-the-demo)
-2. [Instalasi](#2-install)
+1. [Mulai cepat](#1-quick-start)
+2. [Contoh](#2-examples)
 3. [User dan kata sandi](#3-users-and-passwords)
 4. [Kirim flow dari perangkat Anda](#4-send-flows-from-your-devices)
 5. [Pastikan flow masuk](#5-check-that-flows-arrive)
@@ -40,37 +40,103 @@ pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 10. [Opsi dan data](#10-options-and-data)
 11. [Keamanan, kebutuhan sumber daya, pemecahan masalah](#11-security-sizing-troubleshooting)
 
+<a id="1-quick-start"></a>
+
 <a id="1-try-the-demo"></a>
 
-## 1. Coba demo
-
-Unduh arsip untuk sistem Anda dari
-[halaman rilis](https://github.com/githubflyideas/traffic66/releases)
-(Windows x64, Linux x86-64/ARM64 dengan kernel 3.2+, macOS 11+), ekstrak, lalu jalankan:
+## 1. Mulai cepat
 
 ```
-./traffic66 demo          # Linux, macOS
-.\traffic66.exe demo      # Windows
+# Linux, macOS: unduh ke ./traffic66 lalu jalankan demo (jaringan simulasi)
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
 ```
 
-Di macOS, jalankan dulu `xattr -dr com.apple.quarantine <folder>`. Buka
-http://127.0.0.1:8066 sebagai `admin` / `traffic66`: riwayat satu hari dan
-trafik live dari empat perangkat simulasi, termasuk sebuah serangan yang
-ditampilkan langkah demi langkah di **Temuan**. Ctrl+C menghentikannya; hapus
-`traffic66-demo` untuk memulai dari awal. Untuk menjalankannya berdampingan
-dengan instalasi sungguhan: `-addr :8067 -listen ""`.
+```
+# Windows, PowerShell
+$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+Buka http://127.0.0.1:8066 dan masuk sebagai `admin` / `traffic66`. Ctrl+C menghentikannya. Mengumpulkan dari perangkat Anda: perintah yang sama dengan `serve` alih-alih `demo` (Windows: `$env:TRAFFIC66_RUN='serve'`).
+
+```
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
+```
+
+Port: TCP 8066 antarmuka web, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (setiap port UDP menerima semua protokol). Terminal menampilkan alamat tujuan untuk perangkat; masuk pertama kali meminta kata sandi baru.
+
+Secara manual (arsip: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
+
+```
+curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
+cd traffic66-linux-amd64 && ./traffic66 demo
+```
+
+macOS manual: lebih dulu `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "melindungi PC Anda": **Info selengkapnya** → **Tetap jalankan**.
+
+<a id="2-examples"></a>
 
 <a id="2-install"></a>
 
-## 2. Instalasi
+## 2. Contoh
 
-traffic66 hanya satu file. Port: UDP 6343 (sFlow), 2055 (NetFlow), 4739
-(IPFIX), TCP 8066 (antarmuka web); setiap port UDP menerima semua protokol.
-
-**Linux** (systemd):
+### Demo di samping instalasi sungguhan
 
 ```
-sudo mkdir -p /opt/traffic66 && sudo tar xzf traffic66-linux-amd64.tar.gz -C /opt/traffic66 --strip-components=1
+./traffic66 demo -addr :8067 -listen ""
+```
+
+### Kumpulkan sFlow, NetFlow v5/v9 dan IPFIX (port bawaan)
+
+```
+./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
+```
+
+### Port dan direktori data sendiri
+
+```
+./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
+./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
+```
+
+### Analisis file tangkapan
+
+```
+./traffic66 capture.pcap other.pcapng
+```
+
+### Antarmuka terminal
+
+```
+./traffic66 tui
+./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
+```
+
+### Uji jalur tanpa perangkat (dari mesin lain)
+
+```
+./traffic66 simulate -to 192.0.2.50
+```
+
+### Buka firewall
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Antarmuka web hanya di mesin ini, lewat SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### Sebagai layanan: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
 sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
 sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
@@ -97,28 +163,95 @@ WantedBy=multi-user.target
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload
+journalctl -u traffic66 -f
 ```
 
-**Windows** (PowerShell sebagai Administrator): ekstrak ke `C:\traffic66`,
-jalankan `C:\traffic66\traffic66.exe passwd`, buka port-nya, dan jalankan
-saat boot:
+### Sebagai layanan: Windows
 
 ```
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
 $a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
 Start-ScheduledTask -TaskName traffic66
 ```
 
-Klik dua kali `traffic66.exe` juga bisa: itu membuka antarmuka web.
+### Sebagai layanan: macOS
 
-**macOS**: ekstrak ke `/usr/local/traffic66`, hapus tanda karantina,
-jalankan `traffic66 passwd -data "/Library/Application Support/traffic66"`,
-lalu jalankan dari LaunchDaemon yang `ProgramArguments`-nya adalah program,
-`-data`, dan direktori itu, dengan `RunAtLoad` dan `KeepAlive`.
+Ekstrak ke `/usr/local/traffic66`, hapus atribut karantina, jalankan `traffic66 passwd -data "/Library/Application Support/traffic66"`, lalu mulai dari LaunchDaemon dengan `ProgramArguments` berisi program, `-data` dan direktori itu, serta `RunAtLoad` dan `KeepAlive`.
+
+<a id="device-configuration"></a>
+
+### Konfigurasi perangkat
+
+`192.0.2.50` adalah traffic66, `192.0.2.1` perangkatnya; timeout dan laju sampling: [bagian 4](#4-send-flows-from-your-devices).
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
 
 <a id="3-users-and-passwords"></a>
 
@@ -158,50 +291,7 @@ interface tepi): dengan begitu setiap paket dihitung sekali. Sampling rate
 sFlow: sekitar 1:1000 untuk 1 Gb/s, 1:4096 untuk 10 Gb/s, 1:8192 untuk
 40/100 Gb/s.
 
-```
-! Cisco IOS-XE, NetFlow v9
-flow exporter T66
- destination 192.0.2.50
- transport udp 2055
- option sampler-table
-flow monitor T66
- exporter T66
- record netflow ipv4 original-input
- cache timeout active 60
-interface GigabitEthernet0/0/0
- ip flow monitor T66 input
-```
-
-```
-# Huawei CloudEngine, sFlow (H3C Comware is similar)
-sflow agent ip 192.0.2.1
-sflow collector 1 ip 192.0.2.50
-interface 10GE1/0/1
- sflow sampling collector 1
- sflow sampling rate 4096
- sflow sampling inbound
- sflow counter collector 1
- sflow counter interval 30
-```
-
-```
-# Juniper EX/QFX, sFlow
-set protocols sflow collector 192.0.2.50 udp-port 6343
-set protocols sflow sample-rate ingress 4096
-set protocols sflow interfaces ge-0/0/0
-
-# Arista EOS, sFlow
-sflow sample 4096
-sflow destination 192.0.2.50
-sflow run
-
-# MikroTik RouterOS 7
-/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
-/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
-
-# Linux host, softflowd
-softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
-```
+Konfigurasi untuk Cisco, Huawei, H3C, Juniper, Arista, MikroTik dan softflowd: [Contoh → Konfigurasi perangkat](#device-configuration).
 
 <a id="5-check-that-flows-arrive"></a>
 
@@ -453,4 +543,4 @@ selama 1 jam sekitar 9 detik.
 | `address already in use` | Pilih port lain dengan `-addr` atau `-listen` |
 | Windows: "Windows protected your PC" (Windows melindungi PC Anda) | **More info** (info selengkapnya) → **Run anyway** (tetap jalankan) |
 
-Build dari source: Go 1.25 dan compiler C, lalu `scripts/build.sh 0.1.0 traffic66`.
+Build dari source: Go 1.26 dan compiler C, lalu `scripts/build.sh 0.1.0 traffic66`.

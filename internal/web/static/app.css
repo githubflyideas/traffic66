@@ -494,3 +494,12 @@ body.marked .view.on::after{
 .marknote-in p.small{font-size:12px}
 .marknote-act{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 @media print{.marknote{display:none}}
+
+/* first-run guide on Overview */
+.onboard { border-inline-start: 3px solid var(--accent, #2a7); }
+.ob { margin: .4em 0 .2em; padding-inline-start: 1.4em; line-height: 1.7; }
+.ob li { margin-bottom: .5em; }
+.ob-row { margin-top: .25em; display: flex; flex-wrap: wrap; gap: .4em 1em; align-items: center; }
+.ob-c { font-family: ui-monospace, monospace; padding: .1em .4em; border-radius: 4px; background: var(--accent-soft); }
+.ob-copy { border: 1px solid var(--accent-soft); border-radius: 4px; background: none; cursor: pointer; color: var(--accent-ink); font-size: .8em; padding: 0 .45em; margin-inline-start: .25em; }
+.ob-copy:hover { background: var(--accent-soft); }
