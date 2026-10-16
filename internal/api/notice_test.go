@@ -156,3 +156,23 @@ func TestAssetCSVIsRegisteredOnly(t *testing.T) {
 			"if the gate has gone, the file now needs the notice on it", w.Code)
 	}
 }
+
+// The asset CSV carries the notice as "# " comment lines when unregistered
+// (defence in depth: today the route is registered-only) and none when
+// registered.
+func TestAssetCSVNotice(t *testing.T) {
+	s, _ := assetServer(t, []string{license.FeatDCIM}, 0, 0, 0)
+	r := httptest.NewRequest("GET", "/api/assets/csv?kind=site", nil)
+	r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, "admin"))
+	w := httptest.NewRecorder()
+	s.getAssetCSV(w, r)
+	if w.Code != 200 {
+		t.Fatalf("registered export: %d %s", w.Code, w.Body)
+	}
+	if strings.HasPrefix(w.Body.String(), "#") {
+		t.Errorf("a registered installation marked its CSV: %q", w.Body.String())
+	}
+	if got := commentLines((&Server{}).notice(), "# "); !strings.HasPrefix(got, "# ") || !strings.Contains(got, "not registered") {
+		t.Errorf("unregistered CSV prefix = %q", got)
+	}
+}

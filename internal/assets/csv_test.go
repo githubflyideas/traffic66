@@ -122,3 +122,48 @@ func TestCSVEveryKind(t *testing.T) {
 		}
 	}
 }
+
+// A cell that starts like a formula is exported with a leading ' so a
+// spreadsheet shows it as text, and the import takes the ' off again.
+func TestCSVFormulaInjection(t *testing.T) {
+	s := open(t)
+	if _, err := s.SaveSite(Site{Name: "=HYPERLINK(\"http://x\")", Address: "+81", Note: "@SUM(1)"}); err != nil {
+		t.Fatal(err)
+	}
+	var out strings.Builder
+	if err := s.ExportCSV(&out, "site"); err != nil {
+		t.Fatal(err)
+	}
+	text := out.String()
+	for _, want := range []string{`"'=HYPERLINK(""http://x"")"`, "'+81", "'@SUM(1)"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("the export does not neutralise %q:\n%s", want, text)
+		}
+	}
+	if _, err := s.ImportCSV(strings.NewReader(text), "site", true); err != nil {
+		t.Fatal(err)
+	}
+	vs, _ := s.Sites()
+	if len(vs) != 1 || vs[0].Name != "=HYPERLINK(\"http://x\")" || vs[0].Address != "+81" || vs[0].Note != "@SUM(1)" {
+		t.Fatalf("after the round trip: %+v", vs)
+	}
+	for in, want := range map[string]string{"-1": "'-1", "\tx": "'\tx", "\rx": "'\rx", "a=b": "a=b", "": ""} {
+		if got := safeCell(in); got != want {
+			t.Errorf("safeCell(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// The evaluation notice is written as leading "# " lines; the import skips
+// them, so a marked file can still be put back.
+func TestCSVImportSkipsNotice(t *testing.T) {
+	s := open(t)
+	text := "# traffic66 EVALUATION - not registered\nname,address\nTokyo DC,Koto-ku\n"
+	p, err := s.ImportCSV(strings.NewReader(text), "site", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Changes) != 1 || p.Changes[0].Error != "" {
+		t.Fatalf("import: %+v", p.Changes)
+	}
+}

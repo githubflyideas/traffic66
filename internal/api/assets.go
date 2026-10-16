@@ -384,6 +384,9 @@ func (s *Server) getAssetCSV(w http.ResponseWriter, r *http.Request) {
 	}
 	kind := r.URL.Query().Get("kind")
 	var buf bytes.Buffer
+	// An unregistered installation's file says so in leading comment lines;
+	// the import below skips them, so the file still round-trips.
+	buf.WriteString(commentLines(s.notice(), "# "))
 	if err := a.ExportCSV(&buf, kind); err != nil {
 		fail(w, err)
 		return
