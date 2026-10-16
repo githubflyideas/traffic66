@@ -3,6 +3,28 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.3.0
+
+中文
+- CSV 导出：未注册版本导出时带评估版提示行（以 `# ` 开头，导入时自动跳过）；以 `= + - @` 开头的单元格前加 `'`，防止在 Excel 中被当作公式执行。
+- IPFIX：只上报累计计数（字段 85/86）且不带起始时间的流，不再在每次上报时重复计入，改为按导出设备、domain、五元组和接口计算与上次的差值；累计值变小时按计数器重置或新流处理。
+- 升级到 Go 1.25.14，修复标准库已知漏洞。
+- 修复无数据提示 `emptyText()` 的无限递归，页面不再卡死，正常显示「这段时间没有数据」。
+- 等待数据提示：说明通常最长约 15 分钟，显示已等待时间，采集源页面按设备显示正在等待的步骤（模板或采样率）。
+- 侧栏 Logo 区域加大到与侧栏接近同宽（推荐上传 416×144 px、透明背景的 PNG 或 SVG）；演示模式的 Demo 标签移到侧栏「数据清理」下方。
+- 界面文字「国家」统一改为「国家/地区」（Country/Region、国・地域）。
+- 地理页面的国家/地区间流量连线按流量连续变化粗细（1–9 px），大流量连线绘制在上层；悬停显示流量与所选时段平均速率，图例标出最小和最大值。
+
+English
+- CSV export: unregistered copies add evaluation notice lines (starting with `# `, skipped on import); cells starting with `= + - @` are prefixed with `'` so spreadsheets do not run them as formulas.
+- IPFIX: flows reported only with running totals (fields 85/86) and no start time are no longer counted in full on every report; the difference from the previous total is used, keyed by exporter, observation domain, 5-tuple and interfaces, and a total that goes down is treated as a counter reset or a new flow.
+- Built with Go 1.25.14, picking up standard library security fixes.
+- The empty-state text (`emptyText()`) no longer recurses forever; pages show "no data" instead of hanging.
+- Waiting hint: says it usually takes up to about 15 minutes, shows how long it has been waiting, and the Sources page shows per exporter which step it is waiting for (templates or sampling rate).
+- Larger sidebar logo area, close to the sidebar's width (recommended upload: 416×144 px, transparent PNG or SVG); the demo-mode Demo badge moved below Data cleanup.
+- "Country" wording is now "Country/Region" throughout the interface (中文「国家/地区」, 日本語「国・地域」).
+- Geo map flow lines between countries/regions now scale continuously with traffic (1–9 px) and the busiest are drawn on top; hovering shows bytes and the average rate over the selected range, and the legend shows the minimum and maximum.
+
 ## 2.2.0
 
 Collection
