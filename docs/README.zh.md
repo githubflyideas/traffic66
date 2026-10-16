@@ -27,7 +27,7 @@
 4. [在设备上配置流导出](#4-send-flows-from-your-devices)
 5. [确认流数据已到达](#5-check-that-flows-arrive)
 6. [接口与计数器](#6-interfaces-and-counters)
-7. [名称、国家与威胁情报列表](#7-names-countries-and-threat-lists)
+7. [名称、国家/地区与威胁情报列表](#7-names-countries-and-threat-lists)
 8. [使用 Web 界面](#8-using-the-web-ui)
 9. [离线 pcap、终端界面、本地抓包](#9-offline-pcap-terminal-ui-local-capture)
 10. [选项与数据](#10-options-and-data)
@@ -194,7 +194,7 @@ traffic66 已经做了这些处理：使用设备实际生效的采样率，等�
 
 <a id="7-names-countries-and-threat-lists"></a>
 
-## 7. 名称、国家与威胁情报列表
+## 7. 名称、国家/地区与威胁情报列表
 
 点击任意地址并选择 **起个名字…**，或使用 **设定 → 名称**。名称保存在数据目录下的 `inventory.txt` 中：
 
@@ -212,9 +212,9 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 私网地址段始终视为自有网段。点击 **保存** 后即生效，无需重启。
 
-国家和网络（AS）开箱即用，使用 DB-IP 的免费 Lite 数据库（[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，"IP Geolocation by DB-IP"，[db-ip.com](https://db-ip.com)）；**设定** 可以更新它们，或换用 MaxMind GeoLite2、IPinfo Lite 或 IPtoASN 文件。地图轮廓：[Natural Earth](https://www.naturalearthdata.com)。
+国家/地区和网络（AS）开箱即用，使用 DB-IP 的免费 Lite 数据库（[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，"IP Geolocation by DB-IP"，[db-ip.com](https://db-ip.com)）；**设定** 可以更新它们，或换用 MaxMind GeoLite2、IPinfo Lite 或 IPtoASN 文件。地图轮廓：[Natural Earth](https://www.naturalearthdata.com)。
 
-![地理与运营商：世界地图上按国家显示的外部流量](images/geo.png)
+![地理与运营商：世界地图上按国家/地区显示的外部流量](images/geo.png)
 
 威胁情报列表是文本文件，每行一个地址或网段，保存为 `<data>/threats/<name>.txt`（例如 Spamhaus DROP）；修改后需重启。命中结果显示在 **威胁情报** 中。
 
@@ -231,11 +231,11 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 | 概览 | 所选接口的带宽；按应用划分的流量（合计、入站或出站），与昨天或上周对比；未处理的发现；主要客户端和服务 |
 | Top 66 | 前 66 名会话，可按任意列排序，或按应用、网络、网段、设备、封装、VLAN 分组；前 30 名通信方 |
 | 流量明细 | 环形图：服务器及其客户端（或反过来），以及服务 |
-| 流向 | 主机 → 应用 → 国家，或客户端 → 服务 → 服务器，或按网段 |
+| 流向 | 主机 → 应用 → 国家/地区，或客户端 → 服务 → 服务器，或按网段 |
 | 接口对账 | 每个接口随时间的流量与其计数器对比；名称、标识、默认接口 |
 | 流记录 | 单条流记录，每 5 秒实时更新，或任意时间范围 |
 | 发现、威胁情报 | 需要处理的问题（[见下文](#findings)）；与列表中地址的流量 |
-| 地理与运营商 | 按国家显示的世界地图，网络（AS）随时间的变化 |
+| 地理与运营商 | 按国家/地区显示的世界地图，网络（AS）随时间的变化 |
 | 设定 | 设备、采样、丢包、SNMP、数据库、Logo、名称 |
 | 离线 pcap 分析、数据清理 | 抓包文件（[见下文](#9-offline-pcap-terminal-ui-local-capture)）；删除旧数据 |
 
@@ -245,9 +245,9 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ![流量明细：以环形图显示服务器及其客户端、服务及其服务器](images/traffic.png)
 
-![单台主机的详情：与它相关的发现、它的流量、在和谁通信、服务、国家和最新流记录](images/detail.png)
+![单台主机的详情：与它相关的发现、它的流量、在和谁通信、服务、国家/地区和最新流记录](images/detail.png)
 
-![流向：哪台主机在访问哪个国家的哪个应用](images/paths.png)
+![流向：哪台主机在访问哪个国家/地区的哪个应用](images/paths.png)
 
 ![中文界面的概览](images/overview-zh.png)
 
