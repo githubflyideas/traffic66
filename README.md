@@ -30,7 +30,7 @@ analysis, without Elasticsearch, Kafka or a separate database.
 4. [Send flows from your devices](#4-send-flows-from-your-devices)
 5. [Check that flows arrive](#5-check-that-flows-arrive)
 6. [Interfaces and counters](#6-interfaces-and-counters)
-7. [Names, countries and threat lists](#7-names-countries-and-threat-lists)
+7. [Names, countries/regions and threat lists](#7-names-countriesregions-and-threat-lists)
 8. [Using the web UI](#8-using-the-web-ui)
 9. [Offline pcap, terminal UI, local capture](#9-offline-pcap-terminal-ui-local-capture)
 10. [Options and data](#10-options-and-data)
@@ -229,7 +229,7 @@ rates, makes up for export loss, spreads long flows over their minutes and
 adds 18 bytes per packet of Ethernet overhead to NetFlow/IPFIX
 (`-l2-overhead`).
 
-## 7. Names, countries and threat lists
+## 7. Names, countries/regions and threat lists
 
 Click any address and choose **Name it…**, or use **Settings → Names**.
 Names are kept in `inventory.txt` in the data directory:
@@ -248,13 +248,13 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 Private ranges are always yours. Changes apply on **Save**, no restart.
 
-Countries and networks (AS) work out of the box with DB-IP's free Lite
+Countries/Regions and networks (AS) work out of the box with DB-IP's free Lite
 databases ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "IP
 Geolocation by DB-IP", [db-ip.com](https://db-ip.com)); **Settings** updates
 them, or takes MaxMind GeoLite2, IPinfo Lite or IPtoASN files instead. Map
 outlines: [Natural Earth](https://www.naturalearthdata.com).
 
-![Geo & networks: remote traffic by country on a world map](docs/images/geo.png)
+![Geo & networks: remote traffic by country/region on a world map](docs/images/geo.png)
 
 Threat lists are text files with one address or network per line in
 `<data>/threats/<name>.txt` (for example Spamhaus DROP); restart after
@@ -274,11 +274,11 @@ online**, **Copy**.
 | Overview | The chosen interface's bandwidth; traffic by application (total, inbound or outbound) against yesterday or last week; open findings; top clients and services |
 | Top 66 | The top 66 conversations, sortable by any column, or grouped by application, network, segment, device, encapsulation, VLAN; the top 30 talkers |
 | Traffic details | Ring charts: servers and their clients (or the other way round), and services |
-| Flow paths | Host → application → country, or client → service → server, or by network |
+| Flow paths | Host → application → country/region, or client → service → server, or by network |
 | Interface check | Every interface over time against its counters; names, tags, the default |
 | Flow records | The individual flows, live every 5 seconds or for any time range |
 | Findings, Threat intel | What needs attention ([below](#findings)); traffic with listed addresses |
-| Geo & networks | A world map by country, networks (AS) over time |
+| Geo & networks | A world map by country/region, networks (AS) over time |
 | Settings | Devices, sampling, loss, SNMP, databases, logo, names |
 | Offline pcap analysis, Data cleanup | Capture files ([below](#9-offline-pcap-terminal-ui-local-capture)); deleting old data |
 
@@ -295,9 +295,9 @@ reaches back as far as detail is kept.
 
 ![Traffic details: servers with their clients, and services with their servers, as ring charts](docs/images/traffic.png)
 
-![Details of one host: the findings about it, its traffic, who it talks to, services, countries and latest flows](docs/images/detail.png)
+![Details of one host: the findings about it, its traffic, who it talks to, services, countries/regions and latest flows](docs/images/detail.png)
 
-![Flow paths: which host uses which application towards which country](docs/images/paths.png)
+![Flow paths: which host uses which application towards which country/region](docs/images/paths.png)
 
 ![Overview in Chinese](docs/images/overview-zh.png)
 

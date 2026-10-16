@@ -27,7 +27,7 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 4. [機器からフローを送る](#4-send-flows-from-your-devices)
 5. [フローの受信を確認する](#5-check-that-flows-arrive)
 6. [インターフェースとカウンター](#6-interfaces-and-counters)
-7. [名前、国、脅威リスト](#7-names-countries-and-threat-lists)
+7. [名前、国・地域、脅威リスト](#7-names-countries-and-threat-lists)
 8. [Web UI の使い方](#8-using-the-web-ui)
 9. [オフライン pcap、ターミナル UI、ローカルキャプチャ](#9-offline-pcap-terminal-ui-local-capture)
 10. [オプションとデータ](#10-options-and-data)
@@ -194,7 +194,7 @@ traffic66 はすでに、機器が適用したレートを使い、不明なレ�
 
 <a id="7-names-countries-and-threat-lists"></a>
 
-## 7. 名前、国、脅威リスト
+## 7. 名前、国・地域、脅威リスト
 
 任意のアドレスをクリックして **名前を付ける…** を選ぶか、**設定 → 名前** を使います。名前はデータディレクトリの `inventory.txt` に保存されます：
 
@@ -212,9 +212,9 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 プライベートアドレス範囲は常に自社のものとして扱われます。変更は **保存** で反映され、再起動は不要です。
 
-国とネットワーク（AS）は、DB-IP の無料 Lite データベース（[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)、"IP Geolocation by DB-IP"、[db-ip.com](https://db-ip.com)）により最初から使えます。**設定** で更新したり、代わりに MaxMind GeoLite2、IPinfo Lite、IPtoASN のファイルを使ったりできます。地図の輪郭：[Natural Earth](https://www.naturalearthdata.com)。
+国・地域とネットワーク（AS）は、DB-IP の無料 Lite データベース（[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)、"IP Geolocation by DB-IP"、[db-ip.com](https://db-ip.com)）により最初から使えます。**設定** で更新したり、代わりに MaxMind GeoLite2、IPinfo Lite、IPtoASN のファイルを使ったりできます。地図の輪郭：[Natural Earth](https://www.naturalearthdata.com)。
 
-![地域とネットワーク：国別の外部トラフィックを示す世界地図](images/geo.png)
+![地域とネットワーク：国・地域別の外部トラフィックを示す世界地図](images/geo.png)
 
 脅威リストは、1 行に 1 つのアドレスまたはネットワークを書いたテキストファイルで、`<data>/threats/<name>.txt` に置きます（例：Spamhaus DROP）。変更後は再起動してください。一致したものは **脅威インテル** に表示されます。
 
@@ -235,7 +235,7 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 | インターフェース照合 | 全インターフェースの推移とカウンターの比較、名前、タグ、デフォルト |
 | フローレコード | 個々のフロー。5 秒ごとのリアルタイム表示、または任意の時間範囲 |
 | 検知、脅威インテル | 対応が必要なもの（[後述](#findings)）、リスト上のアドレスとの通信 |
-| 地域とネットワーク | 国別の世界地図、ネットワーク（AS）の推移 |
+| 地域とネットワーク | 国・地域別の世界地図、ネットワーク（AS）の推移 |
 | 設定 | 機器、サンプリング、ロス、SNMP、データベース、ロゴ、名前 |
 | オフライン pcap 分析、データ削除 | キャプチャファイル（[後述](#9-offline-pcap-terminal-ui-local-capture)）、古いデータの削除 |
 
