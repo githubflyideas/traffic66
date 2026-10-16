@@ -482,6 +482,43 @@ type Series struct {
 	// minute look like a fall in traffic. Zero when the whole range is
 	// settled, which is every range that does not reach up to now.
 	SettledTo int64 `json:"settled_to,omitempty"`
+	// DataFrom is when the stored data begins, in milliseconds, when that
+	// is inside the range. Buckets that end before it are not "no traffic"
+	// but "not collecting yet": the page leaves them out instead of
+	// drawing a flat line at zero.
+	DataFrom int64 `json:"data_from,omitempty"`
+}
+
+// bucketSecs is how many seconds of bucket i the data can cover, the
+// divisor that turns its bytes into a rate. A bucket is cut short at the
+// start by the beginning of the data (an installation that started
+// mid-bucket) and at the end by the end of the range. Rows are kept per
+// minute, so a range that ends in the past covers its last minute whole:
+// that minute's row is in it. A range that ends now only covers up to now.
+func bucketSecs(start time.Time, i int, step time.Duration, to, dataFrom time.Time) float64 {
+	b := start.Add(time.Duration(i) * step)
+	e := b.Add(step)
+	end := to
+	if time.Since(to) > 2*time.Minute {
+		if c := to.Truncate(time.Minute); c.Before(to) {
+			end = c.Add(time.Minute)
+		}
+	}
+	if e.After(end) {
+		e = end
+	}
+	if dataFrom.After(b) {
+		b = dataFrom
+	}
+	return max(1, e.Sub(b).Seconds())
+}
+
+// dataFromMark is the DataFrom of a series starting at start, or 0.
+func dataFromMark(start, dataFrom time.Time) int64 {
+	if dataFrom.IsZero() || !dataFrom.After(start) {
+		return 0
+	}
+	return dataFrom.UnixMilli()
 }
 
 // settle is how long the data of a moment keeps arriving after it. The
@@ -606,6 +643,8 @@ func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 	n := bucketCount(start, q.To, step)
 	se := &Series{Step: int64(step.Seconds()), Names: names, Values: make([][]float64, len(names))}
 	se.SettledTo = unsettledMark(settled, q.To)
+	dataFrom := s.DataStart()
+	se.DataFrom = dataFromMark(start, dataFrom)
 	for i := 0; i < n; i++ {
 		se.Times = append(se.Times, start.Add(time.Duration(i)*step).UnixMilli())
 	}
@@ -621,14 +660,7 @@ func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 		if !ok {
 			si = idx["__other__"]
 		}
-		secs := step.Seconds()
-		if end := start.Add(time.Duration(ti+1) * step); end.After(q.To) {
-			secs = q.To.Sub(start.Add(time.Duration(ti) * step)).Seconds()
-			if secs < 1 {
-				secs = 1
-			}
-		}
-		se.Values[si][ti] += p.v * 8 / secs
+		se.Values[si][ti] += p.v * 8 / bucketSecs(start, ti, step, q.To, dataFrom)
 	}
 	return se, nil
 }

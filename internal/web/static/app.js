@@ -473,13 +473,38 @@ function niceMax(m) {
   for (const s of [1, 2, 2.5, 5, 10]) if (s * p * 4 >= m) return s * p * 4;
   return m;
 }
+// axisTicks returns round local times between from and to for the time
+// axis: the smallest interval that gives at most max labels.
+function axisTicks(from, to, max, span) {
+  const M = 6e4, D = 864e5;
+  const iv = [M, 2 * M, 5 * M, 10 * M, 15 * M, 30 * M, 60 * M, 120 * M, 180 * M, 360 * M, 720 * M, D, 2 * D, 5 * D, 7 * D, 10 * D, 15 * D];
+  const fine = span > 36 * 3600e3 ? iv.filter(v => v >= D) : iv; // day labels only once a day
+  const I = fine.find(v => (to - from) / v <= max) || fine[fine.length - 1];
+  const off = ms => new Date(ms).getTimezoneOffset() * M; // local = utc - off
+  const out = [];
+  let t = Math.ceil((from - off(from)) / I) * I + off(from);
+  for (; t <= to && out.length < 50; t += I) { const a = Math.round((t - off(t)) / I) * I + off(t); out.push(a); }
+  return out;
+}
 // settledTo marks where the data stops being complete: buckets after it
 // are drawn, because leaving the newest data off a live chart is its own
 // kind of lie, but they are still filling. Without the mark a minute that
 // is half counted looks like a fall in traffic.
-function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = fmtBps, settledTo = 0}) {
+// dataFrom is when the stored data begins: the buckets that end before it
+// are left out (a gap), not drawn as traffic of zero. Lines marked keep
+// (a baseline from another day, device counters) are not cut.
+function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = fmtBps, settledTo = 0, dataFrom = 0}) {
+  const stepMs = times && times.length > 1 ? times[1] - times[0] : 0;
+  if (dataFrom && times) {
+    const cut = d => (d || []).map((v, i) => times[i] + stepMs <= dataFrom ? null : v);
+    areas = areas.map(a => ({...a, data: cut(a.data)}));
+    lines = lines.map(l => l.keep ? l : {...l, data: cut(l.data)});
+  }
   const draw = () => {
     const W = el.clientWidth, H = el.clientHeight; if (W < 120 || H < 60 || !times || !times.length) { el.innerHTML = ''; return; }
+    // nothing at all to draw: say so instead of an axis from 0 to 1
+    const has = d => (d || []).some(v => v != null && v >= 0);
+    if (!areas.some(a => has(a.data)) && !lines.some(l => has(l.data))) { el.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
     const rtl = document.documentElement.dir === 'rtl';
     const L = rtl ? 8 : 50, R = rtl ? 50 : 8, T = 8, B = 22, n = times.length;
     const x = i => rtl ? W - R - (W - L - R) * i / Math.max(1, n - 1) : L + (W - L - R) * i / Math.max(1, n - 1);
@@ -488,15 +513,23 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
     let top = 0;
     cum.forEach(c => c.forEach(v => { if (v != null && v > top) top = v; }));
     lines.forEach(l => l.data.forEach(v => { if (v != null && v > top) top = v; }));
-    const Y = niceMax(top * 1.05), y = v => T + (H - T - B) * (1 - v / Y);
+    // all zero: a scale up to 1K reads as "nothing", 0..1 rounds to 0,0,1,1,1
+    const Y = top > 0 ? niceMax(top * 1.05) : 1000, y = v => T + (H - T - B) * (1 - v / Y);
     const span = times[n - 1] - times[0];
     let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(el.getAttribute('aria-label') || '')}">`;
     for (let k = 0; k <= 4; k++) {
       const yy = y(Y * k / 4);
       s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="ax" x="${rtl ? W - R + 8 : L - 8}" y="${yy + 4}" text-anchor="${rtl ? 'start' : 'end'}">${fmtY(Y * k / 4)}</text>`;
     }
-    const ticks = W < 600 ? 4 : 7, step = Math.max(1, Math.round(n / ticks));
-    for (let i = 0; i < n; i += step) s += `<text class="ax" x="${x(i)}" y="${H - 5}" text-anchor="middle">${fmtAxisTime(times[i], span)}</text>`;
+    // time labels on round times (every 5, 10, 15, 30 minutes, hours,
+    // days at local midnight), placed where that time falls
+    const xt = ms => { const f = stepMs ? (ms - times[0]) / stepMs : 0; return rtl ? W - R - (W - L - R) * f / Math.max(1, n - 1) : L + (W - L - R) * f / Math.max(1, n - 1); };
+    for (const ms of axisTicks(times[0], times[n - 1], W < 600 ? 4 : 7, span)) s += `<text class="ax" x="${xt(ms).toFixed(1)}" y="${H - 5}" text-anchor="middle">${fmtAxisTime(ms, span)}</text>`;
+    // The buckets still filling are not stacked: a stack that falls off a
+    // cliff at the right edge reads as traffic stopping. They stay in the
+    // tooltip and under the hatching; lines draw them dashed.
+    const firstUnsettled = settledTo ? times.findIndex(v => v + stepMs > settledTo) : -1;
+    const stackTo = firstUnsettled > 0 ? firstUnsettled : n;
     areas.forEach((a, k) => {
       let seg = [], paths = '';
       const flush = () => {
@@ -506,17 +539,22 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
         for (let j = seg.length - 1; j >= 0; j--) { const i = seg[j]; const b = k ? (cum[k - 1][i] || 0) : 0; lo += 'L' + x(i).toFixed(1) + ' ' + y(b).toFixed(1); }
         paths += up + lo + 'Z'; seg = [];
       };
-      for (let i = 0; i < n; i++) { if (cum[k][i] == null) flush(); else seg.push(i); }
+      for (let i = 0; i < stackTo; i++) { if (cum[k][i] == null) flush(); else seg.push(i); }
       flush();
       s += `<path d="${paths}" fill="${a.color}" fill-opacity=".88" stroke="var(--surface)" stroke-width="1"/>`;
     });
     lines.forEach(l => {
       let d = '', pen = false, area = '', seg = [];
       const close = () => { if (seg.length > 1) area += 'M' + seg.map(i => x(i).toFixed(1) + ' ' + y(l.data[i]).toFixed(1)).join('L') + `L${x(seg[seg.length - 1]).toFixed(1)} ${y(0)}L${x(seg[0]).toFixed(1)} ${y(0)}Z`; seg = []; };
-      l.data.forEach((v, i) => { if (v == null || v < 0) { pen = false; close(); return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = true; seg.push(i); });
+      const lineTo = l.keep ? n : stackTo;
+      l.data.forEach((v, i) => { if (i >= lineTo) return; if (v == null || v < 0) { pen = false; close(); return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = true; seg.push(i); });
       close();
+      // the unsettled tail, from the last settled point, thin and dashed
+      let tail = '';
+      if (lineTo < n) { let tp = false; for (let i = lineTo - 1; i < n; i++) { const v = l.data[i]; if (v == null || v < 0) { tp = false; continue; } tail += (tp ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); tp = true; } }
       if (l.fill && area) s += `<path d="${area}" fill="${l.color}" fill-opacity=".14" stroke="none"/>`;
       s += `<path d="${d}" fill="none" stroke="${l.color}" stroke-width="2" ${l.dash ? 'stroke-dasharray="4 3"' : ''}/>`;
+      if (tail) s += `<path class="tail" d="${tail}" fill="none" stroke="${l.color}" stroke-width="1.5" stroke-opacity=".6" stroke-dasharray="2 3"/>`;
     });
     // The tail that is still filling: a hatched wash and a line where the
     // complete data ends, rather than a chart that stops short of now.
@@ -524,10 +562,10 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
     // boundary, so it is the bucket's end that is compared, not its start:
     // at 10:58 with a settle of a minute, the 10:55 bucket still has two
     // minutes to go.
-    const stepMs = n > 1 ? times[1] - times[0] : 0;
-    const firstUnsettled = settledTo ? times.findIndex(v => v + stepMs > settledTo) : -1;
+    // starting half a bucket back, so a single filling bucket is visible
     if (firstUnsettled >= 0 && firstUnsettled < n) {
-      const xa = Math.min(x(firstUnsettled), x(n - 1)), xb = Math.max(x(firstUnsettled), x(n - 1));
+      const xs = n > 1 ? (x(firstUnsettled) + x(Math.max(0, firstUnsettled - 1))) / 2 : x(0);
+      const xa = Math.min(xs, x(n - 1)), xb = Math.max(xs, x(n - 1));
       const xEdge = rtl ? xb : xa;
       s += `<defs><pattern id="uns" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">` +
         `<line x1="0" y1="0" x2="0" y2="7" stroke="var(--ink-3)" stroke-width="1" opacity=".5"/></pattern></defs>` +
@@ -746,14 +784,16 @@ views.overview = async (el) => {
   let acc = {n: '—', d: t('kpi.no_counters'), kind: null};
   const withCtr = (ifs?.ifaces || []).filter(f => f.has_counters);
   if (withCtr.length) {
-    let worst = 0, bad = false;
-    withCtr.forEach(f => { const dv = Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)); worst = Math.max(worst, dv); if (dv > Math.max(0.02, 2 * f.stat_err)) bad = true; });
-    acc = {n: nf(worst * 100, 1) + '<small>%</small>', d: bad ? t('kpi.check') : t('kpi.trust'), kind: bad ? 'warn' : 'ok'};
+    // a direction with counters but no flows at all is an export that is
+    // not happening, not a deviation: it is left out of the worst figure
+    let worst = 0, bad = false, any = false;
+    withCtr.forEach(f => { const dv = ifDev(f); if (dv == null) return; any = true; worst = Math.max(worst, dv); if (dv > Math.max(0.02, 2 * f.stat_err)) bad = true; });
+    acc = any ? {n: nf(worst * 100, 1) + '<small>%</small>', d: bad ? t('kpi.check') : t('kpi.trust'), kind: bad ? 'warn' : 'ok'} : {n: '—', d: t('kpi.no_flow'), kind: null};
   }
   const peakTxt = d.peak_at ? t('kpi.peak', {v: fmtBps(d.peak_bps), t: fmtTime(d.peak_at, spanMs())}) : '';
   const series = d.series || {times: [], names: [], values: []};
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
-  const lines = d.baseline && basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
+  const lines = d.baseline && basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, keep: true, data: d.baseline}] : [];
   const dirParts = (d.dir || []).map((p, i) => ({n: t('dir.' + p.key), v: p.wire, c: color(i), val: DIRS[p.key]}));
   const protoParts = (d.proto || []).map((p, i) => ({n: p.key === '__other__' ? t('other') : proto(+p.key), v: p.wire, c: color(i, p.key), val: p.key === '__other__' ? null : p.key}));
   const cl = d.top_clients || [], cmax = Math.max(1, ...cl.map(r => r.wire));
@@ -782,10 +822,10 @@ views.overview = async (el) => {
       ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${fd ? findingsPanel(fd) : ''}
   </div>`;
-  tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to});
+  tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from});
   if (iIn) {
     const pk = s => { const i = (s?.names || []).indexOf(ifk); return i < 0 ? (s?.times || []).map(() => 0) : s.values[i]; };
-    tsChart($('#chIf'), {times: iIn.times, settledTo: iIn.settled_to, lines: [{name: t('if.in'), color: IF_IN, data: pk(iIn), fill: true}, {name: t('if.out'), color: IF_OUT, data: pk(iOut), fill: true}]});
+    tsChart($('#chIf'), {times: iIn.times, settledTo: iIn.settled_to, dataFrom: iIn.data_from, lines: [{name: t('if.in'), color: IF_IN, data: pk(iIn), fill: true}, {name: t('if.out'), color: IF_OUT, data: pk(iOut), fill: true}]});
   }
   el.querySelectorAll('[data-od]').forEach(b => b.onclick = () => { state.od = b.dataset.od; render(); });
   bindFindings(el);
@@ -941,7 +981,7 @@ function fillSeries(id, d, by, measure) {
   const hideOther = by === 'client' || by === 'server';
   const all = d.names.map((n, i) => ({n, name: seriesLabel(by, n), color: color(i, n), data: d.values[i], tot: d.totals?.[i]}));
   const areas = all.filter(a => !(hideOther && a.n === '__other__'));
-  tsChart(el.querySelector('.chart'), {times: d.times, areas, settledTo: d.settled_to, fmtV: pk ? fmtPps : fmtBps});
+  tsChart(el.querySelector('.chart'), {times: d.times, areas, settledTo: d.settled_to, dataFrom: d.data_from, fmtV: pk ? fmtPps : fmtBps});
   el.querySelector('.legend').innerHTML = all.map(a => {
     const [f, v] = seriesValue(by, a.n), tot = a.tot == null ? '' : pk ? nf(a.tot) : fmtBytes(a.tot);
     if (a.n === '__other__') return `<span>${hideOther ? '' : `<i style="background:${a.color}"></i>`}${esc(hideOther ? t('ch.rest') : a.name)}<span class="muted">${tot}</span></span>`;
@@ -2197,10 +2237,20 @@ views.records = async (el) => {
 };
 
 function ifName(f) { return f.name || ((f.device || f.exporter) + ' #' + f.ifindex); }
+// ifDev is an interface's worst deviation over the directions that have
+// flows to compare, or null when no direction has any.
+function ifDev(f) {
+  const d = [f.in_no_flow ? null : Math.abs(f.in_dev), f.out_no_flow ? null : Math.abs(f.out_dev)].filter(v => v != null);
+  return d.length ? Math.max(...d) : null;
+}
+// ok, warn, noflow (counters but no flows: an export problem, not a
+// deviation, and not ranked as one), or null without counters
 function devKind(f) {
   if (!f.has_counters) return null;
-  const dv = Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev));
-  return dv > Math.max(0.02, 2 * (f.stat_err || 0)) ? 'warn' : 'ok';
+  const dv = ifDev(f);
+  if (dv != null && dv > Math.max(0.02, 2 * (f.stat_err || 0))) return 'warn';
+  if (f.in_no_flow || f.out_no_flow) return 'noflow';
+  return 'ok';
 }
 // Interface check: the selected interface's traffic in both directions
 // (ingress green, egress blue) in bits/s and packets/s, the list of
@@ -2209,6 +2259,7 @@ const IF_IN = 'var(--c3)', IF_OUT = 'var(--c1)';
 function ifVerdict(r, rc, dirIn) {
   const dev = dirIn ? r.in_dev : r.out_dev, err = dirIn ? r.in_stat_err : r.out_stat_err;
   if (!r.has_counters) return {text: t('if.no_counters'), kind: 'none', dev, err};
+  if (dirIn ? r.in_no_flow : r.out_no_flow) return {text: t('if.no_flow'), kind: 'noflow', dev, err};
   if (Math.abs(dev) <= Math.max(0.02, 2 * err)) return {text: t('if.ok', {dev: fmtPct(dev), err: '±' + nf(err * 100, 1) + '%'}), kind: 'ok', dev, err};
   const causes = [], src = rc.source;
   if (src && src.lost_pct >= 0.5) causes.push(t('cause.loss', {p: nf(src.lost_pct, 1) + '%'}));
@@ -2245,7 +2296,7 @@ views.ifaces = async (el) => {
     ${panel('c4', t('if.title'), t('if.sub'), `<div class="iflist">${list.map((f, i) => {
       const k = devKind(f), cur = f.exporter === state.ifc.exporter && f.ifindex === state.ifc.ifindex, id = esc(f.exporter + '/' + f.ifindex);
       const head = f.peer && !list[i - 1]?.peer ? `<div class="ifpeers">${esc(t('if.peers'))}</div>` : '';
-      return `${head}<div class="ifrow${f.peer ? ' peer' : ''}"><button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}${f.tag ? `<span class="iftag">${esc(f.tag)}</span>` : ''}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k ? status(k, nf(Math.max(Math.abs(f.in_dev), Math.abs(f.out_dev)) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>
+      return `${head}<div class="ifrow${f.peer ? ' peer' : ''}"><button data-e="${esc(f.exporter)}" data-i="${f.ifindex}" aria-current="${cur}"><span>${esc(ifName(f))}${f.tag ? `<span class="iftag">${esc(f.tag)}</span>` : ''}<br><span class="muted" style="font-size:12.5px">${esc(f.device || f.exporter)} · ${f.ifindex}</span></span>${k === 'noflow' && ifDev(f) == null ? `<span class="muted" style="font-size:12.5px">${t('if.no_flow_short')}</span>` : k ? status(k === 'noflow' ? 'ok' : k, nf(ifDev(f) * 100, 1) + '%') : `<span class="muted" style="font-size:12.5px">${t('if.no_ctr_short')}</span>`}</button>
         ${f.peer && !f.default || !adm() ? '' : `<button class="ifstar ${f.default ? 'on' : ''}" data-star="${id}" title="${esc(t(f.default ? 'if.is_default' : 'if.set_default'))}" aria-label="${esc(t('if.set_default'))}">${f.default ? '★' : '☆'}</button>`}${admOnly(`<button class="ifedit" data-edit="${id}" title="${esc(t('if.rename'))}" aria-label="${esc(t('if.rename'))}">✎</button>`)}</div>
         ${admOnly(`<form class="ifform" data-form="${id}" hidden><input name="name" value="${esc(f.name || '')}" placeholder="${esc(t('if.name_ph'))}"><input name="tag" value="${esc(f.tag || '')}" placeholder="${esc(t('if.tag_ph'))}"><button class="btn primary" type="submit">${t('if.save')}</button><button class="btn" type="button" data-cancel>${t('nm.cancel')}</button></form>`)}`;
     }).join('')}</div>`)}
@@ -2254,10 +2305,10 @@ views.ifaces = async (el) => {
   // interval holds until the next one
   const onTimes = (times, vals) => { let j = -1; return times.map(x => { while (j + 1 < r.times.length && r.times[j + 1] <= x) j++; return j < 0 || vals == null ? null : vals[j]; }); };
   const lb = [{name: t('if.in'), color: IF_IN, data: pick(ri), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(ro), fill: true}];
-  if (ctr && r.times && r.times.length) lb.push({name: t('if.in') + ' · ' + t('if.counter'), color: IF_IN, dash: true, data: onTimes(ri.times, r.in_counter)},
-    {name: t('if.out') + ' · ' + t('if.counter'), color: IF_OUT, dash: true, data: onTimes(ri.times, r.out_counter)});
-  tsChart($('#ifB'), {times: ri.times, settledTo: ri.settled_to, lines: lb});
-  tsChart($('#ifP'), {times: pi.times, settledTo: pi.settled_to, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
+  if (ctr && r.times && r.times.length) lb.push({name: t('if.in') + ' · ' + t('if.counter'), color: IF_IN, dash: true, keep: true, data: onTimes(ri.times, r.in_counter)},
+    {name: t('if.out') + ' · ' + t('if.counter'), color: IF_OUT, dash: true, keep: true, data: onTimes(ri.times, r.out_counter)});
+  tsChart($('#ifB'), {times: ri.times, settledTo: ri.settled_to, dataFrom: ri.data_from, lines: lb});
+  tsChart($('#ifP'), {times: pi.times, settledTo: pi.settled_to, dataFrom: pi.data_from, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
   el.querySelectorAll('.iflist button[data-e]').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
   // name, tag and default: written to the names (iface line) at once
   const saveIf = async (id, body) => {
@@ -2275,8 +2326,8 @@ views.ifaces = async (el) => {
   });
 
   const vin = ifVerdict(r, rc, true), vout = ifVerdict(r, rc, false);
-  const head = v => ctr ? t('if.dev', {v: fmtPct(v.dev)}) : '—';
-  const vk = [vin, vout].some(v => v.kind === 'warn') ? 'warn' : [vin, vout].every(v => v.kind === 'none') ? 'none' : '';
+  const head = v => ctr && v.kind !== 'noflow' ? t('if.dev', {v: fmtPct(v.dev)}) : '—';
+  const vk = [vin, vout].some(v => v.kind === 'warn') ? 'warn' : [vin, vout].some(v => v.kind === 'noflow') ? 'noflow' : [vin, vout].every(v => v.kind === 'none') ? 'none' : '';
   $('#recon').innerHTML = `<div class="ph"><div><div class="sub">${esc(name)} · ${t('if.flow')} / ${t('if.counter')}</div>
       <div style="font-size:20px;font-weight:650"><span style="color:${IF_IN}">${t('if.in')}</span> ${head(vin)} · <span style="color:${IF_OUT}">${t('if.out')}</span> ${head(vout)}</div></div></div>
     <div class="verdict ${vk}"><b>${t('if.in')}</b>: ${vin.text}<br><b>${t('if.out')}</b>: ${vout.text}</div>`;
@@ -2641,7 +2692,7 @@ views.detail = async (el) => {
   $('#title').textContent = t('nav.detail') + ': ' + (isIP ? (names.get(det.v) || det.v) : det.v);
   const tot = d.totals, series = d.series || {times: [], names: [], values: []};
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
-  const lines = d.baseline && d.basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, data: d.baseline}] : [];
+  const lines = d.baseline && d.basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, keep: true, data: d.baseline}] : [];
   const table = (rows, heads, cell) => { const m = Math.max(1, ...rows.map(r => r.wire)); return `<table><tr><th></th>${heads.map(h => `<th>${t(h)}</th>`).join('')}<th class="num">${t('col.traffic')}</th><th style="width:26%">${t('col.share')}</th></tr>
     ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, m)}</td></tr>`).join('') || `<tr><td colspan="${heads.length + 3}" class="empty">${emptyText()}</td></tr>`}</table>`; };
   const s1 = side1.rows || [], s2 = side2.rows || [], cv = conv.rows || [], rr = rec.rows || [];
@@ -2665,7 +2716,7 @@ views.detail = async (el) => {
     ${panel('c12', t('det.flows'), esc(t('rec.latest', {n: rr.length})), `<div style="overflow-x:auto"><table><tr><th>${t('rc.time')}</th><th>${t('rc.client')}</th><th>${t('rc.server')}</th><th class="num">${t('rc.port')}</th><th>${t('rc.app')}</th><th>${t('rc.country')}</th><th class="num">${t('rc.traffic')}</th></tr>
       ${rr.map(r => `<tr><td class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</td><td>${ipCell(r.client)}</td><td>${ipCell(r.server)}</td><td class="num">${r.port ? V('port', r.port + '/' + (r.proto === 17 ? 'udp' : 'tcp'), r.port) : '—'}</td><td>${V('app', r.app, r.app)}</td><td>${r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—')}</td><td class="num">${fmtBytes(r.wire)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">${emptyText()}</td></tr>`}</table></div>`)}
   </div>`;
-  tsChart($('#chDet'), {times: series.times, areas, lines, settledTo: series.settled_to});
+  tsChart($('#chDet'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from});
   bindFindings(el);
 };
 

@@ -107,6 +107,12 @@ type Recon struct {
 	InStatErr   float64 `json:"in_stat_err"` // approx. 95% relative error of the flow estimate
 	OutStatErr  float64 `json:"out_stat_err"`
 	HasCounters bool    `json:"has_counters"`
+	// InNoFlow and OutNoFlow: the counters saw traffic in that direction
+	// but not a single flow came in for it. That is not a deviation of
+	// -100% but an export that is not happening (sampling configured on
+	// the device but flows not sent, or sent somewhere else).
+	InNoFlow  bool `json:"in_no_flow,omitempty"`
+	OutNoFlow bool `json:"out_no_flow,omitempty"`
 }
 
 func (s *Store) Recon(q Query, exporter string, ifindex uint32) (*Recon, error) {
@@ -226,6 +232,7 @@ func (s *Store) Recon(q Query, exporter string, ifindex uint32) (*Recon, error) 
 	if oc > 0 {
 		r.OutDev = (oflw - oc) / oc
 	}
+	r.InNoFlow, r.OutNoFlow = ic > 0 && iflw == 0, oc > 0 && oflw == 0
 	r.InCtrBytes, r.InFlowBytes, r.InPkts, r.InSamples = uint64(ic), uint64(iflw), uint64(inPk), inSamp
 	if inSamp > 0 {
 		r.InStatErr = 1.96 / math.Sqrt(inSamp)

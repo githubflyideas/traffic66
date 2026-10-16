@@ -117,6 +117,10 @@ type Store struct {
 
 	segMu    sync.RWMutex
 	segCache []segment
+
+	dsMu sync.Mutex // guards the cached start of the data
+	dsAt time.Time  // when dsTS was read
+	dsTS time.Time
 }
 
 type segment struct {
@@ -451,6 +455,24 @@ func (s *Store) Source(from, to time.Time) string {
 		return "hot"
 	}
 	return fmt.Sprintf("(SELECT * FROM hot UNION ALL BY NAME SELECT * FROM read_parquet([%s]))", strings.Join(files, ","))
+}
+
+// DataStart is the time of the oldest stored row, raw or summarised, or
+// zero when nothing is stored. It is read again at most once a minute; it
+// only moves later (retention), so a stale value is harmless.
+func (s *Store) DataStart() time.Time {
+	s.dsMu.Lock()
+	defer s.dsMu.Unlock()
+	if !s.dsTS.IsZero() && time.Since(s.dsAt) < time.Minute {
+		return s.dsTS
+	}
+	var t sql.NullTime
+	s.DB.QueryRow(`SELECT min(m) FROM (SELECT min(ts) AS m FROM hot UNION ALL SELECT min(min_ts) FROM segments UNION ALL SELECT min(ts) FROM r_ts)`).Scan(&t)
+	s.dsTS, s.dsAt = time.Time{}, time.Now()
+	if t.Valid {
+		s.dsTS = t.Time.UTC()
+	}
+	return s.dsTS
 }
 
 // Usage reports stored rows and bytes on disk.

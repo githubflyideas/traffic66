@@ -139,6 +139,8 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 	n := bucketCount(start, q.To, step)
 	se := &Series{Step: int64(step.Seconds()), Names: names, Values: make([][]float64, len(names)), Distinct: distinct}
 	se.SettledTo = unsettledMark(settled, q.To)
+	dataFrom := s.DataStart()
+	se.DataFrom = dataFromMark(start, dataFrom)
 	se.Totals = make([]float64, len(names))
 	for i, nm := range names {
 		se.Totals[i] = tot[nm]
@@ -158,11 +160,7 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 		if ti < 0 || ti >= n {
 			continue
 		}
-		secs := step.Seconds()
-		if end := start.Add(time.Duration(ti+1) * step); end.After(q.To) {
-			secs = max(1, q.To.Sub(start.Add(time.Duration(ti)*step)).Seconds())
-		}
-		se.Values[idx[p.k]][ti] += p.v * f / secs
+		se.Values[idx[p.k]][ti] += p.v * f / bucketSecs(start, ti, step, q.To, dataFrom)
 	}
 	return se, nil
 }

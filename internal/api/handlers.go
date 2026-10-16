@@ -400,6 +400,8 @@ func (s *Server) ifaces(w http.ResponseWriter, r *http.Request) {
 		OutDev  float64 `json:"out_dev"`
 		Err     float64 `json:"stat_err"`
 		HasCtr  bool    `json:"has_counters"`
+		InNoFl  bool    `json:"in_no_flow,omitempty"`
+		OutNoFl bool    `json:"out_no_flow,omitempty"`
 	}
 	var out []item
 	for i, f := range list {
@@ -418,6 +420,7 @@ func (s *Server) ifaces(w http.ResponseWriter, r *http.Request) {
 		if f.Counters {
 			if rc, err := s.Store.Recon(q, f.Exporter, f.IfIndex); err == nil && rc.HasCounters {
 				it.InDev, it.OutDev, it.Err, it.HasCtr = rc.InDev, rc.OutDev, rc.InStatErr, true
+				it.InNoFl, it.OutNoFl = rc.InNoFlow, rc.OutNoFlow
 			}
 		}
 		out = append(out, it)
