@@ -790,14 +790,23 @@ function onboardGuide(tot) {
   const s = setup;
   if (!s || s.demo || s.offline || inSB() || s.sources > 0 || (tot && tot.wire > 0) || !(s.listen || []).length) return '';
   const ips = (s.addrs || []).length ? s.addrs : [location.hostname];
-  const code = v => `<code class="ob-c">${esc(v)}</code><button class="ob-copy" data-copy="${esc(v)}" ">${esc(t('ob.copy'))}</button>`;
+  const code = v => `<code class="ob-c">${esc(v)}</code><button class="ob-copy" data-copy="${esc(v)}">${esc(t('ob.copy'))}</button>`;
   const ports = s.listen.map(l => `<span class="ob-p">${esc(l.name)} ${code(l.port)}</span>`).join(' ');
-  const sim = `traffic66 simulate -to ${ips[0]}`;
+  // ready-made export commands for this machine's address and ports
+  const port = n => (s.listen.find(l => l.name === n) || s.listen[0]).port, ip = ips[0];
+  const cfg = [
+    `/ip traffic-flow target add dst-address=${ip} port=${port('netflow')} version=9`,
+    `set protocols sflow collector ${ip} udp-port ${port('sflow')}`,
+    `sflow destination ${ip} ${port('sflow')}`,
+    `softflowd -i eth0 -n ${ip}:${port('ipfix')} -v 10 -t maxlife=60`,
+  ];
+  const lab = ['MikroTik, NetFlow v9', 'Juniper, sFlow', 'Arista, sFlow', 'Linux, IPFIX'];
   return `<div class="panel c12 onboard"><div class="ph"><h2>${esc(t('ob.title'))}</h2></div>
     <ol class="ob">
       <li>${esc(t('ob.step1'))}<div class="ob-row">${ips.map(code).join(' ')}</div><div class="ob-row">${esc(t('ob.ports'))} ${ports}</div></li>
+      <li>${esc(t('ob.try'))}${cfg.map((c, i) => `<div class="ob-row"><span class="muted">${esc(lab[i])}</span> ${code(c)}</div>`).join('')}
+        <div class="ob-row"><a href="https://github.com/githubflyideas/traffic66#device-configuration" target="_blank" rel="noopener">Cisco, Huawei NetStream, Arista …</a></div></li>
       <li>${esc(t('ob.step2'))} <a href="#v=sources" data-obgo="sources">${esc(t('nav.sources'))}</a></li>
-      <li>${esc(t('ob.try'))}<div class="ob-row">${code(sim)} ${code('traffic66 demo -addr :8067 -listen ""')}</div></li>
     </ol></div>`;
 }
 document.addEventListener('click', e => {

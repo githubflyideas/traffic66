@@ -2,11 +2,13 @@
 # traffic66 one-line install for Linux and macOS.
 #
 #   curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-#   curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
 #
 # Downloads the latest release for this system into ./traffic66 (or
-# $TRAFFIC66_DIR) and, when arguments are given, runs traffic66 with them.
-# TRAFFIC66_VERSION=v2.3.3 picks a release. Nothing is installed system-wide.
+# $TRAFFIC66_DIR) and starts the collector, which prints the address and
+# UDP ports to point your devices at. Arguments replace "serve", for example
+# "sh -s -- serve -listen netflow=:9995" or "sh -s -- version".
+# TRAFFIC66_VERSION=v2.3.3 picks a release; TRAFFIC66_NO_START=1 only
+# downloads. Nothing is installed system-wide.
 set -eu
 
 repo=githubflyideas/traffic66
@@ -45,8 +47,10 @@ get "$url" | tar xzf - -C "$dir" --strip-components=1
 chmod +x "$dir/traffic66"
 "$dir/traffic66" version >&2
 
-if [ $# -gt 0 ]; then
-	cd "$dir"
-	exec ./traffic66 "$@"
+if [ -n "${TRAFFIC66_NO_START:-}" ]; then
+	echo "traffic66: installed in $dir; start it with: cd $dir && ./traffic66" >&2
+	exit 0
 fi
-echo "traffic66: installed in $dir. Try:  cd $dir && ./traffic66 demo     or start collecting:  cd $dir && ./traffic66" >&2
+[ $# -gt 0 ] || set -- serve
+cd "$dir"
+exec ./traffic66 "$@"

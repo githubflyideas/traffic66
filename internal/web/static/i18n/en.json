@@ -827,6 +827,6 @@
 "ob.step1": "Point a device's sFlow, NetFlow or IPFIX export at this machine:",
 "ob.ports": "UDP ports:",
 "ob.step2": "It appears under Settings within seconds, and this page fills in a minute or two later.",
-"ob.try": "No device at hand? Send test flows from another machine, or try the demo:",
+"ob.try": "Or paste one of these, already set to this machine's address and ports:",
 "ob.copy": "Copy"
 }

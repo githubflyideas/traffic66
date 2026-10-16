@@ -40,19 +40,19 @@ ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 �
 ## 1. 빠른 시작
 
 ```
-# Linux, macOS: ./traffic66 에 내려받고 데모(가상 네트워크) 실행
+# Linux, macOS: ./traffic66 에 내려받고 수집 시작
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows(PowerShell): 동일
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+터미널에 웹 UI 주소와 장비가 보낼 IP·UDP 포트가 표시됩니다([장비 설정](#device-configuration)). `admin` / `traffic66` 로 로그인하고 새 비밀번호를 정하세요. 구경만 하려면 가상 장비 데모:
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows, PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-http://127.0.0.1:8066 을 열고 `admin` / `traffic66` 로 로그인합니다. Ctrl+C 로 멈춥니다. 내 장비에서 수집하려면 같은 명령에서 `demo` 대신 `serve` 를 씁니다(Windows: `$env:TRAFFIC66_RUN='serve'`).
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 포트: TCP 8066 웹 UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX(모든 UDP 포트가 모든 프로토콜을 받음). 장비가 보낼 주소는 터미널에 표시되고, 첫 로그인 때 새 비밀번호를 정합니다.
@@ -61,7 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scrip
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS 에서 직접 설치할 때는 먼저 `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "PC 보호" 창: **추가 정보** → **실행**.
@@ -72,105 +72,41 @@ macOS 에서 직접 설치할 때는 먼저 `xattr -dr com.apple.quarantine traf
 
 ## 2. 예제
 
-### 실제 설치 옆에서 데모 실행
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### 명령 요약
 
-### sFlow, NetFlow v5/v9, IPFIX 수집(기본 포트)
+| 용도 | 명령 |
+|---|---|
+| sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 수집(기본) | `./traffic66` |
+| sFlow 만, UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| NetFlow v5/v9(2055)와 IPFIX(4739)만 | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| 다른 UDP 포트 | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| 수집기를 한 IP 에만 바인딩 | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| 웹 UI 를 지정한 IP·포트로 | `./traffic66 -addr 10.0.0.5:8080` |
+| 웹 UI 를 이 컴퓨터에서만 | `./traffic66 -addr 127.0.0.1:8066` |
+| 웹 UI 를 HTTPS 로 | `./traffic66 -tls` |
+| 데이터 디렉터리 | `./traffic66 -data /var/lib/traffic66` |
+| 플로우 상세 7일 보관 | `./traffic66 -retention-days 7` |
+| 메모리: RAM 의 20% 를 데이터베이스에 | `./traffic66 -memory 0.20` |
+| 로컬 캡처용 NIC 목록 | `./traffic66 interfaces` |
+| 이 컴퓨터 NIC 캡처(Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| 이 컴퓨터 NIC 캡처(macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| 이 컴퓨터 NIC 캡처(Windows, Npcap 필요) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| admin 비밀번호 설정·재설정(-data 사용 시 추가) | `./traffic66 passwd` |
+| admin 에 무작위 비밀번호 설정 후 출력 | `./traffic66 passwd -generate` |
+| 사용자 추가 또는 비밀번호 변경 | `./traffic66 passwd -user alice` |
+| 사용자 목록 | `./traffic66 passwd -list` |
+| 이번 실행에만 쓰는 비밀번호(스크립트, 컨테이너) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| traffic66 컴퓨터에서 터미널 UI | `./traffic66 tui` |
+| 원격 서버에 터미널 UI 접속 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| 터미널 UI 언어 | `./traffic66 tui -lang ja` |
+| 캡처 파일 분석 | `./traffic66 capture.pcap` |
+| 수집기로 테스트 플로우 전송 | `./traffic66 simulate -to 192.0.2.50` |
+| 가상 장비로 데모 | `./traffic66 demo` |
+| 모든 옵션 | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### 포트와 데이터 디렉터리 변경
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### 캡처 파일 분석
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### 터미널 UI
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### 장비 없이 경로 테스트(다른 컴퓨터에서)
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### 방화벽 열기
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### 웹 UI 는 이 컴퓨터에서만, SSH 로 접속
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### 서비스로 실행: Linux(systemd)
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### 서비스로 실행: Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### 서비스로 실행: macOS
-
-`/usr/local/traffic66` 에 풀고 격리 속성을 지운 뒤 `traffic66 passwd -data "/Library/Application Support/traffic66"` 를 실행하고, `ProgramArguments` 가 프로그램, `-data`, 그 디렉터리이며 `RunAtLoad` 와 `KeepAlive` 가 켜진 LaunchDaemon 으로 시작합니다.
+웹 UI 언어: 메뉴 아래에서 선택(플래그 없음). 그 밖: `traffic66 serve -h`.
 
 <a id="device-configuration"></a>
 
@@ -245,6 +181,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### 방화벽 열기
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### 웹 UI 는 이 컴퓨터에서만, SSH 로 접속
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### 서비스로 실행: Linux(systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### 서비스로 실행: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### 서비스로 실행: macOS
+
+`/usr/local/traffic66` 에 풀고 격리 속성을 지운 뒤 `traffic66 passwd -data "/Library/Application Support/traffic66"` 를 실행하고, `ProgramArguments` 가 프로그램, `-data`, 그 디렉터리이며 `RunAtLoad` 와 `KeepAlive` 가 켜진 LaunchDaemon 으로 시작합니다.
 
 <a id="3-users-and-passwords"></a>
 

@@ -827,6 +827,6 @@
 "ob.step1": "Trỏ export sFlow, NetFlow hoặc IPFIX của thiết bị về máy này:",
 "ob.ports": "Cổng UDP:",
 "ob.step2": "Thiết bị sẽ hiện trong Cài đặt sau vài giây, và trang này có dữ liệu sau một hai phút.",
-"ob.try": "Chưa có thiết bị? Gửi flow thử từ máy khác, hoặc chạy bản demo:",
+"ob.try": "Hoặc dán một trong các lệnh sau, đã điền sẵn địa chỉ và cổng của máy này:",
 "ob.copy": "Sao chép"
 }

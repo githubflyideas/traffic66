@@ -48,19 +48,19 @@ Kafka أو قاعدة بيانات منفصلة.
 ## 1. بدء سريع
 
 ```
-# لينكس وmacOS: نزّله في ./traffic66 وشغّل العرض التوضيحي (شبكة محاكاة)
+# لينكس وmacOS: نزّله في ./traffic66 وابدأ الجمع
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# ويندوز، PowerShell: الشيء نفسه
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+تطبع الطرفية عنوان واجهة الويب وعنوان IP ومنافذ UDP التي توجَّه إليها أجهزتك ([إعداد الأجهزة](#device-configuration)). سجّل الدخول باسم `admin` / `traffic66` واختر كلمة مرور جديدة. للاطلاع فقط؟ العرض التوضيحي بأجهزة محاكاة:
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# ويندوز، PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-افتح http://127.0.0.1:8066 وسجّل الدخول باسم `admin` / `traffic66`. يوقفه Ctrl+C. للجمع من أجهزتك: الأمر نفسه مع `serve` بدل `demo` (ويندوز: `$env:TRAFFIC66_RUN='serve'`).
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 المنافذ: TCP 8066 لواجهة الويب، UDP 6343 لـ sFlow و2055 لـ NetFlow و4739 لـ IPFIX (كل منفذ UDP يقبل كل البروتوكولات). تطبع الطرفية العناوين التي توجَّه إليها الأجهزة، ويطلب أول تسجيل دخول كلمة مرور جديدة.
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scrip
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 على macOS يدويًا: أولًا `xattr -dr com.apple.quarantine traffic66-darwin-*`. رسالة ويندوز «حمى جهاز الكمبيوتر»: **مزيد من المعلومات** ← **التشغيل على أي حال**.
@@ -80,105 +80,41 @@ cd traffic66-linux-amd64 && ./traffic66 demo
 
 ## 2. أمثلة
 
-### العرض التوضيحي بجانب تثبيت حقيقي
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### ملخص الأوامر
 
-### جمع sFlow وNetFlow v5/v9 وIPFIX (المنافذ الافتراضية)
+| المهمة | الأمر |
+|---|---|
+| جمع sFlow على 6343 وNetFlow v5/v9 على 2055 وIPFIX على 4739 (افتراضي) | `./traffic66` |
+| sFlow فقط، UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| NetFlow v5/v9 على 2055 وIPFIX على 4739 فقط | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| منافذ UDP أخرى | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| المجمّعات على عنوان IP واحد | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| واجهة الويب على IP ومنفذ محددين | `./traffic66 -addr 10.0.0.5:8080` |
+| واجهة الويب على هذا الجهاز فقط | `./traffic66 -addr 127.0.0.1:8066` |
+| واجهة الويب عبر HTTPS | `./traffic66 -tls` |
+| مجلد البيانات | `./traffic66 -data /var/lib/traffic66` |
+| الاحتفاظ بتفاصيل 7 أيام | `./traffic66 -retention-days 7` |
+| الذاكرة: 20% من RAM لقاعدة البيانات | `./traffic66 -memory 0.20` |
+| سرد بطاقات الشبكة للالتقاط المحلي | `./traffic66 interfaces` |
+| التقاط بطاقة هذا الجهاز (لينكس) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| التقاط بطاقة هذا الجهاز (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| التقاط بطاقة هذا الجهاز (ويندوز، يتطلب Npcap) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| تعيين كلمة مرور admin أو إعادة تعيينها (أضف ‎-data DIR إن استُخدم) | `./traffic66 passwd` |
+| كلمة مرور عشوائية لـ admin تُطبع | `./traffic66 passwd -generate` |
+| إضافة مستخدم أو تغيير كلمة مروره | `./traffic66 passwd -user alice` |
+| سرد المستخدمين | `./traffic66 passwd -list` |
+| كلمة مرور لهذا التشغيل فقط (سكربتات، حاويات) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| الواجهة الطرفية على جهاز traffic66 | `./traffic66 tui` |
+| الواجهة الطرفية إلى خادم بعيد | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| لغة الواجهة الطرفية | `./traffic66 tui -lang ja` |
+| تحليل ملف التقاط | `./traffic66 capture.pcap` |
+| إرسال تدفقات اختبار إلى مجمّع | `./traffic66 simulate -to 192.0.2.50` |
+| عرض توضيحي بأجهزة محاكاة | `./traffic66 demo` |
+| كل الخيارات | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### منافذ ومجلد بيانات مخصّصان
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### تحليل ملف التقاط
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### الواجهة الطرفية
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### اختبار المسار دون جهاز (من جهاز آخر)
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### فتح الجدار الناري
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### واجهة الويب على هذا الجهاز فقط، عبر SSH
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### كخدمة: لينكس (systemd)
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### كخدمة: ويندوز
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### كخدمة: macOS
-
-فك الضغط في `/usr/local/traffic66`، وأزل علامة الحجر، وشغّل `traffic66 passwd -data "/Library/Application Support/traffic66"`، ثم ابدأه من LaunchDaemon تكون `ProgramArguments` فيه البرنامج و`-data` وذلك المجلد، مع `RunAtLoad` و`KeepAlive`.
+لغة واجهة الويب: أسفل القائمة (لا يوجد خيار). البقية: `traffic66 serve -h`.
 
 <a id="device-configuration"></a>
 
@@ -253,6 +189,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### فتح الجدار الناري
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### واجهة الويب على هذا الجهاز فقط، عبر SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### كخدمة: لينكس (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### كخدمة: ويندوز
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### كخدمة: macOS
+
+فك الضغط في `/usr/local/traffic66`، وأزل علامة الحجر، وشغّل `traffic66 passwd -data "/Library/Application Support/traffic66"`، ثم ابدأه من LaunchDaemon تكون `ProgramArguments` فيه البرنامج و`-data` وذلك المجلد، مع `RunAtLoad` و`KeepAlive`.
 
 <a id="3-users-and-passwords"></a>
 

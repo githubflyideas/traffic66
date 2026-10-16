@@ -827,6 +827,6 @@
 "ob.step1": "Richten Sie den sFlow-, NetFlow- oder IPFIX-Export eines Geräts auf diesen Rechner:",
 "ob.ports": "UDP-Ports:",
 "ob.step2": "Es erscheint binnen Sekunden unter Einstellungen; diese Seite füllt sich ein bis zwei Minuten später.",
-"ob.try": "Kein Gerät zur Hand? Senden Sie Testflows von einem anderen Rechner oder probieren Sie die Demo:",
+"ob.try": "Oder fügen Sie einen dieser Befehle ein, schon mit Adresse und Ports dieses Rechners:",
 "ob.copy": "Kopieren"
 }

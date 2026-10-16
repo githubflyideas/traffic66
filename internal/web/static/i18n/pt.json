@@ -827,6 +827,6 @@
 "ob.step1": "Aponte a exportação sFlow, NetFlow ou IPFIX de um equipamento para esta máquina:",
 "ob.ports": "Portas UDP:",
 "ob.step2": "Ele aparece em Configurações em segundos, e esta página se preenche um ou dois minutos depois.",
-"ob.try": "Sem equipamento à mão? Envie fluxos de teste de outra máquina ou experimente a demo:",
+"ob.try": "Ou cole um destes comandos, já com o endereço e as portas desta máquina:",
 "ob.copy": "Copiar"
 }

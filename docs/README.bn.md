@@ -46,19 +46,19 @@ Elasticsearch, Kafka বা আলাদা database ছাড়াই।
 ## 1. দ্রুত শুরু
 
 ```
-# Linux, macOS: ./traffic66-এ ডাউনলোড করে ডেমো (সিমুলেটেড নেটওয়ার্ক) চালান
+# Linux, macOS: ./traffic66-এ ডাউনলোড করে সংগ্রহ শুরু করুন
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows, PowerShell: একই
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+টার্মিনালে web UI-এর ঠিকানা আর ডিভাইসের জন্য IP ও UDP পোর্ট দেখা যায় ([ডিভাইস কনফিগারেশন](#device-configuration))। `admin` / `traffic66` দিয়ে সাইন ইন করে নতুন পাসওয়ার্ড দিন। শুধু দেখতে চান? সিমুলেটেড ডিভাইসের ডেমো:
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows, PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-http://127.0.0.1:8066 খুলে `admin` / `traffic66` দিয়ে সাইন ইন করুন। Ctrl+C বন্ধ করে। নিজের ডিভাইস থেকে flow নিতে: একই কমান্ড, `demo`-র বদলে `serve` (Windows: `$env:TRAFFIC66_RUN='serve'`)।
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 পোর্ট: TCP 8066 web UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (প্রতিটি UDP পোর্ট সব প্রোটোকল নেয়)। ডিভাইস কোন ঠিকানায় পাঠাবে তা টার্মিনালে দেখা যায়; প্রথম সাইন-ইনে নতুন পাসওয়ার্ড চাওয়া হয়।
@@ -67,7 +67,7 @@ curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scrip
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS-এ হাতে: আগে `xattr -dr com.apple.quarantine traffic66-darwin-*`। Windows "protected your PC": **More info** → **Run anyway**।
@@ -78,105 +78,41 @@ macOS-এ হাতে: আগে `xattr -dr com.apple.quarantine traffic66-darw
 
 ## 2. উদাহরণ
 
-### আসল ইনস্টলেশনের পাশে ডেমো
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### কমান্ড চিট শিট
 
-### sFlow, NetFlow v5/v9 ও IPFIX সংগ্রহ (ডিফল্ট পোর্ট)
+| কাজ | কমান্ড |
+|---|---|
+| sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 সংগ্রহ (ডিফল্ট) | `./traffic66` |
+| শুধু sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| শুধু NetFlow v5/v9 (2055) ও IPFIX (4739) | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| অন্য UDP পোর্ট | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| collector একটি IP-তে | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Web UI নির্দিষ্ট IP ও পোর্টে | `./traffic66 -addr 10.0.0.5:8080` |
+| Web UI শুধু এই মেশিনে | `./traffic66 -addr 127.0.0.1:8066` |
+| Web UI HTTPS-এ | `./traffic66 -tls` |
+| ডেটা ডিরেক্টরি | `./traffic66 -data /var/lib/traffic66` |
+| flow বিবরণ ৭ দিন রাখুন | `./traffic66 -retention-days 7` |
+| মেমরি: ডেটাবেসের জন্য RAM-এর ২০% | `./traffic66 -memory 0.20` |
+| লোকাল ক্যাপচারের নেটওয়ার্ক কার্ড তালিকা | `./traffic66 interfaces` |
+| এই মেশিনের NIC ক্যাপচার (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| এই মেশিনের NIC ক্যাপচার (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| এই মেশিনের NIC ক্যাপচার (Windows, Npcap লাগে) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| admin পাসওয়ার্ড সেট/রিসেট (-data DIR থাকলে যোগ করুন) | `./traffic66 passwd` |
+| admin-এর র‍্যান্ডম পাসওয়ার্ড সেট করে দেখান | `./traffic66 passwd -generate` |
+| ইউজার যোগ বা পাসওয়ার্ড বদল | `./traffic66 passwd -user alice` |
+| ইউজার তালিকা | `./traffic66 passwd -list` |
+| শুধু এই রানের পাসওয়ার্ড (স্ক্রিপ্ট, কন্টেইনার) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| traffic66 মেশিনে Terminal UI | `./traffic66 tui` |
+| রিমোট সার্ভারে Terminal UI | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| Terminal UI-এর ভাষা | `./traffic66 tui -lang ja` |
+| ক্যাপচার ফাইল বিশ্লেষণ | `./traffic66 capture.pcap` |
+| collector-এ পরীক্ষামূলক flow পাঠান | `./traffic66 simulate -to 192.0.2.50` |
+| সিমুলেটেড ডিভাইসসহ ডেমো | `./traffic66 demo` |
+| সব অপশন | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### নিজের পোর্ট ও ডেটা ডিরেক্টরি
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### ক্যাপচার ফাইল বিশ্লেষণ
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### Terminal UI
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### ডিভাইস ছাড়া পথ পরীক্ষা (অন্য মেশিন থেকে)
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### ফায়ারওয়াল খুলুন
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### Web UI শুধু এই মেশিনে, SSH দিয়ে
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### সার্ভিস হিসেবে: Linux (systemd)
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### সার্ভিস হিসেবে: Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### সার্ভিস হিসেবে: macOS
-
-`/usr/local/traffic66`-এ খুলুন, quarantine ফ্ল্যাগ সরান, `traffic66 passwd -data "/Library/Application Support/traffic66"` চালান, তারপর এমন LaunchDaemon থেকে চালু করুন যার `ProgramArguments` প্রোগ্রাম, `-data` ও সেই ডিরেক্টরি, `RunAtLoad` ও `KeepAlive` সহ।
+Web UI-এর ভাষা: মেনুর নিচে (ফ্ল্যাগ নেই)। বাকি: `traffic66 serve -h`।
 
 <a id="device-configuration"></a>
 
@@ -251,6 +187,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### ফায়ারওয়াল খুলুন
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Web UI শুধু এই মেশিনে, SSH দিয়ে
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### সার্ভিস হিসেবে: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### সার্ভিস হিসেবে: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### সার্ভিস হিসেবে: macOS
+
+`/usr/local/traffic66`-এ খুলুন, quarantine ফ্ল্যাগ সরান, `traffic66 passwd -data "/Library/Application Support/traffic66"` চালান, তারপর এমন LaunchDaemon থেকে চালু করুন যার `ProgramArguments` প্রোগ্রাম, `-data` ও সেই ডিরেক্টরি, `RunAtLoad` ও `KeepAlive` সহ।
 
 <a id="3-users-and-passwords"></a>
 

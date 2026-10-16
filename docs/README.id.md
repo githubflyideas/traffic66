@@ -47,19 +47,19 @@ pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 ## 1. Mulai cepat
 
 ```
-# Linux, macOS: unduh ke ./traffic66 lalu jalankan demo (jaringan simulasi)
+# Linux, macOS: unduh ke ./traffic66 lalu mulai mengumpulkan
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows, PowerShell: sama
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+Terminal menampilkan alamat antarmuka web serta IP dan port UDP tujuan perangkat Anda ([konfigurasi perangkat](#device-configuration)). Masuk sebagai `admin` / `traffic66` lalu pilih kata sandi baru. Hanya ingin melihat? Demo dengan perangkat simulasi:
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows, PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-Buka http://127.0.0.1:8066 dan masuk sebagai `admin` / `traffic66`. Ctrl+C menghentikannya. Mengumpulkan dari perangkat Anda: perintah yang sama dengan `serve` alih-alih `demo` (Windows: `$env:TRAFFIC66_RUN='serve'`).
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 Port: TCP 8066 antarmuka web, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (setiap port UDP menerima semua protokol). Terminal menampilkan alamat tujuan untuk perangkat; masuk pertama kali meminta kata sandi baru.
@@ -68,7 +68,7 @@ Secara manual (arsip: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm6
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS manual: lebih dulu `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "melindungi PC Anda": **Info selengkapnya** → **Tetap jalankan**.
@@ -79,105 +79,41 @@ macOS manual: lebih dulu `xattr -dr com.apple.quarantine traffic66-darwin-*`. Wi
 
 ## 2. Contoh
 
-### Demo di samping instalasi sungguhan
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### Ringkasan perintah
 
-### Kumpulkan sFlow, NetFlow v5/v9 dan IPFIX (port bawaan)
+| Tugas | Perintah |
+|---|---|
+| Kumpulkan sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 (bawaan) | `./traffic66` |
+| Hanya sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| Hanya NetFlow v5/v9 di 2055 dan IPFIX di 4739 | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| Port UDP lain | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| Kolektor di satu alamat IP | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Antarmuka web di IP dan port tertentu | `./traffic66 -addr 10.0.0.5:8080` |
+| Antarmuka web hanya di mesin ini | `./traffic66 -addr 127.0.0.1:8066` |
+| Antarmuka web lewat HTTPS | `./traffic66 -tls` |
+| Direktori data | `./traffic66 -data /var/lib/traffic66` |
+| Simpan detail flow 7 hari | `./traffic66 -retention-days 7` |
+| Memori: 20% RAM untuk basis data | `./traffic66 -memory 0.20` |
+| Daftar kartu jaringan untuk tangkapan lokal | `./traffic66 interfaces` |
+| Tangkap kartu jaringan mesin ini (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| Tangkap kartu jaringan mesin ini (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| Tangkap kartu jaringan mesin ini (Windows, perlu Npcap) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| Atur atau reset kata sandi admin (tambah -data DIR bila dipakai) | `./traffic66 passwd` |
+| Kata sandi admin acak, ditampilkan | `./traffic66 passwd -generate` |
+| Tambah pengguna atau ubah kata sandinya | `./traffic66 passwd -user alice` |
+| Daftar pengguna | `./traffic66 passwd -list` |
+| Kata sandi untuk sekali jalan (skrip, kontainer) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| Antarmuka terminal di mesin traffic66 | `./traffic66 tui` |
+| Antarmuka terminal ke server jarak jauh | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| Bahasa antarmuka terminal | `./traffic66 tui -lang ja` |
+| Analisis file tangkapan | `./traffic66 capture.pcap` |
+| Kirim flow uji ke kolektor | `./traffic66 simulate -to 192.0.2.50` |
+| Demo dengan perangkat simulasi | `./traffic66 demo` |
+| Semua opsi | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### Port dan direktori data sendiri
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### Analisis file tangkapan
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### Antarmuka terminal
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### Uji jalur tanpa perangkat (dari mesin lain)
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### Buka firewall
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### Antarmuka web hanya di mesin ini, lewat SSH
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### Sebagai layanan: Linux (systemd)
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### Sebagai layanan: Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### Sebagai layanan: macOS
-
-Ekstrak ke `/usr/local/traffic66`, hapus atribut karantina, jalankan `traffic66 passwd -data "/Library/Application Support/traffic66"`, lalu mulai dari LaunchDaemon dengan `ProgramArguments` berisi program, `-data` dan direktori itu, serta `RunAtLoad` dan `KeepAlive`.
+Bahasa antarmuka web: di bawah menu (tanpa flag). Selebihnya: `traffic66 serve -h`.
 
 <a id="device-configuration"></a>
 
@@ -252,6 +188,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### Buka firewall
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Antarmuka web hanya di mesin ini, lewat SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### Sebagai layanan: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### Sebagai layanan: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### Sebagai layanan: macOS
+
+Ekstrak ke `/usr/local/traffic66`, hapus atribut karantina, jalankan `traffic66 passwd -data "/Library/Application Support/traffic66"`, lalu mulai dari LaunchDaemon dengan `ProgramArguments` berisi program, `-data` dan direktori itu, serta `RunAtLoad` dan `KeepAlive`.
 
 <a id="3-users-and-passwords"></a>
 

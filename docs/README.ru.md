@@ -47,19 +47,19 @@ Grafana или модулям анализа потоков PRTG и SolarWinds N
 ## 1. Быстрый старт
 
 ```
-# Linux, macOS: скачать в ./traffic66 и запустить демо (имитация сети)
+# Linux, macOS: скачать в ./traffic66 и начать сбор
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows, PowerShell: то же
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+Терминал показывает адрес веб-интерфейса, а также IP и UDP-порты для ваших устройств ([настройка устройств](#device-configuration)). Войдите как `admin` / `traffic66` и задайте новый пароль. Только посмотреть? Демо с имитацией устройств:
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows, PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-Откройте http://127.0.0.1:8066 и войдите как `admin` / `traffic66`. Ctrl+C — остановить. Сбор с ваших устройств: та же команда с `serve` вместо `demo` (Windows: `$env:TRAFFIC66_RUN='serve'`).
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 Порты: TCP 8066 веб-интерфейс, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (каждый UDP-порт принимает любой протокол). Терминал показывает адреса для устройств; при первом входе нужно задать новый пароль.
@@ -68,7 +68,7 @@ curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scrip
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS вручную: сначала `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows «защитила ваш компьютер»: **Подробнее** → **Выполнить в любом случае**.
@@ -79,105 +79,41 @@ macOS вручную: сначала `xattr -dr com.apple.quarantine traffic66-d
 
 ## 2. Примеры
 
-### Демо рядом с рабочей установкой
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### Шпаргалка по командам
 
-### Сбор sFlow, NetFlow v5/v9 и IPFIX (порты по умолчанию)
+| Задача | Команда |
+|---|---|
+| Сбор sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 (по умолчанию) | `./traffic66` |
+| Только sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| Только NetFlow v5/v9 на 2055 и IPFIX на 4739 | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| Другие UDP-порты | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| Коллекторы на одном IP-адресе | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Веб-интерфейс на заданных IP и порту | `./traffic66 -addr 10.0.0.5:8080` |
+| Веб-интерфейс только на этой машине | `./traffic66 -addr 127.0.0.1:8066` |
+| Веб-интерфейс по HTTPS | `./traffic66 -tls` |
+| Каталог данных | `./traffic66 -data /var/lib/traffic66` |
+| Хранить детализацию 7 дней | `./traffic66 -retention-days 7` |
+| Память: 20 % ОЗУ под базу | `./traffic66 -memory 0.20` |
+| Список сетевых карт для локального захвата | `./traffic66 interfaces` |
+| Захват своей сетевой карты (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| Захват своей сетевой карты (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| Захват своей сетевой карты (Windows, нужен Npcap) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| Задать или сбросить пароль admin (с -data DIR, если используется) | `./traffic66 passwd` |
+| Случайный пароль admin с выводом | `./traffic66 passwd -generate` |
+| Добавить пользователя или сменить его пароль | `./traffic66 passwd -user alice` |
+| Список пользователей | `./traffic66 passwd -list` |
+| Пароль только на этот запуск (скрипты, контейнеры) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| Терминальный интерфейс на машине traffic66 | `./traffic66 tui` |
+| Терминальный интерфейс к удалённому серверу | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| Язык терминального интерфейса | `./traffic66 tui -lang ja` |
+| Анализ файла захвата | `./traffic66 capture.pcap` |
+| Отправить тестовые потоки на коллектор | `./traffic66 simulate -to 192.0.2.50` |
+| Демо с имитацией устройств | `./traffic66 demo` |
+| Все параметры | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### Свои порты и каталог данных
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### Анализ файла захвата
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### Терминальный интерфейс
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### Проверка пути без устройства (с другой машины)
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### Открыть брандмауэр
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### Веб-интерфейс только на этой машине, доступ через SSH
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### Как служба: Linux (systemd)
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### Как служба: Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### Как служба: macOS
-
-Распакуйте в `/usr/local/traffic66`, снимите атрибут карантина, выполните `traffic66 passwd -data "/Library/Application Support/traffic66"` и запускайте через LaunchDaemon, где `ProgramArguments` — программа, `-data` и этот каталог, с `RunAtLoad` и `KeepAlive`.
+Язык веб-интерфейса — внизу меню (флага нет). Остальное: `traffic66 serve -h`.
 
 <a id="device-configuration"></a>
 
@@ -252,6 +188,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### Открыть брандмауэр
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Веб-интерфейс только на этой машине, доступ через SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### Как служба: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### Как служба: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### Как служба: macOS
+
+Распакуйте в `/usr/local/traffic66`, снимите атрибут карантина, выполните `traffic66 passwd -data "/Library/Application Support/traffic66"` и запускайте через LaunchDaemon, где `ProgramArguments` — программа, `-data` и этот каталог, с `RunAtLoad` и `KeepAlive`.
 
 <a id="3-users-and-passwords"></a>
 

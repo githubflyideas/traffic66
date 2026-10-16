@@ -40,19 +40,19 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 ## 1. クイックスタート
 
 ```
-# Linux・macOS：./traffic66 にダウンロードしてデモ（模擬ネットワーク）を起動
+# Linux・macOS：./traffic66 にダウンロードして収集を開始
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows（PowerShell）：同じく
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+ターミナルに Web UI のアドレスと、機器の送信先 IP・UDP ポートが表示されます（[機器の設定](#device-configuration)）。`admin` / `traffic66` でサインインし新しいパスワードを設定します。まず見るだけなら、模擬機器のデモ：
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows（PowerShell）
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-http://127.0.0.1:8066 を開き、`admin` / `traffic66` でサインインします。Ctrl+C で停止します。 自分の機器から収集するには、同じコマンドの `demo` を `serve` に替えます（Windows：`$env:TRAFFIC66_RUN='serve'`）。
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 ポート：TCP 8066 Web UI、UDP 6343 sFlow、2055 NetFlow、4739 IPFIX（どの UDP ポートもすべてのプロトコルを受信）。機器の送信先アドレスはターミナルに表示されます。初回サインイン時に新しいパスワードを設定します。
@@ -61,7 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scrip
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS で手動の場合は先に `xattr -dr com.apple.quarantine traffic66-darwin-*`。Windows の「PC が保護されました」：**詳細情報** → **実行**。
@@ -72,105 +72,41 @@ macOS で手動の場合は先に `xattr -dr com.apple.quarantine traffic66-darw
 
 ## 2. 例
 
-### 本番環境と並べてデモを動かす
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### コマンド早見表
 
-### sFlow・NetFlow v5/v9・IPFIX を収集（既定ポート）
+| 用途 | コマンド |
+|---|---|
+| sFlow 6343・NetFlow v5/v9 2055・IPFIX 4739 を収集（既定） | `./traffic66` |
+| sFlow のみ、UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| NetFlow v5/v9（2055）と IPFIX（4739）のみ | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| 別の UDP ポート | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| コレクタを 1 つの IP にバインド | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Web UI を指定の IP とポートで | `./traffic66 -addr 10.0.0.5:8080` |
+| Web UI をこのマシンだけに | `./traffic66 -addr 127.0.0.1:8066` |
+| Web UI を HTTPS で | `./traffic66 -tls` |
+| データディレクトリ | `./traffic66 -data /var/lib/traffic66` |
+| フロー詳細を 7 日保持 | `./traffic66 -retention-days 7` |
+| メモリ：RAM の 20% をデータベースに | `./traffic66 -memory 0.20` |
+| ローカルキャプチャ用の NIC 一覧 | `./traffic66 interfaces` |
+| このマシンの NIC をキャプチャ（Linux） | `sudo ./traffic66 -capture eth0 -listen ""` |
+| このマシンの NIC をキャプチャ（macOS） | `sudo ./traffic66 -capture en0 -listen ""` |
+| このマシンの NIC をキャプチャ（Windows、Npcap が必要） | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| admin のパスワードを設定・リセット（-data 使用時は付ける） | `./traffic66 passwd` |
+| admin にランダムなパスワードを設定して表示 | `./traffic66 passwd -generate` |
+| ユーザーの追加・パスワード変更 | `./traffic66 passwd -user alice` |
+| ユーザー一覧 | `./traffic66 passwd -list` |
+| この起動だけのパスワード（スクリプト、コンテナ） | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| traffic66 のマシンでターミナル UI | `./traffic66 tui` |
+| リモートサーバーにターミナル UI で接続 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| ターミナル UI の言語 | `./traffic66 tui -lang ja` |
+| キャプチャファイルを解析 | `./traffic66 capture.pcap` |
+| コレクタにテストフローを送信 | `./traffic66 simulate -to 192.0.2.50` |
+| 模擬機器でデモ | `./traffic66 demo` |
+| 全オプション | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### ポートとデータディレクトリを変更
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### キャプチャファイルを解析
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### ターミナル UI
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### 機器なしで経路をテスト（別のマシンから）
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### ファイアウォールを開ける
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### Web UI はこのマシンだけで、SSH 経由でアクセス
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### サービスとして実行：Linux（systemd）
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### サービスとして実行：Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### サービスとして実行：macOS
-
-`/usr/local/traffic66` に展開し、quarantine 属性を外して `traffic66 passwd -data "/Library/Application Support/traffic66"` を実行し、`ProgramArguments` にプログラム・`-data`・そのディレクトリを指定し `RunAtLoad` と `KeepAlive` を有効にした LaunchDaemon から起動します。
+Web UI の言語はメニュー下部で切り替え（フラグなし）。その他：`traffic66 serve -h`。
 
 <a id="device-configuration"></a>
 
@@ -245,6 +181,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### ファイアウォールを開ける
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Web UI はこのマシンだけで、SSH 経由でアクセス
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### サービスとして実行：Linux（systemd）
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### サービスとして実行：Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### サービスとして実行：macOS
+
+`/usr/local/traffic66` に展開し、quarantine 属性を外して `traffic66 passwd -data "/Library/Application Support/traffic66"` を実行し、`ProgramArguments` にプログラム・`-data`・そのディレクトリを指定し `RunAtLoad` と `KeepAlive` を有効にした LaunchDaemon から起動します。
 
 <a id="3-users-and-passwords"></a>
 

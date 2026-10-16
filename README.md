@@ -39,19 +39,19 @@ analysis, without Elasticsearch, Kafka or a separate database.
 ## 1. Quick start
 
 ```
-# Linux, macOS: download into ./traffic66 and start the demo (a simulated network)
+# Linux, macOS: download into ./traffic66 and start collecting
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows, PowerShell: the same
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+The terminal prints the web UI address and the IP and UDP ports to point your devices at ([device configuration](#device-configuration)). Sign in as `admin` / `traffic66` and choose a new password. Only looking? The demo, with simulated devices:
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows, PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-Open http://127.0.0.1:8066 and sign in as `admin` / `traffic66`. Ctrl+C stops it. Collect from your own devices: the same command with `serve` instead of `demo` (Windows: `$env:TRAFFIC66_RUN='serve'`).
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 Ports: TCP 8066 web UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (every UDP port takes every protocol). The terminal prints the addresses to point your devices at; the first sign-in asks for a new password.
@@ -60,112 +60,46 @@ By hand (archives: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`,
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS by hand: `xattr -dr com.apple.quarantine traffic66-darwin-*` first. Windows "protected your PC": **More info** → **Run anyway**.
 
 ## 2. Examples
 
-### Demo next to a real installation
+### Command cheat sheet
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+| Task | Command |
+|---|---|
+| Collect sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 (default) | `./traffic66` |
+| sFlow only, UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| NetFlow v5/v9 on 2055 and IPFIX on 4739 only | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| Other UDP ports | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| Collectors on one IP address | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Web UI on a given IP and port | `./traffic66 -addr 10.0.0.5:8080` |
+| Web UI on this machine only | `./traffic66 -addr 127.0.0.1:8066` |
+| Web UI over HTTPS | `./traffic66 -tls` |
+| Data directory | `./traffic66 -data /var/lib/traffic66` |
+| Keep 7 days of flow detail | `./traffic66 -retention-days 7` |
+| Memory: 20% of RAM for the database | `./traffic66 -memory 0.20` |
+| List network cards for local capture | `./traffic66 interfaces` |
+| Capture this machine's NIC (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| Capture this machine's NIC (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| Capture this machine's NIC (Windows, needs Npcap) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| Set or reset the admin password (add -data DIR if used) | `./traffic66 passwd` |
+| Set a random admin password and print it | `./traffic66 passwd -generate` |
+| Add a user or change her password | `./traffic66 passwd -user alice` |
+| List users | `./traffic66 passwd -list` |
+| Password for this run only (scripts, containers) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| Terminal UI on the traffic66 machine | `./traffic66 tui` |
+| Terminal UI to a remote server | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| Terminal UI language | `./traffic66 tui -lang ja` |
+| Analyse a capture file | `./traffic66 capture.pcap` |
+| Send test flows to a collector | `./traffic66 simulate -to 192.0.2.50` |
+| Demo with simulated devices | `./traffic66 demo` |
+| All options | `./traffic66 serve -h` |
 
-### Collect sFlow, NetFlow v5/v9 and IPFIX (default ports)
-
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### Custom ports and data directory
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### Analyse a capture file
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### Terminal UI
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### Test the path without a device (from another machine)
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### Open the firewall
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### Web UI on this machine only, reached over SSH
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### Run as a service: Linux (systemd)
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### Run as a service: Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### Run as a service: macOS
-
-Unpack to `/usr/local/traffic66`, remove the quarantine flag, run `traffic66 passwd -data "/Library/Application Support/traffic66"`, and start it from a LaunchDaemon whose `ProgramArguments` are the program, `-data` and that directory, with `RunAtLoad` and `KeepAlive`.
+Web UI language: menu foot (no flag). Not on this list: `traffic66 serve -h`.
 
 ### Device configuration
 
@@ -238,6 +172,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### Open the firewall
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Web UI on this machine only, reached over SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### Run as a service: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### Run as a service: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### Run as a service: macOS
+
+Unpack to `/usr/local/traffic66`, remove the quarantine flag, run `traffic66 passwd -data "/Library/Application Support/traffic66"`, and start it from a LaunchDaemon whose `ProgramArguments` are the program, `-data` and that directory, with `RunAtLoad` and `KeepAlive`.
 
 ## 3. Users and passwords
 

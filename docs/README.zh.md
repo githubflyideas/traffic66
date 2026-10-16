@@ -40,19 +40,19 @@
 ## 1. 快速开始
 
 ```
-# Linux、macOS：下载到 ./traffic66 并启动演示（模拟网络）
+# Linux、macOS：下载到 ./traffic66 并开始采集
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows（PowerShell）：同上
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+终端会打印 Web 界面地址，以及设备要指向的 IP 和 UDP 端口（[设备配置](#device-configuration)）。用 `admin` / `traffic66` 登录并设置新密码。只想先看看？用模拟设备跑演示：
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows，PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-打开 http://127.0.0.1:8066，用 `admin` / `traffic66` 登录。按 Ctrl+C 停止。 采集自己设备的流量：把同一条命令里的 `demo` 换成 `serve`（Windows：`$env:TRAFFIC66_RUN='serve'`）。
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 端口：TCP 8066 Web 界面，UDP 6343 sFlow、2055 NetFlow、4739 IPFIX（每个 UDP 端口都接收所有协议）。终端会打印设备应指向的地址；首次登录会要求设置新密码。
@@ -61,7 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scrip
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS 手动安装时先运行 `xattr -dr com.apple.quarantine traffic66-darwin-*`。Windows 提示「已保护你的电脑」：**更多信息** → **仍要运行**。
@@ -72,105 +72,41 @@ macOS 手动安装时先运行 `xattr -dr com.apple.quarantine traffic66-darwin-
 
 ## 2. 示例
 
-### 与正式安装同时运行演示
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### 命令速查
 
-### 采集 sFlow、NetFlow v5/v9 和 IPFIX（默认端口）
+| 用途 | 命令 |
+|---|---|
+| 采集 sFlow 6343、NetFlow v5/v9 2055、IPFIX 4739（默认） | `./traffic66` |
+| 只收 sFlow，UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| 只收 NetFlow v5/v9（2055）和 IPFIX（4739） | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| 换 UDP 端口 | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| 采集器只绑定一个 IP | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Web 界面绑定指定 IP 和端口 | `./traffic66 -addr 10.0.0.5:8080` |
+| Web 界面只允许本机访问 | `./traffic66 -addr 127.0.0.1:8066` |
+| Web 界面用 HTTPS | `./traffic66 -tls` |
+| 数据目录 | `./traffic66 -data /var/lib/traffic66` |
+| 流明细保留 7 天 | `./traffic66 -retention-days 7` |
+| 内存：数据库用 20% 内存 | `./traffic66 -memory 0.20` |
+| 列出可抓包的网卡 | `./traffic66 interfaces` |
+| 抓本机网卡（Linux） | `sudo ./traffic66 -capture eth0 -listen ""` |
+| 抓本机网卡（macOS） | `sudo ./traffic66 -capture en0 -listen ""` |
+| 抓本机网卡（Windows，需要 Npcap） | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| 设置或重置 admin 密码（用了 -data 就加上） | `./traffic66 passwd` |
+| 设置随机 admin 密码并打印 | `./traffic66 passwd -generate` |
+| 添加用户或修改其密码 | `./traffic66 passwd -user alice` |
+| 列出用户 | `./traffic66 passwd -list` |
+| 只对本次运行生效的密码（脚本、容器） | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| 在 traffic66 机器上打开终端界面 | `./traffic66 tui` |
+| 终端界面连接远程服务器 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| 终端界面语言 | `./traffic66 tui -lang ja` |
+| 分析抓包文件 | `./traffic66 capture.pcap` |
+| 向采集器发送测试流量 | `./traffic66 simulate -to 192.0.2.50` |
+| 用模拟设备运行演示 | `./traffic66 demo` |
+| 全部选项 | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### 自定义端口和数据目录
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### 分析抓包文件
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### 终端界面
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### 没有设备时测试链路（在另一台机器上运行）
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### 开放防火墙
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### Web 界面只在本机，通过 SSH 访问
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### 作为服务运行：Linux（systemd）
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### 作为服务运行：Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### 作为服务运行：macOS
-
-解压到 `/usr/local/traffic66`，去掉隔离标记，运行 `traffic66 passwd -data "/Library/Application Support/traffic66"`，再用 LaunchDaemon 启动：`ProgramArguments` 为程序、`-data` 和该目录，并设置 `RunAtLoad` 和 `KeepAlive`。
+Web 界面语言：菜单底部切换（没有命令行参数）。更多：`traffic66 serve -h`。
 
 <a id="device-configuration"></a>
 
@@ -245,6 +181,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### 开放防火墙
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Web 界面只在本机，通过 SSH 访问
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### 作为服务运行：Linux（systemd）
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### 作为服务运行：Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### 作为服务运行：macOS
+
+解压到 `/usr/local/traffic66`，去掉隔离标记，运行 `traffic66 passwd -data "/Library/Application Support/traffic66"`，再用 LaunchDaemon 启动：`ProgramArguments` 为程序、`-data` 和该目录，并设置 `RunAtLoad` 和 `KeepAlive`。
 
 <a id="3-users-and-passwords"></a>
 

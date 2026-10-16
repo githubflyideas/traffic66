@@ -840,6 +840,7 @@ func loginChecker(dir, user, flagPw string, demo bool) *auth.FileChecker {
 	}
 	if pw != "" {
 		log.Printf("login: user %q with the password given at start", user)
+		fixedPassword = true
 		return auth.NewFileChecker(dir, map[string]string{user: pw})
 	}
 	file := filepath.Join(dir, auth.FileName)

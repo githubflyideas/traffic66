@@ -48,19 +48,19 @@ Elasticsearch، Kafka یا الگ database کے۔
 ## 1. فوری آغاز
 
 ```
-# Linux، macOS: ./traffic66 میں ڈاؤن لوڈ کر کے ڈیمو (فرضی نیٹ ورک) چلائیں
+# Linux، macOS: ./traffic66 میں ڈاؤن لوڈ کر کے جمع کرنا شروع کریں
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows، PowerShell: یہی
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+ٹرمینل ویب UI کا پتا اور آلات کے لیے IP اور UDP پورٹس دکھاتا ہے ([آلات کی ترتیب](#device-configuration))۔ `admin` / `traffic66` سے سائن اِن کر کے نیا پاس ورڈ چنیں۔ صرف دیکھنا ہے؟ فرضی آلات والا ڈیمو:
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows، PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-http://127.0.0.1:8066 کھولیں اور `admin` / `traffic66` سے سائن اِن کریں۔ Ctrl+C روکتا ہے۔ اپنے آلات سے flows لینے کے لیے: یہی کمانڈ، `demo` کی جگہ `serve` (Windows: `$env:TRAFFIC66_RUN='serve'`)۔
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 پورٹس: TCP 8066 ویب UI، UDP 6343 sFlow، 2055 NetFlow، 4739 IPFIX (ہر UDP پورٹ ہر پروٹوکول لیتا ہے)۔ ٹرمینل وہ پتے دکھاتا ہے جن پر آلات بھیجیں؛ پہلی سائن اِن پر نیا پاس ورڈ مانگا جاتا ہے۔
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scrip
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS پر ہاتھ سے: پہلے `xattr -dr com.apple.quarantine traffic66-darwin-*`۔ Windows "protected your PC": **More info** ← **Run anyway**۔
@@ -80,105 +80,41 @@ macOS پر ہاتھ سے: پہلے `xattr -dr com.apple.quarantine traffic66-dar
 
 ## 2. مثالیں
 
-### اصل انسٹالیشن کے ساتھ ڈیمو
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### کمانڈز کا خلاصہ
 
-### sFlow، NetFlow v5/v9 اور IPFIX جمع کریں (ڈیفالٹ پورٹس)
+| کام | کمانڈ |
+|---|---|
+| sFlow 6343، NetFlow v5/v9 2055، IPFIX 4739 جمع کریں (ڈیفالٹ) | `./traffic66` |
+| صرف sFlow، UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| صرف NetFlow v5/v9 (2055) اور IPFIX (4739) | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| دوسرے UDP پورٹس | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| کلیکٹرز ایک IP پر | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| ویب UI مخصوص IP اور پورٹ پر | `./traffic66 -addr 10.0.0.5:8080` |
+| ویب UI صرف اسی مشین پر | `./traffic66 -addr 127.0.0.1:8066` |
+| ویب UI بذریعہ HTTPS | `./traffic66 -tls` |
+| ڈیٹا ڈائریکٹری | `./traffic66 -data /var/lib/traffic66` |
+| flow تفصیل 7 دن رکھیں | `./traffic66 -retention-days 7` |
+| میموری: ڈیٹابیس کے لیے RAM کا 20% | `./traffic66 -memory 0.20` |
+| لوکل کیپچر کے لیے نیٹ ورک کارڈز کی فہرست | `./traffic66 interfaces` |
+| اس مشین کا NIC کیپچر کریں (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| اس مشین کا NIC کیپچر کریں (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| اس مشین کا NIC کیپچر کریں (Windows، Npcap درکار) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| admin پاس ورڈ سیٹ/ری سیٹ کریں (‎-data DIR ہو تو شامل کریں) | `./traffic66 passwd` |
+| admin کا بے ترتیب پاس ورڈ سیٹ کر کے دکھائیں | `./traffic66 passwd -generate` |
+| صارف شامل کریں یا پاس ورڈ بدلیں | `./traffic66 passwd -user alice` |
+| صارفین کی فہرست | `./traffic66 passwd -list` |
+| صرف اس رن کا پاس ورڈ (اسکرپٹس، کنٹینرز) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| traffic66 مشین پر ٹرمینل UI | `./traffic66 tui` |
+| ریموٹ سرور سے ٹرمینل UI | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| ٹرمینل UI کی زبان | `./traffic66 tui -lang ja` |
+| کیپچر فائل کا تجزیہ | `./traffic66 capture.pcap` |
+| کلیکٹر کو آزمائشی flows بھیجیں | `./traffic66 simulate -to 192.0.2.50` |
+| فرضی آلات کے ساتھ ڈیمو | `./traffic66 demo` |
+| تمام اختیارات | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### اپنے پورٹس اور ڈیٹا ڈائریکٹری
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### کیپچر فائل کا تجزیہ
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### ٹرمینل UI
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### بغیر آلے کے راستہ جانچیں (دوسری مشین سے)
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### فائر وال کھولیں
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### ویب UI صرف اسی مشین پر، SSH کے ذریعے
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### سروس کے طور پر: Linux (systemd)
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### سروس کے طور پر: Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### سروس کے طور پر: macOS
-
-`/usr/local/traffic66` میں کھولیں، quarantine فلیگ ہٹائیں، `traffic66 passwd -data "/Library/Application Support/traffic66"` چلائیں، اور ایسے LaunchDaemon سے شروع کریں جس کے `ProgramArguments` پروگرام، `-data` اور وہ ڈائریکٹری ہوں، `RunAtLoad` اور `KeepAlive` کے ساتھ۔
+ویب UI کی زبان: مینو کے نیچے (کوئی فلیگ نہیں)۔ باقی: `traffic66 serve -h`۔
 
 <a id="device-configuration"></a>
 
@@ -253,6 +189,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### فائر وال کھولیں
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### ویب UI صرف اسی مشین پر، SSH کے ذریعے
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### سروس کے طور پر: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### سروس کے طور پر: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### سروس کے طور پر: macOS
+
+`/usr/local/traffic66` میں کھولیں، quarantine فلیگ ہٹائیں، `traffic66 passwd -data "/Library/Application Support/traffic66"` چلائیں، اور ایسے LaunchDaemon سے شروع کریں جس کے `ProgramArguments` پروگرام، `-data` اور وہ ڈائریکٹری ہوں، `RunAtLoad` اور `KeepAlive` کے ساتھ۔
 
 <a id="3-users-and-passwords"></a>
 

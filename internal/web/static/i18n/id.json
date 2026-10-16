@@ -827,6 +827,6 @@
 "ob.step1": "Arahkan ekspor sFlow, NetFlow, atau IPFIX perangkat ke mesin ini:",
 "ob.ports": "Port UDP:",
 "ob.step2": "Perangkat muncul di Pengaturan dalam hitungan detik, dan halaman ini terisi satu-dua menit kemudian.",
-"ob.try": "Tidak ada perangkat? Kirim flow uji dari mesin lain, atau coba demo:",
+"ob.try": "Atau tempel salah satu perintah ini, sudah berisi alamat dan port mesin ini:",
 "ob.copy": "Salin"
 }

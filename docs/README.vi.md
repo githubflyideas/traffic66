@@ -47,19 +47,19 @@ Elasticsearch, Kafka hay một cơ sở dữ liệu riêng.
 ## 1. Bắt đầu nhanh
 
 ```
-# Linux, macOS: tải về ./traffic66 và chạy demo (mạng mô phỏng)
+# Linux, macOS: tải về ./traffic66 và bắt đầu thu thập
+curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
+```
+
+```
+# Windows, PowerShell: tương tự
+irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+```
+
+Terminal in ra địa chỉ giao diện web cùng IP và cổng UDP để trỏ thiết bị tới ([cấu hình thiết bị](#device-configuration)). Đăng nhập bằng `admin` / `traffic66` rồi đặt mật khẩu mới. Chỉ muốn xem thử? Bản demo với thiết bị mô phỏng:
+
+```
 curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
-
-```
-# Windows, PowerShell
-$env:TRAFFIC66_RUN='demo'; irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
-```
-
-Mở http://127.0.0.1:8066 và đăng nhập bằng `admin` / `traffic66`. Ctrl+C để dừng. Thu thập từ thiết bị của bạn: cùng lệnh đó, thay `demo` bằng `serve` (Windows: `$env:TRAFFIC66_RUN='serve'`).
-
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- serve
 ```
 
 Cổng: TCP 8066 giao diện web, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (mỗi cổng UDP nhận mọi giao thức). Terminal in ra địa chỉ để trỏ thiết bị tới; lần đăng nhập đầu sẽ yêu cầu mật khẩu mới.
@@ -68,7 +68,7 @@ Tải thủ công (gói: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-a
 
 ```
 curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66 demo
+cd traffic66-linux-amd64 && ./traffic66
 ```
 
 macOS thủ công: chạy trước `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "đã bảo vệ PC": **Thông tin thêm** → **Vẫn chạy**.
@@ -79,105 +79,41 @@ macOS thủ công: chạy trước `xattr -dr com.apple.quarantine traffic66-dar
 
 ## 2. Ví dụ
 
-### Demo bên cạnh bản cài thật
+<a id="command-cheat-sheet"></a>
 
-```
-./traffic66 demo -addr :8067 -listen ""
-```
+### Bảng lệnh nhanh
 
-### Thu sFlow, NetFlow v5/v9 và IPFIX (cổng mặc định)
+| Việc | Lệnh |
+|---|---|
+| Thu sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 (mặc định) | `./traffic66` |
+| Chỉ sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| Chỉ NetFlow v5/v9 cổng 2055 và IPFIX cổng 4739 | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| Cổng UDP khác | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| Collector chỉ trên một IP | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Giao diện web trên IP và cổng chỉ định | `./traffic66 -addr 10.0.0.5:8080` |
+| Giao diện web chỉ trên máy này | `./traffic66 -addr 127.0.0.1:8066` |
+| Giao diện web qua HTTPS | `./traffic66 -tls` |
+| Thư mục dữ liệu | `./traffic66 -data /var/lib/traffic66` |
+| Giữ chi tiết flow 7 ngày | `./traffic66 -retention-days 7` |
+| Bộ nhớ: 20% RAM cho cơ sở dữ liệu | `./traffic66 -memory 0.20` |
+| Liệt kê card mạng để bắt gói tại chỗ | `./traffic66 interfaces` |
+| Bắt gói card mạng máy này (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| Bắt gói card mạng máy này (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| Bắt gói card mạng máy này (Windows, cần Npcap) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| Đặt hoặc đặt lại mật khẩu admin (thêm -data DIR nếu dùng) | `./traffic66 passwd` |
+| Đặt mật khẩu admin ngẫu nhiên và in ra | `./traffic66 passwd -generate` |
+| Thêm người dùng hoặc đổi mật khẩu | `./traffic66 passwd -user alice` |
+| Liệt kê người dùng | `./traffic66 passwd -list` |
+| Mật khẩu chỉ cho lần chạy này (script, container) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| Giao diện terminal trên máy traffic66 | `./traffic66 tui` |
+| Giao diện terminal tới máy chủ từ xa | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| Ngôn ngữ giao diện terminal | `./traffic66 tui -lang ja` |
+| Phân tích file capture | `./traffic66 capture.pcap` |
+| Gửi flow thử tới collector | `./traffic66 simulate -to 192.0.2.50` |
+| Demo với thiết bị mô phỏng | `./traffic66 demo` |
+| Tất cả tùy chọn | `./traffic66 serve -h` |
 
-```
-./traffic66                     # web UI :8066, UDP 6343 / 2055 / 4739
-```
-
-### Cổng và thư mục dữ liệu tùy chọn
-
-```
-./traffic66 -addr :9066 -listen sflow=:6343,netflow=:9995,ipfix=:4739 -data /srv/traffic66
-./traffic66 -listen netflow=:2055 -retention-days 7 -no-dns
-```
-
-### Phân tích file capture
-
-```
-./traffic66 capture.pcap other.pcapng
-```
-
-### Giao diện terminal
-
-```
-./traffic66 tui
-./traffic66 tui -server http://192.0.2.50:8066 -user admin -password …
-```
-
-### Thử đường truyền khi chưa có thiết bị (từ máy khác)
-
-```
-./traffic66 simulate -to 192.0.2.50
-```
-
-### Mở tường lửa
-
-```
-sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
-sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
-New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
-New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
-```
-
-### Giao diện web chỉ trên máy này, truy cập qua SSH
-
-```
-./traffic66 -addr 127.0.0.1:8066                 # on the server
-ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
-```
-
-### Chạy như dịch vụ: Linux (systemd)
-
-```
-sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
-sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
-sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
-```
-
-`/etc/systemd/system/traffic66.service`:
-
-```
-[Unit]
-Description=traffic66 flow analytics
-After=network-online.target
-
-[Service]
-User=traffic66
-ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
-Restart=on-failure
-MemoryMax=2G
-#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```
-echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
-sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
-journalctl -u traffic66 -f
-```
-
-### Chạy như dịch vụ: Windows
-
-```
-$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-Start-ScheduledTask -TaskName traffic66
-```
-
-### Chạy như dịch vụ: macOS
-
-Giải nén vào `/usr/local/traffic66`, gỡ cờ quarantine, chạy `traffic66 passwd -data "/Library/Application Support/traffic66"`, rồi khởi động bằng LaunchDaemon có `ProgramArguments` là chương trình, `-data` và thư mục đó, cùng `RunAtLoad` và `KeepAlive`.
+Ngôn ngữ giao diện web: chọn ở cuối menu (không có cờ). Còn lại: `traffic66 serve -h`.
 
 <a id="device-configuration"></a>
 
@@ -252,6 +188,68 @@ sflow run
 # Linux host, softflowd
 softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
 ```
+
+### Mở tường lửa
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Giao diện web chỉ trên máy này, truy cập qua SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### Chạy như dịch vụ: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### Chạy như dịch vụ: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### Chạy như dịch vụ: macOS
+
+Giải nén vào `/usr/local/traffic66`, gỡ cờ quarantine, chạy `traffic66 passwd -data "/Library/Application Support/traffic66"`, rồi khởi động bằng LaunchDaemon có `ProgramArguments` là chương trình, `-data` và thư mục đó, cùng `RunAtLoad` và `KeepAlive`.
 
 <a id="3-users-and-passwords"></a>
 

@@ -14,6 +14,9 @@ import (
 // startup summary can say which password to sign in with.
 var firstStart bool
 
+// fixedPassword is set when -password or TRAFFIC66_PASSWORD gives the password.
+var fixedPassword bool
+
 // printStartup prints what somebody starting traffic66 for the first time
 // needs and otherwise has to piece together from the log: where the web UI
 // is, which address and UDP ports to point the devices at, and how to sign
@@ -32,6 +35,8 @@ func printStartup(w io.Writer, scheme string, web net.Addr, listens []api.Listen
 	switch {
 	case demo:
 		fmt.Fprintf(w, "  Sign in    %s / %s\n", user, auth.DefaultPassword)
+	case fixedPassword:
+		fmt.Fprintf(w, "  Sign in    %s, with the password given at start\n", user)
 	case first:
 		fmt.Fprintf(w, "  Sign in    %s / %s  (you choose a new password at the first sign-in)\n", user, auth.DefaultPassword)
 	default:

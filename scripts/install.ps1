@@ -2,8 +2,10 @@
 #
 #   irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
 #
-# Downloads the latest release into .\traffic66 (or $env:TRAFFIC66_DIR) and,
-# when $env:TRAFFIC66_RUN is set (for example "demo"), runs it with that.
+# Downloads the latest release into .\traffic66 (or $env:TRAFFIC66_DIR) and
+# starts the collector, which prints the address and UDP ports to point your
+# devices at. $env:TRAFFIC66_RUN replaces "serve" (for example
+# "serve -listen netflow=:9995"); $env:TRAFFIC66_NO_START = 1 only downloads.
 # $env:TRAFFIC66_VERSION = "v2.3.3" picks a release.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -24,9 +26,10 @@ Copy-Item (Join-Path $src '*') $dir -Recurse -Force
 Remove-Item $zip, $tmp -Recurse -Force
 Get-ChildItem $dir -Recurse | Unblock-File
 & (Join-Path $dir 'traffic66.exe') version
-if ($env:TRAFFIC66_RUN) {
-    Set-Location $dir
-    & .\traffic66.exe ($env:TRAFFIC66_RUN -split ' ')
+if ($env:TRAFFIC66_NO_START) {
+    Write-Host "traffic66: installed in $dir; start it with: cd $dir; .\traffic66.exe"
 } else {
-    Write-Host "traffic66: installed in $dir. Try:  cd $dir; .\traffic66.exe demo"
+    $run = if ($env:TRAFFIC66_RUN) { $env:TRAFFIC66_RUN } else { 'serve' }
+    Set-Location $dir
+    & .\traffic66.exe ($run -split ' ')
 }
