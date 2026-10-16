@@ -327,7 +327,7 @@
 "logo.sub": "Hiển thị trên trang đăng nhập và đầu menu",
 "logo.upload": "Tải lên logo…",
 "logo.reset": "Dùng logo mặc định",
-"logo.hint": "PNG, SVG, JPEG, WebP hoặc GIF, tối đa 1 MB. Đẹp nhất ở 272 × 92 pixel; kích thước khác sẽ được co giãn cho vừa.",
+"logo.hint": "PNG, SVG, JPEG, WebP hoặc GIF, tối đa 1 MB. Khuyến nghị 416 × 144 pixel (hiển thị 208 × 72, bằng chiều rộng thanh bên), PNG hoặc SVG nền trong suốt; kích thước khác sẽ được co giãn cho vừa.",
 "logo.saved": "Đã lưu logo",
 "sankey.title_conv": "Client → dịch vụ → server",
 "sankey.by_conv": "Client → server",

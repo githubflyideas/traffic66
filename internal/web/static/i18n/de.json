@@ -327,7 +327,7 @@
 "logo.sub": "Wird auf der Anmeldeseite und oben im Menü angezeigt",
 "logo.upload": "Logo hochladen…",
 "logo.reset": "Integriertes Logo verwenden",
-"logo.hint": "PNG, SVG, JPEG, WebP oder GIF, bis 1 MB. Optimal sind 272 × 92 Pixel; andere Größen werden passend skaliert.",
+"logo.hint": "PNG, SVG, JPEG, WebP oder GIF, bis 1 MB. Empfohlen: 416 × 144 Pixel (angezeigt mit 208 × 72, so breit wie die Seitenleiste), PNG oder SVG mit transparentem Hintergrund; andere Größen werden passend skaliert.",
 "logo.saved": "Logo gespeichert",
 "sankey.title_conv": "Client → Dienst → Server",
 "sankey.by_conv": "Client → Server",

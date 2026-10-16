@@ -327,7 +327,7 @@
 "logo.sub": "Shown on the sign-in page and at the top of the menu",
 "logo.upload": "Upload a logo…",
 "logo.reset": "Use the built-in logo",
-"logo.hint": "PNG, SVG, JPEG, WebP or GIF, up to 1 MB. Best at 272 × 92 pixels; other sizes are scaled to fit.",
+"logo.hint": "PNG, SVG, JPEG, WebP or GIF, up to 1 MB. Recommended: 416 × 144 pixels (shown at 208 × 72, the width of the sidebar), PNG or SVG with a transparent background; other sizes are scaled to fit.",
 "logo.saved": "Logo saved",
 "sankey.title_conv": "Client → service → server",
 "sankey.by_conv": "Client → server",

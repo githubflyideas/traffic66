@@ -327,7 +327,7 @@
 "logo.sub": "Affiché sur la page de connexion et en haut du menu",
 "logo.upload": "Importer un logo…",
 "logo.reset": "Revenir au logo intégré",
-"logo.hint": "PNG, SVG, JPEG, WebP ou GIF, 1 Mo au plus. Idéalement 272 × 92 pixels ; les autres tailles sont ajustées.",
+"logo.hint": "PNG, SVG, JPEG, WebP ou GIF, 1 Mo au plus. Recommandé : 416 × 144 pixels (affiché en 208 × 72, la largeur du menu latéral), PNG ou SVG à fond transparent ; les autres tailles sont ajustées.",
 "logo.saved": "Logo enregistré",
 "sankey.title_conv": "Client → service → serveur",
 "sankey.by_conv": "Client → serveur",
