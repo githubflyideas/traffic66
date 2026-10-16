@@ -38,7 +38,13 @@ macOS 에서 직접 설치할 때는 먼저 `xattr -dr com.apple.quarantine traf
 | admin 비밀번호 설정·재설정(-data 사용 시 추가) | `./traffic66 passwd` |
 | 원격 서버에 터미널 UI 접속 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![개요: 미처리 탐지, 어제 같은 시각과 비교한 애플리케이션별 대역폭, 상위 클라이언트와 서비스](images/overview.png)
+## 스크린샷
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="개요"></a><br>개요 | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="지역 및 네트워크"></a><br>지역 및 네트워크 | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="인터페이스 대조"></a><br>인터페이스 대조 |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## 전체 설명서
 

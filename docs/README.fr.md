@@ -41,7 +41,13 @@ macOS à la main : d'abord `xattr -dr com.apple.quarantine traffic66-darwin-*`. 
 | Définir ou réinitialiser le mot de passe admin (ajouter -data DIR si utilisé) | `./traffic66 passwd` |
 | Interface terminal vers un serveur distant | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![Vue d'ensemble : détections ouvertes, bande passante par application comparée à la même heure hier, principaux clients et services](images/overview.png)
+## Captures d'écran
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="Vue d'ensemble"></a><br>Vue d'ensemble | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="Géographie et réseaux"></a><br>Géographie et réseaux | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="Contrôle des interfaces"></a><br>Contrôle des interfaces |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## Manuel complet
 

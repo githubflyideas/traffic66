@@ -40,7 +40,13 @@ macOS by hand: `xattr -dr com.apple.quarantine traffic66-darwin-*` first. Window
 | Set or reset the admin password (add -data DIR if used) | `./traffic66 passwd` |
 | Terminal UI to a remote server | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![Overview: open findings, bandwidth by application compared with the same time yesterday, top clients and services](docs/images/overview.png)
+## Screenshots
+
+| | |
+|---|---|
+| <a href="docs/images/overview.png"><img src="docs/images/overview.png" alt="Overview"></a><br>Overview | <a href="docs/images/topn.png"><img src="docs/images/topn.png" alt="Top 66"></a><br>Top 66 |
+| <a href="docs/images/geo.png"><img src="docs/images/geo.png" alt="Geo & networks"></a><br>Geo & networks | <a href="docs/images/interfaces.png"><img src="docs/images/interfaces.png" alt="Interface check"></a><br>Interface check |
+| <a href="docs/images/tui-top.png"><img src="docs/images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## Full manual
 

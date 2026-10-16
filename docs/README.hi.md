@@ -40,7 +40,13 @@ macOS पर हाथ से: पहले `xattr -dr com.apple.quarantine traf
 | admin पासवर्ड सेट/रीसेट करें (-data DIR हो तो जोड़ें) | `./traffic66 passwd` |
 | रिमोट सर्वर से Terminal UI | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![सारांश: खुली संदिग्ध गतिविधियाँ, कल इसी समय की तुलना में application के हिसाब से bandwidth, top clients और services](images/overview.png)
+## स्क्रीनशॉट
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="सारांश"></a><br>सारांश | <a href="images/topn.png"><img src="images/topn.png" alt="शीर्ष 66"></a><br>शीर्ष 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="भूगोल और नेटवर्क"></a><br>भूगोल और नेटवर्क | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="इंटरफ़ेस मिलान"></a><br>इंटरफ़ेस मिलान |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## पूरा मैनुअल
 

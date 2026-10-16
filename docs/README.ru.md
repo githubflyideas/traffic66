@@ -40,7 +40,13 @@ macOS вручную: сначала `xattr -dr com.apple.quarantine traffic66-d
 | Задать или сбросить пароль admin (с -data DIR, если используется) | `./traffic66 passwd` |
 | Терминальный интерфейс к удалённому серверу | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![Обзор: открытые обнаружения, полоса по приложениям в сравнении с тем же временем вчера, основные клиенты и сервисы](images/overview.png)
+## Скриншоты
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="Обзор"></a><br>Обзор | <a href="images/topn.png"><img src="images/topn.png" alt="Топ 66"></a><br>Топ 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="География и сети"></a><br>География и сети | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="Сверка интерфейсов"></a><br>Сверка интерфейсов |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## Полное руководство
 

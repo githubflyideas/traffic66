@@ -42,7 +42,13 @@ macOS پر ہاتھ سے: پہلے `xattr -dr com.apple.quarantine traffic66-dar
 | admin پاس ورڈ سیٹ/ری سیٹ کریں (‎-data DIR ہو تو شامل کریں) | `./traffic66 passwd` |
 | ریموٹ سرور سے ٹرمینل UI | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![جائزہ: کھلی مشتبہ سرگرمیاں، کل اسی وقت کے مقابلے میں application کے حساب سے bandwidth، سرفہرست clients اور services](images/overview.png)
+## اسکرین شاٹس
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="جائزہ"></a><br>جائزہ | <a href="images/topn.png"><img src="images/topn.png" alt="ٹاپ 66"></a><br>ٹاپ 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="مقامات اور نیٹ ورک"></a><br>مقامات اور نیٹ ورک | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="انٹرفیس جانچ"></a><br>انٹرفیس جانچ |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## مکمل دستی
 

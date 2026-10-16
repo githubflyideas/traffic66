@@ -42,7 +42,13 @@ curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scrip
 | تعيين كلمة مرور admin أو إعادة تعيينها (أضف ‎-data DIR إن استُخدم) | `./traffic66 passwd` |
 | الواجهة الطرفية إلى خادم بعيد | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![نظرة عامة: الاكتشافات المفتوحة، واستهلاك عرض النطاق حسب التطبيق مقارنةً بالوقت نفسه أمس، وأبرز العملاء والخدمات](images/overview.png)
+## لقطات الشاشة
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="نظرة عامة"></a><br>نظرة عامة | <a href="images/topn.png"><img src="images/topn.png" alt="أعلى 66"></a><br>أعلى 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="الجغرافيا والشبكات"></a><br>الجغرافيا والشبكات | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="مطابقة الواجهات"></a><br>مطابقة الواجهات |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## الدليل الكامل
 

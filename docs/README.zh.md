@@ -38,7 +38,13 @@ macOS 手动安装时先运行 `xattr -dr com.apple.quarantine traffic66-darwin-
 | 设置或重置 admin 密码（用了 -data 就加上） | `./traffic66 passwd` |
 | 终端界面连接远程服务器 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![概览：未处理的发现、按应用划分的带宽与昨天同一时间对比、主要客户端和服务](images/overview.png)
+## 截图
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="概览"></a><br>概览 | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="地理与运营商"></a><br>地理与运营商 | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="接口对账"></a><br>接口对账 |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## 完整手册
 

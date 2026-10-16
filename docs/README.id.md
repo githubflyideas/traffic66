@@ -41,7 +41,13 @@ macOS manual: lebih dulu `xattr -dr com.apple.quarantine traffic66-darwin-*`. Wi
 | Atur atau reset kata sandi admin (tambah -data DIR bila dipakai) | `./traffic66 passwd` |
 | Antarmuka terminal ke server jarak jauh | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding waktu yang sama kemarin, klien dan layanan teratas](images/overview.png)
+## Tangkapan layar
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="Ringkasan"></a><br>Ringkasan | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="Geografi & jaringan"></a><br>Geografi & jaringan | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="Pencocokan antarmuka"></a><br>Pencocokan antarmuka |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## Manual lengkap
 

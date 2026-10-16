@@ -38,7 +38,13 @@ macOS で手動の場合は先に `xattr -dr com.apple.quarantine traffic66-darw
 | admin のパスワードを設定・リセット（-data 使用時は付ける） | `./traffic66 passwd` |
 | リモートサーバーにターミナル UI で接続 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![概要：未対応の検知、アプリケーション別の帯域と昨日の同じ時刻との比較、上位のクライアントとサービス](images/overview.png)
+## スクリーンショット
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="概要"></a><br>概要 | <a href="images/topn.png"><img src="images/topn.png" alt="上位 66"></a><br>上位 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="地域とネットワーク"></a><br>地域とネットワーク | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="インターフェース照合"></a><br>インターフェース照合 |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## 完全なマニュアル
 

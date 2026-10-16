@@ -41,7 +41,13 @@ macOS von Hand: zuerst `xattr -dr com.apple.quarantine traffic66-darwin-*`. Wind
 | admin-Passwort setzen oder zurücksetzen (ggf. -data DIR) | `./traffic66 passwd` |
 | Terminaloberfläche zu einem entfernten Server | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![Übersicht: offene Befunde, Bandbreite nach Anwendung im Vergleich zur gleichen Zeit gestern, wichtigste Clients und Dienste](images/overview.png)
+## Bildschirmfotos
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="Übersicht"></a><br>Übersicht | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="Geo & Netze"></a><br>Geo & Netze | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="Schnittstellenprüfung"></a><br>Schnittstellenprüfung |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## Vollständiges Handbuch
 

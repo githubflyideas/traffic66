@@ -41,7 +41,13 @@ macOS thủ công: chạy trước `xattr -dr com.apple.quarantine traffic66-dar
 | Đặt hoặc đặt lại mật khẩu admin (thêm -data DIR nếu dùng) | `./traffic66 passwd` |
 | Giao diện terminal tới máy chủ từ xa | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
 
-![Tổng quan: các phát hiện đang mở, băng thông theo ứng dụng so với cùng thời điểm hôm qua, các client và dịch vụ hàng đầu](images/overview.png)
+## Ảnh chụp màn hình
+
+| | |
+|---|---|
+| <a href="images/overview.png"><img src="images/overview.png" alt="Tổng quan"></a><br>Tổng quan | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
+| <a href="images/geo.png"><img src="images/geo.png" alt="Địa lý & mạng"></a><br>Địa lý & mạng | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="Kiểm tra giao diện"></a><br>Kiểm tra giao diện |
+| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
 
 ## Hướng dẫn đầy đủ
 
