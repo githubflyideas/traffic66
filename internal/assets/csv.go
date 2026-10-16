@@ -95,6 +95,23 @@ func id(v int64) string {
 	return strconv.FormatInt(v, 10)
 }
 
+// safeCell keeps a spreadsheet from reading a cell as a formula (CSV
+// injection): a value starting with = + - @ tab or CR gets a leading '.
+// unsafeCell undoes it on import so an export round-trips unchanged.
+func safeCell(v string) string {
+	if v != "" && strings.ContainsRune("=+-@\t\r", rune(v[0])) {
+		return "'" + v
+	}
+	return v
+}
+
+func unsafeCell(v string) string {
+	if len(v) > 1 && v[0] == '\'' && strings.ContainsRune("=+-@\t\r", rune(v[1])) {
+		return v[1:]
+	}
+	return v
+}
+
 // ExportCSV writes one kind of record.
 func (s *Store) ExportCSV(w io.Writer, kind string) error {
 	cols, ok := csvColumns[kind]
@@ -174,6 +191,9 @@ func (s *Store) ExportCSV(w io.Writer, kind string) error {
 		}
 	}
 	for _, r := range rows {
+		for i := range r {
+			r[i] = safeCell(r[i])
+		}
 		if err := c.Write(r); err != nil {
 			return err
 		}
@@ -230,6 +250,7 @@ func (s *Store) ImportCSV(r io.Reader, kind string, apply bool) (Plan, error) {
 	rd := csv.NewReader(r)
 	rd.FieldsPerRecord = -1
 	rd.TrimLeadingSpace = true
+	rd.Comment = '#' // the evaluation notice an unregistered export starts with
 	head, err := rd.Read()
 	if err != nil {
 		return Plan{}, fmt.Errorf("the file has no header row")
@@ -260,7 +281,7 @@ func (s *Store) ImportCSV(r io.Reader, kind string, apply bool) (Plan, error) {
 			if !ok || i >= len(rec) {
 				return ""
 			}
-			return strings.TrimSpace(rec[i])
+			return unsafeCell(strings.TrimSpace(rec[i]))
 		}
 		if strings.TrimSpace(strings.Join(rec, "")) == "" {
 			continue
