@@ -41,6 +41,11 @@ type Waiting struct {
 	Records int `json:"records,omitempty"`
 	// Seconds is roughly how much longer it is worth waiting.
 	Seconds int `json:"seconds,omitempty"`
+	// Since is when the earliest exporter still held at this stage first
+	// sent anything, and ElapsedSec how long ago that was, so a page can
+	// say "waiting x minutes" rather than leave somebody guessing.
+	Since      time.Time `json:"since,omitempty"`
+	ElapsedSec int       `json:"elapsed_sec,omitempty"`
 }
 
 // waitingOn asks the collector what it has and works out which stage it is
@@ -49,31 +54,48 @@ func (s *Server) waitingOn() Waiting {
 	if s.Col == nil {
 		return Waiting{}
 	}
-	return waitingFor(s.Col.Sources(), store.Settle())
+	return waitingFor(s.Col.Sources(), store.Settle(), time.Now())
 }
 
 // waitingFor is the decision itself, over the sources as they are. The
 // order matters: it is the order the stages happen in, so the answer is the
 // earliest one still unfinished, which is the one somebody would otherwise
 // be puzzled by.
-func waitingFor(srcs []collector.SourceInfo, settle time.Duration) Waiting {
+func waitingFor(srcs []collector.SourceInfo, settle time.Duration, now time.Time) Waiting {
 	if len(srcs) == 0 {
 		return Waiting{Reason: WaitNothing}
 	}
 	var held, noTemplate int
+	var tmplSince, sampSince time.Time
+	earliest := func(cur *time.Time, t time.Time) {
+		if !t.IsZero() && (cur.IsZero() || t.Before(*cur)) {
+			*cur = t
+		}
+	}
 	for _, si := range srcs {
 		if si.Templates == 0 && si.NoTemplate > 0 {
 			noTemplate += int(si.NoTemplate)
+			earliest(&tmplSince, si.FirstSeen)
 		}
 		if si.SamplingState == "waiting" {
 			held += si.Pending
+			earliest(&sampSince, si.FirstSeen)
 		}
 	}
+	withSince := func(w Waiting, since time.Time) Waiting {
+		if !since.IsZero() {
+			w.Since = since
+			if d := now.Sub(since); d > 0 {
+				w.ElapsedSec = int(d.Seconds())
+			}
+		}
+		return w
+	}
 	if noTemplate > 0 {
-		return Waiting{Reason: WaitTemplates, Records: noTemplate}
+		return withSince(Waiting{Reason: WaitTemplates, Records: noTemplate}, tmplSince)
 	}
 	if held > 0 {
-		return Waiting{Reason: WaitSampling, Records: held}
+		return withSince(Waiting{Reason: WaitSampling, Records: held}, sampSince)
 	}
 	// Everything is being read and scaled; what is left is the settle
 	// delay, which is why the last few minutes of a chart are marked.
