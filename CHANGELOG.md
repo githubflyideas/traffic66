@@ -3,6 +3,14 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.3.4
+
+- One-line install: `curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh` (Linux, macOS) or `irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex` (Windows) downloads the latest release and starts the collector; `sh -s -- demo` starts the demo instead.
+- Startup prints a summary: web UI addresses, how to sign in, and the IP addresses and UDP ports to point devices at.
+- First run: until a device sends anything, Overview shows this machine's addresses and collector ports with ready-to-paste export commands (MikroTik, Juniper, Arista, softflowd) and copy buttons; the empty-state hint names the actual ports when `-listen` changes them; a new installation opens on the last hour.
+- Help: the full manual is built into the program and shown in the web UI in its language (English otherwise), with a table of contents and copyable commands; it works offline.
+- The README is a short quick start with a command cheat sheet and screenshots; the full manual is docs/MANUAL.md and its translations.
+
 ## 2.3.3
 
 - Built with Go 1.26.9, which fixes standard library vulnerabilities in Go 1.25.14 (among them HTTP/2 and TLS issues) that traffic66 can reach.
