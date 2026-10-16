@@ -1214,7 +1214,7 @@ views.sankey = async (el) => {
       }
     }));
     sEl.innerHTML = s + '</svg>';
-    sEl.querySelectorAll('path[data-l]').forEach(p => { p.onmousemove = e => showTip(e, `<div class="t">${esc(p.dataset.l)}</div><b>${fmtBytes(+p.dataset.v)}</b> <span class="muted">${esc(t('sb.avg'))} ${fmtBps(+p.dataset.v * 8 / Math.max(1, spanMs() / 1000))}</span>`); p.onmouseleave = hideTip; });
+    sEl.querySelectorAll('path[data-l]').forEach(p => { p.onmousemove = e => showTip(e, `<div class="t">${esc(p.dataset.l)}</div><b>${fmtBytes(+p.dataset.v)}</b> <span class="muted">L${+p.dataset.lv + 1} · ${esc(t('sb.avg'))} ${fmtBps(+p.dataset.v * 8 / Math.max(1, spanMs() / 1000))}</span>`); p.onmouseleave = hideTip; });
     sEl.querySelectorAll('[data-k]').forEach(r => r.onclick = e => {
       e.stopPropagation(); const ci = +r.dataset.c, kk = r.dataset.k; if (kk === '__other__') return;
       openPop({k: field[ci], v: kk, label: label(ci, kk)}, r.getBoundingClientRect());
@@ -1257,9 +1257,11 @@ function drawMap(el, w, rows, gl) {
     else p.style.cursor = 'default';
   });
   el.querySelectorAll('.mlines path').forEach(p => {
-    p.onmousemove = e => showTip(e, `<div class="t">${esc(country(p.dataset.from))} ↔ ${esc(country(p.dataset.to))}</div><b>${fmtBytes(+p.dataset.v)}</b> <span class="muted">${esc(t('sb.avg'))} ${fmtBps(+p.dataset.v * 8 / Math.max(1, spanMs() / 1000))}</span>`);
+    p.onmousemove = e => showTip(e, `<div class="t">${esc(country(p.dataset.from))} ↔ ${esc(country(p.dataset.to))}</div><b>${fmtBytes(+p.dataset.v)}</b> <span class="muted">L${+p.dataset.lv + 1} · ${esc(t('sb.avg'))} ${fmtBps(+p.dataset.v * 8 / Math.max(1, spanMs() / 1000))}</span>`);
     p.onmouseleave = hideTip;
   });
+  const mp = el.querySelector('#mappal');
+  if (mp) mp.onchange = () => { try { localStorage.setItem('t66.mappal', mp.value); } catch (e) {} drawMap(el, w, rows, gl); };
   if (gl && !(gl.origins || []).length) el.insertAdjacentHTML('beforeend', `<p class="muted maphint">${esc(t('geo.lines_hint'))}</p>`);
 }
 // Lines from the countries of the internal networks to the remote
@@ -1272,10 +1274,40 @@ function drawMap(el, w, rows, gl) {
 // map's are over the countries': the quietest line and the busiest are
 // usually orders of magnitude apart, and a linear scale would put every
 // line but one in the bottom step.
-// Width is continuous: 1px for no traffic up to 9px for the busiest line,
-// on the square root of its share of the busiest, so area-like perception
-// tracks bytes. Lines are drawn quietest first so busy lines sit on top.
-const lineW = (v, vmax) => 1 + 8 * Math.sqrt(Math.max(0, v) / (vmax || 1));
+// 15 levels: three widths times five shades, light to dark. A line's level
+// is set on a log scale of its share of the busiest line (log10(v/vmax)
+// over the lines' own range, cut into 15 equal steps), not by quantiles:
+// a few huge flows then do not flatten the rest, and equal traffic always
+// gets an equal level. Level l -> width LINE_W[floor(l/5)], shade l%5.
+// The palette follows the theme unless one is picked in the legend.
+const LINE_W = [1.5, 4, 8];
+const LINE_PAL = {
+  gb: ['#7fd6a0', '#3fb8a0', '#1f97b5', '#1f6fb8', '#163f8f'],
+  or: ['#ffc266', '#ff9a3c', '#f26a2e', '#d63a2a', '#9e1622'],
+  pp: ['#f7a8d0', '#e57ab8', '#c34fa8', '#8e3a9e', '#5a2585']
+};
+// theme -> palette when the choice is "follow theme"
+const THEME_PAL = {light: 'or', gray: 'gb', black: 'pp', teal: 'gb', orange: 'or'};
+const curTheme = () => window.t66Theme ? t66Theme.get() : 'light';
+function linePalName() {
+  let v = 'auto';
+  try { v = localStorage.getItem('t66.mappal') || 'auto'; } catch (e) {}
+  return LINE_PAL[v] ? v : THEME_PAL[curTheme()] || 'or';
+}
+function linePal() {
+  const p = LINE_PAL[linePalName()];
+  // on the black theme the two darkest shades would sink into the
+  // background: lift them towards white so every level stays visible
+  return curTheme() === 'black' ? p.map((c, i) => i >= 3 ? `color-mix(in oklab, ${c} ${i === 3 ? 75 : 60}%, #fff)` : c) : p;
+}
+function lineLevel(v, vmin, vmax) {
+  if (!(v > 0) || !(vmax > vmin)) return v > 0 ? 14 : 0;
+  const lo = Math.log10(vmin), hi = Math.log10(vmax);
+  return Math.max(0, Math.min(14, Math.floor(15 * (Math.log10(v) - lo) / (hi - lo))));
+}
+// lower byte bound of level l (inverse of lineLevel)
+const levelFrom = (l, vmin, vmax) => Math.pow(10, Math.log10(vmin) + (Math.log10(vmax) - Math.log10(vmin)) * l / 15);
+const lineStyle = l => `--lw:${LINE_W[Math.floor(l / 5)]}px;--lc:${linePal()[l % 5]}`;
 const geoLines = (w, gl) => (gl && gl.lines || []).filter(l => w.p[l.from] && w.p[l.to]).slice(0, 60);
 
 // The lines have a scale of their own, over their own range: a line is one
@@ -1284,25 +1316,31 @@ const geoLines = (w, gl) => (gl && gl.lines || []).filter(l => w.p[l.from] && w.
 function lineLegend(w, gl) {
   const vals = geoLines(w, gl).map(l => l.v).filter(x => x > 0);
   if (!vals.length) return '';
-  const vmax = Math.max(...vals), vmin = Math.min(...vals);
-  const samples = vmin < vmax ? [vmin, vmin + (vmax - vmin) / 4, vmax / 4 > vmin ? vmax / 4 : (vmin + vmax) / 2, vmax] : [vmax];
-  return `<div class="maplegend"><span class="muted">${t('geo.lines_scale')}</span>` +
-    samples.map(v => `<i class="lw" style="height:${lineW(v, vmax).toFixed(1)}px" title="${esc(fmtBytes(v))}"></i>`).join('') +
-    `<span class="muted">${esc(fmtBytes(vmin))} – ${esc(fmtBytes(vmax))}</span></div>`;
+  const vmax = Math.max(...vals), vmin = Math.min(...vals), one = !(vmax > vmin);
+  const cur = (() => { try { return localStorage.getItem('t66.mappal') || 'auto'; } catch (e) { return 'auto'; } })();
+  let g = '<div class="lgrid">';
+  for (let l = 0; l < 15; l++) {
+    const rng = one ? fmtBytes(vmax) : `${fmtBytes(levelFrom(l, vmin, vmax))} – ${fmtBytes(levelFrom(l + 1, vmin, vmax))}`;
+    g += `<span class="lcell" title="L${l + 1}: ${esc(rng)}"><i class="lw" style="${lineStyle(l)}"></i><small>${esc(rng)}</small></span>`;
+  }
+  g += '</div>';
+  return `<div class="maplegend mlegend"><span class="muted">${t('geo.lines_scale')}</span>
+    <label class="muted" style="margin-inline-start:auto">${esc(t('geo.line_pal'))} <select id="mappal">${['auto', 'gb', 'or', 'pp'].map(k => `<option value="${k}"${k === cur ? ' selected' : ''}>${esc(t('geo.pal_' + k))}</option>`).join('')}</select></label></div>${g}`;
 }
 function mapLines(w, gl) {
   const lines = geoLines(w, gl);
   if (!lines.length) return '';
-  const vmax = Math.max(...lines.map(l => l.v), 0);
+  const pos = lines.map(l => l.v).filter(x => x > 0);
+  const vmax = Math.max(0, ...pos), vmin = pos.length ? Math.min(...pos) : 0;
   let s = '<g class="mlines">';
   [...lines].sort((a, b) => a.v - b.v).forEach(l => {
     const [x0, y0] = w.p[l.from], [x1, y1] = w.p[l.to], dx = x1 - x0, dy = y1 - y0, dist = Math.hypot(dx, dy);
     // bend each line upwards by a fifth of its length
     const mx = (x0 + x1) / 2 + dy * .2 * Math.sign(dx || 1) * -1, my = (y0 + y1) / 2 - Math.abs(dx) * .2 - dist * .05;
-    const lw = lineW(l.v, vmax), r = vmax > 0 ? Math.sqrt(l.v / vmax) : 1;
-    s += `<path d="M${x0} ${y0}Q${mx.toFixed(1)} ${my.toFixed(1)} ${x1} ${y1}" style="stroke-width:${lw.toFixed(2)}px;stroke-opacity:${(0.55 + 0.4 * r).toFixed(2)}" data-from="${l.from}" data-to="${l.to}" data-v="${l.v}"/>`;
+    const lv = lineLevel(l.v, vmin, vmax), lw = LINE_W[Math.floor(lv / 5)];
+    s += `<path d="M${x0} ${y0}Q${mx.toFixed(1)} ${my.toFixed(1)} ${x1} ${y1}" class="lv${lv}" style="${lineStyle(lv)}" data-lv="${lv}" data-from="${l.from}" data-to="${l.to}" data-v="${l.v}"/>`;
     // the dot at the far end is sized from the line's own width
-    s += `<circle cx="${x1}" cy="${y1}" r="${(lw / 2 + 1.5).toFixed(1)}" class="mend"/>`;
+    s += `<circle cx="${x1}" cy="${y1}" r="${(lw / 2 + 1.5).toFixed(1)}" class="mend" style="--lc:${linePal()[lv % 5]}"/>`;
   });
   (gl.origins || []).filter(cc => w.p[cc]).forEach(cc => { const [x, y] = w.p[cc]; s += `<circle cx="${x}" cy="${y}" r="9" class="morigin-ring"/><circle cx="${x}" cy="${y}" r="5" class="morigin"/>`; });
   return s + '</g>';
