@@ -3,6 +3,18 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.3.1
+
+中文
+- 地理页面国家/地区间流量连线改为 15 档：3 种线宽（1.5 / 4 / 8 px）× 同一色系由浅到深 5 种颜色；按流量的对数比例分档，少数大流量不会把其余连线压成同一档。
+- 连线配色跟随主题（浅色、橙色→橙红；灰色、青色→绿蓝；黑色→粉紫），也可在图例中手动选择绿蓝、橙红或粉紫；黑色主题下最深两档自动提亮以保持可见。
+- 连线图例改为 3×5 网格，标出每一档的流量范围；悬停显示流量、档位和平均速率。
+
+English
+- Geo map: lines between countries/regions now use 15 levels — 3 widths (1.5 / 4 / 8 px) × 5 shades of one palette, light to dark — binned on a log scale of traffic so a few huge flows do not flatten the rest.
+- The line palette follows the theme (Light, Orange → orange–red; Gray, Teal → green–blue; Black → pink–purple) or can be picked in the legend; on the Black theme the two darkest shades are lifted so every level stays visible.
+- The line legend is a 3×5 grid with the traffic range of each level; hovering a line shows its traffic, level and average rate.
+
 ## 2.3.0
 
 中文
