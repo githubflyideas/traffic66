@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>traffic66</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232a78d6'/%3E%3Cpath d='M3 11l3-4 3 2 4-5' stroke='white' stroke-width='1.8' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app" id="app" hidden>
+<aside>
+  <div class="brand"><img class="logo" src="/logo" alt="traffic66"></div>
+  <a class="licbadge" id="licBadge" href="#v=sources" hidden></a>
+  <div class="ver" id="ver"><span id="verNo"></span><span id="clock"></span></div>
+  <nav class="dash" id="nav" aria-label="Dashboards">
+    <button data-v="overview"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span data-i="nav.overview"></span></button>
+    <button data-v="topn"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke-width="3"/></svg><span data-i="nav.topn"></span></button>
+    <button data-v="traffic"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span data-i="nav.traffic"></span></button>
+    <button data-v="records"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7"/></svg><span data-i="nav.records"></span></button>
+    <button data-v="sankey"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h5c5 0 5-6 12-6M8 12c5 0 5 6 12 6"/><path d="M17 3l3 3-3 3M17 15l3 3-3 3"/></svg><span data-i="nav.sankey"></span></button>
+    <button data-v="ifaces"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10v4M11 10v4M15 10v4"/></svg><span data-i="nav.ifaces"></span></button>
+    <button data-v="billing"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M9 20V5M14 20v-8M19 20V8"/><path d="M3 20h18"/></svg><span data-i="nav.billing"></span></button>
+    <hr>
+    <button data-v="findings"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg><span data-i="nav.findings"></span><span class="badge crit" id="findBadge" hidden></span></button>
+    <button data-v="threats"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg><span data-i="nav.threats"></span></button>
+    <button data-v="geo"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg><span data-i="nav.geo"></span></button>
+    <hr>
+    <div class="navgrp" id="grpAssets">
+      <button class="grphead" data-grp="assets" aria-expanded="true" aria-controls="grpAssetsItems"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5-9 5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg><span data-i="nav.assets"></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10l4 4 4-4"/></svg></button>
+      <div class="grpitems" id="grpAssetsItems">
+        <button data-v="racks"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M7 7h10M7 11h10M7 15h10"/></svg><span data-i="nav.racks"></span></button>
+        <button data-v="ipam"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v4H4zM4 13h16v4H4z"/><path d="M7.5 9h.01M7.5 15h.01" stroke-width="2.5"/></svg><span data-i="nav.ipam"></span></button>
+        <button data-v="names"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg><span data-i="src.names"></span></button>
+      </div>
+    </div>
+    <hr>
+    <button data-v="sources"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span data-i="nav.sources"></span><span class="badge" id="srcBadge" hidden></span></button>
+    <button data-v="sandbox"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg><span data-i="nav.sandbox"></span></button>
+    <hr>
+    <button data-v="cleanup"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg><span data-i="nav.cleanup"></span></button>
+    <div class="demo" id="demo" hidden></div>
+  </nav>
+  <div class="self" id="self"></div>
+  <div class="foot">
+    <div class="pick"><select id="lang" aria-label="Language"></select><button type="button" id="theme"><i></i><span></span></button></div>
+    <button class="linkbtn" id="acct"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span id="acctName" data-i="nav.account"></span></button>
+    <button class="linkbtn" id="logout"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 8l-4 4 4 4M6 12h10"/></svg><span data-i="top.logout"></span></button>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="row1">
+      <h1 id="title"></h1>
+      <label class="ifsel" id="ifselWrap" hidden><span data-i="if.picker"></span><select id="ifsel"></select></label>
+      <div class="range" role="group" id="range"></div>
+      <span class="refresh" id="refresh"></span>
+      <button class="btn" id="share" data-i="top.copy"></button>
+    </div>
+    <div class="sbbar" id="sbbar" hidden></div>
+    <div class="fbar" id="fbar"></div>
+    <div class="row2" id="filters" aria-live="polite"></div>
+  </header>
+  <main id="main">
+    <section class="view" id="v-overview"></section>
+    <section class="view" id="v-findings"></section>
+    <section class="view" id="v-topn"></section>
+    <section class="view" id="v-traffic"></section>
+    <section class="view" id="v-detail"></section>
+    <section class="view" id="v-sankey"></section>
+    <section class="view" id="v-geo"></section>
+    <section class="view" id="v-threats"></section>
+    <section class="view" id="v-records"></section>
+    <section class="view" id="v-racks"></section>
+    <section class="view" id="v-devices"></section>
+    <section class="view" id="v-ipam"></section>
+    <section class="view" id="v-names"></section>
+    <section class="view" id="v-cleanup"></section>
+    <section class="view" id="v-account"></section>
+    <section class="view" id="v-sandbox"></section>
+    <section class="view" id="v-ifaces"></section>
+    <section class="view" id="v-billing"></section>
+    <section class="view" id="v-sources"></section>
+  </main>
+  <footer class="lic" id="lic" hidden></footer>
+</div>
+</div>
+
+<div class="login" id="login" hidden>
+  <img class="logo" src="/logo" alt="traffic66" width="272" height="92">
+  <form id="loginForm" class="panel">
+    <h2 data-i="login.title"></h2>
+    <label><span data-i="login.user"></span><input name="user" autocomplete="username" required></label>
+    <label><span data-i="login.password"></span><input name="password" type="password" autocomplete="current-password" required></label>
+    <p class="hint" id="loginHint" hidden></p>
+    <p class="err" id="loginErr" hidden></p>
+    <button class="primary" data-i="login.go"></button>
+  </form>
+</div>
+
+<div class="pop" id="pop" role="menu"></div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>
