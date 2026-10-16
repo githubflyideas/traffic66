@@ -278,11 +278,12 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ![オフライン分析：キャプチャファイルとパケット数、フロー数、時間](images/sandbox.png)
 
-**ターミナル UI**：traffic66 のマシンで `traffic66 tui`、または `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`。キー操作：1–8 ページ、Enter 操作、f これだけ表示、x 除外、t 時間範囲、w ブラウザーで開く、q 終了。`-lang` で言語を選びます。
+**ターミナル UI**：traffic66 のマシンで `traffic66 tui`、または `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`。
+3 つのページ：**1 トップ**（クライアント・サーバー・アプリケーション・ポート・ネットワーク (AS)・国/地域をレート順に表示、← → で切替、Enter で操作）、**2 インターフェース**（機器・インターフェースごとのレート、使用率、照合、機器のサンプリングと損失。Enter で推移と上位ホスト/アプリを展開）、**3 検索**（`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` のような条件でフローレコードを表示）。キー操作：`/` フィルター、Backspace/`c` 削除/解除、`t` 期間（5 分〜24 時間）、`u` bit/s・バイト・パケット/秒、`p` 一時停止、`+`/`-` 更新間隔、`w` 同じ表示をブラウザーで開く、`?` ヘルプ、`q` 終了。`-lang` で言語を、`NO_COLOR` で色なしを選べます。
 
-![ターミナル UI：概要](images/tui-overview.png)
+![ターミナル UI：トップ](images/tui-top.png)
 
-![ターミナル UI：上位 66 の会話](images/tui-topn.png)
+![ターミナル UI：インターフェース](images/tui-interfaces.png)
 
 **ローカルキャプチャ** はローカルのインターフェースからフローを作ります。スイッチのミラーポートにつないだポートが最適です。`traffic66 interfaces` で一覧を表示し、`-capture eth1` でキャプチャします。Windows では：
 

@@ -278,11 +278,12 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 
 ![오프라인 분석: 캡처 파일과 패킷, 플로, 시간](images/sandbox.png)
 
-**터미널 UI**: traffic66 서버에서 `traffic66 tui`, 또는 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`. 키: 1–8 페이지, Enter 작업, f 이것만 보기, x 제외, t 시간 범위, w 브라우저에서 열기, q 종료. `-lang`으로 언어를 고릅니다.
+**터미널 UI**: traffic66 서버에서 `traffic66 tui`, 또는 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
+세 페이지: **1 상위**(클라이언트, 서버, 애플리케이션, 포트, 네트워크(AS), 국가/지역을 속도순으로, ← → 전환, Enter 작업), **2 인터페이스**(장비·인터페이스별 속도, 사용률, 대조 및 장비의 샘플링과 손실; Enter로 추이와 상위 호스트/앱 펼치기), **3 검색**(`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` 같은 조건으로 플로 레코드 조회). 키: `/` 필터, Backspace/`c` 제거/모두 지우기, `t` 기간(5분~24시간), `u` bit/s·바이트·패킷/초, `p` 일시정지, `+`/`-` 새로고침 간격, `w` 같은 보기를 브라우저에서 열기, `?` 도움말, `q` 종료. `-lang`으로 언어를, `NO_COLOR`로 색 없음을 고릅니다.
 
-![터미널 UI: 개요](images/tui-overview.png)
+![터미널 UI: 상위](images/tui-top.png)
 
-![터미널 UI: Top 66 대화](images/tui-topn.png)
+![터미널 UI: 인터페이스](images/tui-interfaces.png)
 
 **로컬 캡처**는 로컬 인터페이스에서 플로를 만듭니다. 스위치의 미러 포트에 연결한 포트가 가장 좋습니다. `traffic66 interfaces`로 목록을 보고, `-capture eth1`로 캡처합니다. Windows에서는:
 

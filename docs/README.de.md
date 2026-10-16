@@ -379,12 +379,11 @@ werden Flows, nicht Paketinhalte.
 
 **Terminaloberfläche**: `traffic66 tui` auf dem traffic66-Rechner oder
 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
-Tasten: 1–8 Seiten, Enter Aktionen, f nur dies anzeigen, x ausschließen,
-t Zeitraum, w im Browser öffnen, q beenden; `-lang` wählt die Sprache.
+Drei Seiten: **1 Top** (Clients, Server, Anwendungen, Ports, Netze (AS) und Länder/Regionen nach Rate; ← → wechseln, Enter für Aktionen), **2 Schnittstellen** (Rate, Auslastung und Abgleich je Gerät und Schnittstelle, dazu Sampling und Verlust jedes Geräts; Enter klappt Verlauf und Top-Hosts/-Anwendungen auf) und **3 Suche** (Flow-Datensätze für Filter wie `ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1`). Tasten: `/` Filter, Rücktaste/`c` entfernen/leeren, `t` Zeitraum (5 Min. bis 24 Stunden), `u` Bit/s, Bytes oder Pakete/s, `p` Pause, `+`/`-` Aktualisierungsintervall, `w` dieselbe Ansicht im Browser, `?` Hilfe, `q` Beenden; `-lang` wählt die Sprache, `NO_COLOR` schaltet Farben ab.
 
-![Terminaloberfläche: Übersicht](images/tui-overview.png)
+![Terminaloberfläche: Top](images/tui-top.png)
 
-![Terminaloberfläche: Top 66 Verbindungen](images/tui-topn.png)
+![Terminaloberfläche: Schnittstellen](images/tui-interfaces.png)
 
 **Lokale Erfassung** bildet Flows aus einer lokalen Schnittstelle, am besten
 einem Port, der mit dem Mirror-Port eines Switches verbunden ist:

@@ -348,6 +348,10 @@ Keys: `/` filter, Backspace/`c` remove/clear, `t` time range (5 min to
 interval, `w` open the same view in the browser, `?` help, `q` quit; `-lang`
 picks the language and `NO_COLOR` turns colours off.
 
+![Terminal UI: Top](docs/images/tui-top.png)
+
+![Terminal UI: Interfaces](docs/images/tui-interfaces.png)
+
 **Local capture** builds flows from a local interface, best a port
 connected to a switch's mirror port: `traffic66 interfaces` lists them,
 `-capture eth1` captures. On Windows:

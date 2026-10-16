@@ -384,13 +384,11 @@ paquets.
 
 **Interface terminal** : `traffic66 tui` sur la machine traffic66, ou
 `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
-Touches : 1–8 pages, Entrée actions, f afficher seulement, x exclure,
-t plage de temps, w ouvrir dans un navigateur, q quitter ; `-lang` choisit
-la langue.
+Trois pages : **1 Top** (clients, serveurs, applications, ports, réseaux (AS) et pays/régions par débit ; ← → pour changer, Entrée pour les actions), **2 Interfaces** (débit, utilisation et rapprochement par équipement et interface, avec l'échantillonnage et la perte de chaque équipement ; Entrée déplie la tendance et les hôtes/applications principaux) et **3 Recherche** (enregistrements de flux pour des filtres comme `ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1`). Touches : `/` filtre, Retour arrière/`c` retirer/effacer, `t` période (5 min à 24 heures), `u` bits/s, octets ou paquets/s, `p` pause, `+`/`-` intervalle de rafraîchissement, `w` ouvre la même vue dans le navigateur, `?` aide, `q` quitter ; `-lang` choisit la langue et `NO_COLOR` désactive les couleurs.
 
-![Interface terminal : vue d'ensemble](images/tui-overview.png)
+![Interface terminal : Top](images/tui-top.png)
 
-![Interface terminal : Top 66 des conversations](images/tui-topn.png)
+![Interface terminal : interfaces](images/tui-interfaces.png)
 
 **Capture locale** construit des flux à partir d'une interface locale,
 idéalement un port relié au port miroir d'un switch : `traffic66 interfaces`
