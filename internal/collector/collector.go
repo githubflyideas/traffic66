@@ -351,24 +351,40 @@ type SourceInfo struct {
 	LostRecords uint64  `json:"lost_records"`
 	// the loss split by where it happened: on the way (gaps in sequence
 	// numbers) and in the device itself (sFlow's own drop counter)
-	TransitPct    float64       `json:"transit_pct"`
-	DropPct       float64       `json:"drop_pct"`
-	Sampling      string        `json:"sampling"`
-	SamplingState string        `json:"sampling_state"`
-	Effective     float64       `json:"effective,omitempty"`
-	LossComp      float64       `json:"loss_comp,omitempty"`
-	Pending       int           `json:"pending"`
-	NoTemplate    uint64        `json:"no_template"`
-	Templates     int           `json:"templates"`
-	Counters      uint64        `json:"counters"`
-	DecodeErrors  uint64        `json:"decode_errors"`
-	LastSeen      time.Time     `json:"last_seen"`
-	ClockSkew     time.Duration `json:"clock_skew_ns"`
+	TransitPct    float64   `json:"transit_pct"`
+	DropPct       float64   `json:"drop_pct"`
+	Sampling      string    `json:"sampling"`
+	SamplingState string    `json:"sampling_state"`
+	Effective     float64   `json:"effective,omitempty"`
+	LossComp      float64   `json:"loss_comp,omitempty"`
+	Pending       int       `json:"pending"`
+	NoTemplate    uint64    `json:"no_template"`
+	Templates     int       `json:"templates"`
+	Counters      uint64    `json:"counters"`
+	DecodeErrors  uint64    `json:"decode_errors"`
+	LastSeen      time.Time `json:"last_seen"`
+	FirstSeen     time.Time `json:"first_seen,omitempty"`
+	// WaitStep is what this exporter's data is held for: "templates" or
+	// "sampling"; empty when nothing is held.
+	WaitStep  string        `json:"wait_step,omitempty"`
+	ClockSkew time.Duration `json:"clock_skew_ns"`
 	// NetFlow/IPFIX: the templates received (id and field ids), shown when
 	// the sampling rate is not declared
 	TemplateInfo []string `json:"template_info,omitempty"`
 	// NetFlow/IPFIX: whether the templates carry flowDirection ("yes"/"no")
 	DirField string `json:"dir_field,omitempty"`
+}
+
+// WaitStep names the stage an exporter's records are held at: templates
+// first (nothing can be read without one), then the sampling rate.
+func WaitStep(templates int, noTemplate uint64, samplingState string) string {
+	switch {
+	case templates == 0 && noTemplate > 0:
+		return "templates"
+	case samplingState == "waiting":
+		return "sampling"
+	}
+	return ""
 }
 
 // Sources lists every exporter seen.
@@ -398,7 +414,8 @@ func (c *Collector) Sources() []SourceInfo {
 			Packets: s.Packets, Records: s.Records, LostPct: lost, LostRecords: s.LostRecords, TransitPct: lost,
 			Sampling: samp, SamplingState: s.SamplingState, Pending: s.Pending, NoTemplate: s.NoTemplate,
 			Templates: s.Templates, LastSeen: s.LastSeen, ClockSkew: s.ClockSkew, LossComp: s.LossComp,
-			TemplateInfo: s.TemplateInfo, DirField: s.DirField,
+			TemplateInfo: s.TemplateInfo, DirField: s.DirField, FirstSeen: s.FirstSeen,
+			WaitStep: WaitStep(s.Templates, s.NoTemplate, s.SamplingState),
 		})
 	}
 	c.mu.Lock()

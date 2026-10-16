@@ -39,8 +39,11 @@ type Stats struct {
 	Manual   bool // the rate was set by hand (sampling= in the names)
 	// LossComp is the multiplier currently applied to make up for records
 	// lost in transit (1 = no loss).
-	LossComp  float64
-	LastSeen  time.Time
+	LossComp float64
+	LastSeen time.Time
+	// FirstSeen is when the first datagram of this session arrived, so a
+	// page can say how long it has been waiting for a template or a rate.
+	FirstSeen time.Time
 	ClockSkew time.Duration
 }
 
@@ -487,6 +490,9 @@ func (s *session) updateComp(recv, lost float64, now time.Time) {
 func (s *session) touch(now time.Time, exportTime time.Time) {
 	s.stats.Packets++
 	s.stats.LastSeen = now
+	if s.stats.FirstSeen.IsZero() {
+		s.stats.FirstSeen = now
+	}
 	if !exportTime.IsZero() {
 		s.stats.ClockSkew = exportTime.Sub(now)
 	}

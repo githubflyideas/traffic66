@@ -243,12 +243,17 @@ function ago(ms) {
 // sampling rate, or for the most recent minutes to settle. Saying only
 // "no data" there reads as a fault, and sends somebody to change ports
 // and firewall rules while the collector is about to finish.
+// waitedFor says how long the collector has been at this stage, from the
+// server's elapsed_sec, so "up to about 15 minutes" can be read against it.
+function waitedFor(w) {
+  return w.elapsed_sec > 0 ? ' ' + t('wait.elapsed', {m: Math.max(1, Math.floor(w.elapsed_sec / 60))}) : '';
+}
 function emptyText() {
   const w = waiting;
   if (!w || !w.reason) return t('empty.nodata');
   if (w.reason === 'nothing') return t('empty.first');
-  if (w.reason === 'templates') return t('wait.templates', {n: nf(w.records || 0)});
-  if (w.reason === 'sampling') return t('wait.sampling', {n: nf(w.records || 0)});
+  if (w.reason === 'templates') return t('wait.templates', {n: nf(w.records || 0)}) + waitedFor(w);
+  if (w.reason === 'sampling') return t('wait.sampling', {n: nf(w.records || 0)}) + waitedFor(w);
   if (w.reason === 'settling') return t('wait.settling', {n: Math.ceil((w.seconds || 0) / 60)});
   return t('empty.nodata');
 }
@@ -2343,7 +2348,7 @@ views.sources = async (el) => {
     const kind = s.status;
     return `<tr class="${s.issues?.length ? 'has-fix' : ''}"><td>${s.name ? esc(s.name) + ' ' : ''}<span class="muted" style="font-size:12.5px">${esc(s.exporter)}${s.domain ? ' / ' + s.domain : ''}</span>${obsLine(s)}</td>
       <td class="nw">${esc(s.proto)}</td><td class="num">${nf(s.rec_per_sec, 1)}</td>
-      <td class="nw">${s.sampling ? esc(s.sampling) : (s.sampling_state === 'waiting' ? '<span class="muted">?</span>' : '1:1')}${s.sampling_state === 'manual' ? ` <span class="muted">(${esc(t('src.manual'))})</span>` : ''}${s.effective ? ` <span class="muted">(${esc(t('src.effective', {v: '1:' + nf(s.effective)}))})</span>` : ''}</td>
+      <td class="nw">${s.sampling ? esc(s.sampling) : (s.sampling_state === 'waiting' ? '<span class="muted">?</span>' : '1:1')}${s.sampling_state === 'manual' ? ` <span class="muted">(${esc(t('src.manual'))})</span>` : ''}${s.effective ? ` <span class="muted">(${esc(t('src.effective', {v: '1:' + nf(s.effective)}))})</span>` : ''}${s.wait_step ? `<br><span class="muted" style="font-size:12px">${esc(t('src.wait_' + s.wait_step))}${s.first_seen ? ' · ' + esc(t('wait.elapsed', {m: Math.max(1, Math.floor((Date.now() - Date.parse(s.first_seen)) / 60000))})) : ''}</span>` : ''}</td>
       <td class="num">${nf(s.lost_pct, 2)}%</td><td class="nw muted">${s.last_seen ? ago(Date.parse(s.last_seen)) : ''}</td>
       <td>${status(kind, t('st.' + kind))}</td>
       ${admOnly(`<td class="nw" style="text-align:end">${s.blocked
