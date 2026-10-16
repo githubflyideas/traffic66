@@ -105,6 +105,7 @@ On Windows, write `traffic66.exe` instead of `./traffic66` (PowerShell: `.\traff
 ## FAQ
 
 **No data showing.** Check that the device exports to this computer's IP and the right UDP port (6343 / 2055 / 4739), that the firewall allows those UDP ports inbound, and wait a minute: NetFlow/IPFIX devices often send records only after flows end or time out.
+NetFlow v9 and IPFIX need the device's template before records can be decoded, and long flows are exported only at the active timeout: set template refresh and active timeout to 60 s on the device. NetFlow v5, sFlow and local capture show up immediately.
 
 **Can't find the interface name.** Run `traffic66.exe interfaces` (Windows) or `./traffic66 interfaces` (Linux, macOS); it lists the names and numbers `-capture` accepts.
 
