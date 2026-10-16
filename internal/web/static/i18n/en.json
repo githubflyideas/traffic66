@@ -828,5 +828,6 @@
 "ob.ports": "UDP ports:",
 "ob.step2": "It appears under Settings within seconds, and this page fills in a minute or two later.",
 "ob.try": "Or paste one of these, already set to this machine's address and ports:",
-"ob.copy": "Copy"
+"ob.copy": "Copy",
+"nav.help": "Help"
 }

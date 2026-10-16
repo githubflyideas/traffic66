@@ -828,5 +828,6 @@
 "ob.ports": "Port UDP:",
 "ob.step2": "Perangkat muncul di Pengaturan dalam hitungan detik, dan halaman ini terisi satu-dua menit kemudian.",
 "ob.try": "Atau tempel salah satu perintah ini, sudah berisi alamat dan port mesin ini:",
-"ob.copy": "Salin"
+"ob.copy": "Salin",
+"nav.help": "Bantuan"
 }

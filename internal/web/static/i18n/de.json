@@ -828,5 +828,6 @@
 "ob.ports": "UDP-Ports:",
 "ob.step2": "Es erscheint binnen Sekunden unter Einstellungen; diese Seite füllt sich ein bis zwei Minuten später.",
 "ob.try": "Oder fügen Sie einen dieser Befehle ein, schon mit Adresse und Ports dieses Rechners:",
-"ob.copy": "Kopieren"
+"ob.copy": "Kopieren",
+"nav.help": "Hilfe"
 }

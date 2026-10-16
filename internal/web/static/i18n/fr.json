@@ -828,5 +828,6 @@
 "ob.ports": "Ports UDP :",
 "ob.step2": "Il apparaît dans Réglages en quelques secondes, et cette page se remplit une ou deux minutes plus tard.",
 "ob.try": "Ou collez l'une de ces commandes, déjà réglées sur l'adresse et les ports de cette machine :",
-"ob.copy": "Copier"
+"ob.copy": "Copier",
+"nav.help": "Aide"
 }

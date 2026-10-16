@@ -139,6 +139,8 @@ func (s *Server) Handler() http.Handler {
 	// of one they can forget to make at all.
 	adminAPI := func(pattern string, h http.HandlerFunc) { api(pattern, s.adminOnly(h)) }
 	api("GET /api/status", s.status)
+	api("GET /api/manual", s.manual)
+	api("GET /api/manual/images/{name}", s.manualImage)
 	api("GET /api/me", s.me)
 	api("POST /api/password", s.changePassword)
 	api("GET /api/users", s.listUsers)

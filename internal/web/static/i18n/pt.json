@@ -828,5 +828,6 @@
 "ob.ports": "Portas UDP:",
 "ob.step2": "Ele aparece em Configurações em segundos, e esta página se preenche um ou dois minutos depois.",
 "ob.try": "Ou cole um destes comandos, já com o endereço e as portas desta máquina:",
-"ob.copy": "Copiar"
+"ob.copy": "Copiar",
+"nav.help": "Ajuda"
 }
