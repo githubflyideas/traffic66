@@ -466,4 +466,4 @@ Verbindungen über 1 Stunde etwa 9 s.
 | `address already in use` | Andere Ports mit `-addr` oder `-listen` wählen |
 | Windows: "Der Computer wurde durch Windows geschützt" | **Weitere Informationen** → **Trotzdem ausführen** |
 
-Aus dem Quellcode bauen: Go 1.24 und ein C-Compiler, dann `scripts/build.sh 0.1.0 traffic66`.
+Aus dem Quellcode bauen: Go 1.25 und ein C-Compiler, dann `scripts/build.sh 0.1.0 traffic66`.

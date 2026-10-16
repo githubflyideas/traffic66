@@ -336,4 +336,4 @@ Web UI は平文の HTTP です。信頼できないネットワークでは `-a
 | `address already in use` | `-addr` または `-listen` で別のポートを指定 |
 | Windows："Windows によって PC が保護されました" | **詳細情報** → **実行** |
 
-ソースからのビルド：Go 1.24 と C コンパイラーを用意し、`scripts/build.sh 0.1.0 traffic66` を実行します。
+ソースからのビルド：Go 1.25 と C コンパイラーを用意し、`scripts/build.sh 0.1.0 traffic66` を実行します。

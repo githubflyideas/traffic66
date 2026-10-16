@@ -497,4 +497,4 @@ take under 0.2 s; a 1-hour Top 66 of all conversations about 9 s.
 | `address already in use` | Choose other ports with `-addr` or `-listen` |
 | Windows "protected your PC" | **More info** → **Run anyway** |
 
-Build from source: Go 1.24 and a C compiler, then `scripts/build.sh 0.1.0 traffic66`.
+Build from source: Go 1.25 and a C compiler, then `scripts/build.sh 0.1.0 traffic66`.

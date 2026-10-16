@@ -446,6 +446,6 @@ traffic66.example.com --to 127.0.0.1:8066`) یا SSH tunnel کے ذریعے۔ UD
 | `address already in use` | `-addr` یا `-listen` سے دوسرے ports چنیں |
 | Windows "protected your PC" | **More info** (مزید معلومات) → **Run anyway** (پھر بھی چلائیں) |
 
-سورس سے بِلڈ: Go 1.24 اور ایک C compiler، پھر `scripts/build.sh 0.1.0 traffic66`۔
+سورس سے بِلڈ: Go 1.25 اور ایک C compiler، پھر `scripts/build.sh 0.1.0 traffic66`۔
 
 </div>

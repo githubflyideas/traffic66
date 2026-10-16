@@ -433,6 +433,6 @@ SNMP نصًا صريحًا؛ استخدم مجتمعات للقراءة فقط.
 | `address already in use` | اختر منافذ أخرى بـ `-addr` أو `-listen` |
 | Windows "protected your PC" | **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال) |
 
-البناء من المصدر: Go 1.24 ومترجم C، ثم `scripts/build.sh 0.1.0 traffic66`.
+البناء من المصدر: Go 1.25 ومترجم C، ثم `scripts/build.sh 0.1.0 traffic66`.
 
 </div>

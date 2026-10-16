@@ -447,4 +447,4 @@ bộ phiên hội thoại mất khoảng 9 giây.
 | `address already in use` | Chọn cổng khác bằng `-addr` hoặc `-listen` |
 | Windows báo "Windows đã bảo vệ PC của bạn" | **Thông tin thêm** → **Vẫn chạy** |
 
-Biên dịch từ mã nguồn: Go 1.24 và một trình biên dịch C, sau đó chạy `scripts/build.sh 0.1.0 traffic66`.
+Biên dịch từ mã nguồn: Go 1.25 và một trình biên dịch C, sau đó chạy `scripts/build.sh 0.1.0 traffic66`.
