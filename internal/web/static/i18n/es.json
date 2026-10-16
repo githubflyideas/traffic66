@@ -327,7 +327,7 @@
 "logo.sub": "Se muestra en la página de inicio de sesión y arriba del menú",
 "logo.upload": "Subir un logotipo…",
 "logo.reset": "Usar el logotipo integrado",
-"logo.hint": "PNG, SVG, JPEG, WebP o GIF, hasta 1 MB. Lo ideal es 272 × 92 píxeles; otros tamaños se ajustan.",
+"logo.hint": "PNG, SVG, JPEG, WebP o GIF, hasta 1 MB. Recomendado: 416 × 144 píxeles (se muestra a 208 × 72, el ancho de la barra lateral), PNG o SVG con fondo transparente; otros tamaños se ajustan.",
 "logo.saved": "Logotipo guardado",
 "sankey.title_conv": "Cliente → servicio → servidor",
 "sankey.by_conv": "Cliente → servidor",

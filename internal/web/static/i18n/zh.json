@@ -327,7 +327,7 @@
 "logo.sub": "显示在登录页和菜单顶部",
 "logo.upload": "上传 Logo…",
 "logo.reset": "恢复内置 Logo",
-"logo.hint": "PNG、SVG、JPEG、WebP 或 GIF，最大 1 MB。最佳尺寸 272 × 92 像素，其他尺寸会自动缩放。",
+"logo.hint": "PNG、SVG、JPEG、WebP 或 GIF，最大 1 MB。推荐 416 × 144 像素（按 208 × 72 显示，与左侧栏同宽），PNG 或 SVG、透明背景；其他尺寸会按比例缩放。",
 "logo.saved": "Logo 已保存",
 "sankey.title_conv": "客户端 → 服务 → 服务器",
 "sankey.by_conv": "客户端 → 服务器",

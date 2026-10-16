@@ -65,11 +65,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
 aside{background:var(--side);border-inline-end:1px solid var(--side-line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-.brand{padding:10px 14px 8px;font-weight:700;font-size:18px;letter-spacing:-.01em;border-bottom:1px solid var(--side-line);display:flex;align-items:center;gap:8px}
-.brand .logo{display:block;height:46px;max-width:150px;object-fit:contain;object-position:left center}
+.brand{padding:12px 14px 10px;flex-wrap:wrap;position:relative;font-weight:700;font-size:18px;letter-spacing:-.01em;border-bottom:1px solid var(--side-line);display:flex;align-items:center;gap:8px}
+/* the logo fills the sidebar's width (236px less the brand padding = 208px)
+   and keeps its aspect ratio; 72px tall at most. Recommended upload:
+   416 x 144 px (2x for sharp high-DPI screens). */
+.brand .logo{display:block;flex:1 1 100%;width:100%;max-width:208px;height:auto;max-height:72px;object-fit:contain;object-position:left center}
 [dir=rtl] .brand .logo{object-position:right center}
 .brand b{color:var(--accent)}
-.brand .demo{font-size:11px;font-weight:600;background:var(--warn);color:#1b2432;border-radius:4px;padding:1px 6px;letter-spacing:0}
+nav.dash .demo{display:inline-block;margin:6px 12px 0;font-size:11px;font-weight:600;background:var(--warn);color:#1b2432;border-radius:4px;padding:1px 6px;letter-spacing:0;opacity:.85}
+nav.dash .demo[hidden]{display:none}
 nav.dash{padding:8px 10px;overflow-y:auto;flex:1}
 nav.dash hr{border:0;border-top:1px solid var(--side-line);margin:8px 8px}
 nav.dash button{position:relative;display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;text-align:start;color:var(--ink-2);font-size:14.5px;line-height:1.25;font-weight:600;letter-spacing:.005em;transition:background .18s,color .18s,transform .18s}
@@ -290,7 +294,7 @@ th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
 
 /* logo on Sources */
 .logoprev{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.logoprev img{width:272px;height:92px;object-fit:contain;border:1px dashed var(--line-2);border-radius:8px;background:var(--surface)}
+.logoprev img{width:208px;height:72px;object-fit:contain;border:1px dashed var(--line-2);border-radius:8px;background:var(--surface)}
 
 /* flow records header and pages */
 .rechead{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:center}

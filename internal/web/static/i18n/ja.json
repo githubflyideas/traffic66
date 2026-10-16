@@ -327,7 +327,7 @@
 "logo.sub": "サインイン画面とメニュー上部に表示されます",
 "logo.upload": "ロゴをアップロード…",
 "logo.reset": "内蔵ロゴに戻す",
-"logo.hint": "PNG、SVG、JPEG、WebP、GIF（1 MB まで）。推奨サイズは 272 × 92 ピクセルで、他のサイズは自動で縮小・拡大されます。",
+"logo.hint": "PNG、SVG、JPEG、WebP、GIF（1 MB まで）。推奨は 416 × 144 ピクセル（サイドバーの幅に合わせ 208 × 72 で表示）、背景透過の PNG または SVG。他のサイズは縦横比を保って縮小されます。",
 "logo.saved": "ロゴを保存しました",
 "sankey.title_conv": "クライアント → サービス → サーバー",
 "sankey.by_conv": "クライアント → サーバー",
