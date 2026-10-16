@@ -299,6 +299,8 @@ func (a *app) loadIfaces(v view, m measure, q func(map[string]string) map[string
 			OutDev                 float64 `json:"out_dev"`
 			Err                    float64 `json:"stat_err"`
 			HasCtr                 bool    `json:"has_counters"`
+			InNoFlow               bool    `json:"in_no_flow"`
+			OutNoFlow              bool    `json:"out_no_flow"`
 		}
 	}
 	if err := a.get("ifaces", q(nil), &d); err != nil {
@@ -396,9 +398,27 @@ func (a *app) loadIfaces(v view, m measure, q func(map[string]string) map[string
 			}
 			rec, rst := "—", dim
 			if f.HasCtr {
-				rec, rst = pct(f.InDev)+" "+pct(f.OutDev), green
-				if math.Max(math.Abs(f.InDev), math.Abs(f.OutDev)) > math.Max(0.02, 2*f.Err) {
+				// counters but no flows: an export that is not happening,
+				// not a deviation of -100%
+				in, out, dv := pct(f.InDev), pct(f.OutDev), 0.0
+				if f.InNoFlow {
+					in = a.t("if.no_flow_short")
+				} else {
+					dv = math.Abs(f.InDev)
+				}
+				if f.OutNoFlow {
+					out = a.t("if.no_flow_short")
+				} else {
+					dv = math.Max(dv, math.Abs(f.OutDev))
+				}
+				rec, rst = in+" "+out, green
+				if f.InNoFlow && f.OutNoFlow {
+					rec = a.t("if.no_flow_short")
+				}
+				if dv > math.Max(0.02, 2*f.Err) {
 					rst = yellow
+				} else if f.InNoFlow || f.OutNoFlow {
+					rst = dim
 				}
 			}
 			mark := "▸ "
@@ -425,6 +445,8 @@ func (a *app) ifaceDetail(v view, m measure, q func(map[string]string) map[strin
 	var rc struct {
 		Recon struct {
 			HasCounters bool      `json:"has_counters"`
+			InNoFlow    bool      `json:"in_no_flow"`
+			OutNoFlow   bool      `json:"out_no_flow"`
 			InFlow      []float64 `json:"in_flow"`
 			OutFlow     []float64 `json:"out_flow"`
 		}
@@ -437,6 +459,9 @@ func (a *app) ifaceDetail(v view, m measure, q func(map[string]string) map[strin
 		}
 		out = append(out, line{{dim, ind + fit(a.t("tui.in"), 8) + " "}, {green, spark(rc.Recon.InFlow, sw, maxv)}, {dim, " " + fmtBps(maxv)}})
 		out = append(out, line{{dim, ind + fit(a.t("tui.out"), 8) + " "}, {blue, spark(rc.Recon.OutFlow, sw, maxv)}})
+		if rc.Recon.InNoFlow || rc.Recon.OutNoFlow {
+			out = append(out, styled(dim, ind+a.t("if.no_flow")))
+		}
 	}
 	// the interface filter on top of the current filters
 	key := fmt.Sprintf("%s/%d", exp, idx)
