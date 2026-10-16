@@ -767,6 +767,8 @@
 "src.wait_templates": "đang chờ mẫu",
 "src.wait_sampling": "đang chờ tỷ lệ lấy mẫu",
 "wait.settling": "Chưa có — những phút gần nhất vẫn đang về. Thiết bị xuất báo cáo luồng sau khi luồng kết thúc, nên {n} phút cuối sẽ dần đầy. Không cần làm gì.",
+"wait.settling_one": "Chưa có — những phút gần nhất vẫn đang về. Thiết bị xuất báo cáo luồng sau khi luồng kết thúc, nên 1 phút cuối sẽ dần đầy. Không cần làm gì.",
+"nav.names": "Tên",
 "fd.kind.fastscan": "Quét nhanh",
 "fd.kind.beacon": "Kết nối định kỳ",
 "fd.kind.chain": "Chuỗi nhảy",

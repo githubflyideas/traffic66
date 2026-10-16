@@ -767,6 +767,8 @@
 "src.wait_templates": "waiting for templates",
 "src.wait_sampling": "waiting for sampling rate",
 "wait.settling": "Not yet — the most recent minutes are still arriving. Exporters report a flow after it ends, so the last {n} minutes fill in as they come. Nothing to do.",
+"nav.names": "Names",
+"wait.settling_one": "Not yet — the most recent minute is still arriving. Exporters report a flow after it ends, so the last minute fills in as it comes. Nothing to do.",
 "fd.kind.fastscan": "Fast scan",
 "fd.kind.beacon": "Regular check-in",
 "fd.kind.chain": "Hop chain",

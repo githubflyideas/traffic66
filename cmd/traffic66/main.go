@@ -119,6 +119,24 @@ Usage:
 Run "traffic66 <command> -h" for the flags of a command.
 `
 
+// commandOf splits the command from its arguments: serve when the first
+// argument is a flag, except --version and --help, which are commands and
+// not flags of serve.
+func commandOf(args []string) (string, []string) {
+	if len(args) == 0 {
+		return "serve", args
+	}
+	a := strings.ToLower(args[0])
+	switch a {
+	case "-version", "--version", "-v", "-h", "-help", "--help":
+		return a, args[1:]
+	}
+	if strings.HasPrefix(a, "-") {
+		return "serve", args
+	}
+	return a, args[1:]
+}
+
 func main() {
 	log.SetFlags(log.LstdFlags)
 	args := cleanArgs(os.Args[1:])
@@ -126,10 +144,7 @@ func main() {
 		runOffline(args)
 		return
 	}
-	cmd := "serve"
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		cmd, args = strings.ToLower(args[0]), args[1:]
-	}
+	cmd, args := commandOf(args)
 	switch cmd {
 	case "serve":
 		serve(args, false)
@@ -150,9 +165,9 @@ func main() {
 		for _, i := range list {
 			fmt.Println(i)
 		}
-	case "version", "-version", "--version":
+	case "version", "-version", "--version", "-v":
 		fmt.Printf("traffic66 %s (%s build)\n", version, buildKind)
-	case "help", "-h", "--help":
+	case "help", "-h", "-help", "--help":
 		fmt.Printf(usage, version)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q", cmd)

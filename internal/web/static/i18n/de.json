@@ -767,6 +767,8 @@
 "src.wait_templates": "wartet auf Templates",
 "src.wait_sampling": "wartet auf Sampling-Rate",
 "wait.settling": "Noch nicht — die letzten Minuten treffen noch ein. Exporter melden einen Fluss, nachdem er endet, daher füllen sich die letzten {n} Minuten nach und nach. Nichts zu tun.",
+"nav.names": "Namen",
+"wait.settling_one": "Noch nicht — die letzte Minute trifft noch ein. Exporter melden einen Fluss, nachdem er endet, daher füllt sich die letzte Minute nach und nach. Nichts zu tun.",
 "fd.kind.fastscan": "Schneller Scan",
 "fd.kind.beacon": "Regelmäßige Meldung",
 "fd.kind.chain": "Sprungkette",

@@ -767,6 +767,8 @@
 "src.wait_templates": "等待模板",
 "src.wait_sampling": "等待采样率",
 "wait.settling": "还没到时候——最近几分钟的数据还在陆续到达。导出器是在流结束后才上报的，所以最后 {n} 分钟会逐步补齐。无需操作。",
+"wait.settling_one": "还没到时候——最近几分钟的数据还在陆续到达。导出器是在流结束后才上报的，所以最后 1 分钟会逐步补齐。无需操作。",
+"nav.names": "名称",
 "fd.kind.fastscan": "高速扫描",
 "fd.kind.beacon": "定时回连",
 "fd.kind.chain": "跳板链",

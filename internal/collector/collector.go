@@ -82,6 +82,7 @@ type sfAgent struct {
 	lostDgram uint64
 	lastSeq   map[uint32]uint32
 	lastSeen  time.Time
+	firstSeen time.Time // the agent's first datagram
 	decodeErr uint64
 }
 
@@ -250,6 +251,9 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 		c.sfAgents[agentAddr] = ag
 	}
 	ag.lastSeen = now
+	if ag.firstSeen.IsZero() {
+		ag.firstSeen = now
+	}
 	if d == nil {
 		ag.decodeErr++
 		return false
@@ -421,7 +425,7 @@ func (c *Collector) Sources() []SourceInfo {
 	c.mu.Lock()
 	for _, ag := range c.sfAgents {
 		si := SourceInfo{Exporter: ag.addr.String(), Proto: flow.SrcSFlow.String(), Packets: ag.datagrams, Records: ag.samples,
-			Counters: ag.counters, DecodeErrors: ag.decodeErr, LastSeen: ag.lastSeen, SamplingState: "known"}
+			Counters: ag.counters, DecodeErrors: ag.decodeErr, LastSeen: ag.lastSeen, FirstSeen: ag.firstSeen, SamplingState: "known"}
 		var lost, drops uint64
 		rates := map[uint32]bool{}
 		var effSum, effN float64

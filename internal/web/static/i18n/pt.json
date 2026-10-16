@@ -767,6 +767,8 @@
 "src.wait_templates": "à espera dos modelos",
 "src.wait_sampling": "à espera da taxa de amostragem",
 "wait.settling": "Ainda não — os minutos mais recentes ainda estão a chegar. Os exportadores reportam um fluxo depois de ele terminar, por isso os últimos {n} minutos vão-se preenchendo. Nada a fazer.",
+"nav.names": "Nomes",
+"wait.settling_one": "Ainda não — o minuto mais recente ainda está a chegar. Os exportadores reportam um fluxo depois de ele terminar, por isso o último minuto vai-se preenchendo. Nada a fazer.",
 "fd.kind.fastscan": "Varrimento rápido",
 "fd.kind.beacon": "Ligação periódica",
 "fd.kind.chain": "Cadeia de saltos",

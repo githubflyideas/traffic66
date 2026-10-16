@@ -38,14 +38,6 @@ func row(ts time.Time, cli, srv string, sport int, pkts, wire uint64) store.Row 
 		CliInt: true, SrvInt: true, Dir: store.DirInternal}
 }
 
-func kinds(fs []store.Finding) map[string]int {
-	m := map[string]int{}
-	for _, f := range fs {
-		m[f.Kind]++
-	}
-	return m
-}
-
 // ---------------------------------------------------------------- fastscan
 
 // One minute, many hosts, many ports, probe-sized packets: a list being
