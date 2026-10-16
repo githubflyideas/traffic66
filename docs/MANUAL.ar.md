@@ -47,32 +47,24 @@ Kafka أو قاعدة بيانات منفصلة.
 
 ## 1. بدء سريع
 
-```
-# لينكس وmacOS: نزّله في ./traffic66 وابدأ الجمع
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. نزّل أرشيف نظامك من: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. فك الضغط وشغّل البرنامج:
 
 ```
-# ويندوز، PowerShell: الشيء نفسه
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-تطبع الطرفية عنوان واجهة الويب وعنوان IP ومنافذ UDP التي توجَّه إليها أجهزتك ([إعداد الأجهزة](#device-configuration)). سجّل الدخول باسم `admin` / `traffic66` واختر كلمة مرور جديدة. للاطلاع فقط؟ العرض التوضيحي بأجهزة محاكاة:
+ويندوز: فك ضغط `traffic66-windows-amd64.zip` وشغّل `traffic66.exe` (يكفي النقر المزدوج).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: شغّل أولًا `xattr -dr com.apple.quarantine .` داخل المجلد.
 
-المنافذ: TCP 8066 لواجهة الويب، UDP 6343 لـ sFlow و2055 لـ NetFlow و4739 لـ IPFIX (كل منفذ UDP يقبل كل البروتوكولات). تطبع الطرفية العناوين التي توجَّه إليها الأجهزة، ويطلب أول تسجيل دخول كلمة مرور جديدة.
+ثم:
 
-يدويًا (الأرشيفات: `linux-amd64` و`linux-arm64` و`darwin-amd64` و`darwin-arm64` و`windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-على macOS يدويًا: أولًا `xattr -dr com.apple.quarantine traffic66-darwin-*`. رسالة ويندوز «حمى جهاز الكمبيوتر»: **مزيد من المعلومات** ← **التشغيل على أي حال**.
+- واجهة الويب: `http://<IP الخادم>:8066`، وتستمع على كل واجهات الشبكة.
+- تسجيل الدخول: المستخدم `admin` وكلمة المرور `traffic66`. يُطلب تعيين كلمة مرور جديدة عند أول دخول.
+- وجّه أجهزتك إلى IP الخادم: sFlow على UDP 6343 وNetFlow v5/v9 على UDP 2055 وIPFIX على UDP 4739 (كل الواجهات؛ كل منفذ يقبل كل البروتوكولات).
 
 <a id="2-examples"></a>
 
@@ -521,6 +513,6 @@ SNMP نصًا صريحًا؛ استخدم مجتمعات للقراءة فقط.
 | `address already in use` | اختر منافذ أخرى بـ `-addr` أو `-listen` |
 | Windows "protected your PC" | **More info** (مزيد من المعلومات) → **Run anyway** (التشغيل على أي حال) |
 
-البناء من المصدر: Go 1.26 ومترجم C، ثم `scripts/build.sh 0.1.0 traffic66`.
+البناء من المصدر: Go 1.26 ومترجم C، ثم `CGO_ENABLED=1 go build ./cmd/traffic66`.
 
 </div>

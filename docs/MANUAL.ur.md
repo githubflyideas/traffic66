@@ -47,32 +47,24 @@ Elasticsearch، Kafka یا الگ database کے۔
 
 ## 1. فوری آغاز
 
-```
-# Linux، macOS: ./traffic66 میں ڈاؤن لوڈ کر کے جمع کرنا شروع کریں
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. اپنے سسٹم کا آرکائیو ڈاؤن لوڈ کریں: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. کھول کر پروگرام چلائیں:
 
 ```
-# Windows، PowerShell: یہی
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-ٹرمینل ویب UI کا پتا اور آلات کے لیے IP اور UDP پورٹس دکھاتا ہے ([آلات کی ترتیب](#device-configuration))۔ `admin` / `traffic66` سے سائن اِن کر کے نیا پاس ورڈ چنیں۔ صرف دیکھنا ہے؟ فرضی آلات والا ڈیمو:
+Windows: `traffic66-windows-amd64.zip` کھولیں اور `traffic66.exe` چلائیں (ڈبل کلک بھی کافی ہے)۔
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: پہلے اس فولڈر میں `xattr -dr com.apple.quarantine .` چلائیں۔
 
-پورٹس: TCP 8066 ویب UI، UDP 6343 sFlow، 2055 NetFlow، 4739 IPFIX (ہر UDP پورٹ ہر پروٹوکول لیتا ہے)۔ ٹرمینل وہ پتے دکھاتا ہے جن پر آلات بھیجیں؛ پہلی سائن اِن پر نیا پاس ورڈ مانگا جاتا ہے۔
+پھر:
 
-ہاتھ سے (آرکائیو: `linux-amd64`، `linux-arm64`، `darwin-amd64`، `darwin-arm64`، `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS پر ہاتھ سے: پہلے `xattr -dr com.apple.quarantine traffic66-darwin-*`۔ Windows "protected your PC": **More info** ← **Run anyway**۔
+- ویب UI: `http://<سرور IP>:8066`۔ یہ تمام نیٹ ورک انٹرفیسز پر سنتا ہے۔
+- سائن اِن: صارف `admin`، پاس ورڈ `traffic66`۔ پہلی بار سائن اِن پر نیا پاس ورڈ رکھنا ہوتا ہے۔
+- آلات کو سرور IP پر بھیجنے دیں: sFlow UDP 6343، NetFlow v5/v9 UDP 2055، IPFIX UDP 4739 (تمام انٹرفیسز؛ ہر پورٹ ہر پروٹوکول لیتا ہے)۔
 
 <a id="2-examples"></a>
 
@@ -532,6 +524,6 @@ traffic66.example.com --to 127.0.0.1:8066`) یا SSH tunnel کے ذریعے۔ UD
 | `address already in use` | `-addr` یا `-listen` سے دوسرے ports چنیں |
 | Windows "protected your PC" | **More info** (مزید معلومات) → **Run anyway** (پھر بھی چلائیں) |
 
-سورس سے بِلڈ: Go 1.26 اور ایک C compiler، پھر `scripts/build.sh 0.1.0 traffic66`۔
+سورس سے بِلڈ: Go 1.26 اور ایک C compiler، پھر `CGO_ENABLED=1 go build ./cmd/traffic66`۔
 
 </div>

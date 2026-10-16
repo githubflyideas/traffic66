@@ -3,6 +3,12 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.3.5
+
+- Removed the install scripts (`scripts/install.sh`, `scripts/install.ps1`): download the archive from Releases, unzip it and run `traffic66` (or `traffic66.exe`).
+- The README is a plain quick start (download, run, web address, default sign-in, UDP ports) and a list of common commands with one line of explanation each.
+- Release builds run directly in CI and report themselves as official builds (2.3.4 showed "community build").
+
 ## 2.3.4
 
 - One-line install: `curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh` (Linux, macOS) or `irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex` (Windows) downloads the latest release and starts the collector; `sh -s -- demo` starts the demo instead.

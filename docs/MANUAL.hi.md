@@ -45,32 +45,24 @@ Elasticsearch, Kafka या अलग database के।
 
 ## 1. क्विक स्टार्ट
 
-```
-# Linux, macOS: ./traffic66 में डाउनलोड करें और flows लेना शुरू करें
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. अपने सिस्टम का आर्काइव डाउनलोड करें: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. खोलें और प्रोग्राम चलाएँ:
 
 ```
-# Windows, PowerShell: वही
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-टर्मिनल web UI का पता और डिवाइसों के लिए IP व UDP पोर्ट दिखाता है ([डिवाइस कॉन्फ़िगरेशन](#device-configuration))। `admin` / `traffic66` से साइन इन करके नया पासवर्ड चुनें। सिर्फ़ देखना है? सिम्युलेटेड डिवाइसों वाला डेमो:
+Windows: `traffic66-windows-amd64.zip` खोलें और `traffic66.exe` चलाएँ (डबल-क्लिक भी चलेगा)।
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: पहले उस फ़ोल्डर में `xattr -dr com.apple.quarantine .` चलाएँ।
 
-पोर्ट: TCP 8066 web UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (हर UDP पोर्ट हर प्रोटोकॉल लेता है)। टर्मिनल बताता है कि डिवाइसों को किस पते पर भेजना है; पहले साइन-इन पर नया पासवर्ड माँगा जाता है।
+फिर:
 
-हाथ से (archives: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS पर हाथ से: पहले `xattr -dr com.apple.quarantine traffic66-darwin-*`। Windows "protected your PC": **More info** → **Run anyway**।
+- Web UI: `http://<सर्वर IP>:8066`। यह सभी नेटवर्क इंटरफ़ेस पर सुनता है।
+- साइन इन: यूज़र `admin`, पासवर्ड `traffic66`। पहली बार साइन इन पर नया पासवर्ड सेट करना होता है।
+- डिवाइसों को सर्वर IP पर भेजने को कहें: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (सभी इंटरफ़ेस; हर पोर्ट हर प्रोटोकॉल लेता है)।
 
 <a id="2-examples"></a>
 
@@ -531,4 +523,4 @@ communities इस्तेमाल करें।
 | `address already in use` | `-addr` या `-listen` से दूसरे ports चुनें |
 | Windows: "Windows protected your PC" (Windows ने आपके PC को सुरक्षित किया) | **More info** (अधिक जानकारी) → **Run anyway** (फिर भी चलाएँ) |
 
-सोर्स से बिल्ड करें: Go 1.26 और एक C compiler, फिर `scripts/build.sh 0.1.0 traffic66`।
+सोर्स से बिल्ड करें: Go 1.26 और एक C compiler, फिर `CGO_ENABLED=1 go build ./cmd/traffic66`।

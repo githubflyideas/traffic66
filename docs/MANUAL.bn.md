@@ -45,32 +45,24 @@ Elasticsearch, Kafka বা আলাদা database ছাড়াই।
 
 ## 1. দ্রুত শুরু
 
-```
-# Linux, macOS: ./traffic66-এ ডাউনলোড করে সংগ্রহ শুরু করুন
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. আপনার সিস্টেমের আর্কাইভ ডাউনলোড করুন: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. খুলে প্রোগ্রামটি চালান:
 
 ```
-# Windows, PowerShell: একই
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-টার্মিনালে web UI-এর ঠিকানা আর ডিভাইসের জন্য IP ও UDP পোর্ট দেখা যায় ([ডিভাইস কনফিগারেশন](#device-configuration))। `admin` / `traffic66` দিয়ে সাইন ইন করে নতুন পাসওয়ার্ড দিন। শুধু দেখতে চান? সিমুলেটেড ডিভাইসের ডেমো:
+Windows: `traffic66-windows-amd64.zip` খুলে `traffic66.exe` চালান (ডাবল-ক্লিকেও হয়)।
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: আগে ফোল্ডারে `xattr -dr com.apple.quarantine .` চালান।
 
-পোর্ট: TCP 8066 web UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (প্রতিটি UDP পোর্ট সব প্রোটোকল নেয়)। ডিভাইস কোন ঠিকানায় পাঠাবে তা টার্মিনালে দেখা যায়; প্রথম সাইন-ইনে নতুন পাসওয়ার্ড চাওয়া হয়।
+তারপর:
 
-হাতে (আর্কাইভ: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS-এ হাতে: আগে `xattr -dr com.apple.quarantine traffic66-darwin-*`। Windows "protected your PC": **More info** → **Run anyway**।
+- Web UI: `http://<সার্ভার IP>:8066`। এটি সব নেটওয়ার্ক ইন্টারফেসে শোনে।
+- সাইন ইন: ইউজার `admin`, পাসওয়ার্ড `traffic66`। প্রথম সাইন-ইনে নতুন পাসওয়ার্ড দিতে হয়।
+- ডিভাইসগুলোকে সার্ভার IP-তে পাঠাতে দিন: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (সব ইন্টারফেস; প্রতিটি পোর্ট সব প্রোটোকল নেয়)।
 
 <a id="2-examples"></a>
 
@@ -531,4 +523,4 @@ overview 0.2 s-এর কম সময় নেয়; সব conversation-এ�
 | `address already in use` | `-addr` বা `-listen` দিয়ে অন্য port বেছে নিন |
 | Windows "protected your PC" | **More info** (আরও তথ্য) → **Run anyway** (তবুও চালান) |
 
-সোর্স থেকে বিল্ড: Go 1.26 ও একটি C compiler, তারপর `scripts/build.sh 0.1.0 traffic66`।
+সোর্স থেকে বিল্ড: Go 1.26 ও একটি C compiler, তারপর `CGO_ENABLED=1 go build ./cmd/traffic66`।

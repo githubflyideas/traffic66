@@ -39,32 +39,24 @@
 
 ## 1. 快速开始
 
-```
-# Linux、macOS：下载到 ./traffic66 并开始采集
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. 从这里下载对应系统的压缩包： [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. 解压后运行程序：
 
 ```
-# Windows（PowerShell）：同上
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-终端会打印 Web 界面地址，以及设备要指向的 IP 和 UDP 端口（[设备配置](#device-configuration)）。用 `admin` / `traffic66` 登录并设置新密码。只想先看看？用模拟设备跑演示：
+Windows：解压 `traffic66-windows-amd64.zip`，运行 `traffic66.exe`（双击即可）。
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS：先在该目录运行 `xattr -dr com.apple.quarantine .`。
 
-端口：TCP 8066 Web 界面，UDP 6343 sFlow、2055 NetFlow、4739 IPFIX（每个 UDP 端口都接收所有协议）。终端会打印设备应指向的地址；首次登录会要求设置新密码。
+然后：
 
-手动下载（压缩包：`linux-amd64`、`linux-arm64`、`darwin-amd64`、`darwin-arm64`、`windows-amd64.zip`）：
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS 手动安装时先运行 `xattr -dr com.apple.quarantine traffic66-darwin-*`。Windows 提示「已保护你的电脑」：**更多信息** → **仍要运行**。
+- Web 界面：`http://<服务器IP>:8066`，监听所有网卡。
+- 登录：用户 `admin`，密码 `traffic66`。首次登录必须设置新密码。
+- 把设备的流量导出指向服务器 IP：sFlow UDP 6343，NetFlow v5/v9 UDP 2055，IPFIX UDP 4739（监听所有网卡；每个端口都接收所有协议）。
 
 <a id="2-examples"></a>
 
@@ -438,4 +430,4 @@ Web 界面使用明文 HTTP：在不可信的网络中，请使用 `-addr 127.0.
 | `address already in use` | 用 `-addr` 或 `-listen` 换用其他端口 |
 | Windows："Windows 已保护你的电脑" | **更多信息** → **仍要运行** |
 
-从源码构建：需要 Go 1.26 和 C 编译器，然后运行 `scripts/build.sh 0.1.0 traffic66`。
+从源码构建：需要 Go 1.26 和 C 编译器，然后运行 `CGO_ENABLED=1 go build ./cmd/traffic66`。

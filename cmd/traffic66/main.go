@@ -47,8 +47,8 @@ import (
 	"github.com/githubflyideas/traffic66/internal/web"
 )
 
-// version is the release this build claims. The release workflow and
-// scripts/build.sh set it at link time; left unset, as a plain `go build`
+// version is the release this build claims. The release workflow sets it
+// at link time; left unset, as a plain `go build`
 // leaves it, it is filled in by buildVersion so a hand-built binary says
 // what it is rather than naming a release it is not.
 var version = ""
@@ -57,7 +57,7 @@ var version = ""
 // CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
 // default used to be a hardcoded 0.1.0-dev, and because nothing checked it
 // it stayed that way for two major versions.
-const devVersion = "2.3.4"
+const devVersion = "2.3.5"
 
 func init() {
 	if version == "" {

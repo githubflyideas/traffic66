@@ -45,32 +45,24 @@ pcap-Analyse, ohne Elasticsearch, Kafka oder eine separate Datenbank.
 
 ## 1. Schnellstart
 
-```
-# Linux, macOS: nach ./traffic66 laden und mit dem Erfassen beginnen
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Archiv für Ihr System herunterladen: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Entpacken und das Programm starten:
 
 ```
-# Windows, PowerShell: dasselbe
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-Das Terminal zeigt die Adresse der Weboberfläche sowie IP und UDP-Ports für Ihre Geräte ([Gerätekonfiguration](#device-configuration)). Als `admin` / `traffic66` anmelden und ein neues Passwort wählen. Nur anschauen? Die Demo mit simulierten Geräten:
+Windows: `traffic66-windows-amd64.zip` entpacken und `traffic66.exe` starten (Doppelklick genügt).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: zuerst im Ordner `xattr -dr com.apple.quarantine .` ausführen.
 
-Ports: TCP 8066 Weboberfläche, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (jeder UDP-Port nimmt jedes Protokoll). Das Terminal zeigt die Adressen für Ihre Geräte; die erste Anmeldung verlangt ein neues Passwort.
+Dann:
 
-Von Hand (Archive: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS von Hand: zuerst `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows „Der Computer wurde geschützt“: **Weitere Informationen** → **Trotzdem ausführen**.
+- Weboberfläche: `http://<Server-IP>:8066`. Sie lauscht auf allen Netzwerkschnittstellen.
+- Anmelden: Benutzer `admin`, Passwort `traffic66`. Bei der ersten Anmeldung setzen Sie ein neues Passwort.
+- Geräte an die Server-IP senden lassen: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (alle Schnittstellen; jeder Port nimmt jedes Protokoll).
 
 <a id="2-examples"></a>
 
@@ -549,4 +541,4 @@ Verbindungen über 1 Stunde etwa 9 s.
 | `address already in use` | Andere Ports mit `-addr` oder `-listen` wählen |
 | Windows: "Der Computer wurde durch Windows geschützt" | **Weitere Informationen** → **Trotzdem ausführen** |
 
-Aus dem Quellcode bauen: Go 1.26 und ein C-Compiler, dann `scripts/build.sh 0.1.0 traffic66`.
+Aus dem Quellcode bauen: Go 1.26 und ein C-Compiler, dann `CGO_ENABLED=1 go build ./cmd/traffic66`.

@@ -39,32 +39,24 @@ ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 �
 
 ## 1. 빠른 시작
 
-```
-# Linux, macOS: ./traffic66 에 내려받고 수집 시작
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. 시스템에 맞는 압축 파일을 내려받으세요: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. 압축을 풀고 프로그램을 실행합니다:
 
 ```
-# Windows(PowerShell): 동일
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-터미널에 웹 UI 주소와 장비가 보낼 IP·UDP 포트가 표시됩니다([장비 설정](#device-configuration)). `admin` / `traffic66` 로 로그인하고 새 비밀번호를 정하세요. 구경만 하려면 가상 장비 데모:
+Windows: `traffic66-windows-amd64.zip` 을 풀고 `traffic66.exe` 실행(더블클릭 가능).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: 먼저 그 폴더에서 `xattr -dr com.apple.quarantine .` 실행.
 
-포트: TCP 8066 웹 UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX(모든 UDP 포트가 모든 프로토콜을 받음). 장비가 보낼 주소는 터미널에 표시되고, 첫 로그인 때 새 비밀번호를 정합니다.
+그다음:
 
-직접 내려받기(압축 파일: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS 에서 직접 설치할 때는 먼저 `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "PC 보호" 창: **추가 정보** → **실행**.
+- 웹 UI: `http://<서버 IP>:8066`. 모든 네트워크 인터페이스에서 대기합니다.
+- 로그인: 사용자 `admin`, 비밀번호 `traffic66`. 첫 로그인 때 새 비밀번호를 정해야 합니다.
+- 장비가 서버 IP 로 보내게 하세요: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739(모든 인터페이스, 모든 포트가 모든 프로토콜을 받음).
 
 <a id="2-examples"></a>
 
@@ -438,4 +430,4 @@ Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windo
 | `address already in use` | `-addr` 또는 `-listen`으로 다른 포트 지정 |
 | Windows: "Windows의 PC 보호" | **추가 정보** → **실행** |
 
-소스에서 빌드: Go 1.26와 C 컴파일러를 준비한 뒤 `scripts/build.sh 0.1.0 traffic66`.
+소스에서 빌드: Go 1.26와 C 컴파일러를 준비한 뒤 `CGO_ENABLED=1 go build ./cmd/traffic66`.

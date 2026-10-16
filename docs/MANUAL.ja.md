@@ -39,32 +39,24 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 
 ## 1. クイックスタート
 
-```
-# Linux・macOS：./traffic66 にダウンロードして収集を開始
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. お使いのシステム用のアーカイブをダウンロード： [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. 展開してプログラムを実行：
 
 ```
-# Windows（PowerShell）：同じく
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-ターミナルに Web UI のアドレスと、機器の送信先 IP・UDP ポートが表示されます（[機器の設定](#device-configuration)）。`admin` / `traffic66` でサインインし新しいパスワードを設定します。まず見るだけなら、模擬機器のデモ：
+Windows：`traffic66-windows-amd64.zip` を展開し `traffic66.exe` を実行（ダブルクリックで可）。
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS：先にそのフォルダで `xattr -dr com.apple.quarantine .` を実行。
 
-ポート：TCP 8066 Web UI、UDP 6343 sFlow、2055 NetFlow、4739 IPFIX（どの UDP ポートもすべてのプロトコルを受信）。機器の送信先アドレスはターミナルに表示されます。初回サインイン時に新しいパスワードを設定します。
+その後：
 
-手動の場合（アーカイブ：`linux-amd64`、`linux-arm64`、`darwin-amd64`、`darwin-arm64`、`windows-amd64.zip`）：
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS で手動の場合は先に `xattr -dr com.apple.quarantine traffic66-darwin-*`。Windows の「PC が保護されました」：**詳細情報** → **実行**。
+- Web UI：`http://<サーバーIP>:8066`。すべてのネットワークインターフェースで待ち受けます。
+- サインイン：ユーザー `admin`、パスワード `traffic66`。初回サインイン時に新しいパスワードを設定します。
+- 機器の送信先をサーバー IP に：sFlow UDP 6343、NetFlow v5/v9 UDP 2055、IPFIX UDP 4739（全インターフェース。どのポートも全プロトコルを受信）。
 
 <a id="2-examples"></a>
 
@@ -438,4 +430,4 @@ Web UI は平文の HTTP です。信頼できないネットワークでは `-a
 | `address already in use` | `-addr` または `-listen` で別のポートを指定 |
 | Windows："Windows によって PC が保護されました" | **詳細情報** → **実行** |
 
-ソースからのビルド：Go 1.26 と C コンパイラーを用意し、`scripts/build.sh 0.1.0 traffic66` を実行します。
+ソースからのビルド：Go 1.26 と C コンパイラーを用意し、`CGO_ENABLED=1 go build ./cmd/traffic66` を実行します。

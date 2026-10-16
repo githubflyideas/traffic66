@@ -6,45 +6,73 @@ sFlow・NetFlow・IPFIX のフロー分析を 1 つのプログラムで行い�
 
 ## クイックスタート
 
-```
-# Linux・macOS：./traffic66 にダウンロードして収集を開始
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. お使いのシステム用のアーカイブをダウンロード： [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. 展開してプログラムを実行：
 
 ```
-# Windows（PowerShell）：同じく
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-ターミナルに Web UI のアドレスと、機器の送信先 IP・UDP ポートが表示されます（[機器の設定](MANUAL.ja.md#device-configuration)）。`admin` / `traffic66` でサインインし新しいパスワードを設定します。まず見るだけなら、模擬機器のデモ：
+Windows：`traffic66-windows-amd64.zip` を展開し `traffic66.exe` を実行（ダブルクリックで可）。
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS：先にそのフォルダで `xattr -dr com.apple.quarantine .` を実行。
 
-ポート：TCP 8066 Web UI、UDP 6343 sFlow、2055 NetFlow、4739 IPFIX（どの UDP ポートもすべてのプロトコルを受信）。機器の送信先アドレスはターミナルに表示されます。初回サインイン時に新しいパスワードを設定します。
+その後：
 
-macOS で手動の場合は先に `xattr -dr com.apple.quarantine traffic66-darwin-*`。Windows の「PC が保護されました」：**詳細情報** → **実行**。
+- Web UI：`http://<サーバーIP>:8066`。すべてのネットワークインターフェースで待ち受けます。
+- サインイン：ユーザー `admin`、パスワード `traffic66`。初回サインイン時に新しいパスワードを設定します。
+- 機器の送信先をサーバー IP に：sFlow UDP 6343、NetFlow v5/v9 UDP 2055、IPFIX UDP 4739（全インターフェース。どのポートも全プロトコルを受信）。
 
-## コマンド早見表
+## よく使うコマンド
 
-| 用途 | コマンド |
-|---|---|
-| sFlow 6343・NetFlow v5/v9 2055・IPFIX 4739 を収集（既定） | `./traffic66` |
-| NetFlow v5/v9（2055）と IPFIX（4739）のみ | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| sFlow のみ、UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| Web UI を指定の IP とポートで | `./traffic66 -addr 10.0.0.5:8080` |
-| このマシンの NIC をキャプチャ（Linux） | `sudo ./traffic66 -capture eth0 -listen ""` |
-| admin のパスワードを設定・リセット（-data 使用時は付ける） | `./traffic66 passwd` |
-| リモートサーバーにターミナル UI で接続 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  上記の既定値で起動。
+
+- `./traffic66 -addr :9000`  
+  Web UI を 8066 ではなく 9000 番ポートで。
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  コレクタのポートを変更（ここでは NetFlow を 9995 に）。
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  全インターフェースではなく 1 つの IP アドレスだけで待ち受け。
+
+- `./traffic66 -data /var/lib/traffic66`  
+  データを別のディレクトリに保存（既定はプログラム横の `traffic66-data`）。
+
+- `./traffic66 passwd`  
+  admin のパスワードを設定・リセット（`-data` を使う場合は `-data DIR` を付ける）。
+
+- `traffic66.exe interfaces`  
+  Windows：ネットワークカードの一覧（名前と番号）。
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows：この PC のそのカードの通信を解析（名前か番号）。Npcap（npcap.com）が必要。
+
+- `./traffic66 interfaces`  
+  Linux・macOS：ネットワークカードの一覧。
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux：このマシンの eth0 の通信を解析（macOS は `-capture en0`）。
+
+- `./traffic66 tui`  
+  traffic66 のマシンでターミナル UI。
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  リモートの traffic66 にターミナル UI で接続。
+
+- `./traffic66 demo`  
+  模擬機器で試す。
 
 ## スクリーンショット
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="概要"></a><br>概要 | <a href="images/topn.png"><img src="images/topn.png" alt="上位 66"></a><br>上位 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="地域とネットワーク"></a><br>地域とネットワーク | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="インターフェース照合"></a><br>インターフェース照合 |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="概要" width="49%"> <img src="images/topn.png" alt="上位 66" width="49%">
+
+<img src="images/geo.png" alt="地域とネットワーク" width="49%"> <img src="images/interfaces.png" alt="インターフェース照合" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## 完全なマニュアル
 
