@@ -2,71 +2,49 @@
 
 # traffic66 — NetFlow, sFlow and IPFIX collector and traffic analyzer
 
-Flow analytics for sFlow, NetFlow and IPFIX in a single program: who uses
-the bandwidth, where the traffic goes, and whether the numbers match the
-devices' own interface counters, in a web UI and a terminal UI.
+Who uses the bandwidth, where the traffic goes, and whether the numbers match the devices' own interface counters. One program, web UI and terminal UI.
 
 ## Quick start
 
-1. Download the archive for your system from [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
-2. Unzip it and run the program:
+Download: [Releases](https://github.com/githubflyideas/traffic66/releases/latest)  
+Run: `traffic66.exe` (Windows) or `./traffic66` (Linux, macOS)  
+Open: `http://<this computer's IP>:8066` (on the same computer: http://localhost:8066)
 
-```
-tar xzf traffic66-linux-amd64.tar.gz
-cd traffic66-linux-amd64
-./traffic66
-```
+**Login: user `admin`, password `traffic66` (you set a new password at first sign-in)**
 
-Windows: unzip `traffic66-windows-amd64.zip` and run `traffic66.exe` (double-click works).
+Devices send to this computer's IP: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739.
 
-macOS: first run `xattr -dr com.apple.quarantine .` in the folder.
+### Windows
 
-Then:
+1. Download `traffic66-windows-amd64.zip` and unzip it, for example to `C:\traffic66`.
+2. To capture this PC's own traffic, install [Npcap](https://npcap.com/#download) first (keep the defaults). Not needed for sFlow/NetFlow/IPFIX.
+3. Double-click `traffic66.exe` to start with the defaults (no options). For any command with options, open a terminal:
+   - Normal: open the folder, type `cmd` in the address bar and press Enter.
+   - Local capture needs an admin terminal: right-click Start > **Terminal (Admin)**, then `cd C:\traffic66`.
+4. Run `traffic66.exe` (in PowerShell: `.\traffic66.exe`).
+5. Open http://localhost:8066 and sign in.
 
-- Web UI: `http://<server IP>:8066`. It listens on all network interfaces.
-- Sign in: user `admin`, password `traffic66`. The first sign-in makes you set a new password.
-- Point your devices at the server IP: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (all interfaces; every port accepts every protocol).
+### Linux
 
-## Common commands
+1. Download and unzip:
+   ```
+   tar xzf traffic66-linux-amd64.tar.gz
+   cd traffic66-linux-amd64
+   ```
+   (ARM: `traffic66-linux-arm64.tar.gz`)
+2. Run `./traffic66` (local capture needs `sudo`).
+3. Open `http://<server IP>:8066` and sign in.
 
-- `./traffic66`  
-  Start with the defaults above.
+### macOS
 
-- `./traffic66 -addr :9000`  
-  Web UI on port 9000 instead of 8066.
-
-- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
-  Change the collector ports (here NetFlow on 9995).
-
-- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
-  Listen on one IP address only, instead of all interfaces.
-
-- `./traffic66 -data /var/lib/traffic66`  
-  Keep the data in another directory (default: `traffic66-data` next to the program).
-
-- `./traffic66 passwd`  
-  Set or reset the admin password (add `-data DIR` if you use one).
-
-- `traffic66.exe interfaces`  
-  Windows: list the network cards (name and number).
-
-- `traffic66.exe -capture Wi-Fi`  
-  Windows: analyse this PC's own traffic on that card (name or number). Needs Npcap (npcap.com).
-
-- `./traffic66 interfaces`  
-  Linux, macOS: list the network cards.
-
-- `sudo ./traffic66 -capture eth0`  
-  Linux: analyse this machine's own traffic on eth0 (macOS: `-capture en0`).
-
-- `./traffic66 tui`  
-  Terminal UI on the traffic66 machine.
-
-- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
-  Terminal UI connected to a remote traffic66.
-
-- `./traffic66 demo`  
-  Try it with simulated devices.
+1. Download `traffic66-darwin-arm64.tar.gz` (Apple silicon) or `traffic66-darwin-amd64.tar.gz` (Intel), then:
+   ```
+   tar xzf traffic66-darwin-arm64.tar.gz
+   cd traffic66-darwin-arm64
+   xattr -dr com.apple.quarantine .
+   ```
+2. Run `./traffic66` (local capture needs `sudo`).
+3. Open http://localhost:8066 and sign in.
 
 ## Screenshots
 
@@ -76,8 +54,64 @@ Then:
 
 <img src="docs/images/tui-top.png" alt="TUI" width="49%">
 
+## What do you want to do?
+
+Capture this computer's traffic (Windows, admin terminal, Npcap installed):  
+`traffic66.exe -capture Wi-Fi`  
+Use the card name or number from `traffic66.exe interfaces`, e.g. `-capture Ethernet`.
+
+Capture this computer's traffic (Linux / macOS):  
+`sudo ./traffic66 -capture eth0`  
+On macOS usually `en0`. Names come from `./traffic66 interfaces`.
+
+Receive sFlow from a switch:  
+`./traffic66`  
+Nothing to add: configure the switch to send sFlow to this computer's IP, UDP 6343.
+
+Receive NetFlow or IPFIX from a router:  
+`./traffic66`  
+Configure the router to export to this computer's IP, UDP 2055 (NetFlow) or 4739 (IPFIX).
+
+Use another collector port:  
+`./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+Here NetFlow is received on 9995. Every port accepts every protocol.
+
+Change the web port:  
+`./traffic66 -addr :9000`  
+Then open `http://<IP>:9000`.
+
+Bind to one IP address only:  
+`./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+Web UI and collectors listen only on 192.168.1.10.
+
+Set or change the admin password:  
+`./traffic66 passwd`  
+Prompts for a new password (Windows: `traffic66.exe passwd`).
+
+Keep data in another directory:  
+`./traffic66 -data /var/lib/traffic66`  
+Default: `traffic66-data` next to the program.
+
+Terminal UI:  
+`./traffic66 tui`  
+Run on the traffic66 machine; for a remote one add `-server http://192.168.1.10:8066`.
+
+Try without devices:  
+`./traffic66 demo`  
+Starts with simulated devices.
+
+On Windows, write `traffic66.exe` instead of `./traffic66` (PowerShell: `.\traffic66.exe`).
+
+## FAQ
+
+**No data showing.** Check that the device exports to this computer's IP and the right UDP port (6343 / 2055 / 4739), that the firewall allows those UDP ports inbound, and wait a minute: NetFlow/IPFIX devices often send records only after flows end or time out.
+
+**Can't find the interface name.** Run `traffic66.exe interfaces` (Windows) or `./traffic66 interfaces` (Linux, macOS); it lists the names and numbers `-capture` accepts.
+
+**Forgot the password.** Stop traffic66 and run `./traffic66 passwd` (add `-data DIR` if you use one) to set a new one.
+
 ## Full manual
 
 In the web UI: **Help** in the menu. On GitHub: [MANUAL.md](docs/MANUAL.md)
 
-15 languages. Free for evaluation and for organizations under 100 people ([licence](LICENSE.md)).
+Free for evaluation and for organizations under 100 people ([licence](LICENSE.md)).
