@@ -87,23 +87,47 @@ func TestOctetTotalPerIntervalIsNotSubtracted(t *testing.T) {
 	}
 }
 
-// Without a start time the two cases cannot be told apart, so the total is
-// taken whole, as it was before any of this was tracked.
+func noTimeReport(t *testing.T, d *Decoder, seq uint32, bytes, pkts uint64) uint64 {
+	t.Helper()
+	m := encode.NewIPFIX()
+	m.AddTemplate(noTimeTmpl)
+	m.AddData(311, []encode.Values{{encode.A(cli), encode.A(srv), encode.U(50522, 2), encode.U(443, 2),
+		encode.U(6, 1), encode.U(bytes, 8), encode.U(pkts, 8), encode.U(3, 4)}})
+	at := base.Add(time.Duration(seq) * time.Minute)
+	res, err := d.Decode(m.IPFIX(uint32(at.Unix()), seq, 1), exp, at)
+	if err != nil || len(res.Records) != 1 {
+		t.Fatalf("got %d %v", len(res.Records), err)
+	}
+	return res.Records[0].Bytes
+}
+
+// Without a start time a flow re-reported with a growing running total is
+// counted by its growth, not whole on every report.
 func TestOctetTotalWithoutStartTime(t *testing.T) {
 	d := NewDecoder()
 	d.Unsampled = map[netip.Addr]bool{exp: true} // release records at once
-	for i := 0; i < 2; i++ {
-		m := encode.NewIPFIX()
-		m.AddTemplate(noTimeTmpl)
-		m.AddData(311, []encode.Values{{encode.A(cli), encode.A(srv), encode.U(50522, 2), encode.U(443, 2),
-			encode.U(6, 1), encode.U(1000, 8), encode.U(10, 8), encode.U(3, 4)}})
-		res, err := d.Decode(m.IPFIX(uint32(base.Unix()), uint32(i), 1), exp, base)
-		if err != nil || len(res.Records) != 1 {
-			t.Fatalf("got %d %v", len(res.Records), err)
-		}
-		if res.Records[0].Bytes != 1000 {
-			t.Fatalf("report %d: %d bytes, want 1000", i, res.Records[0].Bytes)
-		}
+	var sum uint64
+	for i, tot := range []uint64{1000, 2500, 4000} {
+		sum += noTimeReport(t, d, uint32(i), tot, tot/100)
+	}
+	if sum != 4000 {
+		t.Errorf("three reports added up to %d bytes, want 4000 (the final total)", sum)
+	}
+}
+
+// Without a start time a total that shrank is a reset or a new flow with the
+// same identity, and is taken whole.
+func TestOctetTotalWithoutStartTimeReset(t *testing.T) {
+	d := NewDecoder()
+	d.Unsampled = map[netip.Addr]bool{exp: true}
+	if got := noTimeReport(t, d, 0, 5000, 50); got != 5000 {
+		t.Fatalf("first report %d", got)
+	}
+	if got := noTimeReport(t, d, 1, 800, 8); got != 800 {
+		t.Fatalf("after a reset %d, want 800", got)
+	}
+	if got := noTimeReport(t, d, 2, 1300, 13); got != 500 {
+		t.Fatalf("after the reset the growth is %d, want 500", got)
 	}
 }
 
