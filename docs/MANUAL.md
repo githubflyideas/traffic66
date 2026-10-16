@@ -38,32 +38,24 @@ analysis, without Elasticsearch, Kafka or a separate database.
 
 ## 1. Quick start
 
-```
-# Linux, macOS: download into ./traffic66 and start collecting
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Download the archive for your system from [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Unzip it and run the program:
 
 ```
-# Windows, PowerShell: the same
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-The terminal prints the web UI address and the IP and UDP ports to point your devices at ([device configuration](#device-configuration)). Sign in as `admin` / `traffic66` and choose a new password. Only looking? The demo, with simulated devices:
+Windows: unzip `traffic66-windows-amd64.zip` and run `traffic66.exe` (double-click works).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: first run `xattr -dr com.apple.quarantine .` in the folder.
 
-Ports: TCP 8066 web UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (every UDP port takes every protocol). The terminal prints the addresses to point your devices at; the first sign-in asks for a new password.
+Then:
 
-By hand (archives: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS by hand: `xattr -dr com.apple.quarantine traffic66-darwin-*` first. Windows "protected your PC": **More info** → **Run anyway**.
+- Web UI: `http://<server IP>:8066`. It listens on all network interfaces.
+- Sign in: user `admin`, password `traffic66`. The first sign-in makes you set a new password.
+- Point your devices at the server IP: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (all interfaces; every port accepts every protocol).
 
 ## 2. Examples
 
@@ -587,4 +579,4 @@ take under 0.2 s; a 1-hour Top 66 of all conversations about 9 s.
 | `address already in use` | Choose other ports with `-addr` or `-listen` |
 | Windows "protected your PC" | **More info** → **Run anyway** |
 
-Build from source: Go 1.26 and a C compiler, then `scripts/build.sh 0.1.0 traffic66`.
+Build from source: Go 1.26 and a C compiler, then `CGO_ENABLED=1 go build ./cmd/traffic66`.

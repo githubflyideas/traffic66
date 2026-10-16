@@ -91,7 +91,28 @@ jobs:
             fi
             exe=traffic66; [[ "${{ runner.os }}" == Windows ]] && exe=traffic66.exe
             if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
-            scripts/build.sh "$ver" "dist/traffic66-${{ matrix.target }}/$exe"
+            # one self-contained binary per platform
+            out="dist/traffic66-${{ matrix.target }}/$exe"
+            kind=community; [[ "$GITHUB_REF" == refs/tags/* ]] && kind=official
+            ldflags="-s -w -X main.version=${ver} -X main.buildKind=${kind}"
+            tags=""
+            export CGO_ENABLED=1
+            case "${{ runner.os }}" in
+              Linux)
+                # static: libstdc++ linked in, no glibc dependency (kernel 3.2+,
+                # CentOS 7 included); getentropy has a fallback (entropy_linux.go)
+                tmp="$(mktemp -d)"
+                ln -sf "$(${CXX:-g++} -print-file-name=libstdc++.a)" "$tmp/libstdc++.a"
+                export CGO_LDFLAGS="-L$tmp ${CGO_LDFLAGS:-}"
+                ldflags="$ldflags -linkmode=external -extldflags '-static -Wl,--wrap=getentropy'"
+                tags="netgo,osusergo" ;;
+              Windows)
+                # MinGW runtime linked in: no DLLs needed next to the program
+                ldflags="$ldflags -extldflags=-static" ;;
+              macOS)
+                export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}" ;;
+            esac
+            go build -trimpath ${tags:+-tags "$tags"} -ldflags "$ldflags" -o "$out" ./cmd/traffic66
             cp README.md "dist/traffic66-${{ matrix.target }}/"
             cp -r docs "dist/traffic66-${{ matrix.target }}/"
             cp LICENSE.md ADDITIONAL-USE-GRANT.md THIRD_PARTY_NOTICES.md "dist/traffic66-${{ matrix.target }}/"

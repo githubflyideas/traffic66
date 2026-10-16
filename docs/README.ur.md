@@ -10,49 +10,77 @@ interface counters سے میل کھاتے ہیں — web UI اور terminal UI �
 
 ## فوری آغاز
 
-```
-# Linux، macOS: ./traffic66 میں ڈاؤن لوڈ کر کے جمع کرنا شروع کریں
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. اپنے سسٹم کا آرکائیو ڈاؤن لوڈ کریں: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. کھول کر پروگرام چلائیں:
 
 ```
-# Windows، PowerShell: یہی
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-ٹرمینل ویب UI کا پتا اور آلات کے لیے IP اور UDP پورٹس دکھاتا ہے ([آلات کی ترتیب](MANUAL.ur.md#device-configuration))۔ `admin` / `traffic66` سے سائن اِن کر کے نیا پاس ورڈ چنیں۔ صرف دیکھنا ہے؟ فرضی آلات والا ڈیمو:
+Windows: `traffic66-windows-amd64.zip` کھولیں اور `traffic66.exe` چلائیں (ڈبل کلک بھی کافی ہے)۔
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: پہلے اس فولڈر میں `xattr -dr com.apple.quarantine .` چلائیں۔
 
-پورٹس: TCP 8066 ویب UI، UDP 6343 sFlow، 2055 NetFlow، 4739 IPFIX (ہر UDP پورٹ ہر پروٹوکول لیتا ہے)۔ ٹرمینل وہ پتے دکھاتا ہے جن پر آلات بھیجیں؛ پہلی سائن اِن پر نیا پاس ورڈ مانگا جاتا ہے۔
+پھر:
 
-macOS پر ہاتھ سے: پہلے `xattr -dr com.apple.quarantine traffic66-darwin-*`۔ Windows "protected your PC": **More info** ← **Run anyway**۔
+- ویب UI: `http://<سرور IP>:8066`۔ یہ تمام نیٹ ورک انٹرفیسز پر سنتا ہے۔
+- سائن اِن: صارف `admin`، پاس ورڈ `traffic66`۔ پہلی بار سائن اِن پر نیا پاس ورڈ رکھنا ہوتا ہے۔
+- آلات کو سرور IP پر بھیجنے دیں: sFlow UDP 6343، NetFlow v5/v9 UDP 2055، IPFIX UDP 4739 (تمام انٹرفیسز؛ ہر پورٹ ہر پروٹوکول لیتا ہے)۔
 
-## کمانڈز کا خلاصہ
+## عام کمانڈز
 
-| کام | کمانڈ |
-|---|---|
-| sFlow 6343، NetFlow v5/v9 2055، IPFIX 4739 جمع کریں (ڈیفالٹ) | `./traffic66` |
-| صرف NetFlow v5/v9 (2055) اور IPFIX (4739) | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| صرف sFlow، UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| ویب UI مخصوص IP اور پورٹ پر | `./traffic66 -addr 10.0.0.5:8080` |
-| اس مشین کا NIC کیپچر کریں (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
-| admin پاس ورڈ سیٹ/ری سیٹ کریں (‎-data DIR ہو تو شامل کریں) | `./traffic66 passwd` |
-| ریموٹ سرور سے ٹرمینل UI | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  اوپر کی ڈیفالٹ ترتیب سے شروع کریں۔
+
+- `./traffic66 -addr :9000`  
+  ویب UI پورٹ 8066 کی جگہ 9000 پر۔
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  کلیکٹر پورٹس بدلیں (یہاں NetFlow کو 9995 پر)۔
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  تمام انٹرفیسز کی جگہ صرف ایک IP پتے پر سنیں۔
+
+- `./traffic66 -data /var/lib/traffic66`  
+  ڈیٹا دوسری ڈائریکٹری میں رکھیں (ڈیفالٹ: پروگرام کے ساتھ `traffic66-data`)۔
+
+- `./traffic66 passwd`  
+  admin پاس ورڈ سیٹ یا ری سیٹ کریں (`-data` استعمال ہو تو `-data DIR` لگائیں)۔
+
+- `traffic66.exe interfaces`  
+  Windows: نیٹ ورک کارڈز کی فہرست (نام اور نمبر)۔
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows: اس PC کی اپنی ٹریفک اس کارڈ پر دیکھیں (نام یا نمبر)۔ Npcap (npcap.com) درکار۔
+
+- `./traffic66 interfaces`  
+  Linux، macOS: نیٹ ورک کارڈز کی فہرست۔
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux: اس مشین کی اپنی ٹریفک eth0 پر دیکھیں (macOS: `-capture en0`)۔
+
+- `./traffic66 tui`  
+  traffic66 مشین پر ٹرمینل UI۔
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  دور کے traffic66 سے جڑا ٹرمینل UI۔
+
+- `./traffic66 demo`  
+  فرضی آلات کے ساتھ آزمائیں۔
 
 ## اسکرین شاٹس
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="جائزہ"></a><br>جائزہ | <a href="images/topn.png"><img src="images/topn.png" alt="ٹاپ 66"></a><br>ٹاپ 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="مقامات اور نیٹ ورک"></a><br>مقامات اور نیٹ ورک | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="انٹرفیس جانچ"></a><br>انٹرفیس جانچ |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="جائزہ" width="49%"> <img src="images/topn.png" alt="ٹاپ 66" width="49%">
+
+<img src="images/geo.png" alt="مقامات اور نیٹ ورک" width="49%"> <img src="images/interfaces.png" alt="انٹرفیس جانچ" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## مکمل دستی
 
-ویب UI کے مینو میں **مدد**؛ GitHub پر: [MANUAL.ur.md](MANUAL.ur.md)
+ویب UI کے مینو میں **مدد**۔ GitHub پر: [MANUAL.ur.md](MANUAL.ur.md)
 
 15 زبانیں۔ جانچ کے لیے اور 100 سے کم افراد والی تنظیموں کے لیے مفت ([لائسنس](../LICENSE.md))۔
 

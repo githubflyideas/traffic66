@@ -6,45 +6,73 @@
 
 ## 快速开始
 
-```
-# Linux、macOS：下载到 ./traffic66 并开始采集
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. 从这里下载对应系统的压缩包： [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. 解压后运行程序：
 
 ```
-# Windows（PowerShell）：同上
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-终端会打印 Web 界面地址，以及设备要指向的 IP 和 UDP 端口（[设备配置](MANUAL.zh.md#device-configuration)）。用 `admin` / `traffic66` 登录并设置新密码。只想先看看？用模拟设备跑演示：
+Windows：解压 `traffic66-windows-amd64.zip`，运行 `traffic66.exe`（双击即可）。
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS：先在该目录运行 `xattr -dr com.apple.quarantine .`。
 
-端口：TCP 8066 Web 界面，UDP 6343 sFlow、2055 NetFlow、4739 IPFIX（每个 UDP 端口都接收所有协议）。终端会打印设备应指向的地址；首次登录会要求设置新密码。
+然后：
 
-macOS 手动安装时先运行 `xattr -dr com.apple.quarantine traffic66-darwin-*`。Windows 提示「已保护你的电脑」：**更多信息** → **仍要运行**。
+- Web 界面：`http://<服务器IP>:8066`，监听所有网卡。
+- 登录：用户 `admin`，密码 `traffic66`。首次登录必须设置新密码。
+- 把设备的流量导出指向服务器 IP：sFlow UDP 6343，NetFlow v5/v9 UDP 2055，IPFIX UDP 4739（监听所有网卡；每个端口都接收所有协议）。
 
-## 命令速查
+## 常用命令
 
-| 用途 | 命令 |
-|---|---|
-| 采集 sFlow 6343、NetFlow v5/v9 2055、IPFIX 4739（默认） | `./traffic66` |
-| 只收 NetFlow v5/v9（2055）和 IPFIX（4739） | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| 只收 sFlow，UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| Web 界面绑定指定 IP 和端口 | `./traffic66 -addr 10.0.0.5:8080` |
-| 抓本机网卡（Linux） | `sudo ./traffic66 -capture eth0 -listen ""` |
-| 设置或重置 admin 密码（用了 -data 就加上） | `./traffic66 passwd` |
-| 终端界面连接远程服务器 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  按上面的默认设置启动。
+
+- `./traffic66 -addr :9000`  
+  Web 界面改用 9000 端口（默认 8066）。
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  修改采集端口（这里把 NetFlow 改为 9995）。
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  只监听一个 IP 地址，而不是所有网卡。
+
+- `./traffic66 -data /var/lib/traffic66`  
+  数据放到其他目录（默认是程序旁边的 `traffic66-data`）。
+
+- `./traffic66 passwd`  
+  设置或重置 admin 密码（用了 `-data` 就加上 `-data 目录`）。
+
+- `traffic66.exe interfaces`  
+  Windows：列出网卡（名称和编号）。
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows：抓取本机这块网卡的流量（填名称或编号）。需要安装 Npcap（npcap.com）。
+
+- `./traffic66 interfaces`  
+  Linux、macOS：列出网卡。
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux：抓取本机 eth0 的流量（macOS 用 `-capture en0`）。
+
+- `./traffic66 tui`  
+  在 traffic66 机器上打开终端界面。
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  终端界面连接远程的 traffic66。
+
+- `./traffic66 demo`  
+  用模拟设备试用。
 
 ## 截图
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="概览"></a><br>概览 | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="地理与运营商"></a><br>地理与运营商 | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="接口对账"></a><br>接口对账 |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="概览" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+
+<img src="images/geo.png" alt="地理与运营商" width="49%"> <img src="images/interfaces.png" alt="接口对账" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## 完整手册
 

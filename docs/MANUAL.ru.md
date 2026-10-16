@@ -46,32 +46,24 @@ Grafana или модулям анализа потоков PRTG и SolarWinds N
 
 ## 1. Быстрый старт
 
-```
-# Linux, macOS: скачать в ./traffic66 и начать сбор
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Скачайте архив для своей системы: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Распакуйте и запустите программу:
 
 ```
-# Windows, PowerShell: то же
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-Терминал показывает адрес веб-интерфейса, а также IP и UDP-порты для ваших устройств ([настройка устройств](#device-configuration)). Войдите как `admin` / `traffic66` и задайте новый пароль. Только посмотреть? Демо с имитацией устройств:
+Windows: распакуйте `traffic66-windows-amd64.zip` и запустите `traffic66.exe` (можно двойным щелчком).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: сначала выполните в папке `xattr -dr com.apple.quarantine .`.
 
-Порты: TCP 8066 веб-интерфейс, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (каждый UDP-порт принимает любой протокол). Терминал показывает адреса для устройств; при первом входе нужно задать новый пароль.
+Затем:
 
-Вручную (архивы: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS вручную: сначала `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows «защитила ваш компьютер»: **Подробнее** → **Выполнить в любом случае**.
+- Веб-интерфейс: `http://<IP сервера>:8066`. Слушает на всех сетевых интерфейсах.
+- Вход: пользователь `admin`, пароль `traffic66`. При первом входе нужно задать новый пароль.
+- Направьте устройства на IP сервера: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (все интерфейсы; каждый порт принимает любой протокол).
 
 <a id="2-examples"></a>
 
@@ -540,4 +532,4 @@ traffic66 и скопируйте каталог; обновление: заме
 | `address already in use` | Выберите другие порты с помощью `-addr` или `-listen` |
 | Windows: "Система Windows защитила ваш компьютер" | **Подробнее** → **Выполнить в любом случае** |
 
-Сборка из исходников: Go 1.26 и компилятор C, затем `scripts/build.sh 0.1.0 traffic66`.
+Сборка из исходников: Go 1.26 и компилятор C, затем `CGO_ENABLED=1 go build ./cmd/traffic66`.

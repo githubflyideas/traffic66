@@ -8,45 +8,73 @@ devices' own interface counters, in a web UI and a terminal UI.
 
 ## Quick start
 
-```
-# Linux, macOS: download into ./traffic66 and start collecting
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Download the archive for your system from [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Unzip it and run the program:
 
 ```
-# Windows, PowerShell: the same
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-The terminal prints the web UI address and the IP and UDP ports to point your devices at ([device configuration](docs/MANUAL.md#device-configuration)). Sign in as `admin` / `traffic66` and choose a new password. Only looking? The demo, with simulated devices:
+Windows: unzip `traffic66-windows-amd64.zip` and run `traffic66.exe` (double-click works).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: first run `xattr -dr com.apple.quarantine .` in the folder.
 
-Ports: TCP 8066 web UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (every UDP port takes every protocol). The terminal prints the addresses to point your devices at; the first sign-in asks for a new password.
+Then:
 
-macOS by hand: `xattr -dr com.apple.quarantine traffic66-darwin-*` first. Windows "protected your PC": **More info** → **Run anyway**.
+- Web UI: `http://<server IP>:8066`. It listens on all network interfaces.
+- Sign in: user `admin`, password `traffic66`. The first sign-in makes you set a new password.
+- Point your devices at the server IP: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (all interfaces; every port accepts every protocol).
 
-## Command cheat sheet
+## Common commands
 
-| Task | Command |
-|---|---|
-| Collect sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 (default) | `./traffic66` |
-| NetFlow v5/v9 on 2055 and IPFIX on 4739 only | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| sFlow only, UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| Web UI on a given IP and port | `./traffic66 -addr 10.0.0.5:8080` |
-| Capture this machine's NIC (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
-| Set or reset the admin password (add -data DIR if used) | `./traffic66 passwd` |
-| Terminal UI to a remote server | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  Start with the defaults above.
+
+- `./traffic66 -addr :9000`  
+  Web UI on port 9000 instead of 8066.
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  Change the collector ports (here NetFlow on 9995).
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  Listen on one IP address only, instead of all interfaces.
+
+- `./traffic66 -data /var/lib/traffic66`  
+  Keep the data in another directory (default: `traffic66-data` next to the program).
+
+- `./traffic66 passwd`  
+  Set or reset the admin password (add `-data DIR` if you use one).
+
+- `traffic66.exe interfaces`  
+  Windows: list the network cards (name and number).
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows: analyse this PC's own traffic on that card (name or number). Needs Npcap (npcap.com).
+
+- `./traffic66 interfaces`  
+  Linux, macOS: list the network cards.
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux: analyse this machine's own traffic on eth0 (macOS: `-capture en0`).
+
+- `./traffic66 tui`  
+  Terminal UI on the traffic66 machine.
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  Terminal UI connected to a remote traffic66.
+
+- `./traffic66 demo`  
+  Try it with simulated devices.
 
 ## Screenshots
 
-| | |
-|---|---|
-| <a href="docs/images/overview.png"><img src="docs/images/overview.png" alt="Overview"></a><br>Overview | <a href="docs/images/topn.png"><img src="docs/images/topn.png" alt="Top 66"></a><br>Top 66 |
-| <a href="docs/images/geo.png"><img src="docs/images/geo.png" alt="Geo & networks"></a><br>Geo & networks | <a href="docs/images/interfaces.png"><img src="docs/images/interfaces.png" alt="Interface check"></a><br>Interface check |
-| <a href="docs/images/tui-top.png"><img src="docs/images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="docs/images/overview.png" alt="Overview" width="49%"> <img src="docs/images/topn.png" alt="Top 66" width="49%">
+
+<img src="docs/images/geo.png" alt="Geo & networks" width="49%"> <img src="docs/images/interfaces.png" alt="Interface check" width="49%">
+
+<img src="docs/images/tui-top.png" alt="TUI" width="49%">
 
 ## Full manual
 

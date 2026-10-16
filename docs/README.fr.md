@@ -9,48 +9,76 @@ dans une interface terminal.
 
 ## Démarrage rapide
 
-```
-# Linux, macOS : télécharger dans ./traffic66 et commencer la collecte
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Téléchargez l'archive de votre système : [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Décompressez-la et lancez le programme :
 
 ```
-# Windows, PowerShell : idem
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-Le terminal affiche l'adresse de l'interface web, ainsi que l'IP et les ports UDP à donner à vos équipements ([configuration des équipements](MANUAL.fr.md#device-configuration)). Connectez-vous en `admin` / `traffic66` et choisissez un nouveau mot de passe. Juste pour voir ? La démo, avec des équipements simulés :
+Windows : décompressez `traffic66-windows-amd64.zip` et lancez `traffic66.exe` (un double-clic suffit).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS : lancez d'abord `xattr -dr com.apple.quarantine .` dans le dossier.
 
-Ports : TCP 8066 interface web, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (chaque port UDP accepte tous les protocoles). Le terminal affiche les adresses à donner aux équipements ; la première connexion demande un nouveau mot de passe.
+Ensuite :
 
-macOS à la main : d'abord `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows « a protégé votre ordinateur » : **Informations complémentaires** → **Exécuter quand même**.
+- Interface web : `http://<IP du serveur>:8066`. Elle écoute sur toutes les interfaces réseau.
+- Connexion : utilisateur `admin`, mot de passe `traffic66`. La première connexion impose un nouveau mot de passe.
+- Faites envoyer vos équipements vers l'IP du serveur : sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (toutes les interfaces ; chaque port accepte tous les protocoles).
 
-## Aide-mémoire des commandes
+## Commandes courantes
 
-| Tâche | Commande |
-|---|---|
-| Collecter sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 (par défaut) | `./traffic66` |
-| NetFlow v5/v9 sur 2055 et IPFIX sur 4739 seulement | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| sFlow seul, UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| Interface web sur une IP et un port | `./traffic66 -addr 10.0.0.5:8080` |
-| Capturer la carte réseau locale (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
-| Définir ou réinitialiser le mot de passe admin (ajouter -data DIR si utilisé) | `./traffic66 passwd` |
-| Interface terminal vers un serveur distant | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  Démarrer avec les valeurs par défaut ci-dessus.
+
+- `./traffic66 -addr :9000`  
+  Interface web sur le port 9000 au lieu de 8066.
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  Changer les ports des collecteurs (ici NetFlow sur 9995).
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  Écouter sur une seule adresse IP au lieu de toutes les interfaces.
+
+- `./traffic66 -data /var/lib/traffic66`  
+  Garder les données dans un autre répertoire (par défaut : `traffic66-data` à côté du programme).
+
+- `./traffic66 passwd`  
+  Définir ou réinitialiser le mot de passe admin (ajoutez `-data DIR` si vous en utilisez un).
+
+- `traffic66.exe interfaces`  
+  Windows : lister les cartes réseau (nom et numéro).
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows : analyser le trafic de ce PC sur cette carte (nom ou numéro). Nécessite Npcap (npcap.com).
+
+- `./traffic66 interfaces`  
+  Linux, macOS : lister les cartes réseau.
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux : analyser le trafic de cette machine sur eth0 (macOS : `-capture en0`).
+
+- `./traffic66 tui`  
+  Interface terminal sur la machine traffic66.
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  Interface terminal connectée à un traffic66 distant.
+
+- `./traffic66 demo`  
+  Essayer avec des équipements simulés.
 
 ## Captures d'écran
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="Vue d'ensemble"></a><br>Vue d'ensemble | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="Géographie et réseaux"></a><br>Géographie et réseaux | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="Contrôle des interfaces"></a><br>Contrôle des interfaces |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="Vue d'ensemble" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+
+<img src="images/geo.png" alt="Géographie et réseaux" width="49%"> <img src="images/interfaces.png" alt="Contrôle des interfaces" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## Manuel complet
 
-dans l'interface web : **Aide** dans le menu ; sur GitHub : [MANUAL.fr.md](MANUAL.fr.md)
+Dans l'interface web : **Aide** dans le menu. Sur GitHub : [MANUAL.fr.md](MANUAL.fr.md)
 
 15 langues. Gratuit pour l'évaluation et pour les organisations de moins de 100 personnes ([licence](../LICENSE.md)).

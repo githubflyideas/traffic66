@@ -47,8 +47,8 @@ import (
 	"github.com/githubflyideas/traffic66/internal/web"
 )
 
-// version is the release this build claims. The release workflow and
-// scripts/build.sh set it at link time; left unset, as a plain `go build`
+// version is the release this build claims. The release workflow sets it
+// at link time; left unset, as a plain `go build`
 // leaves it, it is filled in by buildVersion so a hand-built binary says
 // what it is rather than naming a release it is not.
 var version = ""

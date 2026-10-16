@@ -8,48 +8,76 @@
 
 ## Быстрый старт
 
-```
-# Linux, macOS: скачать в ./traffic66 и начать сбор
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Скачайте архив для своей системы: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Распакуйте и запустите программу:
 
 ```
-# Windows, PowerShell: то же
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-Терминал показывает адрес веб-интерфейса, а также IP и UDP-порты для ваших устройств ([настройка устройств](MANUAL.ru.md#device-configuration)). Войдите как `admin` / `traffic66` и задайте новый пароль. Только посмотреть? Демо с имитацией устройств:
+Windows: распакуйте `traffic66-windows-amd64.zip` и запустите `traffic66.exe` (можно двойным щелчком).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: сначала выполните в папке `xattr -dr com.apple.quarantine .`.
 
-Порты: TCP 8066 веб-интерфейс, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (каждый UDP-порт принимает любой протокол). Терминал показывает адреса для устройств; при первом входе нужно задать новый пароль.
+Затем:
 
-macOS вручную: сначала `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows «защитила ваш компьютер»: **Подробнее** → **Выполнить в любом случае**.
+- Веб-интерфейс: `http://<IP сервера>:8066`. Слушает на всех сетевых интерфейсах.
+- Вход: пользователь `admin`, пароль `traffic66`. При первом входе нужно задать новый пароль.
+- Направьте устройства на IP сервера: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (все интерфейсы; каждый порт принимает любой протокол).
 
-## Шпаргалка по командам
+## Частые команды
 
-| Задача | Команда |
-|---|---|
-| Сбор sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 (по умолчанию) | `./traffic66` |
-| Только NetFlow v5/v9 на 2055 и IPFIX на 4739 | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| Только sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| Веб-интерфейс на заданных IP и порту | `./traffic66 -addr 10.0.0.5:8080` |
-| Захват своей сетевой карты (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
-| Задать или сбросить пароль admin (с -data DIR, если используется) | `./traffic66 passwd` |
-| Терминальный интерфейс к удалённому серверу | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  Запуск с настройками по умолчанию.
+
+- `./traffic66 -addr :9000`  
+  Веб-интерфейс на порту 9000 вместо 8066.
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  Сменить порты коллекторов (здесь NetFlow на 9995).
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  Слушать только на одном IP-адресе вместо всех интерфейсов.
+
+- `./traffic66 -data /var/lib/traffic66`  
+  Хранить данные в другом каталоге (по умолчанию `traffic66-data` рядом с программой).
+
+- `./traffic66 passwd`  
+  Задать или сбросить пароль admin (с `-data DIR`, если используется).
+
+- `traffic66.exe interfaces`  
+  Windows: список сетевых карт (имя и номер).
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows: анализ трафика самого ПК на этой карте (имя или номер). Нужен Npcap (npcap.com).
+
+- `./traffic66 interfaces`  
+  Linux, macOS: список сетевых карт.
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux: анализ трафика этой машины на eth0 (macOS: `-capture en0`).
+
+- `./traffic66 tui`  
+  Терминальный интерфейс на машине traffic66.
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  Терминальный интерфейс к удалённому traffic66.
+
+- `./traffic66 demo`  
+  Попробовать с имитацией устройств.
 
 ## Скриншоты
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="Обзор"></a><br>Обзор | <a href="images/topn.png"><img src="images/topn.png" alt="Топ 66"></a><br>Топ 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="География и сети"></a><br>География и сети | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="Сверка интерфейсов"></a><br>Сверка интерфейсов |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="Обзор" width="49%"> <img src="images/topn.png" alt="Топ 66" width="49%">
+
+<img src="images/geo.png" alt="География и сети" width="49%"> <img src="images/interfaces.png" alt="Сверка интерфейсов" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## Полное руководство
 
-в веб-интерфейсе: **Справка** в меню; на GitHub: [MANUAL.ru.md](MANUAL.ru.md)
+В веб-интерфейсе: **Справка** в меню. На GitHub: [MANUAL.ru.md](MANUAL.ru.md)
 
 15 языков. Бесплатно для оценки и для организаций численностью менее 100 человек ([лицензия](../LICENSE.md)).

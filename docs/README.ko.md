@@ -6,45 +6,73 @@ sFlow, NetFlow, IPFIX 플로 분석을 하나의 프로그램으로 처리합니
 
 ## 빠른 시작
 
-```
-# Linux, macOS: ./traffic66 에 내려받고 수집 시작
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. 시스템에 맞는 압축 파일을 내려받으세요: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. 압축을 풀고 프로그램을 실행합니다:
 
 ```
-# Windows(PowerShell): 동일
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-터미널에 웹 UI 주소와 장비가 보낼 IP·UDP 포트가 표시됩니다([장비 설정](MANUAL.ko.md#device-configuration)). `admin` / `traffic66` 로 로그인하고 새 비밀번호를 정하세요. 구경만 하려면 가상 장비 데모:
+Windows: `traffic66-windows-amd64.zip` 을 풀고 `traffic66.exe` 실행(더블클릭 가능).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: 먼저 그 폴더에서 `xattr -dr com.apple.quarantine .` 실행.
 
-포트: TCP 8066 웹 UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX(모든 UDP 포트가 모든 프로토콜을 받음). 장비가 보낼 주소는 터미널에 표시되고, 첫 로그인 때 새 비밀번호를 정합니다.
+그다음:
 
-macOS 에서 직접 설치할 때는 먼저 `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "PC 보호" 창: **추가 정보** → **실행**.
+- 웹 UI: `http://<서버 IP>:8066`. 모든 네트워크 인터페이스에서 대기합니다.
+- 로그인: 사용자 `admin`, 비밀번호 `traffic66`. 첫 로그인 때 새 비밀번호를 정해야 합니다.
+- 장비가 서버 IP 로 보내게 하세요: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739(모든 인터페이스, 모든 포트가 모든 프로토콜을 받음).
 
-## 명령 요약
+## 자주 쓰는 명령
 
-| 용도 | 명령 |
-|---|---|
-| sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 수집(기본) | `./traffic66` |
-| NetFlow v5/v9(2055)와 IPFIX(4739)만 | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| sFlow 만, UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| 웹 UI 를 지정한 IP·포트로 | `./traffic66 -addr 10.0.0.5:8080` |
-| 이 컴퓨터 NIC 캡처(Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
-| admin 비밀번호 설정·재설정(-data 사용 시 추가) | `./traffic66 passwd` |
-| 원격 서버에 터미널 UI 접속 | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  위 기본값으로 시작.
+
+- `./traffic66 -addr :9000`  
+  웹 UI 를 8066 대신 9000 포트로.
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  수집 포트 변경(여기서는 NetFlow 를 9995 로).
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  모든 인터페이스 대신 IP 주소 하나에서만 대기.
+
+- `./traffic66 -data /var/lib/traffic66`  
+  데이터를 다른 디렉터리에 저장(기본: 프로그램 옆 `traffic66-data`).
+
+- `./traffic66 passwd`  
+  admin 비밀번호 설정·재설정(`-data` 를 쓰면 `-data DIR` 추가).
+
+- `traffic66.exe interfaces`  
+  Windows: 네트워크 카드 목록(이름과 번호).
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows: 이 PC 의 해당 카드 트래픽 분석(이름 또는 번호). Npcap(npcap.com) 필요.
+
+- `./traffic66 interfaces`  
+  Linux, macOS: 네트워크 카드 목록.
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux: 이 컴퓨터 eth0 의 트래픽 분석(macOS: `-capture en0`).
+
+- `./traffic66 tui`  
+  traffic66 컴퓨터에서 터미널 UI.
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  원격 traffic66 에 터미널 UI 로 접속.
+
+- `./traffic66 demo`  
+  가상 장비로 체험.
 
 ## 스크린샷
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="개요"></a><br>개요 | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="지역 및 네트워크"></a><br>지역 및 네트워크 | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="인터페이스 대조"></a><br>인터페이스 대조 |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="개요" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+
+<img src="images/geo.png" alt="지역 및 네트워크" width="49%"> <img src="images/interfaces.png" alt="인터페이스 대조" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## 전체 설명서
 

@@ -8,48 +8,76 @@ interface counter-এর সাথে মেলে কি না — web UI ও 
 
 ## দ্রুত শুরু
 
-```
-# Linux, macOS: ./traffic66-এ ডাউনলোড করে সংগ্রহ শুরু করুন
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. আপনার সিস্টেমের আর্কাইভ ডাউনলোড করুন: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. খুলে প্রোগ্রামটি চালান:
 
 ```
-# Windows, PowerShell: একই
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-টার্মিনালে web UI-এর ঠিকানা আর ডিভাইসের জন্য IP ও UDP পোর্ট দেখা যায় ([ডিভাইস কনফিগারেশন](MANUAL.bn.md#device-configuration))। `admin` / `traffic66` দিয়ে সাইন ইন করে নতুন পাসওয়ার্ড দিন। শুধু দেখতে চান? সিমুলেটেড ডিভাইসের ডেমো:
+Windows: `traffic66-windows-amd64.zip` খুলে `traffic66.exe` চালান (ডাবল-ক্লিকেও হয়)।
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: আগে ফোল্ডারে `xattr -dr com.apple.quarantine .` চালান।
 
-পোর্ট: TCP 8066 web UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (প্রতিটি UDP পোর্ট সব প্রোটোকল নেয়)। ডিভাইস কোন ঠিকানায় পাঠাবে তা টার্মিনালে দেখা যায়; প্রথম সাইন-ইনে নতুন পাসওয়ার্ড চাওয়া হয়।
+তারপর:
 
-macOS-এ হাতে: আগে `xattr -dr com.apple.quarantine traffic66-darwin-*`। Windows "protected your PC": **More info** → **Run anyway**।
+- Web UI: `http://<সার্ভার IP>:8066`। এটি সব নেটওয়ার্ক ইন্টারফেসে শোনে।
+- সাইন ইন: ইউজার `admin`, পাসওয়ার্ড `traffic66`। প্রথম সাইন-ইনে নতুন পাসওয়ার্ড দিতে হয়।
+- ডিভাইসগুলোকে সার্ভার IP-তে পাঠাতে দিন: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (সব ইন্টারফেস; প্রতিটি পোর্ট সব প্রোটোকল নেয়)।
 
-## কমান্ড চিট শিট
+## সাধারণ কমান্ড
 
-| কাজ | কমান্ড |
-|---|---|
-| sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 সংগ্রহ (ডিফল্ট) | `./traffic66` |
-| শুধু NetFlow v5/v9 (2055) ও IPFIX (4739) | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| শুধু sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| Web UI নির্দিষ্ট IP ও পোর্টে | `./traffic66 -addr 10.0.0.5:8080` |
-| এই মেশিনের NIC ক্যাপচার (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
-| admin পাসওয়ার্ড সেট/রিসেট (-data DIR থাকলে যোগ করুন) | `./traffic66 passwd` |
-| রিমোট সার্ভারে Terminal UI | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  উপরের ডিফল্টে চালু করুন।
+
+- `./traffic66 -addr :9000`  
+  Web UI 8066-এর বদলে পোর্ট 9000-এ।
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  collector পোর্ট বদলান (এখানে NetFlow 9995-এ)।
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  সব ইন্টারফেসের বদলে শুধু একটি IP-তে শুনুন।
+
+- `./traffic66 -data /var/lib/traffic66`  
+  ডেটা অন্য ডিরেক্টরিতে রাখুন (ডিফল্ট: প্রোগ্রামের পাশে `traffic66-data`)।
+
+- `./traffic66 passwd`  
+  admin পাসওয়ার্ড সেট বা রিসেট (`-data` থাকলে `-data DIR` যোগ করুন)।
+
+- `traffic66.exe interfaces`  
+  Windows: নেটওয়ার্ক কার্ডের তালিকা (নাম ও নম্বর)।
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows: ওই কার্ডে এই PC-র নিজের ট্রাফিক বিশ্লেষণ (নাম বা নম্বর)। Npcap (npcap.com) লাগে।
+
+- `./traffic66 interfaces`  
+  Linux, macOS: নেটওয়ার্ক কার্ডের তালিকা।
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux: eth0-তে এই মেশিনের নিজের ট্রাফিক বিশ্লেষণ (macOS: `-capture en0`)।
+
+- `./traffic66 tui`  
+  traffic66 মেশিনে Terminal UI।
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  দূরের traffic66-এর সাথে যুক্ত Terminal UI।
+
+- `./traffic66 demo`  
+  সিমুলেটেড ডিভাইস দিয়ে চেষ্টা করুন।
 
 ## স্ক্রিনশট
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="সারসংক্ষেপ"></a><br>সারসংক্ষেপ | <a href="images/topn.png"><img src="images/topn.png" alt="শীর্ষ 66"></a><br>শীর্ষ 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="ভূগোল ও নেটওয়ার্ক"></a><br>ভূগোল ও নেটওয়ার্ক | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="ইন্টারফেস মিলানো"></a><br>ইন্টারফেস মিলানো |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="সারসংক্ষেপ" width="49%"> <img src="images/topn.png" alt="শীর্ষ 66" width="49%">
+
+<img src="images/geo.png" alt="ভূগোল ও নেটওয়ার্ক" width="49%"> <img src="images/interfaces.png" alt="ইন্টারফেস মিলানো" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## সম্পূর্ণ ম্যানুয়াল
 
-web UI-এর মেনুতে **সহায়তা**; GitHub-এ: [MANUAL.bn.md](MANUAL.bn.md)
+web UI-এর মেনুতে **সহায়তা**। GitHub-এ: [MANUAL.bn.md](MANUAL.bn.md)
 
 15টি ভাষা। মূল্যায়নের জন্য এবং 100 জনের কম মানুষের প্রতিষ্ঠানের জন্য বিনামূল্যে ([লাইসেন্স](../LICENSE.md))।

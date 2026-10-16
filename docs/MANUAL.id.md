@@ -46,32 +46,24 @@ pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 
 ## 1. Mulai cepat
 
-```
-# Linux, macOS: unduh ke ./traffic66 lalu mulai mengumpulkan
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Unduh arsip untuk sistem Anda: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Ekstrak lalu jalankan programnya:
 
 ```
-# Windows, PowerShell: sama
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-Terminal menampilkan alamat antarmuka web serta IP dan port UDP tujuan perangkat Anda ([konfigurasi perangkat](#device-configuration)). Masuk sebagai `admin` / `traffic66` lalu pilih kata sandi baru. Hanya ingin melihat? Demo dengan perangkat simulasi:
+Windows: ekstrak `traffic66-windows-amd64.zip` lalu jalankan `traffic66.exe` (klik dua kali bisa).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: jalankan dulu `xattr -dr com.apple.quarantine .` di folder itu.
 
-Port: TCP 8066 antarmuka web, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (setiap port UDP menerima semua protokol). Terminal menampilkan alamat tujuan untuk perangkat; masuk pertama kali meminta kata sandi baru.
+Lalu:
 
-Secara manual (arsip: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS manual: lebih dulu `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "melindungi PC Anda": **Info selengkapnya** → **Tetap jalankan**.
+- Antarmuka web: `http://<IP server>:8066`. Mendengarkan di semua antarmuka jaringan.
+- Masuk: pengguna `admin`, kata sandi `traffic66`. Saat pertama masuk Anda wajib membuat kata sandi baru.
+- Arahkan perangkat ke IP server: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (semua antarmuka; setiap port menerima semua protokol).
 
 <a id="2-examples"></a>
 
@@ -541,4 +533,4 @@ selama 1 jam sekitar 9 detik.
 | `address already in use` | Pilih port lain dengan `-addr` atau `-listen` |
 | Windows: "Windows protected your PC" (Windows melindungi PC Anda) | **More info** (info selengkapnya) → **Run anyway** (tetap jalankan) |
 
-Build dari source: Go 1.26 dan compiler C, lalu `scripts/build.sh 0.1.0 traffic66`.
+Build dari source: Go 1.26 dan compiler C, lalu `CGO_ENABLED=1 go build ./cmd/traffic66`.

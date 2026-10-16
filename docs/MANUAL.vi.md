@@ -46,32 +46,24 @@ Elasticsearch, Kafka hay một cơ sở dữ liệu riêng.
 
 ## 1. Bắt đầu nhanh
 
-```
-# Linux, macOS: tải về ./traffic66 và bắt đầu thu thập
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Tải gói cho hệ điều hành của bạn: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Giải nén rồi chạy chương trình:
 
 ```
-# Windows, PowerShell: tương tự
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-Terminal in ra địa chỉ giao diện web cùng IP và cổng UDP để trỏ thiết bị tới ([cấu hình thiết bị](#device-configuration)). Đăng nhập bằng `admin` / `traffic66` rồi đặt mật khẩu mới. Chỉ muốn xem thử? Bản demo với thiết bị mô phỏng:
+Windows: giải nén `traffic66-windows-amd64.zip` rồi chạy `traffic66.exe` (nhấp đúp cũng được).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: trước tiên chạy `xattr -dr com.apple.quarantine .` trong thư mục đó.
 
-Cổng: TCP 8066 giao diện web, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (mỗi cổng UDP nhận mọi giao thức). Terminal in ra địa chỉ để trỏ thiết bị tới; lần đăng nhập đầu sẽ yêu cầu mật khẩu mới.
+Sau đó:
 
-Tải thủ công (gói: `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64.zip`):
-
-```
-curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | tar xz
-cd traffic66-linux-amd64 && ./traffic66
-```
-
-macOS thủ công: chạy trước `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "đã bảo vệ PC": **Thông tin thêm** → **Vẫn chạy**.
+- Giao diện web: `http://<IP máy chủ>:8066`. Lắng nghe trên mọi card mạng.
+- Đăng nhập: người dùng `admin`, mật khẩu `traffic66`. Lần đăng nhập đầu bắt buộc đặt mật khẩu mới.
+- Cho thiết bị gửi về IP máy chủ: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (mọi card mạng; mỗi cổng nhận mọi giao thức).
 
 <a id="2-examples"></a>
 
@@ -534,4 +526,4 @@ bộ phiên hội thoại mất khoảng 9 giây.
 | `address already in use` | Chọn cổng khác bằng `-addr` hoặc `-listen` |
 | Windows báo "Windows đã bảo vệ PC của bạn" | **Thông tin thêm** → **Vẫn chạy** |
 
-Biên dịch từ mã nguồn: Go 1.26 và một trình biên dịch C, sau đó chạy `scripts/build.sh 0.1.0 traffic66`.
+Biên dịch từ mã nguồn: Go 1.26 và một trình biên dịch C, sau đó chạy `CGO_ENABLED=1 go build ./cmd/traffic66`.

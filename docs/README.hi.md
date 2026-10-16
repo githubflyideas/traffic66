@@ -8,48 +8,76 @@ sFlow, NetFlow और IPFIX के लिए flow analytics, एक ही प�
 
 ## क्विक स्टार्ट
 
-```
-# Linux, macOS: ./traffic66 में डाउनलोड करें और flows लेना शुरू करें
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. अपने सिस्टम का आर्काइव डाउनलोड करें: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. खोलें और प्रोग्राम चलाएँ:
 
 ```
-# Windows, PowerShell: वही
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-टर्मिनल web UI का पता और डिवाइसों के लिए IP व UDP पोर्ट दिखाता है ([डिवाइस कॉन्फ़िगरेशन](MANUAL.hi.md#device-configuration))। `admin` / `traffic66` से साइन इन करके नया पासवर्ड चुनें। सिर्फ़ देखना है? सिम्युलेटेड डिवाइसों वाला डेमो:
+Windows: `traffic66-windows-amd64.zip` खोलें और `traffic66.exe` चलाएँ (डबल-क्लिक भी चलेगा)।
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: पहले उस फ़ोल्डर में `xattr -dr com.apple.quarantine .` चलाएँ।
 
-पोर्ट: TCP 8066 web UI, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (हर UDP पोर्ट हर प्रोटोकॉल लेता है)। टर्मिनल बताता है कि डिवाइसों को किस पते पर भेजना है; पहले साइन-इन पर नया पासवर्ड माँगा जाता है।
+फिर:
 
-macOS पर हाथ से: पहले `xattr -dr com.apple.quarantine traffic66-darwin-*`। Windows "protected your PC": **More info** → **Run anyway**।
+- Web UI: `http://<सर्वर IP>:8066`। यह सभी नेटवर्क इंटरफ़ेस पर सुनता है।
+- साइन इन: यूज़र `admin`, पासवर्ड `traffic66`। पहली बार साइन इन पर नया पासवर्ड सेट करना होता है।
+- डिवाइसों को सर्वर IP पर भेजने को कहें: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (सभी इंटरफ़ेस; हर पोर्ट हर प्रोटोकॉल लेता है)।
 
-## कमांड चीट शीट
+## आम कमांड
 
-| काम | कमांड |
-|---|---|
-| sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 लें (डिफ़ॉल्ट) | `./traffic66` |
-| सिर्फ़ NetFlow v5/v9 (2055) और IPFIX (4739) | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| सिर्फ़ sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| Web UI किसी IP और पोर्ट पर | `./traffic66 -addr 10.0.0.5:8080` |
-| इसी मशीन का NIC कैप्चर करें (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
-| admin पासवर्ड सेट/रीसेट करें (-data DIR हो तो जोड़ें) | `./traffic66 passwd` |
-| रिमोट सर्वर से Terminal UI | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  ऊपर के डिफ़ॉल्ट के साथ शुरू करें।
+
+- `./traffic66 -addr :9000`  
+  Web UI 8066 की जगह पोर्ट 9000 पर।
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  collector पोर्ट बदलें (यहाँ NetFlow 9995 पर)।
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  सभी इंटरफ़ेस की जगह सिर्फ़ एक IP पते पर सुनें।
+
+- `./traffic66 -data /var/lib/traffic66`  
+  डेटा दूसरी डायरेक्टरी में रखें (डिफ़ॉल्ट: प्रोग्राम के पास `traffic66-data`)।
+
+- `./traffic66 passwd`  
+  admin पासवर्ड सेट या रीसेट करें (`-data` इस्तेमाल हो तो `-data DIR` जोड़ें)।
+
+- `traffic66.exe interfaces`  
+  Windows: नेटवर्क कार्ड की सूची (नाम और नंबर)।
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows: इस PC का अपना ट्रैफ़िक उस कार्ड पर देखें (नाम या नंबर)। Npcap (npcap.com) चाहिए।
+
+- `./traffic66 interfaces`  
+  Linux, macOS: नेटवर्क कार्ड की सूची।
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux: इस मशीन का अपना ट्रैफ़िक eth0 पर देखें (macOS: `-capture en0`)।
+
+- `./traffic66 tui`  
+  traffic66 मशीन पर Terminal UI।
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  रिमोट traffic66 से जुड़ा Terminal UI।
+
+- `./traffic66 demo`  
+  सिम्युलेटेड डिवाइसों के साथ आज़माएँ।
 
 ## स्क्रीनशॉट
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="सारांश"></a><br>सारांश | <a href="images/topn.png"><img src="images/topn.png" alt="शीर्ष 66"></a><br>शीर्ष 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="भूगोल और नेटवर्क"></a><br>भूगोल और नेटवर्क | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="इंटरफ़ेस मिलान"></a><br>इंटरफ़ेस मिलान |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="सारांश" width="49%"> <img src="images/topn.png" alt="शीर्ष 66" width="49%">
+
+<img src="images/geo.png" alt="भूगोल और नेटवर्क" width="49%"> <img src="images/interfaces.png" alt="इंटरफ़ेस मिलान" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## पूरा मैनुअल
 
-web UI के मेनू में **सहायता**; GitHub पर: [MANUAL.hi.md](MANUAL.hi.md)
+web UI के मेनू में **सहायता**। GitHub पर: [MANUAL.hi.md](MANUAL.hi.md)
 
 15 भाषाएँ। evaluation के लिए और 100 से कम लोगों वाले संगठनों के लिए मुफ़्त ([लाइसेंस](../LICENSE.md))।

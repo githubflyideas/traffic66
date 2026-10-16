@@ -9,48 +9,76 @@ antarmuka terminal.
 
 ## Mulai cepat
 
-```
-# Linux, macOS: unduh ke ./traffic66 lalu mulai mengumpulkan
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh
-```
+1. Unduh arsip untuk sistem Anda: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Ekstrak lalu jalankan programnya:
 
 ```
-# Windows, PowerShell: sama
-irm https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.ps1 | iex
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
 ```
 
-Terminal menampilkan alamat antarmuka web serta IP dan port UDP tujuan perangkat Anda ([konfigurasi perangkat](MANUAL.id.md#device-configuration)). Masuk sebagai `admin` / `traffic66` lalu pilih kata sandi baru. Hanya ingin melihat? Demo dengan perangkat simulasi:
+Windows: ekstrak `traffic66-windows-amd64.zip` lalu jalankan `traffic66.exe` (klik dua kali bisa).
 
-```
-curl -fsSL https://raw.githubusercontent.com/githubflyideas/traffic66/main/scripts/install.sh | sh -s -- demo
-```
+macOS: jalankan dulu `xattr -dr com.apple.quarantine .` di folder itu.
 
-Port: TCP 8066 antarmuka web, UDP 6343 sFlow, 2055 NetFlow, 4739 IPFIX (setiap port UDP menerima semua protokol). Terminal menampilkan alamat tujuan untuk perangkat; masuk pertama kali meminta kata sandi baru.
+Lalu:
 
-macOS manual: lebih dulu `xattr -dr com.apple.quarantine traffic66-darwin-*`. Windows "melindungi PC Anda": **Info selengkapnya** → **Tetap jalankan**.
+- Antarmuka web: `http://<IP server>:8066`. Mendengarkan di semua antarmuka jaringan.
+- Masuk: pengguna `admin`, kata sandi `traffic66`. Saat pertama masuk Anda wajib membuat kata sandi baru.
+- Arahkan perangkat ke IP server: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (semua antarmuka; setiap port menerima semua protokol).
 
-## Ringkasan perintah
+## Perintah umum
 
-| Tugas | Perintah |
-|---|---|
-| Kumpulkan sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 (bawaan) | `./traffic66` |
-| Hanya NetFlow v5/v9 di 2055 dan IPFIX di 4739 | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
-| Hanya sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
-| Antarmuka web di IP dan port tertentu | `./traffic66 -addr 10.0.0.5:8080` |
-| Tangkap kartu jaringan mesin ini (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
-| Atur atau reset kata sandi admin (tambah -data DIR bila dipakai) | `./traffic66 passwd` |
-| Antarmuka terminal ke server jarak jauh | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+- `./traffic66`  
+  Mulai dengan pengaturan bawaan di atas.
+
+- `./traffic66 -addr :9000`  
+  Antarmuka web di port 9000, bukan 8066.
+
+- `./traffic66 -listen sflow=:6343,netflow=:9995,ipfix=:4739`  
+  Ganti port kolektor (di sini NetFlow di 9995).
+
+- `./traffic66 -addr 192.168.1.10:8066 -listen sflow=192.168.1.10:6343,netflow=192.168.1.10:2055,ipfix=192.168.1.10:4739`  
+  Hanya mendengarkan di satu alamat IP, bukan semua antarmuka.
+
+- `./traffic66 -data /var/lib/traffic66`  
+  Simpan data di direktori lain (bawaan: `traffic66-data` di samping program).
+
+- `./traffic66 passwd`  
+  Atur atau reset kata sandi admin (tambahkan `-data DIR` bila dipakai).
+
+- `traffic66.exe interfaces`  
+  Windows: daftar kartu jaringan (nama dan nomor).
+
+- `traffic66.exe -capture Wi-Fi`  
+  Windows: analisis lalu lintas PC ini pada kartu itu (nama atau nomor). Perlu Npcap (npcap.com).
+
+- `./traffic66 interfaces`  
+  Linux, macOS: daftar kartu jaringan.
+
+- `sudo ./traffic66 -capture eth0`  
+  Linux: analisis lalu lintas mesin ini di eth0 (macOS: `-capture en0`).
+
+- `./traffic66 tui`  
+  Antarmuka terminal di mesin traffic66.
+
+- `./traffic66 tui -server http://192.168.1.10:8066 -user admin -password 'your-password'`  
+  Antarmuka terminal ke traffic66 jarak jauh.
+
+- `./traffic66 demo`  
+  Coba dengan perangkat simulasi.
 
 ## Tangkapan layar
 
-| | |
-|---|---|
-| <a href="images/overview.png"><img src="images/overview.png" alt="Ringkasan"></a><br>Ringkasan | <a href="images/topn.png"><img src="images/topn.png" alt="Top 66"></a><br>Top 66 |
-| <a href="images/geo.png"><img src="images/geo.png" alt="Geografi & jaringan"></a><br>Geografi & jaringan | <a href="images/interfaces.png"><img src="images/interfaces.png" alt="Pencocokan antarmuka"></a><br>Pencocokan antarmuka |
-| <a href="images/tui-top.png"><img src="images/tui-top.png" alt="TUI"></a><br>TUI | |
+<img src="images/overview.png" alt="Ringkasan" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+
+<img src="images/geo.png" alt="Geografi & jaringan" width="49%"> <img src="images/interfaces.png" alt="Pencocokan antarmuka" width="49%">
+
+<img src="images/tui-top.png" alt="TUI" width="49%">
 
 ## Manual lengkap
 
-di antarmuka web: **Bantuan** di menu; di GitHub: [MANUAL.id.md](MANUAL.id.md)
+Di antarmuka web: **Bantuan** di menu. Di GitHub: [MANUAL.id.md](MANUAL.id.md)
 
 15 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 100 orang ([lisensi](../LICENSE.md)).
