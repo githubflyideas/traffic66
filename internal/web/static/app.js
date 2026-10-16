@@ -245,12 +245,12 @@ function ago(ms) {
 // and firewall rules while the collector is about to finish.
 function emptyText() {
   const w = waiting;
-  if (!w || !w.reason) return emptyText();
+  if (!w || !w.reason) return t('empty.nodata');
   if (w.reason === 'nothing') return t('empty.first');
   if (w.reason === 'templates') return t('wait.templates', {n: nf(w.records || 0)});
   if (w.reason === 'sampling') return t('wait.sampling', {n: nf(w.records || 0)});
   if (w.reason === 'settling') return t('wait.settling', {n: Math.ceil((w.seconds || 0) / 60)});
-  return emptyText();
+  return t('empty.nodata');
 }
 
 function toast(msg) {
