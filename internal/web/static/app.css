@@ -307,8 +307,8 @@ th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
 .talk tr.sum td{border-top:2px solid var(--line-2);font-weight:650}
 .legend .muted{margin-inline-start:4px}
 .wmap{width:100%;height:auto;display:block;max-height:520px}
-.wmap path,.wmap circle{stroke:var(--surface);stroke-width:.5;cursor:pointer}
-.wmap path:hover,.wmap circle:hover{stroke:var(--ink);stroke-width:1.2}
+.wmap > path,.wmap > circle{stroke:var(--surface);stroke-width:.5;cursor:pointer}
+.wmap > path:hover,.wmap > circle:hover{stroke:var(--ink);stroke-width:1.2}
 .maplegend{display:flex;align-items:center;gap:3px;flex-wrap:wrap;font-size:12px;margin-top:8px}
 .maplegend i{display:inline-block;width:22px;height:10px;border-radius:2px;vertical-align:middle}
 .attrib{font-size:11.5px;margin:8px 0 0}
