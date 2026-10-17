@@ -505,7 +505,7 @@ produção; vender, hospedar para terceiros ou produtos concorrentes exigem
 uma licença comercial. Nada é desligado, nunca. O rodapé de cada página
 mostra o número de instalação de 8 dígitos; envie-o ao autor e coloque o
 `license.json` que receber de volta no diretório de dados. Contato:
-<https://github.com/githubflyideas/traffic66>.
+<route66traffic66@gmail.com>.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.3.8
+
+- Documentation only: license contact updated to route66traffic66@gmail.com in the remaining manual translations (German, Portuguese, Russian, Korean, Vietnamese, Indonesian, Hindi, Bengali, Arabic, Urdu).
+
 ## 2.3.7
 
 - Documentation only: simpler README opening (one-line description, screenshot and a single copy-and-run command block, Windows and device-port notes).

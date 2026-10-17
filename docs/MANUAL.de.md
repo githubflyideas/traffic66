@@ -514,7 +514,7 @@ Dritte oder konkurrierende Produkte erfordern eine kommerzielle Lizenz. Es
 wird nie etwas abgeschaltet. Am Fuß jeder Seite steht die 8-stellige
 Installationsnummer; senden Sie sie an den Autor und legen Sie die
 zurückgeschickte `license.json` in das Datenverzeichnis. Kontakt:
-<https://github.com/githubflyideas/traffic66>.
+<route66traffic66@gmail.com>.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

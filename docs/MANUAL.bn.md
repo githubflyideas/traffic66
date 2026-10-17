@@ -497,7 +497,7 @@ available (ইংরেজি পাঠ বাধ্যতামূলক): ম�
 বাণিজ্যিক লাইসেন্স লাগে। কোনো কিছুই কখনো বন্ধ করা হয় না। প্রতিটি পেজের নিচে 8
 অঙ্কের ইনস্টলেশন নম্বর দেখায়; সেটি লেখককে পাঠান, আর যে `license.json` ফেরত
 পাবেন তা data directory-তে রাখুন। যোগাযোগ:
-<https://github.com/githubflyideas/traffic66>।
+<route66traffic66@gmail.com>।
 
 <a id="11-security-sizing-troubleshooting"></a>
 

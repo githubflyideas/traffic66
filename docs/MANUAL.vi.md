@@ -499,7 +499,7 @@ chức lớn hơn đăng ký sau 30 ngày sử dụng thực tế; bán lại, c
 lưu trữ cho bên khác hoặc sản phẩm cạnh tranh cần giấy phép thương mại. Không
 có tính năng nào bị khóa. Cuối mỗi trang hiển thị mã cài đặt 8 chữ số; gửi mã
 này cho tác giả và đặt file `license.json` nhận được vào thư mục dữ liệu. Liên
-hệ: <https://github.com/githubflyideas/traffic66>.
+hệ: <route66traffic66@gmail.com>.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

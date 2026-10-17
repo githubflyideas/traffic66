@@ -497,7 +497,7 @@ available (अंग्रेज़ी पाठ ही बाध्यकार
 commercial licence चाहिए। कभी कुछ बंद नहीं होता। हर पेज के नीचे 8 अंकों का
 installation number दिखता है; उसे लेखक को भेजें, और जो `license.json` वापस
 मिले उसे data directory में रखें। संपर्क:
-<https://github.com/githubflyideas/traffic66>।
+<route66traffic66@gmail.com>।
 
 <a id="11-security-sizing-troubleshooting"></a>
 
