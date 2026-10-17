@@ -410,7 +410,7 @@ Linux では root か `setcap cap_net_raw,cap_net_admin+ep`、macOS では root�
 
 ### ライセンス
 
-[PolyForm Noncommercial License 1.0.0](../LICENSE.md) と [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)（英語版が正本）のもとでのソースアベイラブルです。評価用途と 100 人未満の組織は無料。それより大きな組織は本番利用 30 日後に登録が必要です。販売、他者向けのホスティング、競合製品には商用ライセンスが必要です。機能が止まることは一切ありません。各ページの下部に 8 桁のインストール番号が表示されるので、それを作者に送り、返ってきた `license.json` をデータディレクトリに置いてください。連絡先：<https://github.com/githubflyideas/traffic66>。
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) と [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)（英語版が正本）のもとでのソースアベイラブルです。評価用途と 100 人未満の組織は無料。それより大きな組織は本番利用 30 日後に登録が必要です。販売、他者向けのホスティング、競合製品には商用ライセンスが必要です。機能が止まることは一切ありません。各ページの下部に 8 桁のインストール番号が表示されるので、それを作者に送り、返ってきた `license.json` をデータディレクトリに置いてください。連絡先：<route66traffic66@gmail.com>。
 
 <a id="11-security-sizing-troubleshooting"></a>
 

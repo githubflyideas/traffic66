@@ -3,6 +3,11 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.3.7
+
+- Documentation only: simpler README opening (one-line description, screenshot and a single copy-and-run command block, Windows and device-port notes).
+- License contact updated to route66traffic66@gmail.com (Additional Use Grant and its translations, manuals).
+
 ## 2.3.6
 
 - Documentation only: rewritten README with per-platform first-run steps (Windows: Npcap, opening a terminal, admin terminal for local capture), task-based commands and a short FAQ (including NetFlow v9/IPFIX template and active timeout advice).

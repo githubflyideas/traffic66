@@ -510,7 +510,7 @@ días de uso en producción; vender, alojar para terceros o productos
 competidores requieren una licencia comercial. Nunca se desactiva nada. El
 pie de cada página muestra el número de instalación de 8 dígitos; envíelo
 al autor y ponga el `license.json` que reciba en el directorio de datos.
-Contacto: <https://github.com/githubflyideas/traffic66>.
+Contacto: <route66traffic66@gmail.com>.
 
 <a id="11-security-sizing-troubleshooting"></a>
 
