@@ -116,6 +116,7 @@ type session struct {
 	winRecv, winLost float64
 	winAt            time.Time
 	comp             float64
+	compSet          bool // comp has been computed at least once
 }
 
 func newSession(k key) *session {
@@ -457,6 +458,9 @@ func (s *session) seq(seq uint32, unit uint32, recs uint32, now time.Time) {
 	s.updateComp(float64(recs), lostRecs, now)
 }
 
+// compWindow is how often the loss compensation multiplier is refreshed.
+const compWindow = 5 * time.Second
+
 // updateComp keeps a decaying window of received and lost records and
 // derives the multiplier that restores the lost share of the totals.
 func (s *session) updateComp(recv, lost float64, now time.Time) {
@@ -468,10 +472,15 @@ func (s *session) updateComp(recv, lost float64, now time.Time) {
 	if s.winAt.IsZero() {
 		s.winAt = now
 	}
-	if now.Sub(s.winAt) < 30*time.Second {
+	// The first multiplier is computed as soon as 100 records have been
+	// seen, so a session that starts out lossy is compensated from its
+	// first seconds; after that the window is refreshed every 5 s.
+	first := !s.compSet && s.winRecv+s.winLost >= 100 && s.winRecv > 0
+	if !first && now.Sub(s.winAt) < compWindow {
 		return
 	}
-	if s.winRecv >= 100 {
+	if first || s.winRecv >= 100 {
+		s.compSet = true
 		c := (s.winRecv + s.winLost) / s.winRecv
 		if c > 2 { // more than half missing: do not guess
 			c = 2

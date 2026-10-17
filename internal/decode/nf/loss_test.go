@@ -2,6 +2,7 @@ package nf
 
 import (
 	"math"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -102,5 +103,56 @@ func TestIPFIXReorderIsNotLoss(t *testing.T) {
 	}
 	if st.LossComp != 1 {
 		t.Fatalf("loss multiplier %.3f for a lossless stream", st.LossComp)
+	}
+}
+
+// lossyRun sends dur worth of IPFIX messages (one every 10 ms, 10 to 30
+// records each), loses each message with probability p, and returns the
+// Mult-scaled bytes over the whole run divided by the bytes sent.
+func lossyRun(t *testing.T, dur time.Duration, p float64) float64 {
+	t.Helper()
+	d := NewDecoder()
+	d.Unsampled[exp] = true
+	rng := rand.New(rand.NewSource(1))
+	now := base
+	seq := uint32(0)
+	var sent, scaled float64
+	for at := time.Duration(0); at < dur; at += 10 * time.Millisecond {
+		m := encode.NewIPFIX()
+		m.AddTemplate(ipfixData)
+		n := 10 + rng.Intn(21)
+		recs := make([]encode.Values, n)
+		for j := range recs {
+			recs[j] = ipfixRec(1000)
+		}
+		m.AddData(ipfixData.ID, recs)
+		b := m.IPFIX(uint32(now.Unix()), seq, 1)
+		seq += uint32(m.DataRecords())
+		sent += float64(n) * 1000
+		if rng.Float64() >= p {
+			res, err := d.Decode(b, exp, now.Add(at))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, r := range res.Records {
+				scaled += float64(r.Bytes) * r.Mult
+			}
+		}
+	}
+	return scaled / sent
+}
+
+// A session that is lossy from the start must be compensated from its
+// first seconds, not only after a long warm-up window.
+func TestLossCompensatedFromStart(t *testing.T) {
+	for _, dur := range []time.Duration{30 * time.Second, 60 * time.Second, 120 * time.Second, 300 * time.Second} {
+		r := lossyRun(t, dur, 0.37)
+		t.Logf("37%% loss, %v: compensated/true = %.3f", dur, r)
+		if dur == 60*time.Second && r < 0.95 {
+			t.Fatalf("60 s at 37%% loss: compensated/true %.3f, want >= 0.95", r)
+		}
+	}
+	if r := lossyRun(t, 60*time.Second, 0); math.Abs(r-1) > 1e-9 {
+		t.Fatalf("lossless run: compensated/true %.6f, want 1", r)
 	}
 }
