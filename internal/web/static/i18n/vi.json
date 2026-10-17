@@ -648,6 +648,8 @@
 "rec.live": "cập nhật mỗi 5 s",
 "rec.go_live": "Quay lại trực tiếp",
 "theme.label": "Giao diện màu",
+"sponsor.label": "Nhà tài trợ",
+"sponsor.default": "Vị trí này dành cho một nhà tài trợ VPS / IDC / mạng — liên hệ route66traffic66@gmail.com",
 "theme.light": "Sáng",
 "base.day": "Cùng giờ hôm qua",
 "base.week": "Cùng giờ tuần trước",

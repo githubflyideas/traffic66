@@ -499,6 +499,8 @@ available (ইংরেজি পাঠ বাধ্যতামূলক): ম�
 পাবেন তা data directory-তে রাখুন। যোগাযোগ:
 <route66traffic66@gmail.com>।
 
+নিবন্ধিত নয় এমন ইনস্টলেশনে বাম সাইডবারে একটি ছোট স্পনসর ব্যানার দেখা যায়। আপনার ব্রাউজার এটি GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) থেকে লোড করে, আর GitHub-এ পৌঁছাতে না পারলে traffic66 সার্ভার সেখান থেকে ডাউনলোড করে `<data>/sponsor`-এ রাখা কপি থেকে; traffic66 আপনার বা ইনস্টলেশনের কোনো তথ্য পাঠায় না। নিবন্ধন করলে এটি সরে যায়।
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. নিরাপত্তা, সক্ষমতার হিসাব, সমস্যা সমাধান

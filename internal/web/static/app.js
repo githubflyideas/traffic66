@@ -2975,6 +2975,8 @@ async function loadStatus() {
     waiting = s.waiting || null;
     setup = s;
     const L = lic = s.license || null;
+    // sponsor banner: unregistered only, fetched by this browser from GitHub
+    if (window.t66Sponsor) { if (L && L.registered) t66Sponsor.remove(); else t66Sponsor.load(); }
     if (L) {
       const id = `<span class="muted">${esc(t('lic.id', {id: L.installation_id}))}</span>`;
       let head;

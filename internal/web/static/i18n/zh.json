@@ -648,6 +648,8 @@
 "rec.live": "每 5 秒更新",
 "rec.go_live": "回到实时",
 "theme.label": "主题",
+"sponsor.label": "赞助",
+"sponsor.default": "此位置留给一家 VPS / IDC / 网络赞助商 — 联系 route66traffic66@gmail.com",
 "theme.light": "浅色",
 "base.day": "昨天同时段",
 "base.week": "上周同期",

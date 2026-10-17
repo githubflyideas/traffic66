@@ -490,6 +490,8 @@ root، وWindows إلى [Npcap](https://npcap.com). تأتي التدفقات ا
 `license.json` الذي تتلقاه في دليل البيانات. للتواصل:
 <route66traffic66@gmail.com>.
 
+تعرض التثبيتات غير المسجلة لافتة رعاية صغيرة في الشريط الجانبي الأيسر. يحمّلها متصفحك من GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor))، أو إن تعذّر الوصول إليه فمن نسخة نزّلها خادم traffic66 من هناك ويحفظها في `<data>/sponsor`؛ ولا يرسل traffic66 أي بيانات عنك أو عن التثبيت. التسجيل يزيلها.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. الأمان، تقدير الموارد، استكشاف الأخطاء

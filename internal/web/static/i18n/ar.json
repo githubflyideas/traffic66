@@ -648,6 +648,8 @@
 "rec.live": "يُحدَّث كل 5 ثوانٍ",
 "rec.go_live": "العودة إلى البث المباشر",
 "theme.label": "السمة",
+"sponsor.label": "راعٍ",
+"sponsor.default": "هذه المساحة مخصصة لراعٍ واحد لخدمات VPS / IDC / الشبكات — للتواصل route66traffic66@gmail.com",
 "theme.light": "فاتح",
 "base.day": "أمس في الوقت نفسه",
 "base.week": "الأسبوع الماضي في الوقت نفسه",

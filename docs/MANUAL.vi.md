@@ -501,6 +501,8 @@ có tính năng nào bị khóa. Cuối mỗi trang hiển thị mã cài đặt
 này cho tác giả và đặt file `license.json` nhận được vào thư mục dữ liệu. Liên
 hệ: <route66traffic66@gmail.com>.
 
+Bản cài đặt chưa đăng ký hiển thị một banner tài trợ nhỏ ở thanh bên trái. Trình duyệt của bạn tải nó từ GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)), hoặc khi không truy cập được GitHub thì từ bản sao mà máy chủ traffic66 đã tải về và lưu trong `<data>/sponsor`; traffic66 không gửi bất kỳ dữ liệu nào về bạn hay bản cài đặt. Đăng ký sẽ gỡ bỏ nó.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Bảo mật, định cỡ, xử lý sự cố

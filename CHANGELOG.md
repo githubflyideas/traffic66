@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## Unreleased
+
+- Web UI: unregistered installations show a small sponsor banner in the left sidebar, above the language and theme picker. The browser loads it from github.com/githubflyideas/ads-sponsor (3 s timeout, no cookies, no referrer, nothing about the installation). If that fails, it uses the last set the server downloaded from GitHub (at start and every 6 hours, only while unregistered; kept in `<data>/sponsor`, served at `/api/sponsor`); if that fails too, a built-in text box. A broken image is never shown. Registering removes it. Not shown in the TUI.
+
 ## 2.3.8
 
 - Documentation only: license contact updated to route66traffic66@gmail.com in the remaining manual translations (German, Portuguese, Russian, Korean, Vietnamese, Indonesian, Hindi, Bengali, Arabic, Urdu).

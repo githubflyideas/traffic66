@@ -648,6 +648,8 @@
 "rec.live": "обновляется каждые 5 с",
 "rec.go_live": "Вернуться к реальному времени",
 "theme.label": "Тема",
+"sponsor.label": "Спонсор",
+"sponsor.default": "Это место для одного спонсора VPS / IDC / сетей — пишите на route66traffic66@gmail.com",
 "theme.light": "Светлая",
 "base.day": "Вчера в то же время",
 "base.week": "Неделю назад в то же время",

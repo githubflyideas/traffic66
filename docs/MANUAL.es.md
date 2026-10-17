@@ -512,6 +512,8 @@ pie de cada página muestra el número de instalación de 8 dígitos; envíelo
 al autor y ponga el `license.json` que reciba en el directorio de datos.
 Contacto: <route66traffic66@gmail.com>.
 
+Las instalaciones no registradas muestran un pequeño banner de patrocinio en la barra lateral izquierda. Tu navegador lo carga desde GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) o, si no puede alcanzarlo, desde una copia que el servidor traffic66 descargó de allí y guarda en `<data>/sponsor`; traffic66 no envía ningún dato sobre ti ni sobre la instalación. Al registrarse desaparece.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Seguridad, dimensionamiento, solución de problemas

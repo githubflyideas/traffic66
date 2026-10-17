@@ -516,6 +516,8 @@ Installationsnummer; senden Sie sie an den Autor und legen Sie die
 zurückgeschickte `license.json` in das Datenverzeichnis. Kontakt:
 <route66traffic66@gmail.com>.
 
+Nicht registrierte Installationen zeigen in der linken Seitenleiste ein kleines Sponsorenbanner. Ihr Browser lädt es von GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) oder, wenn GitHub nicht erreichbar ist, aus einer Kopie, die der traffic66-Server von dort geladen hat und in `<data>/sponsor` aufbewahrt; traffic66 sendet keinerlei Daten über Sie oder die Installation. Mit der Registrierung verschwindet es.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Sicherheit, Dimensionierung, Fehlerbehebung

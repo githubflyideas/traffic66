@@ -648,6 +648,8 @@
 "rec.live": "diperbarui tiap 5 dtk",
 "rec.go_live": "Kembali ke waktu nyata",
 "theme.label": "Tema",
+"sponsor.label": "Sponsor",
+"sponsor.default": "Slot ini untuk satu sponsor VPS / IDC / jaringan — hubungi route66traffic66@gmail.com",
 "theme.light": "Terang",
 "base.day": "Kemarin di jam yang sama",
 "base.week": "Minggu lalu di jam yang sama",

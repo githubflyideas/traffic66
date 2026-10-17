@@ -648,6 +648,8 @@
 "rec.live": "প্রতি ৫ সেকেন্ডে হালনাগাদ",
 "rec.go_live": "লাইভে ফিরুন",
 "theme.label": "থিম",
+"sponsor.label": "স্পনসর",
+"sponsor.default": "এই স্থানটি একটি VPS / IDC / নেটওয়ার্ক স্পনসরের জন্য — যোগাযোগ route66traffic66@gmail.com",
 "theme.light": "হালকা",
 "base.day": "গতকাল একই সময়",
 "base.week": "গত সপ্তাহে একই সময়",

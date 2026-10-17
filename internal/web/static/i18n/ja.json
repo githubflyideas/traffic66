@@ -648,6 +648,8 @@
 "rec.live": "5 秒ごとに更新",
 "rec.go_live": "リアルタイムに戻る",
 "theme.label": "テーマ",
+"sponsor.label": "スポンサー",
+"sponsor.default": "この枠は VPS / IDC / ネットワークのスポンサー 1 社向けです — 連絡先 route66traffic66@gmail.com",
 "theme.light": "ライト",
 "base.day": "昨日の同時刻",
 "base.week": "先週の同時刻",

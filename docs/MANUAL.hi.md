@@ -499,6 +499,8 @@ installation number दिखता है; उसे लेखक को भे
 मिले उसे data directory में रखें। संपर्क:
 <route66traffic66@gmail.com>।
 
+अपंजीकृत इंस्टॉलेशन में बाईं साइडबार में एक छोटा प्रायोजक बैनर दिखता है। आपका ब्राउज़र इसे GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) से लोड करता है, या GitHub तक न पहुँच पाने पर उस प्रति से जिसे traffic66 सर्वर ने वहीं से डाउनलोड करके `<data>/sponsor` में रखा है; traffic66 आपके या इंस्टॉलेशन के बारे में कोई डेटा नहीं भेजता। पंजीकरण करने पर यह हट जाता है।
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. सुरक्षा, क्षमता का अनुमान, समस्या निवारण

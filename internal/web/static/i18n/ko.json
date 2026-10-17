@@ -648,6 +648,8 @@
 "rec.live": "5초마다 업데이트",
 "rec.go_live": "실시간으로 돌아가기",
 "theme.label": "테마",
+"sponsor.label": "후원",
+"sponsor.default": "이 자리는 VPS / IDC / 네트워크 후원사 한 곳을 위한 공간입니다 — 연락처 route66traffic66@gmail.com",
 "theme.light": "라이트",
 "base.day": "어제 같은 시간",
 "base.week": "지난주 같은 시간",

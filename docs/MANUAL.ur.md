@@ -500,6 +500,8 @@ available (انگریزی متن لازم ہے): جانچ کے لیے اور 100
 مصنف کو بھیجیں، اور جو `license.json` واپس ملے اسے data directory میں رکھیں۔
 رابطہ: <route66traffic66@gmail.com>۔
 
+غیر رجسٹرڈ انسٹالیشنز میں بائیں سائیڈبار میں ایک چھوٹا سپانسر بینر دکھائی دیتا ہے۔ آپ کا براؤزر اسے GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) سے لوڈ کرتا ہے، یا GitHub تک رسائی نہ ہو تو اس نقل سے جو traffic66 سرور نے وہیں سے ڈاؤن لوڈ کر کے `<data>/sponsor` میں رکھی ہے؛ traffic66 آپ یا انسٹالیشن کے بارے میں کوئی ڈیٹا نہیں بھیجتا۔ رجسٹر کرنے پر یہ ہٹ جاتا ہے۔
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. سکیورٹی، گنجائش کا اندازہ، مسائل کا حل

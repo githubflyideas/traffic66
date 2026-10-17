@@ -576,6 +576,9 @@ func serve(args []string, demo bool) {
 			log.Printf("your browser will warn about it once; check that fingerprint, or add %s to your trusted certificates", info.CertPath)
 		}
 	}
+	if offline == nil {
+		go srv.RunSponsor(ctx) // sponsor banner fallback; skipped while registered
+	}
 	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go hs.Serve(ln)
 	log.Printf("web UI: %s://%s", scheme, displayAddr(ln.Addr()))

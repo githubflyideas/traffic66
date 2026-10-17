@@ -412,6 +412,8 @@ Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windo
 
 [PolyForm Noncommercial License 1.0.0](../LICENSE.md)과 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)(영문이 구속력을 가짐)에 따른 소스 공개: 평가 용도와 100명 미만 조직은 무료이고, 더 큰 조직은 운영 사용 30일 뒤 등록합니다. 판매, 타인을 위한 호스팅, 경쟁 제품에는 상용 라이선스가 필요합니다. 꺼지는 기능은 전혀 없습니다. 모든 페이지 하단에 8자리 설치 번호가 표시되니 작성자에게 보내고, 돌려받은 `license.json`을 데이터 디렉터리에 넣으십시오. 연락처: <route66traffic66@gmail.com>.
 
+등록되지 않은 설치에서는 왼쪽 사이드바에 작은 후원 배너가 표시됩니다. 브라우저가 GitHub([ads-sponsor](https://github.com/githubflyideas/ads-sponsor))에서 불러오고, GitHub에 닿지 않으면 traffic66 서버가 그곳에서 내려받아 `<data>/sponsor`에 보관한 사본을 사용합니다. traffic66은 사용자나 설치에 관한 어떤 데이터도 보내지 않습니다. 등록하면 사라집니다.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. 보안, 용량 산정, 문제 해결

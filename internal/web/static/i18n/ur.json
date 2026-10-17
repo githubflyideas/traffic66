@@ -648,6 +648,8 @@
 "rec.live": "ہر 5 سیکنڈ میں تازہ",
 "rec.go_live": "لائیو پر واپس",
 "theme.label": "تھیم",
+"sponsor.label": "سپانسر",
+"sponsor.default": "یہ جگہ ایک VPS / IDC / نیٹ ورک سپانسر کے لیے ہے — رابطہ route66traffic66@gmail.com",
 "theme.light": "ہلکا",
 "base.day": "کل اسی وقت",
 "base.week": "پچھلے ہفتے اسی وقت",

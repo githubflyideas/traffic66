@@ -648,6 +648,8 @@
 "rec.live": "se actualiza cada 5 s",
 "rec.go_live": "Volver a tiempo real",
 "theme.label": "Tema",
+"sponsor.label": "Patrocinador",
+"sponsor.default": "Este espacio es para un patrocinador de VPS / IDC / redes — contacto route66traffic66@gmail.com",
 "theme.light": "Claro",
 "base.day": "Ayer a la misma hora",
 "base.week": "La semana pasada a la misma hora",
