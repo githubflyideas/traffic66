@@ -538,7 +538,7 @@ larger organizations register after 30 days of production use; selling,
 hosting for others or competing products need a commercial licence. The foot
 of each page shows the 8-digit installation number; send it to the author,
 and put the `license.json` you get back in the data directory. Contact:
-<https://github.com/githubflyideas/traffic66>.
+<route66traffic66@gmail.com>.
 
 ## 11. Security, sizing, troubleshooting
 

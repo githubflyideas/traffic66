@@ -33,7 +33,7 @@ Devices: send sFlow to UDP 6343, NetFlow v5/v9 to UDP 2055, IPFIX to UDP 4739 on
 
 ## Screenshots
 
-<img src="docs/images/overview.png" alt="Overview" width="49%"> <img src="docs/images/topn.png" alt="Top 66" width="49%">
+<img src="docs/images/topn.png" alt="Top 66" width="49%">
 
 <img src="docs/images/geo.png" alt="Geo & networks" width="49%"> <img src="docs/images/interfaces.png" alt="Interface check" width="49%">
 

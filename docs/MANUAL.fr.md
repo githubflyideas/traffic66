@@ -520,7 +520,7 @@ tiers ou les produits concurrents nécessitent une licence commerciale. Rien
 n'est jamais désactivé. Le bas de chaque page affiche le numéro
 d'installation à 8 chiffres ; envoyez-le à l'auteur et placez le
 `license.json` reçu en retour dans le répertoire de données. Contact :
-<https://github.com/githubflyideas/traffic66>.
+<route66traffic66@gmail.com>.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

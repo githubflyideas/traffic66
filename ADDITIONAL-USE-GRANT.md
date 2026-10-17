@@ -54,7 +54,7 @@ This grant applies to modified versions of the Software. Anyone who distributes 
 
 ## 7. Registration and commercial licenses
 
-The licensor sets the fee, scope, node count, term and support for each Registration License or commercial license case by case, and may grant them free of charge. Contact: https://github.com/githubflyideas/traffic66
+The licensor sets the fee, scope, node count, term and support for each Registration License or commercial license case by case, and may grant them free of charge. Contact: route66traffic66@gmail.com
 
 ## 8. Violations
 
@@ -128,7 +128,7 @@ La présente autorisation s'applique aux versions modifiées du Logiciel. Quicon
 
 ## 7. Licences d'enregistrement et licences commerciales
 
-Le concédant fixe au cas par cas le prix, le périmètre, le nombre de nœuds, la durée et le support de chaque Licence d'enregistrement ou licence commerciale, et peut les accorder gratuitement. Contact : https://github.com/githubflyideas/traffic66
+Le concédant fixe au cas par cas le prix, le périmètre, le nombre de nœuds, la durée et le support de chaque Licence d'enregistrement ou licence commerciale, et peut les accorder gratuitement. Contact : route66traffic66@gmail.com
 
 ## 8. Violations
 
@@ -202,7 +202,7 @@ Esta concesión se aplica a las versiones modificadas del Software. Quien distri
 
 ## 7. Licencias de registro y licencias comerciales
 
-El licenciante fija caso por caso la tarifa, el alcance, el número de nodos, el plazo y el soporte de cada Licencia de registro o licencia comercial, y puede concederlas gratuitamente. Contacto: https://github.com/githubflyideas/traffic66
+El licenciante fija caso por caso la tarifa, el alcance, el número de nodos, el plazo y el soporte de cada Licencia de registro o licencia comercial, y puede concederlas gratuitamente. Contacto: route66traffic66@gmail.com
 
 ## 8. Infracciones
 
@@ -276,7 +276,7 @@ Traffic66（"本软件"）以 PolyForm Noncommercial License 1.0.0（"基础许�
 
 ## 7. 注册许可与商业许可
 
-注册许可或商业许可的费用、范围、节点数、期限和支持内容由许可方逐案决定，也可以免费授予。联系方式：https://github.com/githubflyideas/traffic66
+注册许可或商业许可的费用、范围、节点数、期限和支持内容由许可方逐案决定，也可以免费授予。联系方式： route66traffic66@gmail.com
 
 ## 8. 违约
 
@@ -350,7 +350,7 @@ Traffic66（以下「本ソフトウェア」）は PolyForm Noncommercial Licen
 
 ## 7. 登録ライセンスと商用ライセンス
 
-登録ライセンスまたは商用ライセンスの料金、範囲、ノード数、期間およびサポートは、許諾者が個別に定め、無償で許諾することもあります。連絡先：https://github.com/githubflyideas/traffic66
+登録ライセンスまたは商用ライセンスの料金、範囲、ノード数、期間およびサポートは、許諾者が個別に定め、無償で許諾することもあります。連絡先： route66traffic66@gmail.com
 
 ## 8. 違反
 
