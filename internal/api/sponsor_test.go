@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -136,7 +135,7 @@ func TestSponsorCacheFallback(t *testing.T) {
 	if w.Code != 404 {
 		t.Fatalf("empty cache: %d", w.Code)
 	}
-	if _, err := os.Stat(filepath.Join(data, "sponsor.new")); err == nil || !strings.Contains(err.Error(), "no such") {
+	if _, err := os.Stat(filepath.Join(data, "sponsor.new")); !os.IsNotExist(err) {
 		t.Fatal("temporary directory left behind")
 	}
 }
