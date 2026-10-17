@@ -410,7 +410,7 @@ Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windo
 
 ### 라이선스
 
-[PolyForm Noncommercial License 1.0.0](../LICENSE.md)과 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)(영문이 구속력을 가짐)에 따른 소스 공개: 평가 용도와 100명 미만 조직은 무료이고, 더 큰 조직은 운영 사용 30일 뒤 등록합니다. 판매, 타인을 위한 호스팅, 경쟁 제품에는 상용 라이선스가 필요합니다. 꺼지는 기능은 전혀 없습니다. 모든 페이지 하단에 8자리 설치 번호가 표시되니 작성자에게 보내고, 돌려받은 `license.json`을 데이터 디렉터리에 넣으십시오. 연락처: <https://github.com/githubflyideas/traffic66>.
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md)과 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)(영문이 구속력을 가짐)에 따른 소스 공개: 평가 용도와 100명 미만 조직은 무료이고, 더 큰 조직은 운영 사용 30일 뒤 등록합니다. 판매, 타인을 위한 호스팅, 경쟁 제품에는 상용 라이선스가 필요합니다. 꺼지는 기능은 전혀 없습니다. 모든 페이지 하단에 8자리 설치 번호가 표시되니 작성자에게 보내고, 돌려받은 `license.json`을 데이터 디렉터리에 넣으십시오. 연락처: <route66traffic66@gmail.com>.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

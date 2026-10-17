@@ -488,7 +488,7 @@ root، وWindows إلى [Npcap](https://npcap.com). تأتي التدفقات ا
 للآخرين أو المنتجات المنافسة إلى ترخيص تجاري. لا يُعطَّل أي شيء أبدًا. يعرض أسفل
 كل صفحة رقم التثبيت المكوّن من 8 أرقام؛ أرسله إلى المؤلف، وضع ملف
 `license.json` الذي تتلقاه في دليل البيانات. للتواصل:
-<https://github.com/githubflyideas/traffic66>.
+<route66traffic66@gmail.com>.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

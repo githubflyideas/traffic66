@@ -498,7 +498,7 @@ available (انگریزی متن لازم ہے): جانچ کے لیے اور 100
 دوسروں کے لیے host کرنے یا مقابل مصنوعات کے لیے تجارتی لائسنس چاہیے۔ کچھ بھی کبھی
 بند نہیں کیا جاتا۔ ہر صفحے کے نیچے 8 ہندسوں کا installation نمبر دکھتا ہے؛ اسے
 مصنف کو بھیجیں، اور جو `license.json` واپس ملے اسے data directory میں رکھیں۔
-رابطہ: <https://github.com/githubflyideas/traffic66>۔
+رابطہ: <route66traffic66@gmail.com>۔
 
 <a id="11-security-sizing-troubleshooting"></a>
 

@@ -506,7 +506,7 @@ penggunaan produksi; menjual, meng-host untuk pihak lain, atau produk pesaing
 memerlukan lisensi komersial. Tidak ada yang pernah dimatikan. Bagian bawah
 setiap halaman menampilkan nomor instalasi 8 digit; kirim nomor itu kepada
 pembuatnya, lalu letakkan `license.json` yang Anda terima di direktori data.
-Kontak: <https://github.com/githubflyideas/traffic66>.
+Kontak: <route66traffic66@gmail.com>.
 
 <a id="11-security-sizing-troubleshooting"></a>
 
