@@ -2936,6 +2936,8 @@ async function loadSB() {
   if (offlineMode && sbInfo.ready) state.ds = 'sb';  // nothing else to show
 }
 
+// When the page on screen was last drawn, for the refresh beat below.
+let drawnAt = 0;
 async function render(push) {
   // the default password of a new installation is changed before anything else
   if (me?.must_change) state.v = 'account';
@@ -2964,7 +2966,7 @@ async function render(push) {
   } catch (e) {
     if (e.message !== 'login' && seq === loadSeq) el.innerHTML = errorBox(e);
   }
-  if (seq === loadSeq) resolveNames();
+  if (seq === loadSeq) { drawnAt = Date.now(); resolveNames(); }
 }
 function go(v) { state.v = v; render(true); window.scrollTo(0, 0); }
 
@@ -3053,6 +3055,19 @@ $('#loginForm').addEventListener('submit', async e => {
   render();
   startTimers();
 });
+// How often a page redraws itself, by range. It follows the width of the
+// buckets the range is drawn in: a 15-minute or 1-hour range is drawn per
+// minute, so half a minute is as often as it can say anything new, while a
+// 30-day range is drawn in three-hour buckets and a redraw every five
+// minutes is already generous. A range the user typed ends in the past and
+// never changes, so it has no beat at all.
+const REFRESH_MS = {'15m': 20000, '1h': 30000, '6h': 60000, '24h': 60000, '7d': 300000, '30d': 300000};
+
+// The pages that show incoming data. The others (help, the account, the
+// asset and name pages, data cleanup, the sandbox, the bill) change when
+// somebody changes them, not on their own.
+const LIVE_VIEWS = new Set(['overview', 'findings', 'topn', 'traffic', 'detail', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources']);
+
 // The refresh timers start once, whether the page opened signed in or after
 // signing in (before, signing in left the page without automatic refresh).
 let timers = false;
@@ -3066,13 +3081,24 @@ function startTimers() {
     if (document.activeElement?.closest?.('.cols, #recPer')) return;
     render();
   }, 5000);
+  // Every live page, on a beat that follows the range. The old rule named
+  // four pages and two ranges, which left the traffic, Top 66, flow paths,
+  // geo and interface pages standing still on a 6-hour or a 24-hour range
+  // until somebody clicked something: the records were arriving and the
+  // numbers were right, and the page was simply old.
+  //
+  // The beat is checked every few seconds and a page is redrawn once what
+  // is on it is older than its range's beat, so changing the range takes
+  // effect at once instead of at the end of a cycle somebody cannot see.
   setInterval(() => {
     // not while something is being typed or picked (the names form, filters)
     if (document.hidden || pop.style.display === 'block' || ['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName)) return;
-    if (state.v === 'records' && state.rl) return;
-    if (state.v === 'help') return;
-    if (state.v === 'sources' || state.v === 'records' || state.v === 'overview' || state.v === 'findings' || state.r === '15m' || state.r === '1h') render();
-  }, 30000);
+    if (state.v === 'records' && state.rl) return;  // its own, faster beat
+    if (!LIVE_VIEWS.has(state.v)) return;
+    const beat = REFRESH_MS[state.r];
+    if (!beat || Date.now() - drawnAt < beat) return;  // a range in the past never moves
+    render();
+  }, 5000);
 }
 $('#logout').onclick = async () => { await fetch('/api/logout', {method: 'POST'}); me = null; showLogin(); };
 $('#acct').onclick = () => go('account');
