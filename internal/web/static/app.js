@@ -2,17 +2,14 @@
 'use strict';
 
 // ------------------------------------------------------------ the evaluation mark
-// Every page an unregistered installation might hand to somebody else
-// carries the mark; these three do not. The overview is the first thing a
-// new installation sees and the mark would be the first thing it says, and
-// the settings and the account are a person working on their own machine
-// rather than a page anybody reads twice.
+// Every page of an unregistered installation carries the mark, with no
+// exceptions. The overview, the sources, the account and the help page
+// used to be left out as pages nobody hands on; but a screenshot of the
+// overview is exactly what gets pasted into a report, and a list of
+// exceptions is a list somebody has to keep right as pages are added.
 //
-// It is a list of what is NOT marked on purpose: a page added later is
-// marked unless somebody decides otherwise, which is the right way round —
-// the cost of forgetting is then an extra mark, not a report that leaves
-// the building looking finished when it is not.
-const NOMARK = new Set(['overview', 'sources', 'account', 'help']);
+// The login screen is not one of these views, so it is never marked:
+// nobody has been shown anything yet.
 let marked = false;  // from the licence: true until the installation is registered
 let markNotice = '';  // the server's wording, so a copy says what a file says
 
@@ -26,10 +23,14 @@ function markTile() {
   // read here and written into the tile instead, which is also why the
   // tile is rebuilt whenever the theme changes.
   const ink = getComputedStyle(document.body).getPropertyValue('--ink-3').trim() || '#8a8a8a';
-  // One large glyph per tile rather than many small ones: the tile is
-  // repeated across the whole view.
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="460" height="300">` +
-    `<text x="230" y="150" transform="rotate(-24 230 150)" text-anchor="middle" ` +
+  // One glyph per tile rather than many small ones: the tile is repeated
+  // across the whole view, and the tile's size is what sets how often the
+  // word appears. 360x235 puts about half again as many of them on a
+  // screen as the 460x300 it started at, which is what makes the mark
+  // legible as a mark; the glyph itself is the same size and the same
+  // faint ink, so nothing underneath became harder to read.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="235">` +
+    `<text x="180" y="117" transform="rotate(-24 180 117)" text-anchor="middle" ` +
     `font-family="system-ui,sans-serif" font-size="23" font-weight="600" ` +
     `fill="${esc(ink)}">${esc(text)}</text></svg>`;
   return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
@@ -37,7 +38,7 @@ function markTile() {
 
 // applyMark decides whether the view on screen carries the mark.
 function applyMark() {
-  const on = marked && !NOMARK.has(state.v);
+  const on = marked;
   document.body.classList.toggle('marked', on);
   if (on) document.body.style.setProperty('--mark', markTile());
   markChip(on);
