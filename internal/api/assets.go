@@ -142,76 +142,22 @@ func (s *Server) getAssets(w http.ResponseWriter, r *http.Request) {
 		ports = ownedBy(ports, devices)
 		links = cabled(links, ports)
 	}
+	subnets, err := a.Subnets()
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	if !admin {
+		subnets = visible(subnets, func(v assets.Subnet) bool { return v.Hidden })
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"sites": sites, "racks": racks, "devices": devices, "ports": ports,
-		"links": links, "circuits": circuits,
+		"links": links, "circuits": circuits, "subnets": subnets,
 		"counts": a.Counts(), "quota": s.assetQuota(), "admin": admin,
 		// the height a new rack is offered with, so the page and the
 		// ledger cannot drift apart on it
 		"default_units": assets.DefaultUnits,
 	})
-}
-
-// getIPAM returns the networks with how full they are, and what does not
-// add up in the assignments.
-func (s *Server) getIPAM(w http.ResponseWriter, r *http.Request) {
-	a := s.ledger(w)
-	if a == nil {
-		return
-	}
-	use, err := a.Use()
-	if err != nil {
-		fail(w, err)
-		return
-	}
-	if !s.isAdmin(r) {
-		use = visible(use, func(v assets.SubnetUse) bool { return v.Hidden })
-	}
-	conflicts, err := a.Conflicts()
-	if err != nil {
-		fail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"subnets": use, "conflicts": conflicts})
-}
-
-// getAddrs lists assignments, filtered by network, device, tag or text.
-func (s *Server) getAddrs(w http.ResponseWriter, r *http.Request) {
-	a := s.ledger(w)
-	if a == nil {
-		return
-	}
-	q := r.URL.Query()
-	list, err := a.Addrs(assets.AddrQuery{
-		SubnetID: idParam(q.Get("subnet")),
-		DeviceID: idParam(q.Get("device")),
-		Tag:      q.Get("tag"),
-		Search:   q.Get("q"),
-		Limit:    limitParam(r, 5000),
-	})
-	if err != nil {
-		fail(w, err)
-		return
-	}
-	if !s.isAdmin(r) {
-		list = visible(list, func(v assets.Addr) bool { return v.Hidden })
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"addrs": list})
-}
-
-// getFreeAddrs suggests addresses nothing is assigned to.
-func (s *Server) getFreeAddrs(w http.ResponseWriter, r *http.Request) {
-	a := s.ledger(w)
-	if a == nil {
-		return
-	}
-	n, _ := strconv.Atoi(r.URL.Query().Get("n"))
-	free, err := a.FreeAddrs(idParam(r.URL.Query().Get("subnet")), n)
-	if err != nil {
-		fail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"free": free})
 }
 
 // putAsset saves one record of the kind named in the path.
@@ -273,11 +219,6 @@ func (s *Server) putAsset(w http.ResponseWriter, r *http.Request) {
 		if err = json.Unmarshal(b, &v); err == nil {
 			out, err = a.SaveSubnet(v)
 		}
-	case "addr":
-		var v assets.Addr
-		if err = json.Unmarshal(b, &v); err == nil {
-			out, err = a.SaveAddr(v)
-		}
 	default:
 		fail(w, fmt.Errorf("%q is not a kind of asset", kind))
 		return
@@ -316,8 +257,6 @@ func (s *Server) deleteAsset(w http.ResponseWriter, r *http.Request) {
 		err = a.DeleteCircuit(id)
 	case "subnet":
 		err = a.DeleteSubnet(id)
-	case "addr":
-		err = a.DeleteAddr(id)
 	default:
 		fail(w, fmt.Errorf("%q is not a kind of asset", kind))
 		return

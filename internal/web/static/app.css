@@ -73,18 +73,6 @@ nav.dash button:hover{background:var(--side-hover);color:var(--ink);transform:tr
 nav.dash button[aria-current="page"]{background:var(--surface);box-shadow:0 1px 2px var(--shadow);color:var(--accent-ink);font-weight:700}
 nav.dash button[aria-current="page"]::before{content:"";position:absolute;inset-inline-start:0;top:7px;bottom:7px;width:3px;border-radius:3px;background:var(--accent);animation:navbar .22s ease-out}
 @keyframes navbar{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-/* A named group in the nav: its own heading, its pages indented under it,
-   and a chevron that folds them away. The heading is marked as the
-   current section while any page inside it is open, so a folded group
-   still shows where you are. */
-nav.dash .grphead .chev{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;
-  stroke-linejoin:round;opacity:.6;transition:transform .18s}
-nav.dash .grphead[aria-expanded="false"] .chev{transform:rotate(-90deg)}
-[dir=rtl] nav.dash .grphead[aria-expanded="false"] .chev{transform:rotate(90deg)}
-nav.dash .grphead[data-in="1"]{color:var(--accent-ink)}
-nav.dash .grpitems{overflow:hidden}
-nav.dash .grphead[aria-expanded="false"]+.grpitems{display:none}
-nav.dash .grpitems button{padding-inline-start:30px;font-size:14px}
 .ni{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
 nav.dash button[aria-current="page"] .ni{opacity:1}
 .ver{display:flex;justify-content:space-between;gap:8px;padding:6px 16px 8px;font-size:11.5px;color:var(--ink-3);border-bottom:1px solid var(--side-line);font-variant-numeric:tabular-nums}

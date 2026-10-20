@@ -25,16 +25,3 @@ func sortSubnets(v []Subnet) {
 		return a.Addr().Less(b.Addr())
 	})
 }
-
-// sortAddrs sorts by address, not by the text of it, so that .9 comes
-// before .10.
-func sortAddrs(v []Addr) {
-	sort.SliceStable(v, func(i, j int) bool {
-		a, aerr := netip.ParseAddr(v[i].IP)
-		b, berr := netip.ParseAddr(v[j].IP)
-		if aerr != nil || berr != nil {
-			return v[i].IP < v[j].IP
-		}
-		return a.Less(b)
-	})
-}

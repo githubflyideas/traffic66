@@ -25,12 +25,11 @@ var csvColumns = map[string][]string{
 	"device":  {"id", "name", "role", "vendor", "model", "serial", "mgmt_ip", "rack", "pos_u", "height_u", "tags", "note", "hidden"},
 	"port":    {"id", "device", "name", "ifindex", "speed", "kind", "note"},
 	"circuit": {"id", "name", "carrier", "kind", "bandwidth", "site", "port", "contract", "starts", "ends", "tags", "note", "hidden"},
-	"subnet":  {"id", "prefix", "name", "vlan", "site", "gateway", "tags", "note", "hidden"},
-	"addr":    {"id", "ip", "name", "kind", "device", "port", "mac", "tags", "note", "hidden"},
+	"subnet":  {"id", "prefix", "name", "vlan", "device", "gateway", "tags", "note", "hidden"},
 }
 
 // CSVKinds is every kind that can be exported, for the API and the pages.
-var CSVKinds = []string{"site", "rack", "device", "port", "circuit", "subnet", "addr"}
+var CSVKinds = []string{"site", "rack", "device", "port", "circuit", "subnet"}
 
 // names resolves the references a CSV carries. A site, rack, device or
 // port is written out by name rather than by number, because a number
@@ -177,17 +176,8 @@ func (s *Store) ExportCSV(w io.Writer, kind string) error {
 			return err
 		}
 		for _, v := range vs {
-			rows = append(rows, []string{id(v.ID), v.Prefix, v.Name, num(v.VLAN), n.site[v.SiteID],
+			rows = append(rows, []string{id(v.ID), v.Prefix, v.Name, num(v.VLAN), n.device[v.DeviceID],
 				v.Gateway, strings.Join(v.Tags, " "), v.Note, b(v.Hidden)})
-		}
-	case "addr":
-		vs, err := s.Addrs(AddrQuery{Limit: 20000})
-		if err != nil {
-			return err
-		}
-		for _, v := range vs {
-			rows = append(rows, []string{id(v.ID), v.IP, v.Name, v.Kind, n.device[v.DeviceID], n.port[v.PortID],
-				v.MAC, strings.Join(v.Tags, " "), v.Note, b(v.Hidden)})
 		}
 	}
 	for _, r := range rows {
@@ -363,33 +353,16 @@ func (s *Store) ImportCSV(r io.Reader, kind string, apply bool) (Plan, error) {
 				_, werr = s.SaveCircuit(v)
 			}
 		case "subnet":
-			site, err := ref(n.site, "site")
+			dev, err := ref(n.device, "device")
 			if err != nil {
 				p.add("subnet", act, get("prefix"), err)
 				continue
 			}
-			v := Subnet{ID: rid, Prefix: get("prefix"), Name: get("name"), VLAN: intOf(get("vlan")), SiteID: site,
+			v := Subnet{ID: rid, Prefix: get("prefix"), Name: get("name"), VLAN: intOf(get("vlan")), DeviceID: dev,
 				Gateway: get("gateway"), Tags: strings.Fields(get("tags")), Note: get("note"), Hidden: yes(get("hidden"))}
 			what = v.Prefix
 			if apply {
 				_, werr = s.SaveSubnet(v)
-			}
-		case "addr":
-			dev, err := ref(n.device, "device")
-			if err != nil {
-				p.add("addr", act, get("ip"), err)
-				continue
-			}
-			port, err := ref(n.port, "port")
-			if err != nil {
-				p.add("addr", act, get("ip"), err)
-				continue
-			}
-			v := Addr{ID: rid, IP: get("ip"), Name: get("name"), Kind: get("kind"), DeviceID: dev, PortID: port,
-				MAC: get("mac"), Tags: strings.Fields(get("tags")), Note: get("note"), Hidden: yes(get("hidden"))}
-			what = v.IP
-			if apply {
-				_, werr = s.SaveAddr(v)
 			}
 		}
 		if werr != nil {

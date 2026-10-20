@@ -1,7 +1,6 @@
 package assets
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -150,70 +149,6 @@ Te1/1     storage            connected    20           full    10G SFP-10GBase-S
 	}
 	if by["Gi0/1"].Note != "uplink to isp" {
 		t.Fatalf("Gi0/1 note %q", by["Gi0/1"].Note)
-	}
-}
-
-// show ip arp records which address answered from which MAC, and a
-// mac-address-table paste then says which port that address is on. Each
-// half is worth little alone; together they answer "where is this host
-// plugged in", which is the question nobody can answer from memory.
-func TestPasteARPThenMACTable(t *testing.T) {
-	s := open(t)
-	me, _ := s.SaveDevice(Device{Name: "core-sw1"})
-	arp := `Protocol  Address          Age (min)  Hardware Addr   Type   Interface
-Internet  10.0.0.1                -   aabb.ccdd.ee01  ARPA   Vlan1
-Internet  10.0.0.42              12   aabb.ccdd.ee42  ARPA   Vlan1
-`
-	p, err := s.Paste(PasteOptions{Text: arp, Apply: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if p.Format != FormatARP {
-		t.Fatalf("read as %q", p.Format)
-	}
-	if c := counts(p); c["addr/add"] != 2 || c["errors"] != 0 {
-		t.Fatalf("arp: %v\n%+v", c, p.Changes)
-	}
-	// reading it again recognises that nothing changed
-	p, _ = s.Paste(PasteOptions{Text: arp, Apply: true})
-	if c := counts(p); c["addr/same"] != 2 {
-		t.Fatalf("arp again: %v", c)
-	}
-
-	mac := `          Mac Address Table
--------------------------------------------
-
-Vlan    Mac Address       Type        Ports
-----    -----------       --------    -----
-  10    aabb.ccdd.ee42    DYNAMIC     Gi0/7
-  10    aabb.ccdd.ee99    DYNAMIC     Gi0/8
-`
-	p, err = s.Paste(PasteOptions{Text: mac, DeviceID: me.ID, Apply: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if p.Format != FormatMACTable {
-		t.Fatalf("read as %q", p.Format)
-	}
-	as, _ := s.Addrs(AddrQuery{})
-	var found bool
-	for _, a := range as {
-		if a.IP == "10.0.0.42" {
-			found = a.DeviceID == me.ID && a.PortID != 0
-		}
-	}
-	if !found {
-		t.Fatalf("the address was not put on its port: %+v", as)
-	}
-	// the MAC with no address recorded is reported, not invented
-	var said bool
-	for _, c := range p.Changes {
-		if strings.Contains(c.What, "ee:99") && c.Error != "" {
-			said = true
-		}
-	}
-	if !said {
-		t.Fatalf("an unknown MAC was not reported: %+v", p.Changes)
 	}
 }
 

@@ -288,7 +288,11 @@ func (s *Store) DeleteDevice(id int64) error {
 		OR b_port IN (SELECT id FROM ports WHERE device_id = ?)`, id, id); err != nil {
 		return err
 	}
-	if _, err := s.DB.Exec(`UPDATE addrs SET device_id = 0, port_id = 0, updated = ? WHERE device_id = ?`, now(), id); err != nil {
+	// The networks written against a device are a note about that device,
+	// so they go when it does. (Cables and ports go too; a circuit stays,
+	// because it was bought from a carrier and outlives the box it lands
+	// on, and only loses the port it landed on.)
+	if _, err := s.DB.Exec(`DELETE FROM subnets WHERE device_id = ?`, id); err != nil {
 		return err
 	}
 	if _, err := s.DB.Exec(`UPDATE circuits SET port_id = 0, updated = ? WHERE port_id IN (SELECT id FROM ports WHERE device_id = ?)`, now(), id); err != nil {

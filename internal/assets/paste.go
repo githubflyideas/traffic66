@@ -22,13 +22,16 @@ import (
 const (
 	FormatNeighbors = "neighbors" // show lldp neighbors, show cdp neighbors
 	FormatIfStatus  = "ifstatus"  // show interface status
-	FormatARP       = "arp"       // show ip arp, show arp
-	FormatMACTable  = "mactable"  // show mac address-table
 )
+
+// show ip arp and show mac address-table were read here too, to fill in
+// which address sat behind which MAC and which port it was plugged into.
+// Both went with the address assignment they fed: the ledger no longer
+// keeps addresses, so there is nothing for those tables to go into.
 
 // Change is one thing an import would do, or did.
 type Change struct {
-	Kind   string `json:"kind"`   // device, port, link, addr
+	Kind   string `json:"kind"`   // device, port, link
 	Action string `json:"action"` // add, update, same
 	What   string `json:"what"`   // for the preview, in the operator's terms
 	Error  string `json:"error,omitempty"`
@@ -90,16 +93,14 @@ func (c columns) cut(line, name string) string {
 // headerAliases maps the column names this understands to the spellings
 // the common command outputs use, lowercased.
 var headerAliases = map[string][]string{
-	"device":   {"device id", "chassis id", "system name", "neighbor", "neighbour", "device"},
-	"local":    {"local intf", "local intrfce", "local interface", "local port", "local"},
-	"remote":   {"port id", "neighbor port", "neighbour port", "remote port", "port descr"},
-	"port":     {"ports", "port", "interface", "intf"},
-	"name":     {"name", "description", "descr"},
-	"speed":    {"speed"},
-	"type":     {"type"},
-	"vlan":     {"vlan"},
-	"address":  {"address", "ip address", "ip"},
-	"hardware": {"hardware addr", "hardware address", "mac address", "mac addr", "mac"},
+	"device": {"device id", "chassis id", "system name", "neighbor", "neighbour", "device"},
+	"local":  {"local intf", "local intrfce", "local interface", "local port", "local"},
+	"remote": {"port id", "neighbor port", "neighbour port", "remote port", "port descr"},
+	"port":   {"ports", "port", "interface", "intf"},
+	"name":   {"name", "description", "descr"},
+	"speed":  {"speed"},
+	"type":   {"type"},
+	"vlan":   {"vlan"},
 }
 
 // headerFields cuts a line into its columns: a run of two or more spaces
@@ -247,10 +248,6 @@ func guessFormat(c columns) string {
 	switch {
 	case c.has("device", "local", "remote"):
 		return FormatNeighbors
-	case c.has("address", "hardware"):
-		return FormatARP
-	case c.has("hardware", "port"):
-		return FormatMACTable
 	case c.has("port", "speed"), c.has("port", "vlan"), c.has("port", "name"):
 		return FormatIfStatus
 	}
@@ -337,7 +334,7 @@ type PasteOptions struct {
 func (s *Store) Paste(o PasteOptions) (Plan, error) {
 	c, rows, ok := table(o.Text)
 	if !ok {
-		return Plan{}, fmt.Errorf("this does not look like the output of show lldp/cdp neighbors, show interface status, show ip arp or show mac address-table")
+		return Plan{}, fmt.Errorf("this does not look like the output of show lldp/cdp neighbors or show interface status")
 	}
 	p := Plan{Format: guessFormat(c), Applied: o.Apply}
 	var err error
@@ -346,10 +343,6 @@ func (s *Store) Paste(o PasteOptions) (Plan, error) {
 		err = s.pasteNeighbors(&p, c, rows, o)
 	case FormatIfStatus:
 		err = s.pasteIfStatus(&p, c, rows, o)
-	case FormatARP:
-		err = s.pasteARP(&p, c, rows, o)
-	case FormatMACTable:
-		err = s.pasteMACTable(&p, c, rows, o)
 	}
 	return p, err
 }
@@ -512,102 +505,6 @@ func (s *Store) pasteIfStatus(p *Plan, c columns, rows []string, o PasteOptions)
 			}
 		}
 		p.add("port", act, me.Name+" "+name, nil)
-	}
-	return nil
-}
-
-// pasteARP reads show ip arp: which address answered from which MAC. It
-// is the half of the picture the ledger cannot work out on its own, and
-// the half a mac-address-table paste needs to be worth anything.
-func (s *Store) pasteARP(p *Plan, c columns, rows []string, o PasteOptions) error {
-	have, err := s.Addrs(AddrQuery{Limit: 20000})
-	if err != nil {
-		return err
-	}
-	by := make(map[string]Addr, len(have))
-	for _, a := range have {
-		by[a.IP] = a
-	}
-	for _, r := range rows {
-		ip, err := canonIP(c.cut(r, "address"))
-		mac := CanonMAC(c.cut(r, "hardware"))
-		if err != nil || mac == "" {
-			p.Skipped = append(p.Skipped, strings.TrimSpace(r))
-			continue
-		}
-		cur, known := by[ip]
-		if known && cur.MAC == mac {
-			p.add("addr", "same", ip+" "+mac, nil)
-			continue
-		}
-		cur.IP, cur.MAC = ip, mac
-		act := "update"
-		if !known {
-			act, cur.Kind = "add", KindStatic
-		}
-		if p.Applied {
-			if _, err := s.SaveAddr(cur); err != nil {
-				p.add("addr", act, ip+" "+mac, err)
-				continue
-			}
-		}
-		p.add("addr", act, ip+" "+mac, nil)
-	}
-	return nil
-}
-
-// pasteMACTable reads show mac address-table: which MAC is on which port.
-// On its own that is a list of MACs; after an ARP paste it is what finally
-// says which port a given address is plugged into, which is the question
-// the ledger exists to answer and the one nobody can answer from memory.
-func (s *Store) pasteMACTable(p *Plan, c columns, rows []string, o PasteOptions) error {
-	me, err := s.needDevice(o.DeviceID)
-	if err != nil {
-		return err
-	}
-	have, err := s.Addrs(AddrQuery{Limit: 20000})
-	if err != nil {
-		return err
-	}
-	byMAC := map[string][]Addr{}
-	for _, a := range have {
-		if a.MAC != "" {
-			byMAC[a.MAC] = append(byMAC[a.MAC], a)
-		}
-	}
-	for _, r := range rows {
-		mac, pname := CanonMAC(c.cut(r, "hardware")), c.cut(r, "port")
-		if mac == "" || pname == "" {
-			p.Skipped = append(p.Skipped, strings.TrimSpace(r))
-			continue
-		}
-		as := byMAC[mac]
-		if len(as) == 0 {
-			p.add("addr", "same", mac+" — "+pname, fmt.Errorf("no address recorded for this MAC; paste the ARP table first"))
-			continue
-		}
-		pt, added, err := s.port(me.ID, pname, true, p)
-		if err != nil {
-			p.add("port", "add", me.Name+" "+pname, err)
-			continue
-		}
-		if added {
-			p.add("port", "add", me.Name+" "+pname, nil)
-		}
-		for _, a := range as {
-			if a.DeviceID == me.ID && a.PortID == pt.ID {
-				p.add("addr", "same", a.IP+" — "+me.Name+" "+pname, nil)
-				continue
-			}
-			a.DeviceID, a.PortID = me.ID, pt.ID
-			if p.Applied {
-				if _, err := s.SaveAddr(a); err != nil {
-					p.add("addr", "update", a.IP+" — "+me.Name+" "+pname, err)
-					continue
-				}
-			}
-			p.add("addr", "update", a.IP+" — "+me.Name+" "+pname, nil)
-		}
 	}
 	return nil
 }

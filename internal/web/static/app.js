@@ -314,7 +314,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'ipam', 'cleanup', 'sandbox', 'ifaces', 'billing', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'cleanup', 'sandbox', 'ifaces', 'billing', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 
 // How often a page redraws itself, by range. It follows the width of the
@@ -1701,7 +1701,7 @@ const cleanupDaysUI = [120, 90, 60, 30, 7];
 // only — the panels are shown and explained rather than hidden, so what
 // registering buys is visible, and the server refuses every call anyway.
 let assetData = null;
-const assetSel = {site: 0, rack: 0, device: 0, subnet: 0};
+const assetSel = {site: 0, rack: 0, device: 0};
 
 async function loadAssets() {
   const res = await fetch('/api/assets');
@@ -1761,12 +1761,9 @@ const ASSET_FIELDS = {
   circuit: [['name', 'text', 1], ['carrier', 'text'], ['kind', 'text'], ['bandwidth', 'text'],
     ['site_id', 'site'], ['port_id', 'port'], ['contract', 'text'], ['starts', 'day'], ['ends', 'day'],
     ['tags', 'tags'], ['note', 'area'], ['hidden', 'check']],
-  subnet: [['prefix', 'text', 1], ['name', 'text'], ['vlan', 'num'], ['site_id', 'site'],
+  subnet: [['prefix', 'text', 1], ['name', 'text'], ['vlan', 'num'], ['device_id', 'device'],
     ['gateway', 'text'], ['tags', 'tags'], ['note', 'area'], ['hidden', 'check']],
-  addr: [['ip', 'text', 1], ['name', 'text'], ['kind', 'akind'], ['device_id', 'device'], ['port_id', 'port'],
-    ['mac', 'text'], ['tags', 'tags'], ['note', 'area'], ['hidden', 'check']],
 };
-const ADDR_KINDS = ['static', 'dhcp', 'reserved', 'gateway', 'vip'];
 
 function assetOptions(type, cur) {
   const none = `<option value="0">${esc(t('as.none'))}</option>`;
@@ -1775,7 +1772,6 @@ function assetOptions(type, cur) {
   if (type === 'rack') return none + (assetData.racks || []).map(x => opt(x.id, rackLabel(x))).join('');
   if (type === 'device') return none + (assetData.devices || []).map(x => opt(x.id, x.name)).join('');
   if (type === 'port') return none + (assetData.ports || []).map(x => opt(x.id, portLabel(x))).join('');
-  if (type === 'akind') return ADDR_KINDS.map(k => opt(k, t('as.kind_' + k))).join('');
   return '';
 }
 const rackLabel = r => (r.site_id && assetData.by.site.get(r.site_id) ? assetData.by.site.get(r.site_id).name + ' · ' : '') + r.name;
@@ -1795,7 +1791,7 @@ function assetEdit(kind, rec) {
       if (type === 'tags') return `<div class="afield afwide">${lab}<input id="${id}" value="${esc((rec[f] || []).join(', '))}" placeholder="${esc(t('as.tags_hint'))}"></div>`;
       if (type === 'num') return `<div class="afield">${lab}<input id="${id}" type="number" min="0" value="${rec[f] || ''}"></div>`;
       if (type === 'day') return `<div class="afield">${lab}<input id="${id}" type="date" value="${esc(val(f))}"></div>`;
-      if (['site', 'rack', 'device', 'port', 'akind'].includes(type)) return `<div class="afield">${lab}<select id="${id}">${assetOptions(type, rec[f])}</select></div>`;
+      if (['site', 'rack', 'device', 'port'].includes(type)) return `<div class="afield">${lab}<select id="${id}">${assetOptions(type, rec[f])}</select></div>`;
       return `<div class="afield">${lab}<input id="${id}" value="${esc(val(f))}"></div>`;
     };
     const dlg = document.createElement('dialog');
@@ -1852,7 +1848,7 @@ const quotaLine = (have, limit) => limit > 0 ? `${nf(have)} / ${nf(limit)}` : nf
 // them — and a page of its own for a device, reached by clicking it. The
 // device page is not in the navigation because it is about one device:
 // there is nothing to show until one has been chosen.
-const ASSET_VIEWS = new Set(['racks', 'devices', 'ipam', 'names']);
+const ASSET_VIEWS = new Set(['racks', 'devices']);
 
 // goDevice opens one device's own page.
 function goDevice(id) { assetSel.device = id; go('devices'); }
@@ -1966,6 +1962,7 @@ views.devices = async (el) => {
   $('#title').textContent = x.name;
   document.title = x.name + ' · traffic66';
   const ports = (d.ports || []).filter(p => p.device_id === x.id);
+  const subnets = (d.subnets || []).filter(n => n.device_id === x.id);
   const peer = new Map();
   (d.links || []).forEach(l => { peer.set(l.a_port, l.b_port); peer.set(l.b_port, l.a_port); });
   const fact = (k, v) => v ? `<div class="afact"><span class="k">${esc(t(k))}</span><span class="v">${v}</span></div>` : '';
@@ -1985,6 +1982,7 @@ views.devices = async (el) => {
       </div>
       ${x.note ? `<p class="muted" style="margin:10px 0 0;font-size:13px;white-space:pre-wrap">${esc(x.note)}</p>` : ''}`)}
     ${panel('c12', t('as.ports_of', {x: x.name}), portUse(ports, peer), portTable(d, ports, peer))}
+    ${panel('c12', t('as.subnets_of', {x: x.name}), t('as.subnets_sub'), subnetTable(subnets))}
   </div>`;
   $('#asBack').onclick = () => go('racks');
   const ed = $('#asEditDev'); if (ed) ed.onclick = async () => { if (await assetEdit('device', {...x})) render(); };
@@ -1998,7 +1996,30 @@ views.devices = async (el) => {
   });
   el.querySelectorAll('[data-cable]').forEach(b => b.onclick = () => cablePort(d, +b.dataset.cable, peer));
   const addP = $('#asAddPort'); if (addP) addP.onclick = async () => { if (await assetEdit('port', {device_id: x.id})) render(); };
+  el.querySelectorAll('[data-esub]').forEach(b => b.onclick = async () => { if (await assetEdit('subnet', {...subnets.find(n => n.id === +b.dataset.esub)})) render(); });
+  el.querySelectorAll('[data-dsub]').forEach(b => b.onclick = async () => {
+    const n = subnets.find(y => y.id === +b.dataset.dsub);
+    if (await assetRemove('subnet', n, n.prefix)) render();
+  });
+  const addS = $('#asAddSub'); if (addS) addS.onclick = async () => { if (await assetEdit('subnet', {device_id: x.id})) render(); };
 };
+
+// The networks written down against a device. They are a note beside its
+// ports — what this switch carries — and nothing is looked up in them:
+// no chart, no name and no filter is decided from this table.
+function subnetTable(ns) {
+  const row = n => `<tr><td><b>${esc(n.prefix)}</b>${n.hidden ? ` <span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}</td>
+    <td>${esc(n.name || '')}</td>
+    <td class="muted">${n.vlan ? nf(n.vlan) : ''}</td>
+    <td class="muted mono">${esc(n.gateway || '')}</td>
+    <td>${(n.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join('')}</td>
+    <td style="text-align:end">${adminOnly(`<button class="btn sm" data-esub="${n.id}">${esc(t('as.edit'))}</button>
+      <button class="btn sm danger" data-dsub="${n.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
+  return `<table><tr><th>${esc(t('as.f_prefix'))}</th><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_vlan'))}</th>
+      <th>${esc(t('as.f_gateway'))}</th><th>${esc(t('as.f_tags'))}</th><th></th></tr>
+    ${ns.map(row).join('') || `<tr><td colspan="6" class="empty">${esc(t('as.no_subnets'))}</td></tr>`}</table>
+    ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddSub">${esc(t('as.add_subnet'))}</button></div>`)}`;
+}
 
 // Port occupancy in one line: how many of the ports written down carry a
 // cable. It counts the ledger, not the link state — nothing here is polled.
@@ -2152,70 +2173,6 @@ function wireCSV() {
 }
 
 // ------------------------------------------------------------- addresses
-views.ipam = async (el) => {
-  const d = await assetPage(el, 'nav.ipam', 'as.what_ipam');
-  if (!d) return;
-  const res = await fetch('/api/assets/ipam');
-  const ip = await res.json().catch(() => ({}));
-  if (!res.ok) { el.innerHTML = `<div class="grid">${panel('c12', t('nav.ipam'), '', `<div class="empty">${esc(ip.error || res.statusText)}</div>`)}</div>`; return; }
-  const subs = ip.subnets || [], conflicts = ip.conflicts || [];
-  if (assetSel.subnet && !subs.some(s => s.id === assetSel.subnet)) assetSel.subnet = 0;
-  const sel = subs.find(s => s.id === assetSel.subnet) || null;
-  const [addrs, free] = await Promise.all([
-    sel ? fetch(`/api/assets/addrs?subnet=${sel.id}`).then(r => r.json()).then(j => j.addrs || []) : Promise.resolve([]),
-    sel ? fetch(`/api/assets/free?subnet=${sel.id}&n=8`).then(r => r.json()).then(j => j.free || []) : Promise.resolve([]),
-  ]);
-  const fill = s => s.hosts > 0 ? Math.min(100, Math.round(s.assigned / s.hosts * 100)) : 0;
-  const subRow = s => `<tr${assetSel.subnet === s.id ? ' class="on"' : ''}><td><button class="lnk" data-sub="${s.id}">${esc(s.prefix)}</button>
-      ${s.hidden ? `<span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}
-      ${(s.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join('')}</td>
-    <td class="muted">${esc(s.name || '')}</td>
-    <td class="muted">${s.vlan ? nf(s.vlan) : ''}</td>
-    <td class="muted">${esc(d.by.site.get(s.site_id)?.name || '')}</td>
-    <td class="num">${nf(s.assigned)}${s.hosts >= 0 ? ' / ' + nf(s.hosts) : ''}</td>
-    <td style="width:22%">${s.hosts >= 0 ? bar(s.assigned, s.hosts, fill(s) > 90 ? 'var(--crit)' : fill(s) > 75 ? 'var(--warn)' : '') : `<span class="muted">${esc(t('as.too_large'))}</span>`}</td>
-    <td style="text-align:end">${adminOnly(`<button class="btn sm" data-esub="${s.id}">${esc(t('as.edit'))}</button>
-      <button class="btn sm danger" data-dsub="${s.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  const addrRow = a => `<tr><td><b>${esc(a.ip)}</b>${a.hidden ? ` <span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}</td>
-    <td>${esc(a.name || '')}</td>
-    <td class="muted">${esc(t('as.kind_' + (a.kind || 'static')))}</td>
-    <td class="muted">${esc(d.by.device.get(a.device_id)?.name || '')}</td>
-    <td class="muted mono">${esc(a.mac || '')}</td>
-    <td>${(a.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join('')}</td>
-    <td style="text-align:end">${adminOnly(`<button class="btn sm" data-eaddr="${a.id}">${esc(t('as.edit'))}</button>
-      <button class="btn sm danger" data-daddr="${a.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  el.innerHTML = `<div class="grid">
-    ${panel('c12', t('nav.ipam'), '', `<p class="muted" style="margin:0 0 12px;font-size:13px">${esc(t('as.what_ipam'))}</p>
-      <table><tr><th>${esc(t('as.f_prefix'))}</th><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_vlan'))}</th>
-        <th>${esc(t('as.f_site_id'))}</th><th class="num">${esc(t('as.assigned'))}</th><th></th><th></th></tr>
-      ${subs.map(subRow).join('') || `<tr><td colspan="7" class="empty">${esc(t('as.no_subnets'))}</td></tr>`}</table>
-      ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddSub">${esc(t('as.add_subnet'))}</button></div>`)}`)}
-    ${sel ? panel('c12', t('as.addrs_of', {x: sel.prefix}), sel.hosts >= 0 ? t('as.free_count', {n: nf(sel.free)}) : '',
-      `${free.length ? `<p class="freelist">${esc(t('as.next_free'))}: ${free.map(f => `<button class="lnk mono" data-free="${esc(f)}">${esc(f)}</button>`).join('')}</p>` : ''}
-       <table><tr><th>${esc(t('as.f_ip'))}</th><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_kind'))}</th>
-         <th>${esc(t('as.f_device_id'))}</th><th>${esc(t('as.f_mac'))}</th><th>${esc(t('as.f_tags'))}</th><th></th></tr>
-       ${addrs.map(addrRow).join('') || `<tr><td colspan="7" class="empty">${esc(t('as.no_addrs'))}</td></tr>`}</table>
-       ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddAddr">${esc(t('as.add_addr'))}</button></div>`)}`) : ''}
-    ${conflicts.length ? panel('c12', t('as.conflicts'), t('as.conflicts_sub'),
-      `<table><tr><th>${esc(t('as.f_ip'))}</th><th>${esc(t('as.what'))}</th><th>${esc(t('as.detail'))}</th></tr>
-       ${conflicts.map(c => `<tr><td class="mono">${esc(c.ip)}</td><td>${esc(t('as.cf_' + c.kind))}</td><td class="muted">${esc(c.detail)}</td></tr>`).join('')}</table>`) : ''}
-  </div>`;
-  el.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => { assetSel.subnet = assetSel.subnet === +b.dataset.sub ? 0 : +b.dataset.sub; render(); });
-  el.querySelectorAll('[data-esub]').forEach(b => b.onclick = async () => { if (await assetEdit('subnet', {...subs.find(s => s.id === +b.dataset.esub)})) render(); });
-  el.querySelectorAll('[data-dsub]').forEach(b => b.onclick = async () => {
-    const s = subs.find(x => x.id === +b.dataset.dsub);
-    if (await assetRemove('subnet', s, s.prefix)) render();
-  });
-  el.querySelectorAll('[data-eaddr]').forEach(b => b.onclick = async () => { if (await assetEdit('addr', {...addrs.find(a => a.id === +b.dataset.eaddr)})) render(); });
-  el.querySelectorAll('[data-daddr]').forEach(b => b.onclick = async () => {
-    const a = addrs.find(x => x.id === +b.dataset.daddr);
-    if (await assetRemove('addr', a, a.ip)) render();
-  });
-  el.querySelectorAll('[data-free]').forEach(b => b.onclick = async () => { if (await assetEdit('addr', {ip: b.dataset.free, kind: 'static'})) render(); });
-  const addS = $('#asAddSub'); if (addS) addS.onclick = async () => { if (await assetEdit('subnet', {})) render(); };
-  const addA = $('#asAddAddr'); if (addA) addA.onclick = async () => { if (await assetEdit('addr', {ip: free[0] || '', kind: 'static'})) render(); };
-};
-
 // ------------------------------------------------------------ offline analysis
 // Capture files are imported into a database of their own; "Analyse" shows
 // them on all the other pages, apart from the live data.
@@ -2953,7 +2910,7 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'devices', 'ipam', 'billing', 'names']);
+const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'devices', 'billing', 'names']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
@@ -2970,11 +2927,11 @@ function refreshLabel() {
 }
 // The sandbox bar replaces the time range while capture files are shown.
 function renderSB() {
-  const on = inSB() && !['ifaces', 'sources', 'racks', 'devices', 'ipam'].includes(state.v);
+  const on = inSB() && !['ifaces', 'sources', 'racks', 'devices'].includes(state.v);
   $('#sbbar').hidden = !on;
   $('#range').hidden = on;
   $('#refresh').hidden = on;
-  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources], #nav [data-v=cleanup], #nav .navgrp').forEach(b => b.hidden = inSB() || offlineMode);
+  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources], #nav [data-v=cleanup], #nav [data-v=racks], #nav [data-v=names]').forEach(b => b.hidden = inSB() || offlineMode);
   if (!on) return;
   const r = sbRange(), span = r.to - r.from;
   const df = new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}), tf = new Intl.DateTimeFormat(LANG, {timeStyle: 'short'});
@@ -3021,10 +2978,10 @@ async function render(push) {
   $('#title').textContent = t('nav.' + state.v);  // the detail view refines it
   document.title = t('nav.' + state.v) + ' · traffic66';
   document.querySelectorAll('#nav button').forEach(b => b.dataset.v === state.v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-  // a group whose page is open says so even when it is folded away
-  document.querySelectorAll('#nav .navgrp').forEach(g => {
-    const inside = [...g.querySelectorAll('[data-v]')].some(b => b.dataset.v === state.v) || (g.id === 'grpAssets' && ASSET_VIEWS.has(state.v));
-    g.querySelector('.grphead').dataset.in = inside ? '1' : '0';
+  // the device page is reached from the rack page, so the sidebar marks
+  // rooms and racks while it is open
+  document.querySelectorAll('#nav [data-v=racks]').forEach(b => {
+    if (ASSET_VIEWS.has(state.v)) b.setAttribute('aria-current', 'page');
   });
   renderRange();
   await renderIfsel();
@@ -3191,18 +3148,11 @@ async function init() {
   };
   document.addEventListener('click', e => { const p = $('#rangePop'); if (p && !p.hidden && !e.target.closest('#rangePop')) p.hidden = true; });
   $('#nav').onclick = e => {
-    const g = e.target.closest('[data-grp]');
-    if (g) { const open = g.getAttribute('aria-expanded') !== 'true'; g.setAttribute('aria-expanded', open); try { localStorage.setItem('grp.' + g.dataset.grp, open ? '1' : '0'); } catch (_) {} return; }
     const b = e.target.closest('[data-v]');
     if (!b) return;
     if (b.dataset.v === 'records') state.rl = true;
     go(b.dataset.v);
   };
-  document.querySelectorAll('#nav [data-grp]').forEach(g => {
-    let open = '1';
-    try { open = localStorage.getItem('grp.' + g.dataset.grp) ?? '1'; } catch (_) {}
-    g.setAttribute('aria-expanded', open === '1');
-  });
   $('#share').onclick = () => { navigator.clipboard?.writeText(location.href).then(() => toast(t('top.copied')), () => toast(location.href)); };
   document.addEventListener('click', e => { if (!e.target.closest('.cols')) { const m = $('#colMenu'); if (m) m.hidden = true; } });
   readHash();
