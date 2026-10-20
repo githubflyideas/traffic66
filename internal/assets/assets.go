@@ -1,6 +1,6 @@
 // Package assets is the asset ledger: sites, racks, devices, ports and the
-// links between them, the circuits that reach them, and the subnets and
-// addresses assigned on them.
+// links between them, the circuits that reach them, and the networks
+// written down against a device.
 //
 // It is deliberately a ledger, not a discovery tool. Nothing here is
 // polled or guessed: an operator writes it down, or pastes it in from a
@@ -60,14 +60,16 @@ var schema = []string{
 	`CREATE TABLE IF NOT EXISTS subnets (id BIGINT PRIMARY KEY, prefix VARCHAR, name VARCHAR,
 		vlan INTEGER, site_id BIGINT, gateway VARCHAR, tags VARCHAR, note VARCHAR, hidden BOOLEAN,
 		created TIMESTAMP, updated TIMESTAMP)`,
+	// Addresses were assigned here once, from a page of their own. Both
+	// are gone: it was a second place to keep what the system that hands
+	// out addresses already knows. The table is still created and left
+	// alone, because a ledger that was filled in before this must not lose
+	// what somebody typed into it.
 	`CREATE TABLE IF NOT EXISTS addrs (id BIGINT PRIMARY KEY, subnet_id BIGINT, ip VARCHAR,
 		name VARCHAR, kind VARCHAR, device_id BIGINT, port_id BIGINT, mac VARCHAR,
 		tags VARCHAR, note VARCHAR, hidden BOOLEAN, created TIMESTAMP, updated TIMESTAMP)`,
 	`CREATE TABLE IF NOT EXISTS meta (k VARCHAR PRIMARY KEY, v VARCHAR)`,
 
-	// one address may be written down once; the rest is left to the
-	// conflict report, which explains rather than refuses
-	`CREATE UNIQUE INDEX IF NOT EXISTS addrs_ip ON addrs (ip)`,
 	`CREATE UNIQUE INDEX IF NOT EXISTS subnets_prefix ON subnets (prefix)`,
 	`CREATE INDEX IF NOT EXISTS ports_device ON ports (device_id)`,
 	`CREATE INDEX IF NOT EXISTS devices_rack ON devices (rack_id)`,
@@ -103,6 +105,16 @@ func Open(dir string) (*Store, error) {
 			return nil, fmt.Errorf("asset ledger: %s: %w", q, err)
 		}
 	}
+	// Columns added after a release: a ledger written by an older one is
+	// opened as it is and grown here, never rewritten.
+	for _, q := range []string{
+		`ALTER TABLE subnets ADD COLUMN IF NOT EXISTS device_id BIGINT DEFAULT 0`,
+	} {
+		if _, err := s.DB.Exec(q); err != nil {
+			s.Close()
+			return nil, fmt.Errorf("asset ledger: %s: %w", q, err)
+		}
+	}
 	return s, nil
 }
 
@@ -133,7 +145,6 @@ type Counts struct {
 	Ports    int `json:"ports"`
 	Circuits int `json:"circuits"`
 	Subnets  int `json:"subnets"`
-	Addrs    int `json:"addrs"`
 }
 
 // Counts reports the ledger's size. Hidden records are counted: they are
@@ -146,7 +157,6 @@ func (s *Store) Counts() Counts {
 	}{
 		{"sites", &c.Sites}, {"racks", &c.Racks}, {"devices", &c.Devices},
 		{"ports", &c.Ports}, {"circuits", &c.Circuits}, {"subnets", &c.Subnets},
-		{"addrs", &c.Addrs},
 	} {
 		s.DB.QueryRow(`SELECT count(*) FROM ` + p.table).Scan(p.into)
 	}

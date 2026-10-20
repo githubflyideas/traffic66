@@ -128,7 +128,7 @@ func TestDeleteDevice(t *testing.T) {
 	if _, err := s.SaveLink(Link{APort: p1.ID, BPort: p2.ID}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.SaveAddr(Addr{IP: "10.0.0.5", DeviceID: d1.ID, PortID: p1.ID, Name: "mgmt"}); err != nil {
+	if _, err := s.SaveSubnet(Subnet{Prefix: "10.0.0.0/24", DeviceID: d1.ID, Name: "mgmt"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.DeleteDevice(d1.ID); err != nil {
@@ -140,12 +140,10 @@ func TestDeleteDevice(t *testing.T) {
 	if ps, _ := s.Ports(0); len(ps) != 1 || ps[0].ID != p2.ID {
 		t.Fatalf("ports left: %+v", ps)
 	}
-	as, _ := s.Addrs(AddrQuery{})
-	if len(as) != 1 {
-		t.Fatalf("the address went with the device: %+v", as)
-	}
-	if as[0].DeviceID != 0 || as[0].PortID != 0 {
-		t.Fatalf("the address still points at the device: %+v", as[0])
+	// the networks written against it are a note about the device, and
+	// they go when it does
+	if ns, _ := s.Subnets(); len(ns) != 0 {
+		t.Fatalf("the network outlived the device: %+v", ns)
 	}
 }
 
@@ -180,55 +178,15 @@ func TestOneCablePerPort(t *testing.T) {
 	}
 }
 
-// An address is written down once, in its canonical form, and finds the
-// narrowest network that contains it even when that network is recorded
-// afterwards.
-func TestAddressAssignment(t *testing.T) {
-	s := open(t)
-	wide, err := s.SaveSubnet(Subnet{Prefix: "10.10.0.0/16", Name: "Office"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	a, err := s.SaveAddr(Addr{IP: " 10.10.3.27 ", Name: "Finance PC", MAC: "aabb.ccdd.eeff"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if a.IP != "10.10.3.27" {
-		t.Fatalf("address stored as %q", a.IP)
-	}
-	if a.MAC != "aa:bb:cc:dd:ee:ff" {
-		t.Fatalf("MAC stored as %q", a.MAC)
-	}
-	if a.SubnetID != wide.ID {
-		t.Fatalf("address landed in subnet %d, want %d", a.SubnetID, wide.ID)
-	}
-	if _, err := s.SaveAddr(Addr{IP: "10.10.3.27", Name: "Someone else"}); err == nil {
-		t.Fatal("the address was assigned twice")
-	}
-	// a narrower network recorded later takes the address over
-	narrow, err := s.SaveSubnet(Subnet{Prefix: "10.10.3.0/24", Name: "Finance"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	as, _ := s.Addrs(AddrQuery{})
-	if len(as) != 1 || as[0].SubnetID != narrow.ID {
-		t.Fatalf("after recording %s the address sits in %d, want %d", narrow.Prefix, as[0].SubnetID, narrow.ID)
-	}
-	// and deleting that network hands it back, without losing it
-	if err := s.DeleteSubnet(narrow.ID); err != nil {
-		t.Fatal(err)
-	}
-	as, _ = s.Addrs(AddrQuery{})
-	if len(as) != 1 || as[0].SubnetID != wide.ID {
-		t.Fatalf("after deleting the narrow network: %+v", as)
-	}
-}
-
 // A network is stored with its host bits cleared, its gateway must be
 // inside it, and the same network cannot be recorded twice.
 func TestSubnetCanonical(t *testing.T) {
 	s := open(t)
-	sn, err := s.SaveSubnet(Subnet{Prefix: "192.168.5.37/24", Gateway: "192.168.5.1"})
+	dev, err := s.SaveDevice(Device{Name: "sw1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sn, err := s.SaveSubnet(Subnet{Prefix: "192.168.5.37/24", Gateway: "192.168.5.1", DeviceID: dev.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,82 +202,11 @@ func TestSubnetCanonical(t *testing.T) {
 	if _, err := s.SaveSubnet(Subnet{Prefix: "not a network"}); err == nil {
 		t.Fatal("rubbish was accepted as a network")
 	}
-}
-
-// Free addresses skip what is assigned, the gateway, and the network and
-// broadcast addresses.
-func TestFreeAddrs(t *testing.T) {
-	s := open(t)
-	sn, err := s.SaveSubnet(Subnet{Prefix: "10.1.1.0/29", Gateway: "10.1.1.1"})
-	if err != nil {
-		t.Fatal(err)
+	if _, err := s.SaveSubnet(Subnet{Prefix: "172.16.0.0/16", DeviceID: 999}); err == nil {
+		t.Fatal("a network was written against a device that does not exist")
 	}
-	if _, err := s.SaveAddr(Addr{IP: "10.1.1.2"}); err != nil {
-		t.Fatal(err)
-	}
-	free, err := s.FreeAddrs(sn.ID, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []string{"10.1.1.3", "10.1.1.4", "10.1.1.5", "10.1.1.6"}
-	if len(free) != len(want) {
-		t.Fatalf("free %v, want %v", free, want)
-	}
-	for i := range want {
-		if free[i] != want[i] {
-			t.Fatalf("free %v, want %v", free, want)
-		}
-	}
-	use, err := s.Use()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(use) != 1 || use[0].Hosts != 6 || use[0].Assigned != 1 || use[0].Free != 5 {
-		t.Fatalf("use: %+v", use)
-	}
-	if !use[0].Listable {
-		t.Fatal("a /29 should be listable")
-	}
-}
-
-// Networks too large to enumerate say so rather than pretending.
-func TestLargeSubnet(t *testing.T) {
-	s := open(t)
-	if _, err := s.SaveSubnet(Subnet{Prefix: "2001:db8::/32"}); err != nil {
-		t.Fatal(err)
-	}
-	use, err := s.Use()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if use[0].Hosts != -1 || use[0].Free != -1 || use[0].Listable {
-		t.Fatalf("a /32 of IPv6 was counted: %+v", use[0])
-	}
-}
-
-// The conflict report reads only the ledger: addresses in no recorded
-// network, and one MAC on several addresses.
-func TestConflicts(t *testing.T) {
-	s := open(t)
-	if _, err := s.SaveSubnet(Subnet{Prefix: "10.0.0.0/24"}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.SaveAddr(Addr{IP: "10.0.0.5", MAC: "aa:bb:cc:dd:ee:01", Name: "a"}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.SaveAddr(Addr{IP: "10.0.1.5", MAC: "aa:bb:cc:dd:ee:01", Name: "b"}); err != nil {
-		t.Fatal(err)
-	}
-	cs, err := s.Conflicts()
-	if err != nil {
-		t.Fatal(err)
-	}
-	kinds := map[string]int{}
-	for _, c := range cs {
-		kinds[c.Kind]++
-	}
-	if kinds["outside"] != 1 || kinds["duplicate_mac"] != 1 {
-		t.Fatalf("conflicts: %+v", cs)
+	if sn.DeviceID != dev.ID {
+		t.Fatalf("the network is not on the device: %+v", sn)
 	}
 }
 

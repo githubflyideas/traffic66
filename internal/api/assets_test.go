@@ -77,9 +77,6 @@ func assetServer(t *testing.T, feats []string, sites, racks, devices int) (*Serv
 	// put on the request directly so the test is about the ledger's own
 	// two gates, not about signing in
 	mux.HandleFunc("GET /api/assets", s.getAssets)
-	mux.HandleFunc("GET /api/assets/ipam", s.getIPAM)
-	mux.HandleFunc("GET /api/assets/addrs", s.getAddrs)
-	mux.HandleFunc("GET /api/assets/free", s.getFreeAddrs)
 	mux.HandleFunc("POST /api/assets/{kind}", s.putAsset)
 	mux.HandleFunc("DELETE /api/assets/{kind}", s.deleteAsset)
 	call := func(method, path, body, user string) *httptest.ResponseRecorder {
@@ -99,7 +96,6 @@ func TestAssetsNeedLicence(t *testing.T) {
 	_, call := assetServer(t, nil, 0, 0, 0)
 	for _, c := range []struct{ method, path, body string }{
 		{"GET", "/api/assets", ""},
-		{"GET", "/api/assets/ipam", ""},
 		{"POST", "/api/assets/site", `{"name":"A"}`},
 		{"DELETE", "/api/assets/site?id=1", ""},
 	} {
@@ -225,38 +221,36 @@ func TestAssetsQuota(t *testing.T) {
 	}
 }
 
-// The IPAM pages answer with what the ledger holds.
-func TestAssetsIPAM(t *testing.T) {
+// A network is written against a device and comes back with the ledger,
+// which is all that is left of what used to be a page of its own.
+func TestAssetsSubnets(t *testing.T) {
 	_, call := assetServer(t, []string{license.FeatDCIM}, 0, 0, 0)
-	if w := call("POST", "/api/assets/subnet", `{"prefix":"10.9.9.0/29","gateway":"10.9.9.1"}`, "admin"); w.Code != 200 {
+	w := call("POST", "/api/assets/device", `{"name":"sw1"}`, "admin")
+	if w.Code != 200 {
+		t.Fatalf("device: %d %s", w.Code, w.Body)
+	}
+	var dev assets.Device
+	json.Unmarshal(w.Body.Bytes(), &dev)
+	if w := call("POST", "/api/assets/subnet", fmt.Sprintf(`{"prefix":"10.9.9.0/29","gateway":"10.9.9.1","device_id":%d}`, dev.ID), "admin"); w.Code != 200 {
 		t.Fatalf("subnet: %d %s", w.Code, w.Body)
 	}
-	var sn assets.Subnet
-	w := call("GET", "/api/assets/ipam", "", "viewer")
+	if w := call("POST", "/api/assets/subnet", `{"prefix":"10.9.9.0/29","device_id":999}`, "admin"); w.Code == 200 {
+		t.Fatal("a network was written against a device that does not exist")
+	}
+	w = call("GET", "/api/assets", "", "viewer")
 	if w.Code != 200 {
-		t.Fatalf("ipam: %d %s", w.Code, w.Body)
+		t.Fatalf("assets: %d %s", w.Code, w.Body)
 	}
 	var out struct {
-		Subnets []assets.SubnetUse `json:"subnets"`
+		Subnets []assets.Subnet `json:"subnets"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &out)
-	if len(out.Subnets) != 1 || out.Subnets[0].Hosts != 6 {
-		t.Fatalf("ipam: %s", w.Body)
+	if len(out.Subnets) != 1 || out.Subnets[0].DeviceID != dev.ID || out.Subnets[0].Prefix != "10.9.9.0/29" {
+		t.Fatalf("subnets: %s", w.Body)
 	}
-	sn = out.Subnets[0].Subnet
-	if w := call("POST", "/api/assets/addr", `{"ip":"10.9.9.2","name":"printer"}`, "admin"); w.Code != 200 {
-		t.Fatalf("addr: %d %s", w.Code, w.Body)
-	}
-	if w := call("POST", "/api/assets/addr", `{"ip":"10.9.9.2","name":"someone else"}`, "admin"); w.Code == 200 {
-		t.Fatal("the address was assigned twice")
-	}
-	w = call("GET", fmt.Sprintf("/api/assets/free?subnet=%d&n=3", sn.ID), "", "viewer")
-	if w.Code != 200 || !strings.Contains(w.Body.String(), `"10.9.9.3"`) || strings.Contains(w.Body.String(), `"10.9.9.2"`) {
-		t.Fatalf("free: %d %s", w.Code, w.Body)
-	}
-	w = call("GET", fmt.Sprintf("/api/assets/addrs?subnet=%d", sn.ID), "", "viewer")
-	if !strings.Contains(w.Body.String(), "printer") {
-		t.Fatalf("addrs: %s", w.Body)
+	// the address assignment this page used to do is gone, not hidden
+	if w := call("POST", "/api/assets/addr", `{"ip":"10.9.9.2","name":"printer"}`, "admin"); w.Code == 200 {
+		t.Fatal("an address was assigned")
 	}
 	if w := call("POST", "/api/assets/subnet", `{"prefix":"not a network"}`, "admin"); w.Code == 200 {
 		t.Fatal("rubbish was accepted as a network")

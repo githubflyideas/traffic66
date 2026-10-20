@@ -85,29 +85,15 @@ type Circuit struct {
 	Hidden    bool     `json:"hidden,omitempty"`
 }
 
-// Subnet is a network the ledger assigns addresses from.
+// Subnet is a network a device carries, written down beside it. It is a
+// note, not a source of truth for anything: nothing is looked up in it.
 type Subnet struct {
-	ID      int64    `json:"id"`
-	Prefix  string   `json:"prefix"`
-	Name    string   `json:"name,omitempty"`
-	VLAN    int      `json:"vlan,omitempty"`
-	SiteID  int64    `json:"site_id,omitempty"`
-	Gateway string   `json:"gateway,omitempty"`
-	Tags    []string `json:"tags,omitempty"`
-	Note    string   `json:"note,omitempty"`
-	Hidden  bool     `json:"hidden,omitempty"`
-}
-
-// Addr is one assigned address.
-type Addr struct {
 	ID       int64    `json:"id"`
-	SubnetID int64    `json:"subnet_id,omitempty"`
-	IP       string   `json:"ip"`
-	Name     string   `json:"name,omitempty"`
-	Kind     string   `json:"kind,omitempty"` // static, dhcp, reserved, gateway, vip
 	DeviceID int64    `json:"device_id,omitempty"`
-	PortID   int64    `json:"port_id,omitempty"`
-	MAC      string   `json:"mac,omitempty"`
+	Prefix   string   `json:"prefix"`
+	Name     string   `json:"name,omitempty"`
+	VLAN     int      `json:"vlan,omitempty"`
+	Gateway  string   `json:"gateway,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 	Note     string   `json:"note,omitempty"`
 	Hidden   bool     `json:"hidden,omitempty"`
