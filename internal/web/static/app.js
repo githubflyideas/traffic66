@@ -322,7 +322,7 @@ function readHash() {
   if (RANGES.includes(p.get('r'))) state.r = p.get('r');
   if (p.get('r') === 'custom' && +p.get('from') > 0 && +p.get('to') > +p.get('from')) { state.r = 'custom'; state.cf = +p.get('from'); state.ct = +p.get('to'); }
   if (p.get('dim')) state.dim = p.get('dim');
-  state.tm = p.get('tm') === 'talkers' ? 'talkers' : 'table';  // Top 66 opens on the table
+  state.tm = p.get('tm') === 'table' ? 'table' : 'talkers';  // Top 66 opens on the two ends
   state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
   state.ra = p.get('ra') === 'client' ? 'client' : 'server';
   state.ds = p.get('ds') === 'sb' ? 'sb' : '';
@@ -339,7 +339,7 @@ function writeHash(push) {
   const p = new URLSearchParams({v: state.v, r: state.r});
   if (state.r === 'custom') { p.set('from', state.cf); p.set('to', state.ct); }
   if (state.ds) p.set('ds', state.ds);
-  if (state.v === 'topn') { if (state.tm === 'talkers') p.set('tm', 'talkers'); else p.set('dim', state.dim); }
+  if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
   if (state.v === 'records' && state.rl) p.set('live', '1');
   if (state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state.v)) p.set('if', state.ifv);
@@ -1482,8 +1482,11 @@ function drawMap(el, w, rows, gl) {
 // over the lines' own range, cut into 15 equal steps), not by quantiles:
 // a few huge flows then do not flatten the rest, and equal traffic always
 // gets an equal level. Level l -> width LINE_W[floor(l/5)], shade l%5.
+// The three widths are close together on purpose: a widest line several
+// times the narrowest one dominated the map and the shades stopped being
+// read at all, so the step carries less of the difference than the colour.
 // The palette follows the theme unless one is picked in the legend.
-const LINE_W = [1.5, 4, 8];
+const LINE_W = [1.5, 3, 4.5];
 const LINE_PAL = {
   gb: ['#7fd6a0', '#3fb8a0', '#1f97b5', '#1f6fb8', '#163f8f'],
   or: ['#ffc266', '#ff9a3c', '#f26a2e', '#d63a2a', '#9e1622'],
