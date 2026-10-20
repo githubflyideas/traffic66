@@ -172,3 +172,41 @@ func (s *Store) Bills(from, to time.Time, exporter string) ([]Bill, error) {
 	}
 	return out, rows.Err()
 }
+
+// BillPoint is one five-minute bucket of an interface's own counters.
+type BillPoint struct {
+	TS      time.Time `json:"ts"`
+	In      float64   `json:"in"`  // bits/s
+	Out     float64   `json:"out"` // bits/s
+	Samples int       `json:"samples"`
+}
+
+// BillSeries returns the buckets one interface's bill was computed from,
+// oldest first. It is the working behind the figure: the same rows Bills
+// takes its percentile of, so a customer who disputes a bill can be shown
+// the line it was drawn across rather than asked to take the number.
+//
+// Buckets with no measurement are absent here as they are there, rather
+// than being sent as zero: a chart that draws them flat at the bottom
+// claims the circuit was idle when nothing was collected.
+func (s *Store) BillSeries(from, to time.Time, exporter string, ifindex uint32) ([]BillPoint, error) {
+	if !to.After(from) {
+		return nil, fmt.Errorf("bill series: %s is not before %s", from.Format(time.RFC3339), to.Format(time.RFC3339))
+	}
+	rows, err := s.DB.Query(`SELECT ts, in_bps, out_bps, samples FROM ifr
+		WHERE ts >= ? AND ts < ? AND exporter = ? AND ifindex = ? ORDER BY ts`,
+		from.UTC(), to.UTC(), exporter, ifindex)
+	if err != nil {
+		return nil, fmt.Errorf("bill series: %w", err)
+	}
+	defer rows.Close()
+	out := []BillPoint{}
+	for rows.Next() {
+		var p BillPoint
+		if err := rows.Scan(&p.TS, &p.In, &p.Out, &p.Samples); err != nil {
+			return nil, fmt.Errorf("bill series: %w", err)
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}

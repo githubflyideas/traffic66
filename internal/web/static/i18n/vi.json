@@ -736,6 +736,8 @@
 "bill.avg": "Trung bình",
 "bill.coverage": "Độ phủ",
 "bill.empty": "Kỳ này không có bộ đếm cổng. Con số lấy từ bộ đếm thiết bị tự báo, không phải từ lưu lượng lấy mẫu.",
+"bill.p95": "Phân vị 95",
+"bill.chart_sub": "Mẫu năm phút; đường nét đứt là giá trị được tính phí",
 "bill.gap_note": "Những khoảng năm phút không có số đo thì bị bỏ ra, không tính là 0. Tính là 0 sẽ kéo con số xuống. Độ phủ cho biết con số dựa trên bao nhiêu phần của kỳ.",
 "bill.how": "Con số được tính thế nào",
 "bill.how_note": "Chiều vào và chiều ra được xếp riêng trong kỳ, bỏ 5% mẫu năm phút cao nhất, rồi lấy mẫu cao nhất còn lại — chọn chiều lớn hơn. Tháng được tính theo múi giờ của trình duyệt này.",

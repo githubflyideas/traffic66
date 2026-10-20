@@ -423,7 +423,7 @@ async function renderIfsel() {
 async function api(path, extra = {}, filters = state.f) {
   if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
   // a capture file holds no device counters, so there is no bill in it
-  if (inSB() && path === 'billing') return {bills: []};
+  if (inSB() && path.startsWith('billing')) return {bills: [], points: []};
   const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : extra.range ? extra : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
   // Which clock the day and six-hour columns are cut on. Without it they
   // were cut on UTC, so a day in Tokyo arrived split across two of them
@@ -2528,6 +2528,33 @@ const billPeriod = () => {
   if (isNaN(f) || isNaN(t) || t < f) return [mStart(-1), mStart(0)];
   return [f, new Date(t.getTime() + 864e5)];
 };
+// billGrid lays the buckets out on the period's own five-minute grid. A
+// bucket that holds no measurement stays empty (null) rather than zero:
+// the circuit was not idle, nothing was collected, and the chart says the
+// same thing the figure does by leaving a gap.
+//
+// A month is nearly nine thousand buckets, more than a chart is wide, so
+// above ~600 they are grouped and the highest of each group kept. Taking
+// the highest rather than the average keeps a spike a spike; the dashed
+// line is the figure the server worked out from every bucket, so grouping
+// never moves it.
+function billGrid(d, from, to) {
+  const step = (d.bucket_minutes || 5) * 60000;
+  const n = Math.max(1, Math.round((to - from) / step));
+  const vin = new Array(n).fill(null), vout = new Array(n).fill(null);
+  (d.points || []).forEach(p => {
+    const i = Math.floor((new Date(p.ts).getTime() - from) / step);
+    if (i >= 0 && i < n) { vin[i] = p.in; vout[i] = p.out; }
+  });
+  const g = Math.max(1, Math.ceil(n / 600));
+  if (g === 1) return {times: vin.map((_, i) => from + i * step), in: vin, out: vout};
+  const times = [], gin = [], gout = [];
+  for (let i = 0; i < n; i += g) {
+    const top = a => { let v = null; for (let j = i; j < Math.min(n, i + g); j++) if (a[j] != null && (v == null || a[j] > v)) v = a[j]; return v; };
+    times.push(from + i * step); gin.push(top(vin)); gout.push(top(vout));
+  }
+  return {times, in: gin, out: gout};
+}
 views.billing = async (el) => {
   const [from, to] = billPeriod();
   const [d, ifs] = await Promise.all([
@@ -2580,8 +2607,29 @@ views.billing = async (el) => {
           <td class="nw" style="text-align:end">${b.marked ? admOnly(`<button class="btn" data-unbill="${esc(b.exporter + '/' + b.ifindex)}">${t('bill.remove')}</button>`) : ''}</td></tr>`;
       }).join('')}</table>
       <p class="muted" style="margin:12px 0 0;font-size:13px">${esc(t('bill.gap_note'))}</p>`;
+  // The line the figure was taken across. The table says what is charged;
+  // somebody who disputes a bill asks to see this. Interfaces that
+  // reported nothing have no chart rather than an empty frame.
+  const charted = rows.filter(b => b.buckets).slice(0, 6);
+  const chTitle = b => (b.name || t('bill.ifindex', {n: b.ifindex})) + ' · ' + (b.device || b.exporter);
   el.innerHTML = `<div class="grid">${panel('c12', t('bill.title'), t('bill.sub'), picker + body)}
+    ${charted.map((b, i) => panel('c12', esc(chTitle(b)), esc(t('bill.chart_sub')),
+      `<div class="chart" id="billCh${i}" style="height:190px" aria-label="${esc(chTitle(b))}"></div>
+       <div class="legend"><span><i style="background:${IF_IN}"></i>${esc(t('if.in'))}</span><span><i style="background:${IF_OUT}"></i>${esc(t('if.out'))}</span>
+         <span><i class="dash" style="--base:var(--accent)"></i>${esc(t('bill.p95'))}<span class="muted">${esc(fmtBps(b.billed))}</span></span></div>`)).join('')}
     ${panel('c12', t('bill.how'), '', `<p class="muted" style="margin:0;font-size:13px">${esc(t('bill.how_note'))}<br>${esc(t('bill.retention', {n: nf(d.retention_days || 0)}))}</p>`)}</div>`;
+  charted.forEach(async (b, i) => {
+    const key = b.exporter + '/' + b.ifindex;
+    const sd = await api('billing/series', {from: +from, to: +to, if: key}).catch(() => null);
+    const el2 = document.getElementById('billCh' + i);
+    if (!sd || !el2) return;
+    const g = billGrid(sd, +from, +to);
+    tsChart(el2, {times: g.times, lines: [
+      {name: t('if.in'), color: IF_IN, data: g.in, fill: true},
+      {name: t('if.out'), color: IF_OUT, data: g.out, fill: true},
+      {name: t('bill.p95'), color: 'var(--accent)', data: g.times.map(() => b.billed), dash: true, keep: true},
+    ]});
+  });
   const sel = $('#billP');
   sel.onchange = () => { billSel = {...billSel, p: sel.value}; render(); };
   const f = $('#billF'), tt = $('#billT');
