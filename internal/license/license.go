@@ -9,12 +9,18 @@
 // of flow analysis. What it loses is the registered-only features and the
 // clean, unwatermarked reports.
 //
-// Two versions of the signed message exist. v1 is what traffic66 shipped
+// Three versions of the signed message exist. v1 is what traffic66 shipped
 // first (installation, customer, product, licence type, expiry). v2 adds
 // the signing key's id, the tier, the update window, the quotas and the
-// feature list. A v1 signature can only ever authorise a v1 file: a file
-// carrying quotas or features is checked against the v2 message alone, so
-// an old signature cannot be replayed to grant them.
+// feature list. v3 adds who the licence is made out to — a person or an
+// organisation — so the page can say "licensed to" rather than only
+// "registered", and so a licence bought by one person cannot be passed off
+// as a company's.
+//
+// An older signature can only ever authorise what its own version covers:
+// a file carrying quotas or features is checked against v2 or later, and
+// one naming a licensee against v3 alone, so an old signature cannot be
+// replayed to grant something it never said.
 //
 // Verification goes against a Keyring rather than one key, because an
 // offline licence cannot be withdrawn over the network: if an issuing key
@@ -52,6 +58,18 @@ const (
 	TypeSubscription = "subscription"
 	TypePerpetual    = "perpetual"
 )
+
+// Who a licence is made out to. It is signed, so it cannot be edited into
+// a file after issuing, and it is what the licence page shows beside the
+// name: a licence bought by one person says so.
+const (
+	LicenseeIndividual   = "individual"
+	LicenseeOrganization = "organization"
+)
+
+// Licensees is every licensee kind, for validation and for the issuing
+// tool.
+var Licensees = []string{LicenseeIndividual, LicenseeOrganization}
 
 // Tiers.
 const (
@@ -110,6 +128,7 @@ type File struct {
 	KeyID          string   `json:"key_id,omitempty"`
 	InstallationID string   `json:"installation_id,omitempty"`
 	Customer       string   `json:"customer,omitempty"`
+	Licensee       string   `json:"licensee,omitempty"` // LicenseeIndividual or LicenseeOrganization
 	Product        string   `json:"product,omitempty"`
 	License        string   `json:"license,omitempty"`
 	Tier           string   `json:"tier,omitempty"`
@@ -173,7 +192,7 @@ func CanonFeatures(in []string) []string {
 // fields are the free-text parts of a message; a newline in any of them
 // would let one field pose as another, so they are rejected.
 func fields(f File) []string {
-	return []string{f.KeyID, f.InstallationID, f.Customer, f.Product, f.License, f.Tier,
+	return []string{f.KeyID, f.InstallationID, f.Customer, f.Licensee, f.Product, f.License, f.Tier,
 		strings.Join(CanonFeatures(f.Features), ",")}
 }
 
@@ -198,11 +217,24 @@ func orNull(p *string) string {
 	return *p
 }
 
-// Message is what a v2 signature covers.
-func Message(f File) []byte {
+// Message is what the current signature covers, and what the issuing tool
+// signs. It is v3: v2's fields with the licensee after the customer.
+func Message(f File) []byte { return message("traffic66-license-v3", f, true) }
+
+// MessageV2 is what traffic66 signed before a licence said who it was made
+// out to. It is kept so licences issued then keep working.
+func MessageV2(f File) []byte { return message("traffic66-license-v2", f, false) }
+
+func message(head string, f File, licensee bool) []byte {
 	var b strings.Builder
-	b.WriteString("traffic66-license-v2\n")
-	for _, s := range []string{f.KeyID, f.InstallationID, f.Customer, f.Product, f.License, f.Tier} {
+	b.WriteString(head)
+	b.WriteByte('\n')
+	parts := []string{f.KeyID, f.InstallationID, f.Customer}
+	if licensee {
+		parts = append(parts, f.Licensee)
+	}
+	parts = append(parts, f.Product, f.License, f.Tier)
+	for _, s := range parts {
 		b.WriteString(s)
 		b.WriteByte('\n')
 	}
@@ -223,12 +255,18 @@ func MessageV1(f File) []byte {
 		f.InstallationID, f.Customer, f.Product, f.License, orNull(f.Expires)))
 }
 
-// grants reports whether the file carries anything only a v2 message
-// covers. Such a file is never accepted on a v1 signature.
+// grants reports whether the file carries anything only a v2 message or
+// later covers. Such a file is never accepted on a v1 signature.
 func grants(f File) bool {
 	return f.KeyID != "" || f.Tier != "" || f.UpdatesUntil != nil || len(f.Features) > 0 ||
 		f.MaxUsers != 0 || f.MaxSites != 0 || f.MaxRacks != 0 || f.MaxDevices != 0
 }
+
+// namesLicensee reports whether the file says who it is made out to. Only
+// a v3 signature covers that, so such a file is never accepted on an older
+// one: otherwise a licence issued to a person could have "organization"
+// written into it afterwards and still verify.
+func namesLicensee(f File) bool { return f.Licensee != "" }
 
 // Verify checks f against one key and returns the message version that
 // matched. Keyring.Verify is what traffic66 uses; this is the single-key

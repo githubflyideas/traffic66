@@ -27,6 +27,7 @@ type State struct {
 	Kind           string // KindUnregistered, KindLicensed, KindExpired
 	Reason         string // why, when not licensed; for the footer and support
 	Customer       string
+	Licensee       string // LicenseeIndividual, LicenseeOrganization, or empty on a licence issued before v3
 	Product        string
 	Type           string // TypeTrial, TypeSubscription, TypePerpetual
 	Tier           string
@@ -67,7 +68,7 @@ func Check(ring Keyring, f File, installID string, now time.Time) State {
 	}
 
 	s := State{
-		Kind: KindLicensed, Customer: f.Customer, Product: f.Product,
+		Kind: KindLicensed, Customer: f.Customer, Licensee: f.Licensee, Product: f.Product,
 		Type: f.License, Tier: f.Tier, InstallationID: f.InstallationID,
 		KeyID: key.ID, Days: -1, features: map[string]bool{},
 	}
@@ -196,6 +197,7 @@ type Public struct {
 	Notice         string   `json:"notice,omitempty"`
 	Reason         string   `json:"reason,omitempty"`
 	Customer       string   `json:"customer,omitempty"`
+	Licensee       string   `json:"licensee,omitempty"`
 	Product        string   `json:"product,omitempty"`
 	Type           string   `json:"type,omitempty"`
 	Tier           string   `json:"tier,omitempty"`
@@ -215,7 +217,7 @@ type Public struct {
 func (s State) Public() Public {
 	return Public{
 		Kind: s.Kind, Registered: s.Registered(), Watermark: s.Watermark(), Notice: s.Notice(),
-		Reason: s.Reason, Customer: s.Customer, Product: s.Product,
+		Reason: s.Reason, Customer: s.Customer, Licensee: s.Licensee, Product: s.Product,
 		Type: s.Type, Tier: s.Tier, InstallationID: s.InstallationID,
 		KeyID: s.KeyID, Days: s.Days, Expires: s.Expires,
 		UpdatesUntil: s.UpdatesUntil, Users: s.UserLimit(),

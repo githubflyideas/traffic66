@@ -161,8 +161,9 @@ func TestPerpetual(t *testing.T) {
 // A v1 licence registers the installation but grants no quotas or features.
 func TestLegacyGrantsNothingExtra(t *testing.T) {
 	_, pub := testKey(t)
-	f := vectors()[3].file
-	f.Signature = vectors()[3].sig
+	v := vectorNamed(t, "legacy v1")
+	f := v.file
+	f.Signature = v.sig
 	s := Check(SingleKey(pub), f, "7f3a1c9e", now)
 	if !s.Registered() {
 		t.Fatalf("a v1 licence should still register: %s", s.Reason)
@@ -219,5 +220,40 @@ func TestPublicShape(t *testing.T) {
 	}
 	if len(u.Features) != 0 {
 		t.Fatal("no features without a licence")
+	}
+}
+
+// The licensee is signed, so it cannot be written into a file after it was
+// issued: a licence sold to one person must not be able to call itself a
+// company's by editing a line.
+func TestLicenseeIsSigned(t *testing.T) {
+	_, pub := testKey(t)
+	v := vectorNamed(t, "individual")
+	f := v.file
+	f.Signature = v.sig
+	s := Check(SingleKey(pub), f, "7f3a1c9e", now)
+	if !s.Registered() || s.Licensee != LicenseeIndividual || s.Customer != "Ada Lovelace" {
+		t.Fatalf("licensed to %q as %q: %s", s.Customer, s.Licensee, s.Reason)
+	}
+	if p := s.Public(); p.Licensee != LicenseeIndividual {
+		t.Fatalf("the API says %q", p.Licensee)
+	}
+	// the same file, now claiming to be a company's
+	f.Licensee = LicenseeOrganization
+	if s := Check(SingleKey(pub), f, "7f3a1c9e", now); s.Registered() {
+		t.Fatal("an edited licensee was accepted")
+	}
+	// and a licence issued before v3 carries none, rather than a guess
+	v2 := vectorNamed(t, "subscription")
+	f2 := v2.file
+	f2.Signature = v2.sig
+	s2 := Check(SingleKey(pub), f2, "", now)
+	if !s2.Registered() || s2.Licensee != "" {
+		t.Fatalf("a v2 licence says %q: %s", s2.Licensee, s2.Reason)
+	}
+	// nor can one be added to it
+	f2.Licensee = LicenseeOrganization
+	if s := Check(SingleKey(pub), f2, "", now); s.Registered() {
+		t.Fatal("a licensee added to a v2 licence was accepted")
 	}
 }

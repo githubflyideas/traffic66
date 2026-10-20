@@ -18,6 +18,8 @@ const testKeyID = "65b60673"
 
 const (
 	testPub   = "ebVWLo/mVPlAeLES6KmLp5AfhTrmlb7X4OORC60ElmQ="
+	sigOrg    = "PmZUlDhglvR7Ry2M7nIas/bpaLu0dYYvQ95WLJ9un8pntBCTYtnZwiaHms1hn9p5sa9o7UntJYLmrB5gGap+Cg=="
+	sigPerson = "UYrv9p/uGa8waIxPdEhP6iG3Xa+qgrsDfLGg9P+vKcnLd2HU59fzYM7xvut66aAncFac5tbXQuKOWIhHUwpODw=="
 	sigV2     = "DL9Y+Ajkw3OsQmC4owY0NNiGUAnQSLYwbRdSwW2RI6PurXDtdE4Nlt/2sTq+jauT1wqU8oI0ayDR1h/QcDOeCA=="
 	sigTrial  = "laCeKuijrFNXzPBOOjbKQS5DV7cvBn1ATrTDsh4cc7jfT4GuYSb9c2b3x41a+1M3wYL0+WtHyMNmktFZweE1BA=="
 	sigPerp   = "yniSBg+/WiNbTj3Xwx4chq8r57ywRAn5UVRvSX7nKEmyrY+QvByaXQWOSomM4ZJ9CpOlIPypNRnqaW7TILDsBA=="
@@ -53,6 +55,19 @@ type vector struct {
 
 func vectors() []vector {
 	return []vector{
+		// v3: the licence says who it is made out to
+		{"organization", File{
+			KeyID:    testKeyID,
+			Customer: "Big Co", Licensee: LicenseeOrganization, Product: "traffic66", License: TypePerpetual,
+			Tier: TierEnterprise, UpdatesUntil: str("2027-10-31"), Features: Features,
+		}, sigOrg, 3},
+		{"individual", File{
+			KeyID:          testKeyID,
+			InstallationID: "7f3a1c9e", Customer: "Ada Lovelace", Licensee: LicenseeIndividual,
+			Product: "traffic66", License: TypeSubscription, Tier: TierTeam, Expires: str("2027-10-31"),
+			MaxUsers: 10, MaxSites: 1, MaxRacks: 10, MaxDevices: 100,
+			Features: []string{FeatSyslog, FeatDCIM},
+		}, sigPerson, 3},
 		{"subscription", File{
 			KeyID:    testKeyID,
 			Customer: "株式会社サンプル", Product: "traffic66", License: TypeSubscription,
@@ -79,6 +94,20 @@ func vectors() []vector {
 	}
 }
 
+// vectorNamed finds one pinned licence. Tests ask for it by name: the
+// list grows at the front as message versions are added, and an index
+// would quietly become a different licence.
+func vectorNamed(t *testing.T, name string) vector {
+	t.Helper()
+	for _, v := range vectors() {
+		if v.name == name {
+			return v
+		}
+	}
+	t.Fatalf("no pinned licence called %q", name)
+	return vector{}
+}
+
 func TestVectorsVerify(t *testing.T) {
 	_, pub := testKey(t)
 	if KeyID(pub) != testKeyID {
@@ -102,8 +131,11 @@ func TestVectorsStable(t *testing.T) {
 	priv, _ := testKey(t)
 	for _, v := range vectors() {
 		msg := Message(v.file)
-		if v.ver == 1 {
+		switch v.ver {
+		case 1:
 			msg = MessageV1(v.file)
+		case 2:
+			msg = MessageV2(v.file)
 		}
 		got := b64.EncodeToString(ed25519.Sign(priv, msg))
 		if got != v.sig {
