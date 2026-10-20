@@ -736,6 +736,8 @@
 "bill.avg": "Average",
 "bill.coverage": "Coverage",
 "bill.empty": "No interface counters in this period. The figure comes from the counters a device reports, not from sampled flow.",
+"bill.p95": "95th percentile",
+"bill.chart_sub": "Five-minute samples; the dashed line is the figure charged",
 "bill.gap_note": "Five-minute buckets with no measurement are left out, not counted as zero. Counting them as zero would lower the figure. Coverage is how much of the period it rests on.",
 "bill.how": "How this is worked out",
 "bill.how_note": "Inbound and outbound are each sorted over the period, the top five per cent of the five-minute samples are discarded, and the highest left is charged — the greater of the two directions. Months are counted in this browser's time zone.",

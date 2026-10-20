@@ -736,6 +736,8 @@
 "bill.avg": "Mittel",
 "bill.coverage": "Abdeckung",
 "bill.empty": "In diesem Zeitraum liegen keine Schnittstellenzähler vor. Die Zahl stammt aus den Zählern, die ein Gerät meldet, nicht aus abgetastetem Verkehr.",
+"bill.p95": "95. Perzentil",
+"bill.chart_sub": "Fünf-Minuten-Werte; die gestrichelte Linie ist der abgerechnete Wert",
 "bill.gap_note": "Fünf-Minuten-Fenster ohne Messung werden weggelassen und nicht als Null gezählt. Als Null gezählt würden sie die Zahl senken. Die Abdeckung sagt, auf wie viel des Zeitraums sie beruht.",
 "bill.how": "Wie die Zahl entsteht",
 "bill.how_note": "Ein- und Ausgang werden über den Zeitraum je sortiert, die obersten fünf Prozent der Fünf-Minuten-Werte verworfen und der höchste verbleibende berechnet — der größere der beiden Richtungen. Monate zählen in der Zeitzone dieses Browsers.",

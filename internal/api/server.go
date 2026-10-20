@@ -158,6 +158,7 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/ifaces", s.ifaces)
 	api("GET /api/recon", s.recon)
 	api("GET /api/billing", s.billing)
+	api("GET /api/billing/series", s.billingSeries)
 	api("GET /api/sources", s.sources)
 	adminAPI("POST /api/sources/block", s.postBlock)
 	adminAPI("DELETE /api/sources/block", s.deleteBlock)

@@ -736,6 +736,8 @@
 "bill.avg": "Média",
 "bill.coverage": "Cobertura",
 "bill.empty": "Não há contadores de interface neste período. O número vem dos contadores que o equipamento relata, não do tráfego amostrado.",
+"bill.p95": "Percentil 95",
+"bill.chart_sub": "Amostras de cinco minutos; a linha tracejada é o valor cobrado",
 "bill.gap_note": "Janelas de cinco minutos sem medição ficam de fora, não entram como zero. Contá-las como zero baixaria o número. A cobertura diz sobre quanto do período ele se apoia.",
 "bill.how": "Como o número é obtido",
 "bill.how_note": "Entrada e saída são ordenadas separadamente no período, os cinco por cento mais altos das amostras de cinco minutos são descartados e a mais alta restante é cobrada — a maior das duas direções. Os meses são contados no fuso deste navegador.",

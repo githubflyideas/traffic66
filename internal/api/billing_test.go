@@ -147,3 +147,71 @@ func TestBillingShowsTheMarkedInterfaces(t *testing.T) {
 		t.Errorf("name = %v, want the name from the names file", got[9]["name"])
 	}
 }
+
+// The chart under the table is drawn from the same buckets the figure is
+// taken from: every bucket that holds a measurement comes back, the ones
+// that hold none are absent rather than zero, and the percentile the chart
+// draws its line at is the one the table charges.
+func TestBillingSeries(t *testing.T) {
+	st, err := store.Open(store.Options{Dir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	s := &Server{Store: st}
+	from := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	// six hours of five-minute buckets, with an hour in the middle the
+	// device reported nothing for
+	for i := 0; i < 72; i++ {
+		if i >= 30 && i < 42 {
+			continue
+		}
+		rate := 100e6
+		if i == 50 {
+			rate = 900e6
+		}
+		if _, err := st.DB.Exec(`INSERT INTO ifr VALUES (?, '10.0.0.1', 3, ?, ?, 10)`,
+			from.Add(time.Duration(i)*5*time.Minute), rate, rate/2); err != nil {
+			t.Fatal(err)
+		}
+	}
+	get := func(q string) (int, map[string]any) {
+		w := httptest.NewRecorder()
+		s.billingSeries(w, httptest.NewRequest("GET", "/api/billing/series?"+q, nil))
+		var out map[string]any
+		json.Unmarshal(w.Body.Bytes(), &out)
+		return w.Code, out
+	}
+	code, out := get("from=" + ms(from) + "&to=" + ms(from.Add(6*time.Hour)) + "&if=10.0.0.1/3")
+	if code != 200 {
+		t.Fatalf("%d %v", code, out)
+	}
+	pts := out["points"].([]any)
+	if len(pts) != 60 {
+		t.Fatalf("%d buckets, want the 60 that hold a measurement and not the 12 that do not", len(pts))
+	}
+	first := pts[0].(map[string]any)
+	if first["in"].(float64) != 100e6 || first["out"].(float64) != 50e6 || first["samples"].(float64) != 10 {
+		t.Errorf("first bucket %v", first)
+	}
+	b := out["bill"].(map[string]any)
+	if b["billed"].(float64) != 100e6 || b["in_max"].(float64) != 900e6 {
+		t.Errorf("bill %v, want the table's own figure", b)
+	}
+	if cov := out["coverage"].(float64); cov < 0.8 || cov > 0.9 {
+		t.Errorf("coverage %v, want the 60 buckets of 72 the period could hold", cov)
+	}
+	// the interface has to be named, and named the way the store expects
+	for _, q := range []string{"", "if=10.0.0.1/3", "from=" + ms(from) + "&to=" + ms(from.Add(time.Hour)),
+		"from=" + ms(from) + "&to=" + ms(from.Add(time.Hour)) + "&if=eth0"} {
+		if code, _ := get(q); code == 200 {
+			t.Errorf("%q was accepted", q)
+		}
+	}
+	// an interface nobody reported counters for answers with no buckets
+	// rather than an error: the page draws the empty state
+	code, out = get("from=" + ms(from) + "&to=" + ms(from.Add(6*time.Hour)) + "&if=10.0.0.9/1")
+	if code != 200 || len(out["points"].([]any)) != 0 || out["bill"] != nil {
+		t.Errorf("unknown interface: %d %v", code, out)
+	}
+}

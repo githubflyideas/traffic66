@@ -736,6 +736,8 @@
 "bill.avg": "Rata-rata",
 "bill.coverage": "Cakupan",
 "bill.empty": "Tidak ada penghitung antarmuka pada periode ini. Angkanya berasal dari penghitung yang dilaporkan perangkat, bukan dari lalu lintas yang dicuplik.",
+"bill.p95": "Persentil 95",
+"bill.chart_sub": "Sampel lima menit; garis putus-putus adalah angka yang ditagih",
 "bill.gap_note": "Kotak lima menit tanpa pengukuran ditinggalkan, bukan dihitung nol. Menghitungnya nol akan menurunkan angkanya. Cakupan menyatakan seberapa banyak periode yang menopang angka itu.",
 "bill.how": "Cara angka ini diperoleh",
 "bill.how_note": "Masuk dan keluar masing-masing diurutkan sepanjang periode, lima persen teratas dari cuplikan lima menit dibuang, dan yang tertinggi sisanya ditagih — yang lebih besar dari dua arah. Bulan dihitung menurut zona waktu peramban ini.",

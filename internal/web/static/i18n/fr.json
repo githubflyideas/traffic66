@@ -736,6 +736,8 @@
 "bill.avg": "Moyenne",
 "bill.coverage": "Couverture",
 "bill.empty": "Aucun compteur d'interface sur cette période. Le chiffre vient des compteurs que l'équipement déclare, pas du trafic échantillonné.",
+"bill.p95": "95e centile",
+"bill.chart_sub": "Échantillons de cinq minutes ; la ligne pointillée est la valeur facturée",
 "bill.gap_note": "Les tranches de cinq minutes sans mesure sont écartées, et non comptées comme zéro. Les compter comme zéro abaisserait le chiffre. La couverture indique sur quelle part de la période il repose.",
 "bill.how": "Comment le chiffre est obtenu",
 "bill.how_note": "L'entrant et le sortant sont triés séparément sur la période, les cinq pour cent les plus hauts des échantillons de cinq minutes sont écartés, et le plus haut restant est facturé — le plus grand des deux sens. Les mois sont comptés dans le fuseau de ce navigateur.",

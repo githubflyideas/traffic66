@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -11,13 +12,52 @@ import (
 	"github.com/githubflyideas/traffic66/internal/store"
 )
 
-// Billing reports the 95th percentile per interface over a period the
-// caller gives as an interval. A calendar month, the last thirty days and a
-// cycle that starts on the third are then the same request, and the month's
-// boundaries are worked out where the user's time zone is known — in the
-// browser — rather than guessed at here or pinned to a server flag.
-func (s *Server) billing(w http.ResponseWriter, r *http.Request) {
+// billingSeries answers GET /api/billing/series?from&to&if=exporter/ifindex
+// with the five-minute buckets one interface's bill was computed from, and
+// the percentile drawn across them. The table says what is charged; this
+// says what it was charged from, which is what somebody disputing a bill
+// asks to see.
+func (s *Server) billingSeries(w http.ResponseWriter, r *http.Request) {
 	v := r.URL.Query()
+	from, to, err := billPeriod(v)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	key := v.Get("if")
+	if err := checkIface(key); err != nil {
+		fail(w, err)
+		return
+	}
+	e, idxs, _ := strings.Cut(key, "/")
+	idx, _ := strconv.ParseUint(idxs, 10, 32)
+	pts, err := s.Store.BillSeries(from, to, e, uint32(idx))
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	out := map[string]any{
+		"from": from.UnixMilli(), "to": to.UnixMilli(), "if": key,
+		"bucket_minutes": 5, "points": pts,
+	}
+	// the figure the table shows, so the line across the chart and the
+	// number beside it can never drift apart
+	if bills, err := s.Store.Bills(from, to, e); err == nil {
+		for _, b := range bills {
+			if b.IfIndex == uint32(idx) {
+				out["bill"] = b
+				out["coverage"] = b.Coverage()
+				break
+			}
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// billPeriod reads the interval both billing endpoints take. The
+// boundaries are used exactly as given: parseQuery rounds long ranges to
+// the hour, which would quietly move the start of a month.
+func billPeriod(v url.Values) (time.Time, time.Time, error) {
 	ms := func(k string) (time.Time, error) {
 		n, err := strconv.ParseInt(v.Get(k), 10, 64)
 		if err != nil {
@@ -27,16 +67,27 @@ func (s *Server) billing(w http.ResponseWriter, r *http.Request) {
 	}
 	from, err := ms("from")
 	if err != nil {
-		fail(w, err)
-		return
+		return time.Time{}, time.Time{}, err
 	}
 	to, err := ms("to")
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return from, to, nil
+}
+
+// Billing reports the 95th percentile per interface over a period the
+// caller gives as an interval. A calendar month, the last thirty days and a
+// cycle that starts on the third are then the same request, and the month's
+// boundaries are worked out where the user's time zone is known — in the
+// browser — rather than guessed at here or pinned to a server flag.
+func (s *Server) billing(w http.ResponseWriter, r *http.Request) {
+	v := r.URL.Query()
+	from, to, err := billPeriod(v)
 	if err != nil {
 		fail(w, err)
 		return
 	}
-	// The boundaries are used exactly as given. parseQuery rounds long
-	// ranges to the hour, which would quietly move the start of a month.
 	bills, err := s.Store.Bills(from, to, v.Get("exporter"))
 	if err != nil {
 		fail(w, err)
