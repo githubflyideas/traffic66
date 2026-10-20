@@ -163,7 +163,7 @@ async function loadLang(code) {
   try { localStorage.setItem('t66.lang', code); } catch (e) {}
   regionNames = null;
   document.querySelectorAll('[data-i]').forEach(el => { el.textContent = t(el.dataset.i); });
-  $('#refresh').textContent = t('top.refresh');
+  refreshLabel();
   themeLabel();
 }
 // the theme button shows the current theme; a click goes to the next one
@@ -316,6 +316,20 @@ async function resolveNames() {
 // ------------------------------------------------------------ state & API
 const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'ipam', 'cleanup', 'sandbox', 'ifaces', 'billing', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
+
+// How often a page redraws itself, by range. It follows the width of the
+// buckets the range is drawn in: a 15-minute or 1-hour range is drawn per
+// minute, so half a minute is as often as it can say anything new, while a
+// 30-day range is drawn in three-hour buckets and a redraw every five
+// minutes is already generous. A range the user typed ends in the past and
+// never changes, so it has no beat at all.
+const REFRESH_MS = {'15m': 20000, '1h': 30000, '6h': 60000, '24h': 60000, '7d': 300000, '30d': 300000};
+
+// The pages that show incoming data. The others (help, the account, the
+// asset and name pages, data cleanup, the sandbox, the bill) change when
+// somebody changes them, not on their own.
+const LIVE_VIEWS = new Set(['overview', 'findings', 'topn', 'traffic', 'detail', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources']);
+
 const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'both', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
@@ -2894,8 +2908,16 @@ const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account',
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
-  $('#refresh').hidden = off || $('#range').hidden;
+  $('#refresh').hidden = off || $('#range').hidden || !REFRESH_MS[state.r];
+  refreshLabel();
   $('#share').hidden = off;
+}
+// The label says the beat this range actually redraws on, rather than one
+// number for every range; a range that ends in the past has no beat and
+// the label is hidden with it.
+function refreshLabel() {
+  const beat = REFRESH_MS[state.r];
+  $('#refresh').textContent = beat ? t('top.refresh', {n: beat / 1000}) : '';
 }
 // The sandbox bar replaces the time range while capture files are shown.
 function renderSB() {
@@ -3055,19 +3077,6 @@ $('#loginForm').addEventListener('submit', async e => {
   render();
   startTimers();
 });
-// How often a page redraws itself, by range. It follows the width of the
-// buckets the range is drawn in: a 15-minute or 1-hour range is drawn per
-// minute, so half a minute is as often as it can say anything new, while a
-// 30-day range is drawn in three-hour buckets and a redraw every five
-// minutes is already generous. A range the user typed ends in the past and
-// never changes, so it has no beat at all.
-const REFRESH_MS = {'15m': 20000, '1h': 30000, '6h': 60000, '24h': 60000, '7d': 300000, '30d': 300000};
-
-// The pages that show incoming data. The others (help, the account, the
-// asset and name pages, data cleanup, the sandbox, the bill) change when
-// somebody changes them, not on their own.
-const LIVE_VIEWS = new Set(['overview', 'findings', 'topn', 'traffic', 'detail', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources']);
-
 // The refresh timers start once, whether the page opened signed in or after
 // signing in (before, signing in left the page without automatic refresh).
 let timers = false;

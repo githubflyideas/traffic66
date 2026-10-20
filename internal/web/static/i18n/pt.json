@@ -15,7 +15,7 @@
 "self.dropped": "Descartados",
 "self.disk": "Disco",
 "top.search": "Buscar IP, rede, porta, país (opcional)",
-"top.refresh": "Atualiza a cada 30 s",
+"top.refresh": "Atualiza a cada {n} s",
 "top.copy": "Copiar link",
 "top.copied": "Link copiado",
 "top.logout": "Sair",

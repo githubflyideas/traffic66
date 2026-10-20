@@ -15,7 +15,7 @@
 "self.dropped": "破棄",
 "self.disk": "ディスク",
 "top.search": "IP・ネットワーク・ポート・国・地域で検索（任意）",
-"top.refresh": "30 秒ごとに更新",
+"top.refresh": "{n} 秒ごとに更新",
 "top.copy": "リンクをコピー",
 "top.copied": "リンクをコピーしました",
 "top.logout": "ログアウト",

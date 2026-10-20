@@ -15,7 +15,7 @@
 "self.dropped": "Verworfen",
 "self.disk": "Datenträger",
 "top.search": "IP, Netz, Port, Land suchen (optional)",
-"top.refresh": "Aktualisierung alle 30 s",
+"top.refresh": "Aktualisierung alle {n} s",
 "top.copy": "Link kopieren",
 "top.copied": "Link kopiert",
 "top.logout": "Abmelden",

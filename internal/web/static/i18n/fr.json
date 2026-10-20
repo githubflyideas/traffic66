@@ -15,7 +15,7 @@
 "self.dropped": "Rejetés",
 "self.disk": "Disque",
 "top.search": "Rechercher une IP, un réseau, un port, un pays (facultatif)",
-"top.refresh": "Actualisé toutes les 30 s",
+"top.refresh": "Actualisé toutes les {n} s",
 "top.copy": "Copier le lien",
 "top.copied": "Lien copié",
 "top.logout": "Se déconnecter",

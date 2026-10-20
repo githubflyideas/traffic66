@@ -15,7 +15,7 @@
 "self.dropped": "丢弃",
 "self.disk": "磁盘",
 "top.search": "搜索 IP、网段、端口、国家/地区（不用也行）",
-"top.refresh": "每 30 秒刷新",
+"top.refresh": "每 {n} 秒刷新",
 "top.copy": "复制链接",
 "top.copied": "链接已复制",
 "top.logout": "退出登录",

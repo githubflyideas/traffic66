@@ -15,7 +15,7 @@
 "self.dropped": "Dibuang",
 "self.disk": "Disk",
 "top.search": "Cari IP, jaringan, port, negara (opsional)",
-"top.refresh": "Diperbarui tiap 30 dtk",
+"top.refresh": "Diperbarui tiap {n} dtk",
 "top.copy": "Salin tautan",
 "top.copied": "Tautan disalin",
 "top.logout": "Keluar",

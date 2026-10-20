@@ -15,7 +15,7 @@
 "self.dropped": "Dropped",
 "self.disk": "Disk",
 "top.search": "Search IP, network, port, country/region (optional)",
-"top.refresh": "Refreshes every 30 s",
+"top.refresh": "Refreshes every {n} s",
 "top.copy": "Copy link",
 "top.copied": "Link copied",
 "top.logout": "Log out",
