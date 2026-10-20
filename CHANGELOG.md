@@ -3,6 +3,13 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.4.0
+
+- `GET /api/report?from&to&if` answers the numbers behind a period report: traffic and flow totals, average, peak and 95th percentile of the whole period, a row per interface, the top hosts, applications and countries, and how many findings the detection rules raised, by severity. `if=exporter/ifindex` narrows the whole report to one interface (its totals, its top lists, its row).
+- Each interface row says which measurement it rests on: `counters` where the device's own interface counters were read (what a carrier bills against — average, peak and 95th percentile per direction, with the share of the period that was measured), `flows` where there are none and the sampled flows are the only measurement there is. Utilisation against the interface speed is given only where that speed is known, rather than as a percentage of a guess.
+- The peak and the percentile leave out the bucket that is still filling, so a report that reaches up to now no longer takes its peak from a half-counted minute.
+- `TestAttackFound` no longer fails now and then: the test builds its traffic from a fixed hour of the day, so the 1:4096 sampling of the demo attack draws the same records on every run and on every platform (the port scan reaches detection as 18 distinct ports against a threshold of 5, instead of coming within one port of it at 15:00).
+
 ## 2.3.9
 
 - NetFlow / IPFIX loss compensation starts much sooner: a session is compensated once 100 records have arrived and the factor is recomputed every 5 seconds (was 30 seconds), so totals in the first minute after start are no longer low when the exporter or the kernel drops packets. With 37% loss the compensated total at 30 s rose from 0.62 to 0.98 of the real total.

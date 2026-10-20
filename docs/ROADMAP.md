@@ -6,8 +6,8 @@ separate: merged work reaches users with the next release.
 
 
 ## Reports (target 7 Nov)
-- [ ] Make `TestAttackFound` deterministic (it fails now and then with sampled scans)
-- [ ] `GET /api/report?from&to&if`: totals, average, peak and 95th percentile per interface, utilisation against interface speed, top hosts, applications and countries, findings by severity; with tests
+- [x] Make `TestAttackFound` deterministic (it fails now and then with sampled scans)
+- [x] `GET /api/report?from&to&if`: totals, average, peak and 95th percentile per interface, utilisation against interface speed, top hosts, applications and countries, findings by severity; with tests
 - [ ] Report page: printable layout (print CSS), period and interface picker, in all 15 languages
 - [ ] Report: CSV export of the same tables
 - [ ] Report: comparison with the previous period (change in %, new top hosts)

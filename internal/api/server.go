@@ -154,6 +154,7 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/threats", s.data((*Server).threats))
 	api("GET /api/rings", s.data((*Server).rings))
 	api("GET /api/geolines", s.data((*Server).geoLines))
+	api("GET /api/report", s.data((*Server).report))
 	api("GET /api/ifaces", s.ifaces)
 	api("GET /api/recon", s.recon)
 	api("GET /api/billing", s.billing)
