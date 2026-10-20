@@ -99,11 +99,15 @@ func (r Keyring) Verify(f File) (Key, int, error) {
 			continue
 		}
 		if ed25519.Verify(k.Pub, Message(f), sig) {
+			return k, 3, nil
+		}
+		// A v2 licence does not say who it is made out to.
+		if !namesLicensee(f) && ed25519.Verify(k.Pub, MessageV2(f), sig) {
 			return k, 2, nil
 		}
 		// A v1 licence carries no key id, no quotas and no features; it
 		// registers an installation and nothing more.
-		if !grants(f) && ed25519.Verify(k.Pub, MessageV1(f), sig) {
+		if !namesLicensee(f) && !grants(f) && ed25519.Verify(k.Pub, MessageV1(f), sig) {
 			return k, 1, nil
 		}
 	}

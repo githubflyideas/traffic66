@@ -31,8 +31,8 @@ func TestRingPicksTheNamedKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.ID != keyA.ID || ver != 2 {
-		t.Fatalf("got key %s v%d, want %s v2", got.ID, ver, keyA.ID)
+	if got.ID != keyA.ID || ver != 3 {
+		t.Fatalf("got key %s v%d, want %s v3", got.ID, ver, keyA.ID)
 	}
 }
 

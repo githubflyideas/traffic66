@@ -2687,6 +2687,7 @@ views.sources = async (el) => {
       ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
     ${admOnly(panel('c12', t('lic.install'), t('lic.install_sub'), `<div class="licbox">
+      ${lic?.registered ? `<p style="margin:0 0 4px"><b>${esc(t('lic.who'))}: ${esc(lic.customer || '—')}</b> <span class="tag">${esc(licenseeText(lic))}</span>${lic.tier ? ` <span class="tag">${esc(lic.tier)}</span>` : ''}</p>` : ''}
       <p class="muted" style="margin:0 0 8px;font-size:13px">${esc(t('lic.id', {id: lic?.installation_id || '—'}))}</p>
       <textarea class="inv" id="licText" spellcheck="false" placeholder="${esc(t('lic.paste'))}"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
@@ -3040,6 +3041,12 @@ async function render(push) {
 }
 function go(v) { state.v = v; render(true); window.scrollTo(0, 0); }
 
+// What a licence says it is made out to: a person, an organisation, or —
+// for one issued before licences carried it — nothing, which is said as
+// "not stated" rather than guessed at.
+function licenseeText(L) {
+  return t(L.licensee === 'individual' ? 'lic.as_ind' : L.licensee === 'organization' ? 'lic.as_org' : 'lic.as_unknown');
+}
 async function loadStatus() {
   try {
     const res = await fetch('/api/status');
@@ -3060,16 +3067,22 @@ async function loadStatus() {
       else if (L.kind === 'expired') head = t('lic.exp', {c: L.customer, d: L.expires});
       else head = t('lic.unreg');
       const tail = L.registered ? '' : `<br>${esc(t('lic.free'))} ${esc(t('lic.mark'))} `;
-      $('#lic').innerHTML = `<b>${esc(head)}</b>${tail ? tail : ' '}${id}`;
+      // registered to whom, and as what: a licence bought by one person is
+      // not a company's, and the footer is where a screenshot shows it
+      const as = L.registered ? ` <span class="tag">${esc(licenseeText(L))}</span>` : '';
+      $('#lic').innerHTML = `<b>${esc(head)}</b>${as}${tail ? tail : ' '}${id}`;
       $('#lic').className = 'lic ' + L.kind; $('#lic').hidden = false;
 
       marked = !!L.watermark;
       markNotice = L.notice || '';
       applyMark();
       const b = $('#licBadge');
-      b.textContent = L.registered ? (L.days < 0 ? t('lic.badge_ok') : t('lic.badge_days', {n: L.days})) : t('lic.badge_get');
+      const bt = L.registered ? (L.days < 0 ? t('lic.badge_ok') : t('lic.badge_days', {n: L.days})) : t('lic.badge_get');
+      // the badge carries the name under the word, so the sidebar says who
+      // this installation belongs to and not only that it is licensed
+      b.innerHTML = esc(bt) + (L.registered && L.customer ? `<span class="who">${esc(L.customer)}</span>` : '');
       b.className = 'licbadge ' + L.kind;
-      b.title = head;
+      b.title = head + (L.registered ? ' · ' + licenseeText(L) : '');
       b.hidden = false;
     }
     $('#verNo').textContent = 'v' + s.version + (s.build && s.build !== 'official' ? ' · ' + s.build : '');
