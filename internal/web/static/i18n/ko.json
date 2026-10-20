@@ -15,7 +15,7 @@
 "self.dropped": "누락",
 "self.disk": "디스크",
 "top.search": "IP, 네트워크, 포트, 국가 검색 (선택)",
-"top.refresh": "30초마다 새로고침",
+"top.refresh": "{n}초마다 새로고침",
 "top.copy": "링크 복사",
 "top.copied": "링크를 복사했습니다",
 "top.logout": "로그아웃",

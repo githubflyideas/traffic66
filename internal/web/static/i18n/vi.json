@@ -15,7 +15,7 @@
 "self.dropped": "Bị loại bỏ",
 "self.disk": "Ổ đĩa",
 "top.search": "Tìm IP, mạng, cổng, quốc gia (tùy chọn)",
-"top.refresh": "Làm mới mỗi 30 s",
+"top.refresh": "Làm mới mỗi {n} s",
 "top.copy": "Sao chép liên kết",
 "top.copied": "Đã sao chép liên kết",
 "top.logout": "Đăng xuất",
