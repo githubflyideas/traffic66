@@ -38,9 +38,17 @@ var seriesDims = map[string]seriesDim{
 			return `SELECT ` + b + `, val, sum(wire), sum(pkts) FROM r_dim WHERE ts >= ? AND ts < ? AND dim = 'port' AND NOT starts_with(val, '0/') GROUP BY 1,2`
 		}},
 	// AS of the sender and of the receiver of each packet, when that side
-	// is the external one
-	"asn_src": {key: "CAST(peer_asn AS VARCHAR) || chr(9) || peer_org", cond: "peer_asn <> 0 AND src = " + peerExpr},
-	"asn_dst": {key: "CAST(peer_asn AS VARCHAR) || chr(9) || peer_org", cond: "peer_asn <> 0 AND dst = " + peerExpr},
+	// is the external one.
+	//
+	// Traffic whose peer has no AS number counts as AS 0, the way the AS
+	// table beside these charts counts it. Leaving it out instead made the
+	// chart disagree with the table under it, and worse: on an installation
+	// without a good AS database most minutes carried no AS at all, so
+	// whole buckets came back empty and the chart was drawn as a run of
+	// blocks with nothing between them. A bucket is empty here only when
+	// nothing went through it.
+	"asn_src": {key: "CAST(peer_asn AS VARCHAR) || chr(9) || peer_org", cond: "src = " + peerExpr},
+	"asn_dst": {key: "CAST(peer_asn AS VARCHAR) || chr(9) || peer_org", cond: "dst = " + peerExpr},
 	// interfaces of the flow exporters, as "exporter/ifindex"
 	"if_in":  {key: "exporter || '/' || in_if", cond: "in_if <> 0"},
 	"if_out": {key: "exporter || '/' || out_if", cond: "out_if <> 0"},

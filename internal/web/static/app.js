@@ -1117,7 +1117,7 @@ function seriesLabel(by, k) {
   if (k === '__other__') return t('other');
   if (by === 'client' || by === 'server') return names.get(k) || k;
   if (by === 'service') { const [p, a] = k.split('\t'); return a ? p + ' ' + a : p; }
-  if (by.startsWith('asn')) { const [n, o] = k.split('\t'); return 'AS' + n + (o ? ' ' + o : ''); }
+  if (by.startsWith('asn')) { const [n, o] = k.split('\t'); return n === '0' ? t('unknown') : 'AS' + n + (o ? ' ' + o : ''); }
   if (by.startsWith('if_')) return ifaceNames.get(k) || k;
   return appLabel(k);
 }
