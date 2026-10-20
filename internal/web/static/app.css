@@ -54,7 +54,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 [hidden]{display:none!important}
 
 .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
-aside{background:var(--side);border-inline-end:1px solid var(--side-line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+aside{background:var(--side);border-inline-end:1px solid var(--side-line);display:flex;flex-direction:column;position:sticky;top:0;height:calc(100vh - var(--sp-h, 0px))}
 .brand{padding:12px 14px 10px;flex-wrap:wrap;position:relative;font-weight:700;font-size:18px;letter-spacing:-.01em;border-bottom:1px solid var(--side-line);display:flex;align-items:center;gap:8px}
 /* the logo fills the sidebar's width (236px less the brand padding = 208px)
    and keeps its aspect ratio; 72px tall at most. Recommended upload:
@@ -95,18 +95,28 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
 .self .live i{width:8px;height:8px;border-radius:50%;background:currentColor}
 .self .live.ok{color:var(--good)}.self .live.idle{color:var(--ink-3)}
 .foot{display:flex;flex-direction:column;gap:8px;padding:0 16px 14px}
-.sponsor{display:flex;flex-direction:column;gap:4px}
+/* The sponsor strip of an unregistered installation: the full width of the
+   browser at the top of the page, above the sidebar and the content, and it
+   scrolls away with the page rather than taking a band of every screen.
+
+   The banners in the manifest are 728x90, so a wide window is filled with
+   several of them side by side instead of one stretched one; the strip
+   decides how many fit and rotates through the rest. Its height is the
+   cell's aspect ratio, which is why the sidebar's own height is measured
+   against it (--sp-h, set by sponsor.js) instead of a fixed 100vh. */
+.sponsor{grid-column:1/-1;background:var(--side);border-bottom:1px solid var(--side-line)}
 .sponsor[hidden]{display:none}
-.sponsor .sp-h{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
-.sponsor .sp-text{border:1px dashed var(--line-2);border-radius:6px;padding:6px 8px;font-size:11.5px;line-height:1.35;color:var(--ink-3);overflow-wrap:anywhere}
+.sponsor .sp-h{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:3px 12px 2px}
+.sponsor .sp-text{margin:0 12px 8px;border:1px dashed var(--line-2);border-radius:6px;padding:6px 8px;font-size:11.5px;line-height:1.35;color:var(--ink-3);overflow-wrap:anywhere}
 .sponsor .sp-text[hidden],.spc[hidden]{display:none}
-.spc-track{position:relative;aspect-ratio:728/90;width:100%;border-radius:6px;overflow:hidden;background:var(--surface);border:1px solid var(--line-2)}
-.spc-slide{position:absolute;inset:0;opacity:0;transition:opacity .45s ease;pointer-events:none;display:block}
-.spc-slide.on{opacity:1;pointer-events:auto}
-.spc-slide img{width:100%;height:100%;object-fit:cover;display:block}
-.spc-dots{display:flex;gap:6px;justify-content:center}
+.spc-strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:1px;background:var(--side-line)}
+.spc-cell{position:relative;aspect-ratio:728/90;overflow:hidden;background:var(--surface)}
+.spc-cell>a,.spc-cell>div{display:block;width:100%;height:100%}
+.spc-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.spc-dots{display:flex;gap:6px;justify-content:center;padding:4px 0 5px}
 .spc-dot{width:6px;height:6px;padding:0;border-radius:50%;border:0;cursor:pointer;background:var(--line-2)}
 .spc-dot.on{background:var(--accent)}
+@media print{.sponsor{display:none}}
 .foot .pick{display:grid;grid-template-columns:1fr auto;gap:6px}
 #theme{display:flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:6px;padding:4px 10px;background:var(--surface);color:var(--ink);cursor:pointer;font-size:13px;white-space:nowrap}
 #theme i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:inset 0 0 0 2px var(--surface),0 0 0 1px var(--line-2)}

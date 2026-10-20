@@ -15,9 +15,14 @@
 (function () {
   'use strict';
   var URL_ = 'https://raw.githubusercontent.com/githubflyideas/ads-sponsor/main/traffic66/sponsors.json';
-  var TIMEOUT_MS = 3000, ROTATE_MS = 5500, MAX = 4;
+  // MAX is how many banners are fetched: the strip can show three at once
+  // on a wide window, so four left nothing to rotate to.
+  var TIMEOUT_MS = 3000, ROTATE_MS = 5500, MAX = 6;
+  // A cell narrower than this is not worth drawing a 728x90 banner into, so
+  // it decides how many fit across the window.
+  var MIN_CELL = 420;
   var CACHE_KEY = 't66.sponsor', CACHE_MS = 30 * 60 * 1000;
-  var started = false, timerId = null;
+  var started = false, timerId = null, roId = null;
 
   function httpURL(v, base, httpsOnly) {
     if (typeof v !== 'string' || !v.trim()) return null;
@@ -105,45 +110,82 @@
     return out;
   }
 
+  // The strip: as many banners side by side as the window has room for,
+  // rotating through the rest together. One image element cannot be in two
+  // cells at once, so each cell gets a clone of an already-loaded image —
+  // the bytes are in the browser's cache, nothing is fetched twice.
   function build(slot, slides) {
     var car = slot.querySelector('.spc');
     car.hidden = false;
-    var track = document.createElement('div'); track.className = 'spc-track';
+    var strip = document.createElement('div'); strip.className = 'spc-strip';
     var dots = document.createElement('div'); dots.className = 'spc-dots';
-    var els = [], ds = [], cur = 0, paused = false;
-    function show(i) {
-      cur = i;
-      els.forEach(function (e, j) { e.classList.toggle('on', j === i); });
-      ds.forEach(function (e, j) { e.classList.toggle('on', j === i); });
-    }
-    slides.forEach(function (s, i) {
+    var cells = [], ds = [], cols = 0, off = 0, paused = false;
+
+    function slideEl(s) {
       var a = document.createElement(s.link ? 'a' : 'div');
-      a.className = 'spc-slide';
       if (s.link) { a.href = s.link; a.target = '_blank'; a.rel = 'noopener noreferrer sponsored'; }
       if (s.title || s.alt) a.title = s.title || s.alt;
-      s.img.alt = s.alt;
-      a.appendChild(s.img);
-      track.appendChild(a); els.push(a);
-      if (slides.length > 1) {
-        var d = document.createElement('button');
-        d.type = 'button'; d.className = 'spc-dot';
-        d.setAttribute('aria-label', String(i + 1));
-        d.onclick = function () { show(i); };
-        dots.appendChild(d); ds.push(d);
+      var img = s.img.cloneNode(false);
+      img.alt = s.alt;
+      a.appendChild(img);
+      return a;
+    }
+    function show(o) {
+      off = ((o % slides.length) + slides.length) % slides.length;
+      cells.forEach(function (box, i) {
+        box.textContent = '';
+        box.appendChild(slideEl(slides[(off + i) % slides.length]));
+      });
+      ds.forEach(function (d, i) { d.classList.toggle('on', i === off); });
+    }
+    // How many cells fit. Rebuilt only when the number changes, so a window
+    // being dragged does not rebuild the strip on every pixel.
+    function fit() {
+      var w = car.clientWidth || window.innerWidth || MIN_CELL;
+      var k = Math.max(1, Math.min(slides.length, Math.floor(w / MIN_CELL)));
+      if (k === cols) return;
+      cols = k;
+      strip.textContent = '';
+      cells = [];
+      for (var i = 0; i < k; i++) {
+        var box = document.createElement('div'); box.className = 'spc-cell';
+        strip.appendChild(box); cells.push(box);
       }
-    });
+      show(off);
+      measure();
+    }
+    // The sidebar's height is the window less this strip (see app.css).
+    function measure() {
+      try { document.documentElement.style.setProperty('--sp-h', slot.offsetHeight + 'px'); } catch (e) {}
+    }
+
     car.textContent = '';
-    car.appendChild(track);
-    if (slides.length > 1) car.appendChild(dots);
-    show(0);
-    if (slides.length > 1) {
+    car.appendChild(strip);
+    // Dots only when there is more to see than fits: with everything on
+    // screen there is nothing to page to.
+    slides.forEach(function (s, i) {
+      var d = document.createElement('button');
+      d.type = 'button'; d.className = 'spc-dot';
+      d.setAttribute('aria-label', String(i + 1));
+      d.onclick = function () { show(i); };
+      dots.appendChild(d); ds.push(d);
+    });
+    fit();
+    if (slides.length > cols) {
+      car.appendChild(dots);
       ['mouseenter', 'focusin'].forEach(function (e) { car.addEventListener(e, function () { paused = true; }); });
       ['mouseleave', 'focusout'].forEach(function (e) { car.addEventListener(e, function () { paused = false; }); });
       timerId = setInterval(function () {
-        if (!paused && !document.hidden) show((cur + 1) % slides.length);
+        if (!paused && !document.hidden) show(off + cols);
       }, ROTATE_MS);
     }
     slot.hidden = false;
+    measure();
+    // The cells are fluid, so the strip's height changes with the window
+    // even when the number of cells does not: measure on every resize.
+    var onResize = function () { fit(); measure(); };
+    if (window.ResizeObserver) { roId = new ResizeObserver(onResize); roId.observe(car); }
+    else window.addEventListener('resize', onResize);
   }
 
   window.t66Sponsor = {
@@ -155,11 +197,18 @@
       remote().then(function (m) { return ready(m, URL_); })
         .catch(function () { return local().then(function (m) { return ready(m, here); }); })
         .then(function (ok) { if (started) build(slot, ok); },
-              function () { if (started) { slot.querySelector('.sp-text').hidden = false; slot.hidden = false; } });
+              function () {
+                if (!started) return;
+                slot.querySelector('.sp-text').hidden = false;
+                slot.hidden = false;
+                try { document.documentElement.style.setProperty('--sp-h', slot.offsetHeight + 'px'); } catch (e) {}
+              });
     },
     remove: function () {
       started = false;
       if (timerId) clearInterval(timerId);
+      if (roId) { roId.disconnect(); roId = null; }
+      try { document.documentElement.style.setProperty('--sp-h', '0px'); } catch (e) {}
       var slot = document.getElementById('sponsor');
       if (slot) slot.remove();
     }
