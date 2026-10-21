@@ -84,7 +84,10 @@ const (
 // stays free; these are the registered-only parts.
 const (
 	FeatSyslog = "syslog" // syslog output, including several targets
-	FeatDCIM   = "dcim"   // rooms, racks, ports, circuits, the networks on a device
+	// FeatDCIM gates nothing either: the asset ledger it opened is gone,
+	// and the rooms-and-racks picture that replaced it is free. The name
+	// stays in Features so every licence already issued verifies as signed.
+	FeatDCIM = "dcim" // free since; granted by older licences
 	// FeatTLS gates nothing: HTTPS is free, because the alternative is
 	// passwords and session cookies crossing the network in the clear, and
 	// that is not a feature to sell. The name stays, and stays in Features,

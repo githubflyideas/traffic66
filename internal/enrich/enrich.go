@@ -52,13 +52,32 @@ type Iface struct {
 	Speed   uint64 // bits per second, 0 if unknown
 	Tag     string // a short label such as "uplink" (tag=)
 	Default bool   // the interface the pages show by default (default)
+	ISP     string // the carrier this interface goes out to (isp=)
+	Circuit string // the carrier's circuit ID for that line (circuit=)
 }
+
+// Place is where a device stands: the room and the rack, as written on
+// its device line (room=, rack=). It is there to be drawn, so that
+// somebody can see which room, rack, device, port and circuit a flow
+// came through; nothing is looked up or checked against it.
+type Place struct {
+	Room string
+	Rack string
+}
+
+// attr reads an attribute value. Values cannot hold spaces on a line that
+// is split on spaces, so a space is written as "_" and read back as one.
+func attr(v string) string { return strings.ReplaceAll(v, "_", " ") }
+
+// attrOut writes an attribute value, the other way round.
+func attrOut(v string) string { return strings.Join(strings.Fields(v), "_") }
 
 // Inventory holds operator-provided names. All fields are optional.
 type Inventory struct {
 	mu        sync.RWMutex
 	networks  []Network // longest prefix first
 	devices   map[netip.Addr]string
+	places    map[netip.Addr]Place
 	ifaces    map[string]Iface // "exporter/ifindex"
 	hosts     map[netip.Addr]string
 	unsampled map[netip.Addr]bool
@@ -79,7 +98,7 @@ type SNMPTarget struct {
 }
 
 func NewInventory() *Inventory {
-	return &Inventory{devices: map[netip.Addr]string{}, ifaces: map[string]Iface{}, hosts: map[netip.Addr]string{}, unsampled: map[netip.Addr]bool{}, autoIfs: map[string]Iface{}}
+	return &Inventory{devices: map[netip.Addr]string{}, places: map[netip.Addr]Place{}, ifaces: map[string]Iface{}, hosts: map[netip.Addr]string{}, unsampled: map[netip.Addr]bool{}, autoIfs: map[string]Iface{}}
 }
 
 // LoadInventory reads the inventory file. A missing file is not an error.
@@ -113,6 +132,7 @@ func LoadInventory(path string) (*Inventory, error) {
 func (inv *Inventory) Parse(text string) error {
 	nets := []Network{}
 	devs := map[netip.Addr]string{}
+	places := map[netip.Addr]Place{}
 	ifs := map[string]Iface{}
 	hosts := map[netip.Addr]string{}
 	uns := map[netip.Addr]bool{}
@@ -160,7 +180,16 @@ func (inv *Inventory) Parse(text string) error {
 				return bad("bad address " + f[1])
 			}
 			words := []string{}
+			var pl Place
 			for _, w := range f[2:] {
+				if v, ok := strings.CutPrefix(w, "room="); ok {
+					pl.Room = attr(v)
+					continue
+				}
+				if v, ok := strings.CutPrefix(w, "rack="); ok {
+					pl.Rack = attr(v)
+					continue
+				}
 				if strings.EqualFold(w, "unsampled") {
 					uns[a] = true
 					continue
@@ -176,6 +205,9 @@ func (inv *Inventory) Parse(text string) error {
 				words = append(words, w)
 			}
 			devs[a] = strings.Join(words, " ")
+			if pl != (Place{}) {
+				places[a] = pl
+			}
 		case "iface":
 			if len(f) < 4 {
 				return bad("iface needs an address, an index and a name")
@@ -201,6 +233,14 @@ func (inv *Inventory) Parse(text string) error {
 				}
 				if w == "default" {
 					it.Default = true
+					continue
+				}
+				if v, ok := strings.CutPrefix(w, "isp="); ok {
+					it.ISP = attr(v)
+					continue
+				}
+				if v, ok := strings.CutPrefix(w, "circuit="); ok {
+					it.Circuit = v
 					continue
 				}
 				if w == "billed" {
@@ -246,6 +286,7 @@ func (inv *Inventory) Parse(text string) error {
 	}
 	sort.SliceStable(nets, func(i, j int) bool { return nets[i].Prefix.Bits() > nets[j].Prefix.Bits() })
 	inv.mu.Lock()
+	inv.places = places
 	inv.networks, inv.devices, inv.ifaces, inv.hosts, inv.unsampled, inv.snmp, inv.text = nets, devs, ifs, hosts, uns, snmps, text
 	inv.sampling = samp
 	inv.mu.Unlock()
@@ -277,20 +318,96 @@ func (inv *Inventory) DefaultIface() string {
 
 // SetIface names, tags or marks as default one interface, editing its
 // iface line in the names (or adding one). Only one interface is default.
+// The carrier and circuit written on the line are kept.
 func (inv *Inventory) SetIface(exporter netip.Addr, idx uint32, name, tag string, def bool) error {
-	name = strings.Join(strings.Fields(name), " ")
-	tag = strings.Join(strings.Fields(tag), "_")
-	if name == "" {
-		name = fmt.Sprintf("#%d", idx)
+	return inv.editIface(exporter, idx, func(it *Iface) {
+		it.Name, it.Tag, it.Default = name, tag, def
+	})
+}
+
+// SetCircuit names an interface and says which carrier and circuit it goes
+// out to, keeping its tag, speed and default mark.
+func (inv *Inventory) SetCircuit(exporter netip.Addr, idx uint32, name, isp, circuit string) error {
+	return inv.editIface(exporter, idx, func(it *Iface) {
+		it.Name, it.ISP, it.Circuit = name, isp, circuit
+	})
+}
+
+// editIface rewrites one iface line, in place, from what the line already
+// says changed by edit. A line not there yet is added at the end.
+func (inv *Inventory) editIface(exporter netip.Addr, idx uint32, edit func(*Iface)) error {
+	inv.mu.RLock()
+	it := inv.ifaces[fmt.Sprintf("%s/%d", exporter, idx)]
+	inv.mu.RUnlock()
+	edit(&it)
+	it.Name = strings.Join(strings.Fields(it.Name), " ")
+	if it.Name == "" {
+		it.Name = fmt.Sprintf("#%d", idx)
 	}
+	line := fmt.Sprintf("iface %s %d %s", exporter, idx, it.Name)
+	if it.Speed != 0 {
+		line += fmt.Sprintf(" speed=%d", it.Speed)
+	}
+	if t := attrOut(it.Tag); t != "" {
+		line += " tag=" + t
+	}
+	if v := attrOut(it.ISP); v != "" {
+		line += " isp=" + v
+	}
+	if v := attrOut(it.Circuit); v != "" {
+		line += " circuit=" + v
+	}
+	if it.Default {
+		line += " default"
+	}
+	idxs := strconv.FormatUint(uint64(idx), 10)
+	return inv.editLine(func(f []string) bool {
+		return len(f) >= 3 && f[0] == "iface" && f[1] == exporter.String() && f[2] == idxs
+	}, line, func(f []string, ln string) string {
+		// only one default: take it off the other interfaces
+		if it.Default && len(f) > 0 && f[0] == "iface" && strings.Contains(" "+ln+" ", " default ") {
+			return strings.TrimSpace(strings.Replace(" "+ln+" ", " default ", " ", 1))
+		}
+		return ln
+	})
+}
+
+// SetDevice names a device and says which room and rack it stands in,
+// keeping what else its device line says (sampling=, unsampled).
+func (inv *Inventory) SetDevice(a netip.Addr, name, room, rack string) error {
+	inv.mu.RLock()
+	samp, uns := inv.sampling[a], inv.unsampled[a]
+	inv.mu.RUnlock()
+	name = strings.Join(strings.Fields(name), " ")
+	if name == "" {
+		name = a.String()
+	}
+	line := fmt.Sprintf("device %s %s", a, name)
+	if v := attrOut(room); v != "" {
+		line += " room=" + v
+	}
+	if v := attrOut(rack); v != "" {
+		line += " rack=" + v
+	}
+	if samp != 0 {
+		line += fmt.Sprintf(" sampling=%d", samp)
+	}
+	if uns {
+		line += " unsampled"
+	}
+	return inv.editLine(func(f []string) bool {
+		return len(f) >= 2 && f[0] == "device" && f[1] == a.String()
+	}, line, nil)
+}
+
+// editLine replaces the first line match accepts with line (dropping any
+// further ones) or appends it, passes every other line through other when
+// it is given, and saves.
+func (inv *Inventory) editLine(match func([]string) bool, line string, other func([]string, string) string) error {
 	lines := strings.Split(strings.TrimRight(inv.Text(), "\n"), "\n")
 	if len(lines) == 1 && lines[0] == "" {
 		lines = nil
 	}
-	isIface := func(f []string) bool {
-		return len(f) >= 3 && f[0] == "iface" && f[1] == exporter.String() && f[2] == strconv.FormatUint(uint64(idx), 10)
-	}
-	var speed string
 	out := make([]string, 0, len(lines)+1)
 	at := -1
 	for _, ln := range lines {
@@ -298,41 +415,20 @@ func (inv *Inventory) SetIface(exporter netip.Addr, idx uint32, name, tag string
 		if t := strings.TrimSpace(ln); !strings.HasPrefix(t, "#") {
 			f = strings.Fields(t)
 		}
-		if isIface(f) {
-			for _, w := range f[3:] {
-				if strings.HasPrefix(w, "speed=") {
-					speed = w
-				}
-			}
+		if match(f) {
 			if at < 0 {
 				at = len(out)
-				out = append(out, "")
+				out = append(out, line)
 			}
 			continue
 		}
-		if def && len(f) > 0 && f[0] == "iface" {
-			// only one default: take it off the other interfaces
-			if strings.Contains(" "+ln+" ", " default ") {
-				ln = strings.Replace(" "+ln+" ", " default ", " ", 1)
-				ln = strings.TrimSpace(ln)
-			}
+		if other != nil {
+			ln = other(f, ln)
 		}
 		out = append(out, ln)
 	}
-	line := fmt.Sprintf("iface %s %d %s", exporter, idx, name)
-	if speed != "" {
-		line += " " + speed
-	}
-	if tag != "" {
-		line += " tag=" + tag
-	}
-	if def {
-		line += " default"
-	}
 	if at < 0 {
 		out = append(out, line)
-	} else {
-		out[at] = line
 	}
 	return inv.Save(strings.Join(out, "\n") + "\n")
 }
@@ -373,6 +469,38 @@ func (inv *Inventory) Device(a netip.Addr) string {
 	inv.mu.RLock()
 	defer inv.mu.RUnlock()
 	return inv.devices[a]
+}
+
+// PlaceOf is the room and rack written on a device's line.
+func (inv *Inventory) PlaceOf(a netip.Addr) Place {
+	inv.mu.RLock()
+	defer inv.mu.RUnlock()
+	return inv.places[a]
+}
+
+// Devices lists the devices the inventory names.
+func (inv *Inventory) Devices() []netip.Addr {
+	inv.mu.RLock()
+	defer inv.mu.RUnlock()
+	out := make([]netip.Addr, 0, len(inv.devices))
+	for a := range inv.devices {
+		out = append(out, a)
+	}
+	return out
+}
+
+// Circuits lists the interfaces that have a carrier or a circuit written
+// on their line, keyed "exporter/ifindex".
+func (inv *Inventory) Circuits() map[string]Iface {
+	inv.mu.RLock()
+	defer inv.mu.RUnlock()
+	out := map[string]Iface{}
+	for k, it := range inv.ifaces {
+		if it.ISP != "" || it.Circuit != "" {
+			out[k] = it
+		}
+	}
+	return out
 }
 
 func (inv *Inventory) Iface(exporter netip.Addr, idx uint32) Iface {

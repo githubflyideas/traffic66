@@ -37,3 +37,48 @@ func TestSetIface(t *testing.T) {
 		t.Fatalf("iface 3 %+v", it)
 	}
 }
+
+// Where a device stands and which carrier an interface goes out to are
+// written on their own lines, and editing one thing on a line keeps the
+// rest of it.
+func TestPlacesAndCircuits(t *testing.T) {
+	inv := NewInventory()
+	if err := inv.Save("device 10.0.0.1 Core sampling=1000\niface 10.0.0.1 3 Uplink speed=1000000000 tag=wan default\n"); err != nil {
+		t.Fatal(err)
+	}
+	a := netip.MustParseAddr("10.0.0.1")
+	if err := inv.SetDevice(a, "Core router", "Room 1", "A03"); err != nil {
+		t.Fatal(err)
+	}
+	if p := inv.PlaceOf(a); p.Room != "Room 1" || p.Rack != "A03" || inv.Device(a) != "Core router" {
+		t.Fatalf("place %+v name %q", p, inv.Device(a))
+	}
+	if inv.Sampling()[a] != 1000 {
+		t.Fatal("the sampling rate on the device line was lost")
+	}
+	if err := inv.SetCircuit(a, 3, "Telecom uplink", "China Telecom", "SH-12345"); err != nil {
+		t.Fatal(err)
+	}
+	it := inv.Iface(a, 3)
+	if it.ISP != "China Telecom" || it.Circuit != "SH-12345" || it.Name != "Telecom uplink" {
+		t.Fatalf("circuit %+v", it)
+	}
+	if it.Speed != 1000000000 || it.Tag != "wan" || !it.Default {
+		t.Fatalf("the rest of the line was lost: %+v", it)
+	}
+	// renaming from the interface page keeps the carrier
+	if err := inv.SetIface(a, 3, "WAN", "wan", true); err != nil {
+		t.Fatal(err)
+	}
+	if it := inv.Iface(a, 3); it.ISP != "China Telecom" || it.Circuit != "SH-12345" {
+		t.Fatalf("renaming dropped the carrier: %+v", it)
+	}
+	if c := inv.Circuits(); len(c) != 1 {
+		t.Fatalf("circuits %v", c)
+	}
+	want := "device 10.0.0.1 Core router room=Room_1 rack=A03 sampling=1000\n" +
+		"iface 10.0.0.1 3 WAN speed=1000000000 tag=wan isp=China_Telecom circuit=SH-12345 default\n"
+	if got := inv.Text(); got != want {
+		t.Fatalf("text\n%s\nwant\n%s", got, want)
+	}
+}

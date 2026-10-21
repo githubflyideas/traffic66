@@ -315,7 +315,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 
 // How often a page redraws itself, by range. It follows the width of the
@@ -1693,143 +1693,6 @@ async function ifaceCleanup(el) {
 // the ages offered, mirroring the server's own list
 const cleanupDaysUI = [120, 90, 60, 30, 7];
 
-// ------------------------------------------------------- the asset ledger
-// Sites, racks, devices and their ports, the cables between them, and the
-// networks and addresses assigned on them. It is a ledger: everything here
-// was written down by someone, never discovered. Registered installations
-// only — the panels are shown and explained rather than hidden, so what
-// registering buys is visible, and the server refuses every call anyway.
-let assetData = null;
-const assetSel = {site: 0, rack: 0, device: 0};
-
-async function loadAssets() {
-  const res = await fetch('/api/assets');
-  if (res.status === 401) { showLogin(); throw new Error('login'); }
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) return assetData = {locked: j.error === 'not_registered', error: j.error || res.statusText};
-  j.by = {
-    site: new Map((j.sites || []).map(x => [x.id, x])),
-    rack: new Map((j.racks || []).map(x => [x.id, x])),
-    device: new Map((j.devices || []).map(x => [x.id, x])),
-    port: new Map((j.ports || []).map(x => [x.id, x])),
-  };
-  return assetData = j;
-}
-
-async function assetSave(kind, rec) {
-  const res = await fetch('/api/assets/' + kind, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(rec)});
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j.detail || j.error || res.statusText);
-  return j;
-}
-
-async function assetDelete(kind, id) {
-  const res = await fetch(`/api/assets/${kind}?id=${id}`, {method: 'DELETE'});
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j.detail || j.error || res.statusText);
-}
-
-// The locked panel every asset page shows without a licence. It says what
-// the page would do, because a prospect has to see what they would buy.
-function assetLocked(el, titleKey, whatKey) {
-  el.innerHTML = `<div class="grid">${panel('c12 locked', t(titleKey), t('cl.reg_only'),
-    `<p class="muted" style="margin:0;font-size:13px">${esc(t(whatKey))}</p>
-     <p style="margin:10px 0 0;font-size:13px">${esc(t('as.locked'))}</p>`)}</div>`;
-}
-
-// assetPage loads the ledger and handles the two states that are not the
-// page: no licence, and a failure worth showing.
-async function assetPage(el, titleKey, whatKey) {
-  const d = await loadAssets();
-  if (d.locked) { assetLocked(el, titleKey, whatKey); return null; }
-  if (d.error) { el.innerHTML = `<div class="grid">${panel('c12', t(titleKey), '', `<div class="empty">${esc(d.error)}</div>`)}</div>`; return null; }
-  return d;
-}
-
-// ------------------------------------------------------------ the editor
-// One form over one record. Fields describe what to show; saving posts the
-// whole record back, so a field the form does not show is carried over
-// untouched rather than cleared.
-const ASSET_FIELDS = {
-  site: [['name', 'text', 1], ['address', 'text'], ['note', 'area'], ['hidden', 'check']],
-  rack: [['name', 'text', 1], ['site_id', 'site'], ['units', 'num'], ['note', 'area'], ['hidden', 'check']],
-  device: [['name', 'text', 1], ['role', 'text'], ['vendor', 'text'], ['model', 'text'], ['serial', 'text'],
-    ['mgmt_ip', 'text'], ['rack_id', 'rack'], ['pos_u', 'num'], ['height_u', 'num'], ['tags', 'tags'],
-    ['note', 'area'], ['hidden', 'check']],
-  port: [['name', 'text', 1], ['ifindex', 'num'], ['speed', 'num'], ['kind', 'text'], ['note', 'area']],
-  circuit: [['name', 'text', 1], ['carrier', 'text'], ['kind', 'text'], ['bandwidth', 'text'],
-    ['site_id', 'site'], ['port_id', 'port'], ['contract', 'text'], ['starts', 'day'], ['ends', 'day'],
-    ['tags', 'tags'], ['note', 'area'], ['hidden', 'check']],
-  subnet: [['prefix', 'text', 1], ['name', 'text'], ['vlan', 'num'], ['device_id', 'device'],
-    ['gateway', 'text'], ['tags', 'tags'], ['note', 'area'], ['hidden', 'check']],
-};
-
-function assetOptions(type, cur) {
-  const none = `<option value="0">${esc(t('as.none'))}</option>`;
-  const opt = (v, l) => `<option value="${v}"${+cur === +v ? ' selected' : ''}>${esc(l)}</option>`;
-  if (type === 'site') return none + (assetData.sites || []).map(x => opt(x.id, x.name)).join('');
-  if (type === 'rack') return none + (assetData.racks || []).map(x => opt(x.id, rackLabel(x))).join('');
-  if (type === 'device') return none + (assetData.devices || []).map(x => opt(x.id, x.name)).join('');
-  if (type === 'port') return none + (assetData.ports || []).map(x => opt(x.id, portLabel(x))).join('');
-  return '';
-}
-const rackLabel = r => (r.site_id && assetData.by.site.get(r.site_id) ? assetData.by.site.get(r.site_id).name + ' · ' : '') + r.name;
-const portLabel = p => (assetData.by.device.get(p.device_id)?.name || '?') + ' · ' + p.name;
-
-// assetEdit opens the editor for one record and resolves when it is saved
-// (to the saved record) or cancelled (to null).
-function assetEdit(kind, rec) {
-  return new Promise(resolve => {
-    const fields = ASSET_FIELDS[kind];
-    const val = f => rec[f] ?? '';
-    const row = ([f, type, req]) => {
-      const id = 'af_' + f, lab = `<label for="${id}">${esc(t('as.f_' + f))}${req ? ' *' : ''}</label>`;
-      if (type === 'check') return `<div class="afield afwide"><label class="afcheck"><input type="checkbox" id="${id}"${rec[f] ? ' checked' : ''}> ${esc(t('as.f_' + f))}</label>
-        <span class="muted" style="font-size:12px">${esc(t('as.hidden_hint'))}</span></div>`;
-      if (type === 'area') return `<div class="afield afwide">${lab}<textarea id="${id}" rows="2">${esc(val(f))}</textarea></div>`;
-      if (type === 'tags') return `<div class="afield afwide">${lab}<input id="${id}" value="${esc((rec[f] || []).join(', '))}" placeholder="${esc(t('as.tags_hint'))}"></div>`;
-      if (type === 'num') return `<div class="afield">${lab}<input id="${id}" type="number" min="0" value="${rec[f] || ''}"></div>`;
-      if (type === 'day') return `<div class="afield">${lab}<input id="${id}" type="date" value="${esc(val(f))}"></div>`;
-      if (['site', 'rack', 'device', 'port'].includes(type)) return `<div class="afield">${lab}<select id="${id}">${assetOptions(type, rec[f])}</select></div>`;
-      return `<div class="afield">${lab}<input id="${id}" value="${esc(val(f))}"></div>`;
-    };
-    const dlg = document.createElement('dialog');
-    dlg.className = 'aedit';
-    dlg.innerHTML = `<form method="dialog"><h2>${esc(t(rec.id ? 'as.edit_' + kind : 'as.add_' + kind))}</h2>
-      <div class="aform">${fields.map(row).join('')}</div>
-      <div id="afMsg" class="afmsg"></div>
-      <div class="afbtns"><button type="button" class="btn" id="afCancel">${esc(t('as.cancel'))}</button>
-        <button type="button" class="btn primary" id="afSave">${esc(t('as.save'))}</button></div></form>`;
-    document.body.append(dlg);
-    const close = v => { dlg.close(); dlg.remove(); resolve(v); };
-    dlg.querySelector('#afCancel').onclick = () => close(null);
-    dlg.addEventListener('cancel', e => { e.preventDefault(); close(null); });
-    dlg.querySelector('#afSave').onclick = async () => {
-      const out = {...rec};
-      for (const [f, type] of fields) {
-        const e = dlg.querySelector('#af_' + f);
-        if (type === 'check') out[f] = e.checked;
-        else if (type === 'tags') out[f] = e.value.split(',').map(s => s.trim()).filter(Boolean);
-        else if (type === 'num' || ['site', 'rack', 'device', 'port'].includes(type)) out[f] = +e.value || 0;
-        else out[f] = e.value.trim();
-      }
-      const m = dlg.querySelector('#afMsg');
-      m.textContent = '';
-      try { close(await assetSave(kind, out)); }
-      catch (err) { m.textContent = err.message; }
-    };
-    dlg.showModal();
-    dlg.querySelector('input, select, textarea')?.focus();
-  });
-}
-
-// assetRemove asks first and names what is going.
-async function assetRemove(kind, rec, label) {
-  if (!confirm(t('as.confirm_delete', {x: label}))) return false;
-  try { await assetDelete(kind, rec.id); return true; }
-  catch (err) { alert(err.message); return false; }
-}
-
 // Controls only an administrator gets. The calls behind them are gated
 // server-side too (adminAPI, in internal/api/server.go) — this only keeps
 // the page from offering a button that would answer 403. Tables and
@@ -1837,341 +1700,98 @@ async function assetRemove(kind, rec, label) {
 const adm = () => !!(me && me.admin);
 const admOnly = html => adm() ? html : '';
 
-// Buttons an administrator gets and nobody else: the ledger is read by
-// everyone and written by the one who keeps it.
-const adminOnly = html => assetData.admin ? html : '';
-const quotaLine = (have, limit) => limit > 0 ? `${nf(have)} / ${nf(limit)}` : nf(have);
-
-// ------------------------------------------------- the asset management
-// One page for where the equipment is — sites, racks and the devices in
-// them — and a page of its own for a device, reached by clicking it. The
-// device page is not in the navigation because it is about one device:
-// there is nothing to show until one has been chosen.
-const ASSET_VIEWS = new Set(['racks', 'devices']);
-
-// goDevice opens one device's own page.
-function goDevice(id) { assetSel.device = id; go('devices'); }
-
+// ------------------------------------------------------- rooms and racks
+// A picture of where the flows come from: room, rack, device, port, and
+// the carrier and circuit the port goes out to. It is written down once,
+// beside the names in the inventory file, and nothing is looked up in it.
+// Devices and ports come from the flows themselves; only the places and
+// the carriers are typed in.
+const RK_SHOWN = 6;  // ports listed before the rest fold away
 views.racks = async (el) => {
-  const d = await assetPage(el, 'nav.racks', 'as.what_racks');
-  if (!d) return;
-  const sites = d.sites || [], racks = d.racks || [], ports = d.ports || [];
-  if (assetSel.site && !d.by.site.has(assetSel.site)) assetSel.site = 0;
-  const shown = assetSel.site ? racks.filter(r => r.site_id === assetSel.site) : racks;
-  const devOf = r => (d.devices || []).filter(x => x.rack_id === r.id);
-  const siteRow = s => `<tr${assetSel.site === s.id ? ' class="on"' : ''}><td><button class="lnk" data-site="${s.id}">${esc(s.name)}</button>
-      ${s.hidden ? `<span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}</td>
-    <td class="muted">${esc(s.address || '')}</td>
-    <td class="num">${nf(racks.filter(r => r.site_id === s.id).length)}</td>
-    <td style="text-align:end">${adminOnly(`<button class="btn sm" data-esite="${s.id}">${esc(t('as.edit'))}</button>
-      <button class="btn sm danger" data-dsite="${s.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  // the devices of the chosen site, or of every site
-  const devices = assetSel.site ? (d.devices || []).filter(x => d.by.rack.get(x.rack_id)?.site_id === assetSel.site) : (d.devices || []);
-  const devRow = x => `<tr><td><button class="lnk" data-dev="${x.id}">${esc(x.name)}</button>
-      ${x.hidden ? `<span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}
-      ${(x.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join('')}</td>
-    <td class="muted">${esc(x.role || '')}</td>
-    <td class="muted">${esc([x.vendor, x.model].filter(Boolean).join(' '))}</td>
-    <td>${x.mgmt_ip ? ipCell(x.mgmt_ip) : ''}</td>
-    <td>${devPlace(d, x)}</td>
-    <td class="num">${nf(ports.filter(p => p.device_id === x.id).length)}</td></tr>`;
-  el.innerHTML = `<div class="grid">
-    ${panel('c12', t('nav.racks'), assetCounts(d), `<p class="muted" style="margin:0 0 12px;font-size:13px">${esc(t('as.what_racks'))}</p>
-      <table><tr><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_address'))}</th><th class="num">${esc(t('as.racks'))}</th><th></th></tr>
-      ${sites.map(siteRow).join('') || `<tr><td colspan="4" class="empty">${esc(t('as.no_sites'))}</td></tr>`}</table>
-      ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddSite">${esc(t('as.add_site'))}</button>
-        ${sites.length ? `<button class="btn" id="asAddRack">${esc(t('as.add_rack'))}</button>` : ''}</div>`)}`)}
-    ${panel('c12', t('as.racks') + (assetSel.site ? ' · ' + esc(d.by.site.get(assetSel.site).name) : ''), '',
-      shown.length ? `<div class="rackwrap">${shown.map(r => rackCard(r, devOf(r))).join('')}</div>`
-        : `<div class="empty">${esc(t('as.no_racks'))}</div>`)}
-    ${panel('c12', t('as.devices'), t('as.devices_sub'), `<table><tr><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_role'))}</th>
-        <th>${esc(t('as.f_model'))}</th><th>${esc(t('as.f_mgmt_ip'))}</th><th>${esc(t('as.place'))}</th><th class="num">${esc(t('as.ports'))}</th></tr>
-      ${devices.map(devRow).join('') || `<tr><td colspan="6" class="empty">${esc(t('as.no_devices'))}</td></tr>`}</table>
-      ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddDev">${esc(t('as.add_device'))}</button></div>`)}`)}
-    ${adminOnly(pastePanel(d) + csvPanel())}
-  </div>`;
-  el.querySelectorAll('[data-site]').forEach(b => b.onclick = () => { assetSel.site = assetSel.site === +b.dataset.site ? 0 : +b.dataset.site; render(); });
-  el.querySelectorAll('[data-esite]').forEach(b => b.onclick = async () => { if (await assetEdit('site', {...d.by.site.get(+b.dataset.esite)})) render(); });
-  el.querySelectorAll('[data-dsite]').forEach(b => b.onclick = async () => {
-    const s = d.by.site.get(+b.dataset.dsite);
-    if (await assetRemove('site', s, s.name)) render();
+  const res = await fetch('/api/racks');
+  if (res.status === 401) { showLogin(); return; }
+  const d = await res.json().catch(() => ({}));
+  const devs = d.devices || [], can = !!d.admin;
+  const head = `<p class="rkhint">${esc(t('rk.hint'))}</p>`;
+  if (!devs.length) { el.innerHTML = `<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), head + `<div class="empty">${esc(t('rk.empty'))}</div>`)}</div>`; return; }
+  const rooms = new Map();
+  devs.forEach((x, i) => {
+    const room = x.room || '', rack = x.rack || '';
+    if (!rooms.has(room)) rooms.set(room, new Map());
+    const racks = rooms.get(room);
+    if (!racks.has(rack)) racks.set(rack, []);
+    racks.get(rack).push(i);
   });
-  el.querySelectorAll('[data-erack]').forEach(b => b.onclick = async () => { if (await assetEdit('rack', {...d.by.rack.get(+b.dataset.erack)})) render(); });
-  el.querySelectorAll('[data-drack]').forEach(b => b.onclick = async () => {
-    const r = d.by.rack.get(+b.dataset.drack);
-    if (await assetRemove('rack', r, r.name)) render();
-  });
-  // a device in a rack and a device in the list both open its own page
-  el.querySelectorAll('[data-rdev]').forEach(b => b.onclick = () => goDevice(+b.dataset.rdev));
-  el.querySelectorAll('[data-dev]').forEach(b => b.onclick = () => goDevice(+b.dataset.dev));
-  const add = $('#asAddSite'); if (add) add.onclick = async () => { if (await assetEdit('site', {})) render(); };
-  const addR = $('#asAddRack'); if (addR) addR.onclick = async () => { if (await assetEdit('rack', {site_id: assetSel.site || sites[0].id, units: d.default_units || 46})) render(); };
-  const addD = $('#asAddDev'); if (addD) addD.onclick = async () => {
-    const made = await assetEdit('device', {height_u: 1, rack_id: 0});
-    if (made) { assetData = null; goDevice(made.id); }
+  // rooms in name order, the devices nobody has placed yet last
+  const order = [...rooms.keys()].sort((a, b) => (a === '') - (b === '') || a.localeCompare(b, LANG, {numeric: true}));
+  const pencil = attrs => can ? `<button class="rkedit" ${attrs} title="${esc(t('rk.edit'))}" aria-label="${esc(t('rk.edit'))}">✎</button>` : '';
+  const port = (i, f) => `<div class="rkif">
+      <span class="rkport">${esc(f.name || t('rk.ifindex', {n: f.ifindex}))}<span class="muted"> #${f.ifindex}${f.speed ? ' · ' + esc(fmtBps(f.speed)) : ''}</span></span>
+      <span class="rkwire"></span>
+      <span class="rkisp${f.isp || f.circuit ? '' : ' none'}" title="${esc([f.isp, f.circuit].filter(Boolean).join(' · '))}">${f.isp || f.circuit
+        ? esc(f.isp || '') + (f.circuit ? `<span class="mono"> ${f.isp ? '· ' : ''}${esc(f.circuit)}</span>` : '')
+        : esc(t('rk.no_carrier'))}</span>
+      ${pencil(`data-rki="${i}:${f.ifindex}"`)}</div>`;
+  const device = i => {
+    const x = devs[i], fs = x.ifaces || [];
+    // the ports with a carrier always show; of the rest, the busiest
+    const lead = fs.filter((f, k) => f.isp || f.circuit || k < RK_SHOWN), rest = fs.filter(f => !lead.includes(f));
+    return `<div class="rkdev"><div class="rkdh"><b>${esc(x.name || x.exporter)}</b>${x.name ? ` <span class="mono">${esc(x.exporter)}</span>` : ''}
+        ${x.seen ? '' : `<span class="tag">${esc(t('rk.quiet'))}</span>`}${pencil(`data-rkd="${i}"`)}</div>
+      ${lead.map(f => port(i, f)).join('') || `<div class="rkif muted">${esc(t('rk.no_ifaces'))}</div>`}
+      ${rest.length ? `<details class="rkmore"><summary>${esc(t('rk.more', {n: nf(rest.length)}))}</summary>${rest.map(f => port(i, f)).join('')}</details>` : ''}</div>`;
   };
-  wirePaste();
-  wireCSV();
+  const roomIcon = '<svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>';
+  const body = order.map(room => {
+    const racks = rooms.get(room), names = [...racks.keys()].sort((a, b) => (a === '') - (b === '') || a.localeCompare(b, LANG, {numeric: true}));
+    return `<section class="rkroom${room ? '' : ' unplaced'}"><h3>${roomIcon}${esc(room || t('rk.unplaced'))}</h3><div class="rkracks">
+      ${names.map(rack => `<div class="rkrack"><div class="rkrh">${esc(rack ? t('rk.rack_n', {x: rack}) : t('rk.no_rack'))}</div>${racks.get(rack).map(device).join('')}</div>`).join('')}
+      </div></section>`;
+  }).join('');
+  el.innerHTML = `<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), head + body)}</div>`;
+  const uniq = k => [...new Set(devs.map(x => x[k]).filter(Boolean))].sort();
+  const carriers = [...new Set(devs.flatMap(x => (x.ifaces || []).map(f => f.isp)).filter(Boolean))].sort();
+  const send = async (path, body) => {
+    const r = await fetch('/api/racks/' + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || r.statusText); return; }
+    ifList = null; render();
+  };
+  el.querySelectorAll('[data-rkd]').forEach(b => b.onclick = async () => {
+    const x = devs[+b.dataset.rkd];
+    const v = await rkForm(x.name || x.exporter, [['name', t('rk.device_name'), x.name], ['room', t('rk.room'), x.room, uniq('room')], ['rack', t('rk.rack'), x.rack, uniq('rack')]]);
+    if (v) send('device', {exporter: x.exporter, ...v});
+  });
+  el.querySelectorAll('[data-rki]').forEach(b => b.onclick = async () => {
+    const [i, idx] = b.dataset.rki.split(':').map(Number), x = devs[i], f = (x.ifaces || []).find(y => y.ifindex === idx) || {ifindex: idx};
+    const v = await rkForm((x.name || x.exporter) + ' · #' + idx, [['name', t('rk.iface_name'), f.name], ['isp', t('rk.isp'), f.isp, carriers], ['circuit', t('rk.circuit'), f.circuit]]);
+    if (v) send('iface', {exporter: x.exporter, ifindex: idx, ...v});
+  });
 };
 
-const assetCounts = d => [
-  t('as.c_sites', {x: quotaLine(d.counts.sites, d.quota.sites)}),
-  t('as.c_racks', {x: quotaLine(d.counts.racks, d.quota.racks)}),
-  t('as.c_devices', {x: quotaLine(d.counts.devices, d.quota.devices)}),
-].join(' · ');
-
-// where a device stands, for the lists
-function devPlace(d, x) {
-  const r = d.by.rack.get(x.rack_id);
-  if (!r) return `<span class="muted">${esc(t('as.unracked'))}</span>`;
-  return esc(r.name) + (x.pos_u ? ` <span class="muted">U${x.pos_u}</span>` : '');
-}
-
-// One rack drawn by the unit, numbered from the bottom as racks are. A
-// device fills the units it occupies, so a gap on the page is a gap in the
-// cabinet; a device in the rack whose unit nobody wrote down is listed
-// under it rather than placed somewhere invented.
-function rackCard(r, devs) {
-  // one rack unit in pixels; .rack .ru in app.css draws the same height
-  const H = 14, placed = devs.filter(x => x.pos_u > 0), loose = devs.filter(x => !x.pos_u);
-  const units = [];
-  for (let u = r.units; u >= 1; u--) units.push(`<div class="ru"><span>${u}</span></div>`);
-  const blocks = placed.map(x => {
-    const h = Math.max(1, x.height_u || 1), top = (r.units - (x.pos_u + h - 1)) * H;
-    const title = `${x.name} · ${t('as.units_at', {u: x.pos_u, n: h})}${x.model ? ' · ' + x.model : ''}`;
-    return `<button class="rdev" data-rdev="${x.id}" style="top:${top}px;height:${h * H - 2}px" title="${esc(title)}">${esc(x.name)}</button>`;
+// rkForm asks for a few short values and resolves to them, or to null when
+// cancelled. A list offers what was typed for other devices before, so one
+// room is not written three ways.
+function rkForm(title, fields) {
+  return new Promise(resolve => {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'aedit';
+    dlg.innerHTML = `<form method="dialog"><h2>${esc(title)}</h2><div class="aform">${fields.map(([k, lab, v, list]) => `<div class="afield afwide">
+        <label for="rk_${k}">${esc(lab)}</label><input id="rk_${k}" name="${k}" value="${esc(v || '')}" maxlength="80"${list && list.length ? ` list="rkl_${k}"` : ''}>
+        ${list && list.length ? `<datalist id="rkl_${k}">${list.map(o => `<option value="${esc(o)}">`).join('')}</datalist>` : ''}</div>`).join('')}</div>
+      <div class="afbtns"><button class="btn" value="cancel">${esc(t('rk.cancel'))}</button><button class="btn primary" value="ok">${esc(t('rk.save'))}</button></div></form>`;
+    document.body.appendChild(dlg);
+    dlg.addEventListener('close', () => {
+      const out = {};
+      dlg.querySelectorAll('input').forEach(x => { out[x.name] = x.value.trim(); });
+      const ok = dlg.returnValue === 'ok';
+      dlg.remove();
+      resolve(ok ? out : null);
+    });
+    dlg.showModal();
+    dlg.querySelector('input')?.focus();
   });
-  const free = r.units - placed.reduce((n, x) => n + Math.max(1, x.height_u || 1), 0);
-  return `<div class="rackcard"><div class="rh"><b>${esc(r.name)}</b>
-      <span class="muted">${esc(t('as.units_free', {n: free, t: r.units}))}</span>
-      ${adminOnly(`<span class="rbtns"><button class="btn sm" data-erack="${r.id}">${esc(t('as.edit'))}</button><button class="btn sm danger" data-drack="${r.id}">${esc(t('as.delete'))}</button></span>`)}</div>
-    <div class="rack" style="height:${r.units * H}px">${units.join('')}${blocks.join('')}</div>
-    ${loose.length ? `<div class="rloose">${esc(t('as.unplaced'))}: ${loose.map(x => `<button class="lnk" data-rdev="${x.id}">${esc(x.name)}</button>`).join(', ')}</div>` : ''}</div>`;
 }
 
-// ------------------------------------------------------- one device
-// Reached by clicking a device, never from the navigation: what it is,
-// where it stands, and every port with the port at the other end of its
-// cable.
-views.devices = async (el) => {
-  const d = await assetPage(el, 'as.device', 'as.what_devices');
-  if (!d) return;
-  const x = assetSel.device ? d.by.device.get(assetSel.device) : null;
-  if (!x) { go('racks'); return; }
-  $('#title').textContent = x.name;
-  document.title = x.name + ' · traffic66';
-  const ports = (d.ports || []).filter(p => p.device_id === x.id);
-  const subnets = (d.subnets || []).filter(n => n.device_id === x.id);
-  const peer = new Map();
-  (d.links || []).forEach(l => { peer.set(l.a_port, l.b_port); peer.set(l.b_port, l.a_port); });
-  const fact = (k, v) => v ? `<div class="afact"><span class="k">${esc(t(k))}</span><span class="v">${v}</span></div>` : '';
-  el.innerHTML = `<div class="grid">
-    ${panel('c12', esc(x.name), esc(x.role || ''), `<div class="dtop">
-        <button class="btn sm" id="asBack">← ${esc(t('nav.racks'))}</button>
-        ${adminOnly(`<span style="margin-inline-start:auto;display:flex;gap:6px"><button class="btn sm" id="asEditDev">${esc(t('as.edit'))}</button>
-          <button class="btn sm danger" id="asDelDev">${esc(t('as.delete'))}</button></span>`)}</div>
-      <div class="afacts">
-        ${fact('as.f_vendor', esc([x.vendor, x.model].filter(Boolean).join(' ')))}
-        ${fact('as.f_serial', esc(x.serial || ''))}
-        ${fact('as.f_mgmt_ip', x.mgmt_ip ? ipCell(x.mgmt_ip) : '')}
-        ${fact('as.place', devPlace(d, x))}
-        ${fact('as.f_height_u', x.height_u ? esc(x.height_u + 'U') : '')}
-        ${fact('as.f_tags', (x.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join(''))}
-        ${x.hidden ? fact('as.f_hidden', `<span class="tag">${esc(t('as.f_hidden'))}</span>`) : ''}
-      </div>
-      ${x.note ? `<p class="muted" style="margin:10px 0 0;font-size:13px;white-space:pre-wrap">${esc(x.note)}</p>` : ''}`)}
-    ${panel('c12', t('as.ports_of', {x: x.name}), portUse(ports, peer), portTable(d, ports, peer))}
-    ${panel('c12', t('as.subnets_of', {x: x.name}), t('as.subnets_sub'), subnetTable(subnets))}
-  </div>`;
-  $('#asBack').onclick = () => go('racks');
-  const ed = $('#asEditDev'); if (ed) ed.onclick = async () => { if (await assetEdit('device', {...x})) render(); };
-  const del = $('#asDelDev'); if (del) del.onclick = async () => {
-    if (await assetRemove('device', x, x.name)) { assetSel.device = 0; assetData = null; go('racks'); }
-  };
-  el.querySelectorAll('[data-eport]').forEach(b => b.onclick = async () => { if (await assetEdit('port', {...d.by.port.get(+b.dataset.eport)})) render(); });
-  el.querySelectorAll('[data-dport]').forEach(b => b.onclick = async () => {
-    const p = d.by.port.get(+b.dataset.dport);
-    if (await assetRemove('port', p, portLabel(p))) render();
-  });
-  el.querySelectorAll('[data-cable]').forEach(b => b.onclick = () => cablePort(d, +b.dataset.cable, peer));
-  const addP = $('#asAddPort'); if (addP) addP.onclick = async () => { if (await assetEdit('port', {device_id: x.id})) render(); };
-  el.querySelectorAll('[data-esub]').forEach(b => b.onclick = async () => { if (await assetEdit('subnet', {...subnets.find(n => n.id === +b.dataset.esub)})) render(); });
-  el.querySelectorAll('[data-dsub]').forEach(b => b.onclick = async () => {
-    const n = subnets.find(y => y.id === +b.dataset.dsub);
-    if (await assetRemove('subnet', n, n.prefix)) render();
-  });
-  const addS = $('#asAddSub'); if (addS) addS.onclick = async () => { if (await assetEdit('subnet', {device_id: x.id})) render(); };
-};
-
-// The networks written down against a device. They are a note beside its
-// ports — what this switch carries — and nothing is looked up in them:
-// no chart, no name and no filter is decided from this table.
-function subnetTable(ns) {
-  const row = n => `<tr><td><b>${esc(n.prefix)}</b>${n.hidden ? ` <span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}</td>
-    <td>${esc(n.name || '')}</td>
-    <td class="muted">${n.vlan ? nf(n.vlan) : ''}</td>
-    <td class="muted mono">${esc(n.gateway || '')}</td>
-    <td>${(n.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join('')}</td>
-    <td style="text-align:end">${adminOnly(`<button class="btn sm" data-esub="${n.id}">${esc(t('as.edit'))}</button>
-      <button class="btn sm danger" data-dsub="${n.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  return `<table><tr><th>${esc(t('as.f_prefix'))}</th><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_vlan'))}</th>
-      <th>${esc(t('as.f_gateway'))}</th><th>${esc(t('as.f_tags'))}</th><th></th></tr>
-    ${ns.map(row).join('') || `<tr><td colspan="6" class="empty">${esc(t('as.no_subnets'))}</td></tr>`}</table>
-    ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddSub">${esc(t('as.add_subnet'))}</button></div>`)}`;
-}
-
-// Port occupancy in one line: how many of the ports written down carry a
-// cable. It counts the ledger, not the link state — nothing here is polled.
-function portUse(ps, peer) {
-  if (!ps.length) return '';
-  const used = ps.filter(p => peer.has(p.id)).length;
-  return t('as.port_use', {u: nf(used), n: nf(ps.length), p: nf(Math.round(used / ps.length * 100))});
-}
-
-function portTable(d, ps, peer) {
-  const row = p => {
-    const o = peer.get(p.id), op = o ? d.by.port.get(o) : null;
-    return `<tr><td><b>${esc(p.name)}</b></td>
-      <td class="muted">${p.ifindex ? nf(p.ifindex) : ''}</td>
-      <td class="muted">${p.speed ? fmtBps(p.speed) : ''}</td>
-      <td class="muted">${esc(p.kind || '')}</td>
-      <td>${op ? esc(portLabel(op)) : `<span class="muted">${esc(t('as.port_free'))}</span>`}</td>
-      <td style="text-align:end">${adminOnly(`<button class="btn sm" data-cable="${p.id}">${esc(t(op ? 'as.recable' : 'as.cable'))}</button>
-        <button class="btn sm" data-eport="${p.id}">${esc(t('as.edit'))}</button>
-        <button class="btn sm danger" data-dport="${p.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  };
-  return `<table><tr><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_ifindex'))}</th><th>${esc(t('as.f_speed'))}</th>
-      <th>${esc(t('as.f_kind'))}</th><th>${esc(t('as.cabled_to'))}</th><th></th></tr>
-    ${ps.map(row).join('') || `<tr><td colspan="6" class="empty">${esc(t('as.no_ports'))}</td></tr>`}</table>
-    ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddPort">${esc(t('as.add_port'))}</button></div>`)}`;
-}
-
-// Cabling a port: pick the other end, or pull the cable out. A port holds
-// one cable, so choosing a port that already has one moves it.
-function cablePort(d, portID, peer) {
-  const others = (d.ports || []).filter(p => p.id !== portID);
-  const cur = peer.get(portID) || 0;
-  const dlg = document.createElement('dialog');
-  dlg.className = 'aedit';
-  dlg.innerHTML = `<form method="dialog"><h2>${esc(t('as.cable_title', {x: portLabel(d.by.port.get(portID))}))}</h2>
-    <div class="aform"><div class="afield afwide"><label for="afPeer">${esc(t('as.cabled_to'))}</label>
-      <select id="afPeer"><option value="0">${esc(t('as.no_cable'))}</option>
-        ${others.map(p => `<option value="${p.id}"${cur === p.id ? ' selected' : ''}>${esc(portLabel(p))}</option>`).join('')}</select></div></div>
-    <div id="afMsg" class="afmsg"></div>
-    <div class="afbtns"><button type="button" class="btn" id="afCancel">${esc(t('as.cancel'))}</button>
-      <button type="button" class="btn primary" id="afSave">${esc(t('as.save'))}</button></div></form>`;
-  document.body.append(dlg);
-  const close = () => { dlg.close(); dlg.remove(); };
-  dlg.querySelector('#afCancel').onclick = close;
-  dlg.addEventListener('cancel', e => { e.preventDefault(); close(); });
-  dlg.querySelector('#afSave').onclick = async () => {
-    const to = +dlg.querySelector('#afPeer').value;
-    const link = (d.links || []).find(l => l.a_port === portID || l.b_port === portID);
-    try {
-      if (!to) { if (link) await assetDelete('link', link.id); }
-      else await assetSave('link', {id: link ? link.id : 0, a_port: portID, b_port: to});
-      close(); render();
-    } catch (err) { dlg.querySelector('#afMsg').textContent = err.message; }
-  };
-  dlg.showModal();
-}
-
-// ------------------------------------------------------- import and export
-// Pasting what a switch printed. The operator runs the command they
-// already run; there is nothing to install on the device, no SNMP
-// community to hand out and no credentials to keep anywhere. Nothing is
-// written until the plan has been shown and accepted, so a paste of the
-// wrong buffer is seen rather than suffered.
-function pastePanel(d) {
-  const opt = x => `<option value="${x.id}"${assetSel.device === x.id ? ' selected' : ''}>${esc(x.name)}</option>`;
-  return panel('c12', t('as.paste_title'), t('as.paste_sub'),
-    `<p class="muted" style="margin:0 0 10px;font-size:13px">${esc(t('as.paste_what'))}</p>
-     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-       <label for="asPasteDev" style="font-size:13px">${esc(t('as.paste_from'))}</label>
-       <select id="asPasteDev"><option value="0">${esc(t('as.none'))}</option>${(d.devices || []).map(opt).join('')}</select>
-     </div>
-     <textarea id="asPasteText" rows="7" class="pastebox" placeholder="${esc(t('as.paste_hint'))}"></textarea>
-     <div style="margin-top:8px;display:flex;gap:8px"><button class="btn" id="asPasteCheck">${esc(t('as.preview'))}</button>
-       <button class="btn primary" id="asPasteApply" disabled>${esc(t('as.apply'))}</button></div>
-     <div id="asPastePlan" style="margin-top:10px"></div>`);
-}
-
-// The ledger as a spreadsheet, in and out. Export, edit, import: the id
-// column ties each row back to its record, so a file that came from here
-// updates what it came from instead of doubling it.
-function csvPanel() {
-  const kinds = ['site', 'rack', 'device', 'port', 'circuit', 'subnet', 'addr'];
-  const opt = k => `<option value="${k}">${esc(t('as.kind_of_' + k))}</option>`;
-  return panel('c12', t('as.csv_title'), t('as.csv_sub'),
-    `<p class="muted" style="margin:0 0 10px;font-size:13px">${esc(t('as.csv_what'))}</p>
-     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-       <select id="asCsvKind">${kinds.map(opt).join('')}</select>
-       <button class="btn" id="asCsvOut">${esc(t('as.csv_export'))}</button>
-       <input type="file" id="asCsvFile" accept=".csv,text/csv" style="font-size:13px">
-     </div>
-     <div style="margin-top:8px;display:flex;gap:8px"><button class="btn" id="asCsvCheck" disabled>${esc(t('as.preview'))}</button>
-       <button class="btn primary" id="asCsvApply" disabled>${esc(t('as.apply'))}</button></div>
-     <div id="asCsvPlan" style="margin-top:10px"></div>`);
-}
-
-// A plan, as a table of what would happen. Errors are shown with the rest
-// rather than instead of it: one bad line in a spreadsheet does not make
-// the other fifty wrong.
-function planTable(plan) {
-  if (!plan) return '';
-  const rows = plan.changes || [];
-  if (!rows.length && !(plan.skipped || []).length) return `<div class="empty">${esc(t('as.plan_none'))}</div>`;
-  const row = c => `<tr><td class="muted">${esc(t('as.kind_of_' + c.kind) || c.kind)}</td>
-    <td><span class="st ${c.action === 'error' ? 'crit' : c.action === 'same' ? 'ok' : 'warn'}">${esc(t('as.act_' + c.action))}</span></td>
-    <td>${esc(c.what)}</td><td class="muted">${esc(c.error || '')}</td></tr>`;
-  const n = rows.filter(c => c.action !== 'error' && c.action !== 'same').length;
-  return `<p style="margin:0 0 8px;font-size:13px">${esc(t(plan.applied ? 'as.plan_done' : 'as.plan_would', {n: nf(n)}))}</p>
-    <table><tr><th></th><th></th><th>${esc(t('as.what'))}</th><th>${esc(t('as.detail'))}</th></tr>${rows.map(row).join('')}</table>
-    ${(plan.skipped || []).length ? `<p class="muted" style="margin:8px 0 0;font-size:12.5px">${esc(t('as.plan_skipped'))}: ${esc(plan.skipped.slice(0, 8).join(' | '))}</p>` : ''}`;
-}
-
-// wirePaste and wireCSV are called after the devices page is drawn.
-function wirePaste() {
-  const box = $('#asPasteText'), check = $('#asPasteCheck'), apply = $('#asPasteApply'), out = $('#asPastePlan');
-  if (!box) return;
-  const send = async applyIt => {
-    const body = {text: box.value, device_id: +$('#asPasteDev').value, apply: applyIt};
-    const res = await fetch('/api/assets/paste', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) { out.innerHTML = `<div class="empty">${esc(j.detail || j.error || res.statusText)}</div>`; apply.disabled = true; return null; }
-    out.innerHTML = planTable(j);
-    return j;
-  };
-  check.onclick = async () => { const j = await send(false); apply.disabled = !j || !(j.changes || []).some(c => c.action !== 'error' && c.action !== 'same'); };
-  apply.onclick = async () => { if (await send(true)) { apply.disabled = true; assetData = null; } };
-}
-
-function wireCSV() {
-  const kind = $('#asCsvKind'), file = $('#asCsvFile'), check = $('#asCsvCheck'), apply = $('#asCsvApply'), out = $('#asCsvPlan');
-  if (!kind) return;
-  let text = '';
-  $('#asCsvOut').onclick = () => { location.href = '/api/assets/csv?kind=' + encodeURIComponent(kind.value); };
-  file.onchange = async () => {
-    const f = file.files[0];
-    if (!f) { text = ''; check.disabled = true; return; }
-    text = await f.text();
-    check.disabled = false;
-    apply.disabled = true;
-    out.innerHTML = '';
-  };
-  const send = async applyIt => {
-    const res = await fetch('/api/assets/csv', {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({kind: kind.value, text, apply: applyIt})});
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) { out.innerHTML = `<div class="empty">${esc(j.detail || j.error || res.statusText)}</div>`; apply.disabled = true; return null; }
-    out.innerHTML = planTable(j);
-    return j;
-  };
-  check.onclick = async () => { const j = await send(false); apply.disabled = !j || !(j.changes || []).some(c => c.action !== 'error' && c.action !== 'same'); };
-  apply.onclick = async () => { if (await send(true)) { apply.disabled = true; assetData = null; } };
-}
-
-// ------------------------------------------------------------- addresses
 // ------------------------------------------------------------ offline analysis
 // Capture files are imported into a database of their own; "Analyse" shows
 // them on all the other pages, apart from the live data.
@@ -2775,7 +2395,7 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'devices', 'names']);
+const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'names']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
@@ -2792,7 +2412,7 @@ function refreshLabel() {
 }
 // The sandbox bar replaces the time range while capture files are shown.
 function renderSB() {
-  const on = inSB() && !['ifaces', 'sources', 'racks', 'devices'].includes(state.v);
+  const on = inSB() && !['ifaces', 'sources', 'racks'].includes(state.v);
   $('#sbbar').hidden = !on;
   $('#range').hidden = on;
   $('#refresh').hidden = on;
@@ -2843,11 +2463,6 @@ async function render(push) {
   $('#title').textContent = t('nav.' + state.v);  // the detail view refines it
   document.title = t('nav.' + state.v) + ' · traffic66';
   document.querySelectorAll('#nav button').forEach(b => b.dataset.v === state.v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-  // the device page is reached from the rack page, so the sidebar marks
-  // rooms and racks while it is open
-  document.querySelectorAll('#nav [data-v=racks]').forEach(b => {
-    if (ASSET_VIEWS.has(state.v)) b.setAttribute('aria-current', 'page');
-  });
   renderRange();
   await renderIfsel();
   writeHash(false);

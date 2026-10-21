@@ -7,6 +7,7 @@ heading is the version number.
 
 - 95th-percentile billing is removed: the page, `/api/billing`, `/api/billing/series`, the five-minute rate table it was computed from and the `billed` mark on interface lines (an inventory line that still carries it loads as before). The interface page shows the same counters, and `/api/report` now takes its counter figures from them.
 - The evaluation mark is a step darker and a size larger.
+- Rooms and racks is a picture instead of an asset ledger, and free: every device that sends flows, in its room and rack, with each port and the carrier and circuit ID it goes out to. Devices and ports come from the flows; the room, rack, carrier and circuit are typed in once and kept in `inventory.txt` (`room=`, `rack=` on device lines, `isp=`, `circuit=` on interface lines). The ledger it replaces is removed — device pages, ports, cabling, circuits, networks, paste and CSV import — and its `assets.duckdb` is no longer opened (it can be deleted).
 - The names page is called Inventory again, in every language (台账 in Chinese).
 - The sponsor strip shows one advertiser at a time: a long banner alone, a small 728x90 one three times side by side.
 - Releases started by hand from Actions report themselves as official builds (2.4.0 said "community build").

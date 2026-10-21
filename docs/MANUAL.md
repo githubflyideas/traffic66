@@ -505,29 +505,17 @@ they are the same records. The hourly and daily summaries record traffic by
 application, host and dimension, never by interface, so they keep their
 totals.
 
-### Asset ledger (registered)
+### Rooms and racks
 
-**Sites & racks**, **Devices & ports** and **IP addresses** record where the
-equipment stands, what it is cabled to, and which address is whose. It is a
-ledger, not a discovery tool: nothing in it is polled or guessed, so when it
-and the network disagree it still says what was meant to be there. Racks are
-drawn by the unit; a device cannot be placed where another already stands.
-Addresses are stored canonically, so "already assigned" is a reliable answer,
-and a report names what does not add up — an address in no recorded network,
-one MAC on several addresses.
-
-Entry is by hand, by paste or by spreadsheet. **Paste** reads what the device
-already prints — `show lldp neighbors`, `show cdp neighbors`,
-`show interface status`, `show ip arp`, `show mac address-table` — with
-nothing installed on the device and no community string or password stored
-anywhere; paste the ARP table before the MAC address table and together they
-say which port a host is plugged into. **CSV** exports and imports every
-kind; the `id` column ties a row back to its record, so a file that came from
-here updates what it came from instead of doubling it.
-
-Everyone signed in reads these pages; the administrator writes them, and can
-hide a record from everyone else. The ledger keeps its own `assets.duckdb`
-beside the flow data, so deleting traffic never touches it.
+A picture of where the flows come from: for every device that sends flows,
+the room and rack it stands in, and for each of its ports the carrier and
+circuit ID it goes out to. Devices and ports appear by themselves from the
+flows; click ✎ to type in the room, rack, carrier and circuit. It is filled
+in once and kept in `inventory.txt` beside the names
+(`device 192.0.2.1 Core router room=Room_1 rack=A03`,
+`iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`; a space is
+written as `_`). Nothing is looked up in it. Everyone signed in sees it; the
+administrator edits it.
 
 ### Licence
 
