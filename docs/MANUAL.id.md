@@ -335,7 +335,7 @@ NetFlow/IPFIX (`-l2-overhead`).
 ## 7. Nama, negara, dan daftar ancaman
 
 Klik alamat mana pun lalu pilih **Beri nama…**, atau gunakan
-**Pengaturan → Nama**. Nama disimpan di `inventory.txt` di direktori data:
+**Inventaris**. Nama disimpan di `inventory.txt` di direktori data:
 
 ```
 net    10.10.0.0/16    Office LAN                  # your networks

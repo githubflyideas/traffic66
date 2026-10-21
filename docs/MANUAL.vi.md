@@ -331,7 +331,7 @@ overhead Ethernet cho mỗi gói tin với NetFlow/IPFIX (`-l2-overhead`).
 ## 7. Tên, quốc gia và danh sách mối đe dọa
 
 Nhấp vào bất kỳ địa chỉ nào và chọn **Đặt tên…**, hoặc dùng
-**Cài đặt → Tên**. Tên được lưu trong `inventory.txt` ở thư mục dữ liệu:
+**Sổ quản lý**. Tên được lưu trong `inventory.txt` ở thư mục dữ liệu:
 
 ```
 net    10.10.0.0/16    Office LAN                  # your networks

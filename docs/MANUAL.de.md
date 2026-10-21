@@ -339,7 +339,7 @@ hinzu (`-l2-overhead`).
 ## 7. Namen, Länder und Bedrohungslisten
 
 Klicken Sie auf eine beliebige Adresse und wählen Sie **Benennen…**, oder
-verwenden Sie **Einstellungen → Namen**. Namen werden in `inventory.txt` im
+verwenden Sie **Inventar**. Namen werden in `inventory.txt` im
 Datenverzeichnis gespeichert:
 
 ```

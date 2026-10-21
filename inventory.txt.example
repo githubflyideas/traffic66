@@ -1,5 +1,5 @@
 # traffic66 inventory — copy to <data directory>/inventory.txt, or edit it
-# in the web UI under Sources → Names. Every line is optional.
+# in the web UI under Inventory. Every line is optional.
 #
 # net    <prefix>            <name>          networks that are yours
 net 10.0.0.0/8 Internal

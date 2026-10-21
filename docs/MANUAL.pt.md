@@ -334,7 +334,7 @@ seus minutos e soma 18 bytes de overhead Ethernet por pacote ao NetFlow/IPFIX
 ## 7. Nomes, países e listas de ameaças
 
 Clique em qualquer endereço e escolha **Dar um nome…**, ou use
-**Configurações → Nomes**. Os nomes ficam em `inventory.txt` no diretório
+**Inventário**. Os nomes ficam em `inventory.txt` no diretório
 de dados:
 
 ```
