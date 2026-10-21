@@ -42,19 +42,21 @@ jobs:
     env:
       GOFLAGS: -buildvcs=false
       PRO_TOKEN: ${{ secrets.PRO_TOKEN }}
+      PRO_SSH_KEY: ${{ secrets.PRO_SSH_KEY }}
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v5
       - uses: actions/checkout@v5
-        if: ${{ env.PRO_TOKEN != '' }}
+        if: ${{ env.PRO_TOKEN != '' || env.PRO_SSH_KEY != '' }}
         with:
           repository: githubflyideas/traffic66-pro
-          token: ${{ secrets.PRO_TOKEN }}
+          token: ${{ secrets.PRO_TOKEN || github.token }}
+          ssh-key: ${{ secrets.PRO_SSH_KEY }}
           path: .pro
       - name: Registered features
-        if: ${{ env.PRO_TOKEN != '' }}
+        if: ${{ env.PRO_TOKEN != '' || env.PRO_SSH_KEY != '' }}
         run: |
           cp -R .pro/overlay/tree/. .
           rm -rf .pro
@@ -110,7 +112,7 @@ jobs:
             # a tag push and a one-click release (a version entered by hand)
             # are both releases; only the builds of every push stay community
             kind=community; [[ "$GITHUB_REF" == refs/tags/* || -n "${{ inputs.version }}" ]] && kind=official
-            if [[ $kind == official && -z "$T66_PRO" ]]; then echo "::error::a release needs the PRO_TOKEN secret"; exit 1; fi
+            if [[ $kind == official && -z "$T66_PRO" ]]; then echo "::error::a release needs the PRO_SSH_KEY or PRO_TOKEN secret"; exit 1; fi
             ldflags="-s -w -X main.version=${ver} -X main.buildKind=${kind}"
             tags=""
             export CGO_ENABLED=1
