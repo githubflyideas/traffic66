@@ -343,32 +343,53 @@ label.btn.disabled{opacity:.5;cursor:not-allowed!important}
    out to the carrier and circuit it goes to. */
 .thrimp{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .thrimp input{border:1px solid var(--line-2);border-radius:6px;padding:6px 8px;font:inherit;background:var(--surface);color:var(--ink);min-width:220px}
-.rkhint{margin:0 0 14px;font-size:13px;color:var(--ink-3)}
-.rkroom{border:1px solid var(--line-2);border-radius:10px;padding:12px 14px 14px;margin-bottom:14px;background:var(--surface-2)}
-.rkroom>h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+.rksum{margin:0 0 14px;font-size:13px;color:var(--ink-2)}
+.rkroom{margin-bottom:18px}
+.rkroom>h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .rkroom>h3 .ni{opacity:.7}
-.rkroom.unplaced{border-style:dashed;background:transparent}
-.rkracks{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
-.rkrack{flex:1 1 360px;max-width:560px;border:2px solid var(--ink-3);border-radius:6px;background:var(--surface);overflow:hidden}
-.rkrh{background:var(--ink-3);color:var(--surface);font-size:12.5px;font-weight:600;padding:4px 10px;letter-spacing:.02em}
-.rkdev{margin:8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface)}
-.rkdh{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);font-size:13.5px}
-.rkdh .mono{color:var(--ink-3)}
-.rkif{display:flex;align-items:center;gap:8px;padding:5px 10px;font-size:13px;min-width:0}
-.rkif+.rkif{border-top:1px dashed var(--line)}
-.rkport{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rkport .muted{font-size:12px}
-.rkwire{flex:1 1 24px;min-width:24px;border-top:2px dotted var(--line-2);align-self:center}
-.rkisp{flex:0 0 auto;max-width:60%;padding:2px 9px;border-radius:999px;background:var(--accent);color:#fff;font-size:12.5px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rkisp .mono{font-size:11.5px;opacity:.9;color:#fff}
-.rkisp.none{background:transparent;color:var(--ink-3);border:1px dashed var(--line-2)}
-.rkedit{margin-inline-start:auto;flex:none;background:none;border:0;padding:0 2px;color:var(--ink-3);cursor:pointer;font-size:13px}
-.rkdh .rkedit{margin-inline-start:auto}
-.rkif .rkedit{margin-inline-start:0}
-.rkedit:hover{color:var(--accent)}
-.rkmore{padding:2px 10px 6px;font-size:12.5px}
+.rkroom>h3 .muted{font-size:12.5px;font-weight:400;margin-inline-start:4px}
+.rkroom.unplaced>h3{color:var(--ink-2)}
+.rkracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:14px;align-items:start}
+.rkrack{border:1px solid var(--line-2);border-radius:12px;background:var(--surface-2);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rkrh{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:12.5px;font-weight:600;letter-spacing:.03em;color:var(--ink-2);
+  border-bottom:1px solid var(--line-2);background:var(--surface)}
+.rkrh::before{content:"";width:10px;height:12px;border:2px solid currentColor;border-radius:2px;opacity:.6}
+/* the rack's two mounting rails, as a row of holes down each side */
+.rkbay{position:relative;padding:10px 18px;display:flex;flex-direction:column;gap:10px}
+.rkbay::before,.rkbay::after{content:"";position:absolute;top:6px;bottom:6px;width:6px;
+  background:radial-gradient(circle,var(--line-2) 1.4px,transparent 1.8px) 0 0/6px 9px repeat-y}
+.rkbay::before{left:6px}.rkbay::after{right:6px}
+.rkdev{border:1px solid var(--line-2);border-radius:9px;background:var(--surface);overflow:hidden}
+.rkfp{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,var(--surface-2),var(--surface))}
+.rkled{flex:none;width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 6px var(--good)}
+.rkled.off{background:var(--ink-3);box-shadow:none}
+.rkdn{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.rkdn b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rkdn .mono{font-size:11.5px;color:var(--ink-3)}
+.rkfp .rkedit{margin-inline-start:auto;flex:none;padding:3px 12px;font-size:12.5px}
+.rkports{padding:2px 0}
+.rkif{display:grid;grid-template-columns:minmax(0,1.3fr) auto minmax(0,1fr);align-items:center;gap:10px;padding:6px 12px;font-size:13px}
+.rkif+.rkif,.rkmore{border-top:1px solid var(--line)}
+.rkport{display:flex;align-items:baseline;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rkport b{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.rkport .muted{font-size:11.5px}
+.rkisp{justify-self:start;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;
+  background:hsla(var(--h),65%,50%,.16);border:1px solid hsla(var(--h),65%,50%,.55);color:var(--ink)}
+.rkisp.none{background:transparent;border:1px dashed var(--line-2);color:var(--ink-3);font-weight:400}
+.rkcirc{font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rkmore{padding:4px 12px 6px;font-size:12.5px}
 .rkmore summary{cursor:pointer;color:var(--ink-2)}
+.rkmore .rkif{padding-inline:0}
+dialog.rkdlg{width:min(860px,96vw)}
+dialog.rkdlg h2 .mono{font-size:12.5px;font-weight:400;margin-inline-start:6px}
+.aform.rkdform{grid-template-columns:2fr 1fr 1fr;margin-bottom:14px}
+.rkptab{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:12px}
+.rkptab table{width:100%}
+.rkptab th{position:sticky;top:0;background:var(--surface);z-index:1}
+.rkptab td{padding:4px 6px}
+.rkptab input{width:100%;font:inherit;font-size:13px;padding:4px 7px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+@media (max-width:600px){.rkif{grid-template-columns:1fr auto}.rkcirc{grid-column:1/-1}.aform.rkdform{grid-template-columns:1fr}}
 .lnk{background:none;border:0;padding:0;color:var(--accent-ink);cursor:pointer;font:inherit;text-align:start}
 .lnk:hover{text-decoration:underline}
 .mono{font-family:"Cascadia Mono",Consolas,ui-monospace,monospace;font-size:12.5px}
@@ -542,3 +563,27 @@ body.marked .view.on::after{
 .manual table { border-collapse: collapse; }
 .manual th, .manual td { border: 1px solid var(--line, rgba(127,127,127,.25)); padding: 4px 8px; text-align: start; vertical-align: top; }
 @media (max-width: 900px) { .help { grid-template-columns: 1fr; } .helptoc { position: static; max-height: none; flex-flow: row wrap; } }
+
+/* the syslog feed, under the findings */
+.slform{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px;align-items:end;margin-bottom:12px}
+.slform .slchk{grid-column:1/-1}
+.slform .slwide{grid-column:span 2}
+.slchk{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.slstate{margin-inline-start:auto;padding:2px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line-2);color:var(--ink-3)}
+.slstate.on{border-color:var(--good);color:var(--good)}
+.slmsg{align-self:center;font-size:13px}.slmsg.ok{color:var(--good)}.slmsg.bad{color:var(--crit)}
+.slstats{margin:10px 0 0;font-size:12.5px;color:var(--ink-2)}
+.slerr{color:var(--crit)}
+@media (max-width:760px){.slform{grid-template-columns:1fr 1fr}.slform .slwide{grid-column:1/-1}}
+
+/* links for other platforms, on the settings page */
+.embt td{vertical-align:top}
+.embt code{font-size:12px}
+.embnote{margin:10px 0 0;font-size:12.5px;color:var(--ink-3)}
+.embkey{border:1px solid var(--good);border-radius:10px;padding:12px 14px;margin:0 0 14px;display:grid;gap:6px;background:var(--surface-2)}
+.embkey label{font-size:12px;color:var(--ink-2);margin-top:4px}
+.embcopy{display:flex;gap:8px;align-items:flex-start}
+.embcopy code{flex:1;min-width:0;word-break:break-all;font-size:12px;padding:6px 8px;border-radius:6px;background:var(--surface);border:1px solid var(--line)}
+dialog.embdlg{width:min(620px,96vw)}
+.embdlg textarea{font:inherit;font-size:13px;font-family:ui-monospace,monospace;padding:5px 7px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink);resize:vertical}
+.afhint{font-size:11.5px;color:var(--ink-3)}

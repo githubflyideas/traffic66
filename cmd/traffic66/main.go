@@ -40,7 +40,6 @@ import (
 	"github.com/githubflyideas/traffic66/internal/sim"
 	"github.com/githubflyideas/traffic66/internal/snmp"
 	"github.com/githubflyideas/traffic66/internal/store"
-	"github.com/githubflyideas/traffic66/internal/syslogout"
 	"github.com/githubflyideas/traffic66/internal/tlscert"
 	"github.com/githubflyideas/traffic66/internal/tui"
 	"github.com/githubflyideas/traffic66/internal/web"
@@ -56,7 +55,7 @@ var version = ""
 // CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
 // default used to be a hardcoded 0.1.0-dev, and because nothing checked it
 // it stayed that way for two major versions.
-const devVersion = "2.4.1"
+const devVersion = "2.5.0"
 
 func init() {
 	if version == "" {
@@ -262,9 +261,19 @@ type serveFlags struct {
 	l2                                                 int
 	hold                                               time.Duration
 	tuiAfter                                           bool
-	syslog, syslogNet, syslogFmt, syslogCA, syslogBase string
-	syslogSev                                          int
-	syslogASCII                                        bool
+}
+
+// Parts compiled in separately add their flags and start with the
+// collector, once the licence and the detector exist.
+var (
+	extFlags []func(fs *flag.FlagSet)
+	extServe []func(x serveExt) (stop func())
+)
+
+type serveExt struct {
+	data string
+	lic  *license.Checker
+	det  *detect.Detector
 }
 
 func serve(args []string, demo bool) {
@@ -280,13 +289,9 @@ func serve(args []string, demo bool) {
 	fs.BoolVar(&f.tls, "tls", false, "serve the web UI over HTTPS with a certificate traffic66 keeps in the data directory (registered installations)")
 	fs.StringVar(&f.tlsCert, "tls-cert", "", "serve the web UI over HTTPS with this certificate (registered installations)")
 	fs.StringVar(&f.tlsKey, "tls-key", "", "the private key for -tls-cert")
-	fs.StringVar(&f.syslog, "syslog", "", "send findings to a syslog collector at host:port (registered installations)")
-	fs.StringVar(&f.syslogNet, "syslog-transport", "udp", "how to reach the collector: udp, tcp or tls")
-	fs.StringVar(&f.syslogFmt, "syslog-format", "cef", "message format: cef (ArcSight, QRadar, Splunk, Graylog, Elastic), leef (QRadar), json (Elastic Common Schema), text")
-	fs.IntVar(&f.syslogSev, "syslog-min-sev", 1, "least severity to send: 1 low, 2 medium, 3 high")
-	fs.BoolVar(&f.syslogASCII, "syslog-ascii", false, "escape everything outside ASCII, for collectors that mangle UTF-8")
-	fs.StringVar(&f.syslogCA, "syslog-ca", "", "certificate authority to trust for -syslog-transport tls")
-	fs.StringVar(&f.syslogBase, "syslog-url", "", "web address of this installation, to build the evidence link with")
+	for _, x := range extFlags {
+		x(fs)
+	}
 	fs.StringVar(&f.listen, "listen", "sflow=:6343,netflow=:2055,ipfix=:4739", "UDP collectors as name=addr, comma separated; every port accepts every protocol; empty disables")
 	fs.StringVar(&f.user, "user", "admin", "login user")
 	fs.StringVar(&f.password, "password", "", "login password for this run instead of the stored one (or set TRAFFIC66_PASSWORD)")
@@ -412,11 +417,11 @@ func serve(args []string, demo bool) {
 	}
 
 	det := detect.New(st, inv, detect.Config{})
-	if sender := startSyslog(f, lic); sender != nil {
-		defer sender.Close()
-		base := f.syslogBase
-		det.OnFinding = func(fi store.Finding) {
-			sender.Send(syslogout.FromFinding(fi, syslogout.PhaseStart, base))
+	if offline == nil {
+		for _, x := range extServe {
+			if stop := x(serveExt{data: f.data, lic: lic, det: det}); stop != nil {
+				defer stop()
+			}
 		}
 	}
 	if demo {
@@ -978,29 +983,4 @@ func setGoMemoryLimit(frac float64) {
 	}
 	debug.SetMemoryLimit(lim)
 	log.Printf("memory: database %d MB and program %d MB (soft), from -memory %.2f", lim>>20, lim>>20, frac)
-}
-
-// startSyslog prepares the syslog feed, or returns nil when there is
-// nothing to send to. Unlike HTTPS, a feed that cannot run is not a reason
-// to stop: findings keep being made and keep showing in the web UI, and
-// the one thing lost is that they also go somewhere else.
-func startSyslog(f serveFlags, lic *license.Checker) *syslogout.Sender {
-	if f.syslog == "" {
-		return nil
-	}
-	if lic == nil || !lic.State().Allowed(license.FeatSyslog) {
-		log.Printf("syslog: sending findings to a collector is for registered installations; findings are still made and shown in the web UI")
-		return nil
-	}
-	cfg := syslogout.Config{
-		Enabled: true, Address: f.syslog, Network: f.syslogNet,
-		Format: syslogout.Format(f.syslogFmt), MinSev: f.syslogSev,
-		ASCII: f.syslogASCII, CAFile: f.syslogCA, BaseURL: f.syslogBase,
-	}
-	if err := cfg.Check(); err != nil {
-		fatalf("%v", err)
-	}
-	syslogout.Version = version
-	log.Printf("syslog: sending findings to %s over %s as %s", cfg.Address, cfg.Network, cfg.Format)
-	return syslogout.New(cfg)
 }

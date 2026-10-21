@@ -3,6 +3,15 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.0
+
+- Overview: inbound and outbound follow the interface charted above.
+- Rooms and racks: new look; a device and its ports are edited in one form.
+- Filter chips only on the traffic pages.
+- Black is the default theme.
+- Syslog for findings can be set from the findings page.
+- Links that show one address's bandwidth on another platform (registered installations).
+
 ## 2.4.1
 
 - Overview: Inbound and Outbound now mean which way the bytes went — what arrived at your hosts, what they sent — instead of who opened the connection. On a network whose hosts only connect outwards, Inbound used to be empty (and said the data was still arriving), although most of its traffic is the replies it downloads.

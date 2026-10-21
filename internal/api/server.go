@@ -29,6 +29,9 @@ import (
 	"github.com/githubflyideas/traffic66/internal/store"
 )
 
+// extRoutes add routes from parts that are compiled in separately.
+var extRoutes []func(s *Server, mux *http.ServeMux, api, adminAPI func(string, http.HandlerFunc))
+
 // Server wires the API together.
 type Server struct {
 	Store   *store.Store
@@ -171,8 +174,6 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/findings", s.data((*Server).setFindings))
 	api("GET /api/cleanup", s.getCleanup)
 	adminAPI("POST /api/cleanup", s.postCleanup)
-	api("GET /api/cleanup/iface", s.getCleanupIface)
-	adminAPI("POST /api/cleanup/iface", s.postCleanupIface)
 	api("GET /api/sandbox", s.getSandbox)
 	api("POST /api/sandbox/files", s.putSandboxFile)
 	adminAPI("DELETE /api/sandbox/files", s.deleteSandbox)
@@ -184,6 +185,9 @@ func (s *Server) Handler() http.Handler {
 	adminAPI("POST /api/geo", s.putGeo)
 	adminAPI("DELETE /api/geo", s.deleteGeo)
 	adminAPI("POST /api/geo/dbip", s.updateDBIP)
+	for _, f := range extRoutes {
+		f(s, mux, api, adminAPI)
+	}
 	static := http.FileServer(http.FS(s.Static))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")

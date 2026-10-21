@@ -43,3 +43,41 @@ func TestBytesDirection(t *testing.T) {
 		t.Error("a bad byte direction was accepted")
 	}
 }
+
+// A data centre whose service addresses are public and not listed as its
+// own networks: every flow is transit by address, so only the interface
+// can say which way it went. In through the uplink is inbound, out
+// through it is outbound, the same split as the interface's own chart.
+func TestInterfaceDirection(t *testing.T) {
+	s, err := Open(Options{Dir: t.TempDir(), Threads: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	ts := time.Now().UTC().Add(-10 * time.Minute)
+	user, vip := "198.51.100.7", "203.0.113.10"
+	base := Row{TS: ts, Client: user, Server: vip, Cli4: 0xC6336407, Srv4: 0xCB00710A, Dir: DirTransit, Pkts: 1, Flows: 1, Exporter: "10.0.0.1"}
+	req, resp := base, base
+	req.Src, req.Dst, req.Wire, req.InIf, req.OutIf = user, vip, 1000, 7, 3      // in through the uplink 7
+	resp.Src, resp.Dst, resp.Wire, resp.InIf, resp.OutIf = vip, user, 9000, 3, 7 // back out through it
+	resp.Dup = true                                                              // and seen by a second device too
+	if err := s.AppendRows([]Row{req, resp}); err != nil {
+		t.Fatal(err)
+	}
+	q := func(f ...Filter) uint64 {
+		tot, err := s.Totals(Query{From: ts.Add(-time.Minute), To: ts.Add(time.Minute), Filters: f})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tot.Wire
+	}
+	if got := q(Filter{Field: "bytes", Value: "in"}); got != 0 {
+		t.Errorf("bytes in = %d: by address nothing is inside", got)
+	}
+	if got := q(Filter{Field: "iface_in", Value: "10.0.0.1/7"}); got != 1000 {
+		t.Errorf("in through the uplink = %d, want 1000", got)
+	}
+	if got := q(Filter{Field: "iface_out", Value: "10.0.0.1/7"}); got != 9000 {
+		t.Errorf("out through the uplink = %d, want 9000 (its own duplicate counts)", got)
+	}
+}
