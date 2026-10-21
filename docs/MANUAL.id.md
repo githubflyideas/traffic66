@@ -508,7 +508,7 @@ setiap halaman menampilkan nomor instalasi 8 digit; kirim nomor itu kepada
 pembuatnya, lalu letakkan `license.json` yang Anda terima di direktori data.
 Kontak: <route66traffic66@gmail.com>.
 
-Instalasi yang belum terdaftar menampilkan banner sponsor kecil di bilah sisi kiri. Browser Anda memuatnya dari GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)), atau bila GitHub tidak terjangkau, dari salinan yang diunduh server traffic66 dari sana dan disimpan di `<data>/sponsor`; traffic66 tidak mengirim data apa pun tentang Anda atau instalasi. Mendaftar akan menghapusnya.
+Instalasi yang belum terdaftar menampilkan strip sponsor di bagian atas halaman. Hanya browser Anda yang memuatnya, dari GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)); server traffic66 tidak pernah menghubungi GitHub untuk itu dan tidak menyimpan salinan. Browser yang tidak dapat menjangkau GitHub menampilkan teks bawaan singkat sebagai gantinya. Tidak ada data tentang Anda atau instalasi yang dikirim. Mendaftar akan menghapusnya.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

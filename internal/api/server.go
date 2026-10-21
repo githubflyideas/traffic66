@@ -183,8 +183,6 @@ func (s *Server) Handler() http.Handler {
 	adminAPI("DELETE /api/sandbox/files", s.deleteSandbox)
 	api("POST /api/sandbox/active", s.putSandboxActive)
 	adminAPI("POST /api/license", s.putLicense)
-	api("GET /api/sponsor", s.getSponsor)
-	api("GET /api/sponsor/img/{name}", s.getSponsorImg)
 	adminAPI("POST /api/logo", s.putLogo)
 	adminAPI("DELETE /api/logo", s.deleteLogo)
 	api("GET /api/geo", s.getGeo)

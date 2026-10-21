@@ -67,4 +67,4 @@ macOS: run `xattr -dr com.apple.quarantine .` in the folder first. PowerShell: u
 Web UI: **Help** in the menu. GitHub: [MANUAL.md](docs/MANUAL.md)
 
 Free for evaluation and for organizations under 100 people ([licence](LICENSE.md)).
-Unregistered builds show a small sponsor banner, loaded by your browser from GitHub or cached by the server from GitHub (no data sent); registering removes it.
+Unregistered builds show a sponsor strip, loaded only by your browser from GitHub (the server never fetches it, and no data is sent); registering removes it.
