@@ -141,7 +141,7 @@
 "thr.table": "Coincidencias",
 "thr.sub": "En rojo: un equipo interno envió datos a una dirección listada",
 "thr.none": "No hay coincidencias en este periodo",
-"thr.no_lists": "No hay listas de amenazas cargadas. Escriba una dirección o red por línea en data/threats/<nombre>.txt y reinicie.",
+"thr.no_lists": "Aún no hay listas de amenazas. Importe una abajo: un archivo o un texto pegado, una dirección o red por línea.",
 "rec.title": "Registros de flujo",
 "rec.latest": "Últimos {n}",
 "rec.columns": "Columnas",
@@ -703,5 +703,17 @@
 "rk.quiet": "no envía ahora",
 "rk.edit": "Editar",
 "rk.save": "Guardar",
-"rk.cancel": "Cancelar"
+"rk.cancel": "Cancelar",
+"thr.manage": "Listas de amenazas",
+"thr.manage_sub": "Una dirección o red por línea; la lista se aplica a los flujos desde que se importa",
+"thr.col_name": "Lista",
+"thr.col_entries": "Entradas",
+"thr.import": "Importar una lista",
+"thr.name_ph": "nombre de la lista, p. ej. spamhaus-drop",
+"thr.file": "Elegir archivo…",
+"thr.paste_ph": "o pegue aquí direcciones y redes, una por línea",
+"thr.import_btn": "Importar",
+"thr.remove": "Quitar",
+"thr.confirm_rm": "¿Quitar la lista {x}?",
+"thr.imported": "{n} entradas importadas en {x}."
 }

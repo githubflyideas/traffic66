@@ -931,6 +931,25 @@ func (t *Threats) Match(a netip.Addr) string {
 	return ""
 }
 
+// Remove drops one list.
+func (t *Threats) Remove(name string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for a, n := range t.exact {
+		if n == name {
+			delete(t.exact, a)
+		}
+	}
+	keep := t.nets[:0]
+	for _, x := range t.nets {
+		if x.Name != name {
+			keep = append(keep, x)
+		}
+	}
+	t.nets = keep
+	delete(t.lists, name)
+}
+
 func (t *Threats) Lists() map[string]int {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

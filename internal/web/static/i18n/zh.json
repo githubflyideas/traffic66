@@ -141,7 +141,7 @@
 "thr.table": "命中记录",
 "thr.sub": "红色：内网主机向名单地址发送了数据",
 "thr.none": "这段时间没有命中",
-"thr.no_lists": "还没有加载威胁名单。在 data/threats/<名字>.txt 里每行写一个地址或网段，然后重启。",
+"thr.no_lists": "还没有加载威胁名单。在下方导入：选一个文件或直接粘贴，每行一个地址或网段。",
 "rec.title": "流记录",
 "rec.latest": "最近 {n} 条",
 "rec.columns": "列",
@@ -703,5 +703,17 @@
 "rk.quiet": "当前未发送",
 "rk.edit": "修改",
 "rk.save": "保存",
-"rk.cancel": "取消"
+"rk.cancel": "取消",
+"thr.manage": "威胁名单",
+"thr.manage_sub": "每行一个地址或网段；名单导入后对之后的流量生效",
+"thr.col_name": "名单",
+"thr.col_entries": "条目",
+"thr.import": "导入名单",
+"thr.name_ph": "名单名称，例如 spamhaus-drop",
+"thr.file": "选择文件…",
+"thr.paste_ph": "或把地址和网段粘贴到这里，每行一个",
+"thr.import_btn": "导入",
+"thr.remove": "删除",
+"thr.confirm_rm": "删除名单“{x}”？",
+"thr.imported": "已导入 {n} 条到“{x}”。"
 }

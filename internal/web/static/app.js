@@ -1936,7 +1936,39 @@ views.threats = async (el) => {
     </div></div>
     ${panel('c12', t('thr.table'), t('thr.sub'), nLists === 0 ? `<div class="empty">${t('thr.no_lists')}</div>` : `<table><tr><th>${t('col.list')}</th><th>${t('col.client')}</th><th>${t('col.server')}</th><th>${t('col.country')}</th><th>${t('col.direction')}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.flows')}</th></tr>
       ${rows.map(r => { const [cc, dir] = r.extra.split('|'); const out = dir === '1'; return `<tr><td>${status(out ? 'bad' : 'warn', r.key)}</td><td>${ipCell(r.key2)}</td><td>${ipCell(r.key3)}</td><td>${cc ? V('country', cc, country(cc)) : ''}</td><td class="${out ? 'up' : ''}">${t('dir.' + dir)}</td><td class="num ${out ? 'up' : ''}">${fmtBytes(r.wire)}</td><td class="num">${nf(r.flows)}</td></tr>`; }).join('') || `<tr><td colspan="7" class="empty">${t('thr.none')}</td></tr>`}</table>`)}
+    ${panel('c12', t('thr.manage'), t('thr.manage_sub'), `<table><tr><th>${t('thr.col_name')}</th><th class="num">${t('thr.col_entries')}</th><th></th></tr>
+      ${Object.keys(lists).sort().map(n => `<tr><td>${esc(n)}</td><td class="num">${nf(lists[n])}</td><td style="text-align:end">${admOnly(`<button class="btn sm danger" data-thrm="${esc(n)}">${esc(t('thr.remove'))}</button>`)}</td></tr>`).join('') || `<tr><td colspan="3" class="empty">${esc(t('thr.no_lists'))}</td></tr>`}</table>
+      ${admOnly(`<h3 class="subhead">${esc(t('thr.import'))}</h3><div class="thrimp">
+        <input id="thrName" maxlength="40" placeholder="${esc(t('thr.name_ph'))}">
+        <label class="btn" style="cursor:pointer">${esc(t('thr.file'))}<input type="file" id="thrFile" accept=".txt,.csv,.netset,.list,text/plain" hidden></label>
+        <span id="thrFileName" class="muted" style="font-size:12.5px"></span></div>
+        <textarea class="inv" id="thrText" rows="5" spellcheck="false" placeholder="${esc(t('thr.paste_ph'))}"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="primary" id="thrGo">${esc(t('thr.import_btn'))}</button><span id="thrMsg" style="font-size:13px"></span></div>`)}`)}
   </div>`;
+  el.querySelectorAll('[data-thrm]').forEach(b => b.onclick = async () => {
+    if (!confirm(t('thr.confirm_rm', {x: b.dataset.thrm}))) return;
+    const r = await fetch('/api/threats/lists?name=' + encodeURIComponent(b.dataset.thrm), {method: 'DELETE'});
+    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || r.statusText); return; }
+    render();
+  });
+  const file = $('#thrFile'), go = $('#thrGo');
+  if (!go) return;
+  let fromFile = '';
+  file.onchange = async () => {
+    const f = file.files[0]; if (!f) return;
+    fromFile = await f.text();
+    $('#thrFileName').textContent = f.name;
+    // a list is usually called what its file is called
+    if (!$('#thrName').value) $('#thrName').value = f.name.replace(/\.[^.]*$/, '').replace(/[^A-Za-z0-9._-]+/g, '-').slice(0, 40);
+  };
+  go.onclick = async () => {
+    const msg = $('#thrMsg'), text = $('#thrText').value.trim() || fromFile;
+    const r = await fetch('/api/threats/lists', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: $('#thrName').value.trim(), text})});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { msg.style.color = 'var(--crit)'; msg.textContent = j.error || r.statusText; return; }
+    toast(t('thr.imported', {n: nf(j.entries), x: j.name}));
+    render();
+  };
 };
 
 const REC_COLS = [['time', 1], ['client', 1], ['cport', 1], ['server', 1], ['port', 1], ['proto', 1], ['app', 1], ['country', 1], ['encap', 1], ['traffic', 1], ['packets', 1], ['device', 1],
