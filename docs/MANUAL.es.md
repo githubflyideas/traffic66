@@ -337,7 +337,7 @@ Ethernet a NetFlow/IPFIX (`-l2-overhead`).
 ## 7. Nombres, países y listas de amenazas
 
 Haga clic en cualquier dirección y elija **Ponerle nombre…**, o use
-**Configuración → Nombres**. Los nombres se guardan en `inventory.txt`
+**Inventario**. Los nombres se guardan en `inventory.txt`
 dentro del directorio de datos:
 
 ```

@@ -305,7 +305,7 @@ adds 18 bytes per packet of Ethernet overhead to NetFlow/IPFIX
 
 ## 7. Names, countries/regions and threat lists
 
-Click any address and choose **Name it…**, or use **Settings → Names**.
+Click any address and choose **Name it…**, or use **Inventory**.
 Names are kept in `inventory.txt` in the data directory:
 
 ```

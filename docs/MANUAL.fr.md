@@ -343,7 +343,7 @@ minutes et ajoute 18 octets par paquet de surcoût Ethernet à NetFlow/IPFIX
 ## 7. Noms, pays et listes de menaces
 
 Cliquez sur n'importe quelle adresse et choisissez **Nommer…**, ou utilisez
-**Paramètres → Noms**. Les noms sont enregistrés dans `inventory.txt` dans
+**Inventaire**. Les noms sont enregistrés dans `inventory.txt` dans
 le répertoire de données :
 
 ```
