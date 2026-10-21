@@ -141,7 +141,7 @@
 "thr.table": "일치 항목",
 "thr.sub": "빨간색: 내부 호스트가 목록의 주소로 데이터를 보냄",
 "thr.none": "이 기간에는 일치 항목이 없습니다",
-"thr.no_lists": "불러온 위협 목록이 없습니다. data/threats/<name>.txt에 한 줄에 하나씩 주소나 네트워크를 적고 다시 시작하세요.",
+"thr.no_lists": "아직 불러온 위협 목록이 없습니다. 아래에서 가져오세요. 파일이나 붙여 넣기로, 한 줄에 주소나 네트워크 하나씩입니다.",
 "rec.title": "플로 레코드",
 "rec.latest": "최근 {n}건",
 "rec.columns": "열",
@@ -703,5 +703,17 @@
 "rk.quiet": "현재 전송 없음",
 "rk.edit": "수정",
 "rk.save": "저장",
-"rk.cancel": "취소"
+"rk.cancel": "취소",
+"thr.manage": "위협 목록",
+"thr.manage_sub": "한 줄에 주소나 네트워크 하나씩. 가져온 시점 이후의 플로에 적용됩니다",
+"thr.col_name": "목록",
+"thr.col_entries": "항목",
+"thr.import": "목록 가져오기",
+"thr.name_ph": "목록 이름, 예: spamhaus-drop",
+"thr.file": "파일 선택…",
+"thr.paste_ph": "또는 주소와 네트워크를 한 줄에 하나씩 여기에 붙여 넣기",
+"thr.import_btn": "가져오기",
+"thr.remove": "삭제",
+"thr.confirm_rm": "목록 \"{x}\"을(를) 삭제할까요?",
+"thr.imported": "\"{x}\"에 {n}개 항목을 가져왔습니다."
 }

@@ -141,7 +141,7 @@
 "thr.table": "Correspondances",
 "thr.sub": "En rouge : un hôte interne a envoyé des données vers une adresse listée",
 "thr.none": "Aucune correspondance sur cette période",
-"thr.no_lists": "Aucune liste de menaces chargée. Écrivez une adresse ou un réseau par ligne dans data/threats/<nom>.txt puis redémarrez.",
+"thr.no_lists": "Aucune liste de menaces chargée. Importez-en une ci-dessous : un fichier ou un collage, une adresse ou un réseau par ligne.",
 "rec.title": "Enregistrements de flux",
 "rec.latest": "{n} derniers",
 "rec.columns": "Colonnes",
@@ -703,5 +703,17 @@
 "rk.quiet": "n’envoie pas en ce moment",
 "rk.edit": "Modifier",
 "rk.save": "Enregistrer",
-"rk.cancel": "Annuler"
+"rk.cancel": "Annuler",
+"thr.manage": "Listes de menaces",
+"thr.manage_sub": "Une adresse ou un réseau par ligne ; une liste s’applique aux flux dès son import",
+"thr.col_name": "Liste",
+"thr.col_entries": "Entrées",
+"thr.import": "Importer une liste",
+"thr.name_ph": "nom de la liste, p. ex. spamhaus-drop",
+"thr.file": "Choisir un fichier…",
+"thr.paste_ph": "ou collez ici adresses et réseaux, un par ligne",
+"thr.import_btn": "Importer",
+"thr.remove": "Retirer",
+"thr.confirm_rm": "Retirer la liste {x} ?",
+"thr.imported": "{n} entrées importées dans {x}."
 }

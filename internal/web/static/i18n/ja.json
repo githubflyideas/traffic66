@@ -141,7 +141,7 @@
 "thr.table": "一致した通信",
 "thr.sub": "赤：内部ホストがリスト掲載アドレスへデータを送信",
 "thr.none": "この期間に一致はありません",
-"thr.no_lists": "脅威リストが読み込まれていません。data/threats/<名前>.txt に 1 行 1 アドレスまたはネットワークを書き、再起動してください。",
+"thr.no_lists": "脅威リストはまだ読み込まれていません。下から取り込めます。ファイルか貼り付けで、1 行に 1 つのアドレスまたはネットワークです。",
 "rec.title": "フローレコード",
 "rec.latest": "最新 {n} 件",
 "rec.columns": "列",
@@ -703,5 +703,17 @@
 "rk.quiet": "現在送信なし",
 "rk.edit": "編集",
 "rk.save": "保存",
-"rk.cancel": "キャンセル"
+"rk.cancel": "キャンセル",
+"thr.manage": "脅威リスト",
+"thr.manage_sub": "1 行に 1 つのアドレスまたはネットワーク。取り込んだ時点以降のフローに適用されます",
+"thr.col_name": "リスト",
+"thr.col_entries": "件数",
+"thr.import": "リストを取り込む",
+"thr.name_ph": "リスト名（例: spamhaus-drop）",
+"thr.file": "ファイルを選択…",
+"thr.paste_ph": "またはここにアドレスやネットワークを 1 行に 1 つずつ貼り付け",
+"thr.import_btn": "取り込む",
+"thr.remove": "削除",
+"thr.confirm_rm": "リスト「{x}」を削除しますか？",
+"thr.imported": "{n} 件を「{x}」に取り込みました。"
 }

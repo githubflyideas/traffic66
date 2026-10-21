@@ -163,6 +163,8 @@ func (s *Server) Handler() http.Handler {
 	adminAPI("POST /api/inventory", s.putInventory)
 	adminAPI("POST /api/iface", s.putIface)
 	api("GET /api/racks", s.getRacks)
+	adminAPI("POST /api/threats/lists", s.putThreatList)
+	adminAPI("DELETE /api/threats/lists", s.deleteThreatList)
 	adminAPI("POST /api/racks/device", s.putRackDevice)
 	adminAPI("POST /api/racks/iface", s.putRackIface)
 	api("GET /api/findings", s.data((*Server).findings))

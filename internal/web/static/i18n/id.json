@@ -141,7 +141,7 @@
 "thr.table": "Kecocokan",
 "thr.sub": "Merah: host internal mengirim data ke alamat terdaftar",
 "thr.none": "Tidak ada kecocokan pada periode ini",
-"thr.no_lists": "Belum ada daftar ancaman. Tulis satu alamat atau jaringan per baris di data/threats/<nama>.txt lalu mulai ulang.",
+"thr.no_lists": "Belum ada daftar ancaman. Impor di bawah: berkas atau tempelan, satu alamat atau jaringan per baris.",
 "rec.title": "Catatan flow",
 "rec.latest": "{n} terakhir",
 "rec.columns": "Kolom",
@@ -703,5 +703,17 @@
 "rk.quiet": "sedang tidak mengirim",
 "rk.edit": "Ubah",
 "rk.save": "Simpan",
-"rk.cancel": "Batal"
+"rk.cancel": "Batal",
+"thr.manage": "Daftar ancaman",
+"thr.manage_sub": "Satu alamat atau jaringan per baris; daftar berlaku untuk flow sejak diimpor",
+"thr.col_name": "Daftar",
+"thr.col_entries": "Entri",
+"thr.import": "Impor daftar",
+"thr.name_ph": "nama daftar, mis. spamhaus-drop",
+"thr.file": "Pilih berkas…",
+"thr.paste_ph": "atau tempel alamat dan jaringan di sini, satu per baris",
+"thr.import_btn": "Impor",
+"thr.remove": "Hapus",
+"thr.confirm_rm": "Hapus daftar {x}?",
+"thr.imported": "{n} entri diimpor ke {x}."
 }

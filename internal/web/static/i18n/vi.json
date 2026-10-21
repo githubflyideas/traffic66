@@ -141,7 +141,7 @@
 "thr.table": "Kết quả khớp",
 "thr.sub": "Đỏ: một máy nội bộ đã gửi dữ liệu đến địa chỉ trong danh sách",
 "thr.none": "Không có kết quả khớp trong khoảng này",
-"thr.no_lists": "Chưa nạp danh sách đe dọa nào. Ghi mỗi dòng một địa chỉ hoặc một mạng vào data/threats/<name>.txt rồi khởi động lại.",
+"thr.no_lists": "Chưa nạp danh sách mối đe dọa nào. Nhập bên dưới: một tệp hoặc dán trực tiếp, mỗi dòng một địa chỉ hoặc dải mạng.",
 "rec.title": "Bản ghi luồng",
 "rec.latest": "{n} mới nhất",
 "rec.columns": "Cột",
@@ -703,5 +703,17 @@
 "rk.quiet": "hiện không gửi",
 "rk.edit": "Sửa",
 "rk.save": "Lưu",
-"rk.cancel": "Hủy"
+"rk.cancel": "Hủy",
+"thr.manage": "Danh sách mối đe dọa",
+"thr.manage_sub": "Mỗi dòng một địa chỉ hoặc dải mạng; danh sách áp dụng cho luồng kể từ lúc nhập",
+"thr.col_name": "Danh sách",
+"thr.col_entries": "Mục",
+"thr.import": "Nhập danh sách",
+"thr.name_ph": "tên danh sách, ví dụ spamhaus-drop",
+"thr.file": "Chọn tệp…",
+"thr.paste_ph": "hoặc dán địa chỉ và dải mạng vào đây, mỗi dòng một mục",
+"thr.import_btn": "Nhập",
+"thr.remove": "Xóa",
+"thr.confirm_rm": "Xóa danh sách {x}?",
+"thr.imported": "Đã nhập {n} mục vào {x}."
 }

@@ -141,7 +141,7 @@
 "thr.table": "Treffer",
 "thr.sub": "Rot: Ein interner Host hat Daten an eine gelistete Adresse gesendet",
 "thr.none": "Keine Treffer in diesem Zeitraum",
-"thr.no_lists": "Keine Bedrohungslisten geladen. Legen Sie eine Adresse oder ein Netz pro Zeile in data/threats/<name>.txt ab und starten Sie neu.",
+"thr.no_lists": "Noch keine Bedrohungsliste geladen. Unten importieren: als Datei oder eingefügt, eine Adresse oder ein Netz pro Zeile.",
 "rec.title": "Flow-Datensätze",
 "rec.latest": "Neueste {n}",
 "rec.columns": "Spalten",
@@ -703,5 +703,17 @@
 "rk.quiet": "sendet gerade nicht",
 "rk.edit": "Bearbeiten",
 "rk.save": "Speichern",
-"rk.cancel": "Abbrechen"
+"rk.cancel": "Abbrechen",
+"thr.manage": "Bedrohungslisten",
+"thr.manage_sub": "Eine Adresse oder ein Netz pro Zeile; eine Liste gilt für Flows ab dem Import",
+"thr.col_name": "Liste",
+"thr.col_entries": "Einträge",
+"thr.import": "Liste importieren",
+"thr.name_ph": "Listenname, z. B. spamhaus-drop",
+"thr.file": "Datei wählen…",
+"thr.paste_ph": "oder Adressen und Netze hier einfügen, eine pro Zeile",
+"thr.import_btn": "Importieren",
+"thr.remove": "Entfernen",
+"thr.confirm_rm": "Liste „{x}“ entfernen?",
+"thr.imported": "{n} Einträge in „{x}“ importiert."
 }

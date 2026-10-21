@@ -141,7 +141,7 @@
 "thr.table": "Matches",
 "thr.sub": "Red: an internal host sent data to a listed address",
 "thr.none": "No matches in this period",
-"thr.no_lists": "No threat lists loaded. Put one address or network per line in data/threats/<name>.txt and restart.",
+"thr.no_lists": "No threat list is loaded yet. Import one below: a file or a paste, one address or network per line.",
 "rec.title": "Flow records",
 "rec.latest": "Latest {n}",
 "rec.columns": "Columns",
@@ -703,5 +703,17 @@
 "rk.quiet": "not sending now",
 "rk.edit": "Edit",
 "rk.save": "Save",
-"rk.cancel": "Cancel"
+"rk.cancel": "Cancel",
+"thr.manage": "Threat lists",
+"thr.manage_sub": "One address or network per line; a list applies to flows from the moment it is imported",
+"thr.col_name": "List",
+"thr.col_entries": "Entries",
+"thr.import": "Import a list",
+"thr.name_ph": "list name, e.g. spamhaus-drop",
+"thr.file": "Choose file…",
+"thr.paste_ph": "or paste addresses and networks here, one per line",
+"thr.import_btn": "Import",
+"thr.remove": "Remove",
+"thr.confirm_rm": "Remove the list {x}?",
+"thr.imported": "Imported {n} entries into {x}."
 }
