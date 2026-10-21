@@ -169,7 +169,7 @@ async function loadLang(code) {
 }
 // the theme button shows the current theme; a click goes to the next one
 function themeLabel() {
-  const b = $('#theme'), cur = window.t66Theme ? t66Theme.get() : 'light';
+  const b = $('#theme'), cur = window.t66Theme ? t66Theme.get() : 'black';
   b.querySelector('span').textContent = t('theme.' + cur);
   b.title = t('theme.label') + ': ' + t('theme.' + cur) + ' · ' + t('theme.next');
   b.setAttribute('aria-label', b.title);
@@ -515,7 +515,7 @@ function axisTicks(from, to, max, span) {
 // dataFrom is when the stored data begins: the buckets that end before it
 // are left out (a gap), not drawn as traffic of zero. Lines marked keep
 // (a baseline from another day, device counters) are not cut.
-function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = fmtBps, settledTo = 0, dataFrom = 0}) {
+function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = fmtBps, settledTo = 0, dataFrom = 0, empty = ''}) {
   const stepMs = times && times.length > 1 ? times[1] - times[0] : 0;
   if (dataFrom && times) {
     const cut = d => (d || []).map((v, i) => times[i] + stepMs <= dataFrom ? null : v);
@@ -526,7 +526,7 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
     const W = el.clientWidth, H = el.clientHeight; if (W < 120 || H < 60 || !times || !times.length) { el.innerHTML = ''; return; }
     // nothing at all to draw: say so instead of an axis from 0 to 1
     const has = d => (d || []).some(v => v != null && v >= 0);
-    if (!areas.some(a => has(a.data)) && !lines.some(l => has(l.data))) { el.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
+    if (!areas.some(a => has(a.data)) && !lines.some(l => has(l.data))) { el.innerHTML = `<div class="empty">${empty || emptyText()}</div>`; return; }
     const rtl = document.documentElement.dir === 'rtl';
     const L = rtl ? 8 : 50, R = rtl ? 50 : 8, T = 8, B = 22, n = times.length;
     const x = i => rtl ? W - R - (W - L - R) * i / Math.max(1, n - 1) : L + (W - L - R) * i / Math.max(1, n - 1);
@@ -740,7 +740,9 @@ const FBAR_VIEWS = new Set(['topn', 'traffic']);
 function renderFbar() {
   const bar = $('#fbar'), on = FBAR_VIEWS.has(state.v);
   bar.hidden = !on;
-  $('#filters').hidden = !on && !state.f.length;
+  // the pages that are not about the traffic (settings, the inventory,
+  // rooms and racks, cleanup...) are not filtered, so they show no chips
+  $('#filters').hidden = NOBAR_VIEWS.has(state.v) || (!on && !state.f.length);
   if (bar.hidden) return;
   bar.innerHTML = FBAR.map(([f, lab]) => {
     const cur = state.f.find(x => x.f === f && !x.neg);
@@ -936,17 +938,23 @@ views.help = async (el) => {
   el.querySelectorAll('a[data-hlang]').forEach(a => a.onclick = e => { e.preventDefault(); helpLang = a.dataset.hlang; render(); window.scrollTo(0, 0); });
 };
 views.overview = async (el) => {
-  // total, or only the bytes that came in or only those that went out,
-  // from your networks' point of view — which way the bytes went, not who
-  // opened the connection: a network whose hosts only connect outwards
-  // still downloads, and those replies are its inbound traffic
+  // total, or only what came in or only what went out. Which way is read
+  // off the interface charted above, the same way that chart reads it: in
+  // through it is inbound, out through it outbound. Telling it by address
+  // instead (outside to inside) left the chart empty wherever the served
+  // addresses are public and not listed as your networks, or private at
+  // both ends: by address all of that is transit or internal. Without an
+  // interface, the address is all there is to go by.
   const od = ['inbound', 'outbound'].includes(state.od) ? state.od : '';
-  const [d, ifs, fd] = await Promise.all([api('overview', {}, od ? [...state.f, {f: 'bytes', v: od === 'inbound' ? 'in' : 'out', neg: false}] : state.f), inSB() ? null : loadIfaces(), api('findings', {limit: 3}).catch(() => null)]);
+  const [d, ifs, fd] = await Promise.all([api('overview'), inSB() ? null : loadIfaces(), api('findings', {limit: 3}).catch(() => null)]);
   // the interface chart: the interface picked at the top, else the default, else the busiest
   const ifl = ifs?.ifaces || [], ikey = f => f.exporter + '/' + f.ifindex;
   const ifk = state.ifv && state.ifv !== 'all' ? state.ifv : (ifs?.default || ((ifl.find(f => !f.peer) || ifl[0]) ? ikey(ifl.find(f => !f.peer) || ifl[0]) : ''));
   const ifSel = ifl.find(f => ikey(f) === ifk);
-  const [iIn, iOut] = ifk && !inSB() ? await Promise.all(['if_in', 'if_out'].map(by => api('series', {by, measure: 'wire', top: 20, dup: 1}, [...state.f, {f: 'iface', v: ifk, neg: false}]).catch(() => null))) : [null, null];
+  const viaIf = ifk && !inSB();
+  const [iIn, iOut, dirSeries] = await Promise.all([
+    ...(viaIf ? ['if_in', 'if_out'].map(by => api('series', {by, measure: 'wire', top: 20, dup: 1}, [...state.f, {f: 'iface', v: ifk, neg: false}]).catch(() => null)) : [null, null]),
+    od ? api('series', {by: 'app', measure: 'wire', top: 8, dup: 1}, [...state.f, viaIf ? {f: od === 'inbound' ? 'iface_in' : 'iface_out', v: ifk, neg: false} : {f: 'bytes', v: od === 'inbound' ? 'in' : 'out', neg: false}]).catch(() => null) : null]);
   const tot = d.totals, base = d.base_totals, basis = d.basis;
   // a baseline that was nearly idle gives figures like +57,695%: more than
   // ten times the baseline reads ">10×", and a baseline under 1 kB is no
@@ -964,9 +972,9 @@ views.overview = async (el) => {
     acc = any ? {n: nf(worst * 100, 1) + '<small>%</small>', d: bad ? t('kpi.check') : t('kpi.trust'), kind: bad ? 'warn' : 'ok'} : {n: '—', d: t('kpi.no_flow'), kind: null};
   }
   const peakTxt = d.peak_at ? t('kpi.peak', {v: fmtBps(d.peak_bps), t: fmtTime(d.peak_at, spanMs())}) : '';
-  const series = d.series || {times: [], names: [], values: []};
+  const series = (od ? dirSeries : d.series) || {times: [], names: [], values: []};
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
-  const lines = d.baseline && basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, keep: true, data: d.baseline}] : [];
+  const lines = !od && d.baseline && basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, keep: true, data: d.baseline}] : [];
   const dirParts = (d.dir || []).map((p, i) => ({n: t('dir.' + p.key), v: p.wire, c: color(i), val: DIRS[p.key]}));
   const protoParts = (d.proto || []).map((p, i) => ({n: p.key === '__other__' ? t('other') : proto(+p.key), v: p.wire, c: color(i, p.key), val: p.key === '__other__' ? null : p.key}));
   const cl = d.top_clients || [], cmax = Math.max(1, ...cl.map(r => r.wire));
@@ -984,8 +992,8 @@ views.overview = async (el) => {
     ${iIn ? `<div class="panel c12"><div class="ph"><h2>${t('if.bw')} · ${esc(ifSel ? ifName(ifSel) : ifk)}${ifSel?.tag ? `<span class="iftag">${esc(ifSel.tag)}</span>` : ''}</h2><span class="sub">${esc(t('ov.if_sub'))}</span></div>
       <div class="chart" id="chIf" style="height:220px" aria-label="${esc(t('if.bw'))}"></div>
       <div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div></div>` : ''}
-    <div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[od])}</h2><span class="sub">${lines.length ? esc(baseText(d, 'sub')) : ''}</span>
-      <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'dir.2'], ['outbound', 'dir.1']].map(([k, l]) => `<button data-od="${k}" aria-pressed="${od === k}">${t(l)}</button>`).join('')}</div></div>
+    <div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[od])}</h2><span class="sub">${od && viaIf ? esc(ifSel ? ifName(ifSel) : ifk) : lines.length ? esc(baseText(d, 'sub')) : ''}</span>
+      <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'if.in'], ['outbound', 'if.out']].map(([k, l]) => `<button data-od="${k}" aria-pressed="${od === k}">${t(l)}</button>`).join('')}</div></div>
       <div class="chart" id="chStack" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}${lines.length ? `<span><i class="dash"></i>${esc(lines[0].name)}</span>` : ''}</div></div>
     ${panel('c6', t('ov.dir'), '', '<div class="donut" id="dDir"></div>')}
@@ -996,7 +1004,9 @@ views.overview = async (el) => {
       ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${fd ? findingsPanel(fd) : ''}
   </div>`;
-  tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from});
+  const dirWord = od && t(od === 'inbound' ? 'if.in' : 'if.out');
+  tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from,
+    empty: od && viaIf ? esc(t('ov.dir_empty', {if: ifSel ? ifName(ifSel) : ifk, d: /^[a-z]/i.test(dirWord) ? dirWord.toLocaleLowerCase(LANG) : dirWord})) : ''});
   if (iIn) {
     const pk = s => { const i = (s?.names || []).indexOf(ifk); return i < 0 ? (s?.times || []).map(() => 0) : s.values[i]; };
     tsChart($('#chIf'), {times: iIn.times, settledTo: iIn.settled_to, dataFrom: iIn.data_from, lines: [{name: t('if.in'), color: IF_IN, data: pk(iIn), fill: true}, {name: t('if.out'), color: IF_OUT, data: pk(iOut), fill: true}]});
@@ -1118,10 +1128,60 @@ views.findings = async (el) => {
       <div class="seg" role="group"><button data-fd="open" aria-pressed="${!all}">${t('fd.open')}</button><button data-fd="all" aria-pressed="${all}">${t('fd.all')}</button></div></div></div>
     ${learning > Date.now() ? `<div class="verdict warn" style="margin:0 0 10px">${esc(t('fd.learning', {t: new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(learning))}))}</div>` : ''}
     ${fs.length ? `<table class="fd">${findingRows(fs, true)}</table>` : `<div class="empty">${all ? t('fd.none') : status('ok', t('fd.none_open'))}</div>`}
-    <p class="fdnote">${esc(t('fd.note'))}</p></div></div>`;
+    <p class="fdnote">${esc(t('fd.note'))}</p></div><div class="panel c12" id="slPanel"></div></div>`;
   el.querySelectorAll('[data-fd]').forEach(b => b.onclick = () => { state.fd = b.dataset.fd; render(); });
   bindFindings(el);
+  await syslogPanel($('#slPanel'));
 };
+
+// The syslog feed: the findings above, sent on to the customer's SIEM as
+// they are made. Registered installations send; the others see the
+// settings greyed out and why. Only an administrator changes them.
+async function syslogPanel(el) {
+  const d = await fetch('/api/syslog').then(r => r.json()).catch(() => null);
+  if (!d || !d.available) { el.remove(); return; }
+  const c = d.config || {}, st = d.stats || {}, can = d.admin && d.registered;
+  const dis = can ? '' : ' disabled';
+  const opt = (v, cur, lab) => `<option value="${v}"${v === cur ? ' selected' : ''}>${esc(lab)}</option>`;
+  const fmtLab = {cef: 'CEF', leef: 'LEEF', json: 'JSON', text: t('sl.fmt_text')};
+  const when = x => x && !x.startsWith('0001') ? ago(Date.parse(x)) : '';
+  el.innerHTML = `<div class="ph"><h2>${esc(t('sl.title'))}</h2><span class="sub">${esc(t('sl.sub'))}</span>
+      ${d.registered ? `<span class="slstate ${c.enabled ? 'on' : ''}">${esc(t(c.enabled ? 'sl.on' : 'sl.off'))}</span>` : ''}</div>
+    ${d.registered ? '' : `<div class="verdict warn" style="margin:0 0 12px">${esc(t('sl.locked'))}</div>`}
+    <div class="slform">
+      <label class="slchk"><input type="checkbox" id="slOn"${c.enabled ? ' checked' : ''}${dis}> ${esc(t('sl.enabled'))}</label>
+      <div class="afield"><label for="slAddr">${esc(t('sl.address'))}</label><input id="slAddr" value="${esc(c.address || '')}" placeholder="10.0.0.5:514" maxlength="255"${dis}></div>
+      <div class="afield"><label for="slNet">${esc(t('sl.network'))}</label><select id="slNet"${dis}>${['udp', 'tcp', 'tls'].map(v => opt(v, c.network || 'udp', v.toUpperCase())).join('')}</select></div>
+      <div class="afield"><label for="slFmt">${esc(t('sl.format'))}</label><select id="slFmt"${dis}>${(d.formats || ['cef']).map(v => opt(v, c.format || 'cef', fmtLab[v] || v)).join('')}</select></div>
+      <div class="afield"><label for="slSev">${esc(t('sl.min_sev'))}</label><select id="slSev"${dis}>${[1, 2, 3].map(v => opt(String(v), String(c.min_sev || 1), t('sev.' + SEV[v]))).join('')}</select></div>
+      <div class="afield slwide"><label for="slBase">${esc(t('sl.base_url'))}</label><input id="slBase" value="${esc(c.base_url || '')}" placeholder="https://traffic66.example.com" maxlength="255"${dis}></div>
+      <label class="slchk slwide"><input type="checkbox" id="slAscii"${c.ascii ? ' checked' : ''}${dis}> ${esc(t('sl.ascii'))}</label>
+    </div>
+    ${can ? `<div class="afbtns" style="justify-content:flex-start"><button class="btn primary" id="slSave">${esc(t('sl.save'))}</button><button class="btn" id="slTest">${esc(t('sl.test'))}</button><span id="slMsg" class="slmsg" role="status"></span></div>` : ''}
+    ${d.registered ? `<p class="slstats">${esc(t('sl.stats', {s: nf(st.sent || 0), f: nf(st.failed || 0), d: nf(st.dropped || 0)}))}${st.last_sent && when(st.last_sent) ? ' · ' + esc(t('sl.last_sent', {t: when(st.last_sent)})) : ''}
+      ${st.last_error ? `<br><span class="slerr">${esc(t('sl.last_err', {t: when(st.last_error_at), e: st.last_error}))}</span>` : ''}</p>` : ''}`;
+  if (!can) return;
+  const msg = (ok, text) => { const m = $('#slMsg'); m.className = 'slmsg ' + (ok ? 'ok' : 'bad'); m.textContent = text; };
+  const body = () => ({enabled: $('#slOn').checked, address: $('#slAddr').value.trim(), network: $('#slNet').value, format: $('#slFmt').value,
+    min_sev: +$('#slSev').value, base_url: $('#slBase').value.trim(), ascii: $('#slAscii').checked});
+  const post = async (path, b) => {
+    const r = await fetch('/api/syslog' + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: b ? JSON.stringify(b) : undefined});
+    const j = await r.json().catch(() => ({}));
+    return r.ok ? null : j.error === 'not_registered' ? t('sl.locked') : (j.error || r.statusText);
+  };
+  $('#slSave').onclick = async () => {
+    const err = await post('', body());
+    if (err) { msg(false, err); return; }
+    await syslogPanel(el); msg(true, t('sl.saved'));
+  };
+  // a test sends with what is saved: save first, so what is on screen is
+  // what is tried
+  $('#slTest').onclick = async () => {
+    const err = await post('', body()) || await post('/test');
+    await syslogPanel(el);
+    msg(!err, err || t('sl.test_ok'));
+  };
+}
 
 
 // ------------------------------------------------------------ series charts
@@ -1709,14 +1769,19 @@ const admOnly = html => adm() ? html : '';
 // beside the names in the inventory file, and nothing is looked up in it.
 // Devices and ports come from the flows themselves; only the places and
 // the carriers are typed in.
-const RK_SHOWN = 6;  // ports listed before the rest fold away
+const RK_SHOWN = 8;  // ports listed before the rest fold away
+// one colour per carrier, the same on every device, so the eye finds all
+// of one carrier's lines at once
+const rkHue = s => { let h = 0; for (const c of s) h = (h * 31 + c.codePointAt(0)) % 360; return h; };
+const rkISP = f => f.isp || f.circuit
+  ? `<span class="rkisp" style="--h:${rkHue(f.isp || f.circuit)}">${esc(f.isp || '—')}</span>`
+  : `<span class="rkisp none">${esc(t('rk.no_carrier'))}</span>`;
 views.racks = async (el) => {
   const res = await fetch('/api/racks');
   if (res.status === 401) { showLogin(); return; }
   const d = await res.json().catch(() => ({}));
   const devs = d.devices || [], can = !!d.admin;
-  const head = `<p class="rkhint">${esc(t('rk.hint'))}</p>`;
-  if (!devs.length) { el.innerHTML = `<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), head + `<div class="empty">${esc(t('rk.empty'))}</div>`)}</div>`; return; }
+  if (!devs.length) { el.innerHTML = `<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="empty">${esc(t('rk.empty'))}</div>`)}</div>`; return; }
   const rooms = new Map();
   devs.forEach((x, i) => {
     const room = x.room || '', rack = x.rack || '';
@@ -1726,66 +1791,167 @@ views.racks = async (el) => {
     racks.get(rack).push(i);
   });
   // rooms in name order, the devices nobody has placed yet last
-  const order = [...rooms.keys()].sort((a, b) => (a === '') - (b === '') || a.localeCompare(b, LANG, {numeric: true}));
-  const pencil = attrs => can ? `<button class="rkedit" ${attrs} title="${esc(t('rk.edit'))}" aria-label="${esc(t('rk.edit'))}">✎</button>` : '';
-  const port = (i, f) => `<div class="rkif">
-      <span class="rkport">${esc(f.name || t('rk.ifindex', {n: f.ifindex}))}<span class="muted"> #${f.ifindex}${f.speed ? ' · ' + esc(fmtBps(f.speed)) : ''}</span></span>
-      <span class="rkwire"></span>
-      <span class="rkisp${f.isp || f.circuit ? '' : ' none'}" title="${esc([f.isp, f.circuit].filter(Boolean).join(' · '))}">${f.isp || f.circuit
-        ? esc(f.isp || '') + (f.circuit ? `<span class="mono"> ${f.isp ? '· ' : ''}${esc(f.circuit)}</span>` : '')
-        : esc(t('rk.no_carrier'))}</span>
-      ${pencil(`data-rki="${i}:${f.ifindex}"`)}</div>`;
+  const byName = (a, b) => (a === '') - (b === '') || a.localeCompare(b, LANG, {numeric: true});
+  const order = [...rooms.keys()].sort(byName);
+  const ports = devs.flatMap(x => x.ifaces || []);
+  const sum = t('rk.summary', {r: nf(order.filter(Boolean).length), k: nf([...rooms.values()].reduce((n, m) => n + [...m.keys()].filter(Boolean).length, 0)),
+    d: nf(devs.length), p: nf(ports.filter(f => f.isp || f.circuit).length), n: nf(ports.length)});
+  const port = f => `<div class="rkif">
+      <span class="rkport"><b>${esc(f.name || t('rk.ifindex', {n: f.ifindex}))}</b><span class="muted">#${f.ifindex}${f.speed ? ' · ' + esc(fmtBps(f.speed)) : ''}</span></span>
+      ${rkISP(f)}<span class="rkcirc mono">${esc(f.circuit || '')}</span></div>`;
   const device = i => {
     const x = devs[i], fs = x.ifaces || [];
     // the ports with a carrier always show; of the rest, the busiest
     const lead = fs.filter((f, k) => f.isp || f.circuit || k < RK_SHOWN), rest = fs.filter(f => !lead.includes(f));
-    return `<div class="rkdev"><div class="rkdh"><b>${esc(x.name || x.exporter)}</b>${x.name ? ` <span class="mono">${esc(x.exporter)}</span>` : ''}
-        ${x.seen ? '' : `<span class="tag">${esc(t('rk.quiet'))}</span>`}${pencil(`data-rkd="${i}"`)}</div>
-      ${lead.map(f => port(i, f)).join('') || `<div class="rkif muted">${esc(t('rk.no_ifaces'))}</div>`}
-      ${rest.length ? `<details class="rkmore"><summary>${esc(t('rk.more', {n: nf(rest.length)}))}</summary>${rest.map(f => port(i, f)).join('')}</details>` : ''}</div>`;
+    return `<div class="rkdev"><div class="rkfp"><i class="rkled${x.seen ? '' : ' off'}" title="${esc(x.seen ? '' : t('rk.quiet'))}"></i>
+        <span class="rkdn"><b>${esc(x.name || x.exporter)}</b>${x.name ? `<span class="mono">${esc(x.exporter)}</span>` : ''}</span>
+        ${x.seen ? '' : `<span class="tag">${esc(t('rk.quiet'))}</span>`}
+        ${can ? `<button class="btn rkedit" data-rkd="${i}">${esc(t('rk.edit'))}</button>` : ''}</div>
+      <div class="rkports">${lead.map(port).join('') || `<div class="rkif muted">${esc(t('rk.no_ifaces'))}</div>`}
+      ${rest.length ? `<details class="rkmore"><summary>${esc(t('rk.more', {n: nf(rest.length)}))}</summary>${rest.map(port).join('')}</details>` : ''}</div></div>`;
   };
   const roomIcon = '<svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>';
   const body = order.map(room => {
-    const racks = rooms.get(room), names = [...racks.keys()].sort((a, b) => (a === '') - (b === '') || a.localeCompare(b, LANG, {numeric: true}));
-    return `<section class="rkroom${room ? '' : ' unplaced'}"><h3>${roomIcon}${esc(room || t('rk.unplaced'))}</h3><div class="rkracks">
-      ${names.map(rack => `<div class="rkrack"><div class="rkrh">${esc(rack ? t('rk.rack_n', {x: rack}) : t('rk.no_rack'))}</div>${racks.get(rack).map(device).join('')}</div>`).join('')}
+    const racks = rooms.get(room), names = [...racks.keys()].sort(byName);
+    const n = [...racks.values()].reduce((k, v) => k + v.length, 0);
+    return `<section class="rkroom${room ? '' : ' unplaced'}"><h3>${roomIcon}<span>${esc(room || t('rk.unplaced'))}</span><span class="muted">${esc(t('rk.room_n', {k: nf(names.filter(Boolean).length), d: nf(n)}))}</span></h3><div class="rkracks">
+      ${names.map(rack => `<div class="rkrack"><div class="rkrh"><span>${esc(rack ? t('rk.rack_n', {x: rack}) : t('rk.no_rack'))}</span></div><div class="rkbay">${racks.get(rack).map(device).join('')}</div></div>`).join('')}
       </div></section>`;
   }).join('');
-  el.innerHTML = `<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), head + body)}</div>`;
+  el.innerHTML = `<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="rksum">${esc(sum)}</div>` + body)}</div>`;
   const uniq = k => [...new Set(devs.map(x => x[k]).filter(Boolean))].sort();
-  const carriers = [...new Set(devs.flatMap(x => (x.ifaces || []).map(f => f.isp)).filter(Boolean))].sort();
-  const send = async (path, body) => {
-    const r = await fetch('/api/racks/' + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || r.statusText); return; }
-    ifList = null; render();
-  };
+  const carriers = [...new Set(ports.map(f => f.isp).filter(Boolean))].sort();
   el.querySelectorAll('[data-rkd]').forEach(b => b.onclick = async () => {
     const x = devs[+b.dataset.rkd];
-    const v = await rkForm(x.name || x.exporter, [['name', t('rk.device_name'), x.name], ['room', t('rk.room'), x.room, uniq('room')], ['rack', t('rk.rack'), x.rack, uniq('rack')]]);
-    if (v) send('device', {exporter: x.exporter, ...v});
-  });
-  el.querySelectorAll('[data-rki]').forEach(b => b.onclick = async () => {
-    const [i, idx] = b.dataset.rki.split(':').map(Number), x = devs[i], f = (x.ifaces || []).find(y => y.ifindex === idx) || {ifindex: idx};
-    const v = await rkForm((x.name || x.exporter) + ' · #' + idx, [['name', t('rk.iface_name'), f.name], ['isp', t('rk.isp'), f.isp, carriers], ['circuit', t('rk.circuit'), f.circuit]]);
-    if (v) send('iface', {exporter: x.exporter, ifindex: idx, ...v});
+    const v = await rkEdit(x, {rooms: uniq('room'), racks: uniq('rack'), carriers});
+    if (!v) return;
+    const r = await fetch('/api/racks/device', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({exporter: x.exporter, ...v})});
+    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || r.statusText); return; }
+    ifList = null; render();
   });
 };
 
-// rkForm asks for a few short values and resolves to them, or to null when
-// cancelled. A list offers what was typed for other devices before, so one
-// room is not written three ways.
-function rkForm(title, fields) {
+// rkEdit is one form for a device and every port on it: where it stands,
+// what it is called, and for each port the carrier and circuit. It
+// resolves to what to save (only the ports that changed), or to null when
+// cancelled. The lists offer what was typed before, so one room or one
+// carrier is not written three ways.
+function rkEdit(x, {rooms, racks, carriers}) {
   return new Promise(resolve => {
+    const fs = x.ifaces || [];
+    const dl = (id, list) => list.length ? `<datalist id="${id}">${list.map(o => `<option value="${esc(o)}">`).join('')}</datalist>` : '';
+    const inp = (name, v, list, ph) => `<input name="${name}" value="${esc(v || '')}" maxlength="80"${list ? ` list="${list}"` : ''}${ph ? ` placeholder="${esc(ph)}"` : ''}>`;
     const dlg = document.createElement('dialog');
-    dlg.className = 'aedit';
-    dlg.innerHTML = `<form method="dialog"><h2>${esc(title)}</h2><div class="aform">${fields.map(([k, lab, v, list]) => `<div class="afield afwide">
-        <label for="rk_${k}">${esc(lab)}</label><input id="rk_${k}" name="${k}" value="${esc(v || '')}" maxlength="80"${list && list.length ? ` list="rkl_${k}"` : ''}>
-        ${list && list.length ? `<datalist id="rkl_${k}">${list.map(o => `<option value="${esc(o)}">`).join('')}</datalist>` : ''}</div>`).join('')}</div>
+    dlg.className = 'aedit rkdlg';
+    dlg.innerHTML = `<form method="dialog"><h2>${esc(x.name || x.exporter)} <span class="mono muted">${esc(x.exporter)}</span></h2>
+      <div class="aform rkdform">
+        <div class="afield"><label>${esc(t('rk.device_name'))}</label>${inp('name', x.name)}</div>
+        <div class="afield"><label>${esc(t('rk.room'))}</label>${inp('room', x.room, 'rkl_room')}</div>
+        <div class="afield"><label>${esc(t('rk.rack'))}</label>${inp('rack', x.rack, 'rkl_rack')}</div>
+      </div>
+      ${fs.length ? `<div class="rkptab"><table><thead><tr><th>${esc(t('rk.port'))}</th><th>${esc(t('rk.iface_name'))}</th><th>${esc(t('rk.isp'))}</th><th>${esc(t('rk.circuit'))}</th></tr></thead><tbody>
+        ${fs.map((f, k) => `<tr data-k="${k}"><td class="nw"><b>#${f.ifindex}</b>${f.speed ? `<span class="muted"> ${esc(fmtBps(f.speed))}</span>` : ''}</td>
+          <td>${inp('name', f.name, '', t('rk.ifindex', {n: f.ifindex}))}</td><td>${inp('isp', f.isp, 'rkl_isp')}</td><td>${inp('circuit', f.circuit)}</td></tr>`).join('')}
+      </tbody></table></div>` : `<p class="muted">${esc(t('rk.no_ifaces'))}</p>`}
+      ${dl('rkl_room', rooms)}${dl('rkl_rack', racks)}${dl('rkl_isp', carriers)}
       <div class="afbtns"><button class="btn" value="cancel">${esc(t('rk.cancel'))}</button><button class="btn primary" value="ok">${esc(t('rk.save'))}</button></div></form>`;
     document.body.appendChild(dlg);
     dlg.addEventListener('close', () => {
-      const out = {};
-      dlg.querySelectorAll('input').forEach(x => { out[x.name] = x.value.trim(); });
+      const val = (root, n) => root.querySelector(`input[name="${n}"]`).value.trim();
+      const top = dlg.querySelector('.rkdform');
+      const out = {name: val(top, 'name'), room: val(top, 'room'), rack: val(top, 'rack'), ifaces: []};
+      dlg.querySelectorAll('tr[data-k]').forEach(tr => {
+        const f = fs[+tr.dataset.k], v = {name: val(tr, 'name'), isp: val(tr, 'isp'), circuit: val(tr, 'circuit')};
+        if (v.name !== (f.name || '') || v.isp !== (f.isp || '') || v.circuit !== (f.circuit || '')) out.ifaces.push({ifindex: f.ifindex, ...v});
+      });
+      const ok = dlg.returnValue === 'ok';
+      dlg.remove();
+      resolve(ok ? out : null);
+    });
+    dlg.showModal();
+    dlg.querySelector('input')?.focus();
+  });
+}
+
+// ------------------------------------------------------------ links for other platforms
+// One key per platform. Its links are the same URL with the address put
+// in, so an asset platform adds a "traffic" button beside each of its
+// service addresses without keeping a secret per address. The key is
+// shown once, when it is made or replaced.
+async function embedPanel(el) {
+  const d = await fetch('/api/embeds').then(r => r.json()).catch(() => null);
+  if (!d) { el.remove(); return; }
+  const links = d.links || [], reg = d.registered;
+  const when = x => x && !x.startsWith('0001') ? ago(Date.parse(x)) : t('emb.never');
+  const list = xs => (xs || []).length ? xs.map(x => `<code>${esc(x)}</code>`).join(' ') : `<span class="muted">${esc(t('emb.any'))}</span>`;
+  el.innerHTML = `<div class="ph"><h2>${esc(t('emb.title'))}</h2><span class="sub">${esc(t('emb.sub'))}</span>
+      ${reg ? `<button class="btn primary" id="embNew" style="margin-inline-start:auto">${esc(t('emb.new'))}</button>` : ''}</div>
+    ${reg ? '' : `<div class="verdict warn" style="margin:0 0 12px">${esc(t('emb.locked'))}</div>`}
+    ${location.protocol === 'http:' ? `<p class="embnote">${esc(t('emb.http_warn'))}</p>` : ''}
+    <div id="embKey"></div>
+    ${links.length ? `<table class="embt"><tr><th>${esc(t('emb.col_name'))}</th><th>${esc(t('emb.col_ranges'))}</th><th>${esc(t('emb.col_origins'))}</th><th>${esc(t('emb.col_clients'))}</th><th>${esc(t('emb.col_key'))}</th><th>${esc(t('emb.col_used'))}</th><th></th></tr>
+      ${links.map((x, i) => `<tr><td><b>${esc(x.name)}</b></td><td>${list(x.ranges)}</td><td>${list(x.origins)}</td><td>${list(x.clients)}</td>
+        <td class="nw"><code>${esc(x.prefix)}…</code>${x.old_until ? `<br><span class="muted" style="font-size:12px">${esc(t('emb.old_until', {t: new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'short'}).format(new Date(x.old_until))}))}</span>` : ''}</td>
+        <td class="nw">${esc(when(x.last_used))}<br><span class="muted" style="font-size:12px">${esc(t('emb.hits', {n: nf(x.hits || 0)}))}</span></td>
+        <td class="nw" style="text-align:end">${reg ? `<button class="btn sm" data-emed="${i}">${esc(t('emb.edit'))}</button> <button class="btn sm" data-emrot="${i}">${esc(t('emb.rotate'))}</button> ` : ''}<button class="btn sm danger" data-emdel="${i}">${esc(t('emb.revoke'))}</button></td></tr>`).join('')}</table>`
+      : `<div class="empty">${esc(t('emb.none'))}</div>`}
+    <p class="embnote">${esc(t('emb.rate', {n: nf(d.per_minute || 60)}))}</p>`;
+  const send = async (method, path, body) => {
+    const r = await fetch('/api/embeds' + path, {method, headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(j.error === 'not_registered' ? t('emb.locked') : (j.error || r.statusText)); return null; }
+    return j;
+  };
+  // the key, shown this once, as the link the platform builds
+  const showKey = async key => {
+    await embedPanel(el);
+    const link = `${location.origin}/embed/vip?ip={VIP}&k=${key}`;
+    const frame = `<iframe src="${location.origin}/embed/vip?ip={VIP}&k=${key}" width="100%" height="460" style="border:0"></iframe>`;
+    $('#embKey').innerHTML = `<div class="embkey"><b>${esc(t('emb.key_once'))}</b>
+      <label>${esc(t('emb.link'))}</label><div class="embcopy"><code>${esc(link)}</code><button class="btn sm" data-copy="${esc(link)}">${esc(t('emb.copy'))}</button></div>
+      <label>${esc(t('emb.frame'))}</label><div class="embcopy"><code>${esc(frame)}</code><button class="btn sm" data-copy="${esc(frame)}">${esc(t('emb.copy'))}</button></div></div>`;
+    el.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy); toast(t('emb.copied')); } catch (e) { toast(b.dataset.copy); }
+    });
+  };
+  const edit = async x => {
+    const v = await embedForm(x || {});
+    if (!v) return;
+    const j = await send('POST', '', {...v, id: x?.id || ''});
+    if (!j) return;
+    if (j.key) showKey(j.key); else embedPanel(el);
+  };
+  if ($('#embNew')) $('#embNew').onclick = () => edit(null);
+  el.querySelectorAll('[data-emed]').forEach(b => b.onclick = () => edit(links[+b.dataset.emed]));
+  el.querySelectorAll('[data-emrot]').forEach(b => b.onclick = async () => {
+    const x = links[+b.dataset.emrot];
+    if (!confirm(t('emb.rotate_confirm', {n: x.name}))) return;
+    const j = await send('POST', '/rotate', {id: x.id});
+    if (j?.key) showKey(j.key);
+  });
+  el.querySelectorAll('[data-emdel]').forEach(b => b.onclick = async () => {
+    const x = links[+b.dataset.emdel];
+    if (!confirm(t('emb.revoke_confirm', {n: x.name}))) return;
+    if (await send('DELETE', '?id=' + encodeURIComponent(x.id))) embedPanel(el);
+  });
+}
+// embedForm asks for one platform's name and limits; one entry per line.
+function embedForm(x) {
+  return new Promise(resolve => {
+    const area = (k, v, hint, ph) => `<div class="afield afwide"><label for="emf_${k}">${esc(t('emb.f_' + k))}</label>
+      <textarea id="emf_${k}" name="${k}" rows="3" placeholder="${esc(ph)}">${esc((v || []).join('\n'))}</textarea><span class="afhint">${esc(t(hint))}</span></div>`;
+    const dlg = document.createElement('dialog');
+    dlg.className = 'aedit embdlg';
+    dlg.innerHTML = `<form method="dialog"><h2>${esc(x.name || t('emb.new'))}</h2><div class="aform">
+        <div class="afield afwide"><label for="emf_name">${esc(t('emb.f_name'))}</label><input id="emf_name" name="name" value="${esc(x.name || '')}" maxlength="80"></div>
+        ${area('ranges', x.ranges, 'emb.f_ranges_hint', '203.0.113.0/24\n198.51.100.10')}
+        ${area('origins', x.origins, 'emb.f_origins_hint', 'assets.example.com')}
+        ${area('clients', x.clients, 'emb.f_clients_hint', '192.0.2.0/24')}
+      </div><div class="afbtns"><button class="btn" value="cancel">${esc(t('rk.cancel'))}</button><button class="btn primary" value="ok">${esc(t('rk.save'))}</button></div></form>`;
+    document.body.appendChild(dlg);
+    dlg.addEventListener('close', () => {
+      const lines = n => dlg.querySelector(`[name="${n}"]`).value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      const out = {name: dlg.querySelector('[name="name"]').value.trim(), ranges: lines('ranges'), origins: lines('origins'), clients: lines('clients')};
       const ok = dlg.returnValue === 'ok';
       dlg.remove();
       resolve(ok ? out : null);
@@ -2171,6 +2337,7 @@ views.sources = async (el) => {
         <label class="btn" style="cursor:pointer"><input type="file" id="licFile" accept=".json,application/json" hidden>${t('lic.choose')}</label>
         <button class="primary" id="licSave">${t('lic.install_btn')}</button>
         <span id="licMsg" style="font-size:13px"></span></div></div>`))}
+    ${admOnly('<div class="panel c12" id="embPanel"></div>')}
     ${admOnly(blocked.length ? panel('c12', t('blk.title'), t('blk.sub'), `<table><tr><th>${t('blk.col_addr')}</th><th>${t('blk.col_since')}</th><th class="num">${t('blk.col_dropped')}</th><th>${t('blk.col_note')}</th><th></th></tr>
       ${blocked.map(b => `<tr><td class="nw"><code>${esc(b.address)}</code></td>
         <td class="nw muted">${b.since ? esc(new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'short'}).format(new Date(b.since))) : ''}</td>
@@ -2208,6 +2375,7 @@ views.sources = async (el) => {
       loadStatus(); // the badge, the footer and the watermark all follow from it
     };
   }
+  if (adm()) embedPanel($('#embPanel'));
   const geoMsg = (ok, text) => { const m = $('#geoMsg'); m.style.color = ok === null ? '' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
   if (adm()) {
   const reblock = async (method, path, okMsg) => {

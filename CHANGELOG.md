@@ -3,6 +3,15 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.0
+
+- Overview: Inbound and Outbound split the interface charted above the way that chart does — what came in through it and what went out through it — so the two charts agree. Telling the direction by address instead left the chart empty wherever the served addresses are public and not listed as your own networks, or private at both ends: by address all of that is transit or internal. Without an interface the address is still what decides. The buttons read 入向 / 出向 in Chinese, like the interface chart, and an empty direction says so instead of saying the data is still arriving. The query filters `iface_in` and `iface_out` (exporter/ifindex) do the same in the API.
+- Rooms and racks is redrawn: each rack with its devices as faceplates, each port with its carrier as a coloured tag (one colour per carrier) and its circuit ID beside it, and a count at the top of how many ports have a carrier. One form per device sets its name, room and rack and every port's name, carrier and circuit, saved with one click (`POST /api/racks/device` takes an `ifaces` list). The hint line is gone.
+- Pages that are not about the traffic — settings, inventory, rooms and racks, offline analysis, data cleanup, help, account — no longer show the filter chips.
+- Black is the default theme. A theme picked before is kept.
+- Findings can be sent to syslog from the findings page: collector address, UDP / TCP / TLS, CEF, LEEF, JSON or plain text, the least severity, with a test button and how many messages went, failed or were dropped over the per-minute ceiling. The settings are kept in `<data>/syslog.json` and take effect at once; the `-syslog` flags are the settings until something is saved there. Sending is for registered installations; the licence is checked at each finding, so a feed follows the licence without a restart.
+- Links for other platforms (registered installations): `/embed/vip?ip=<address>&k=<key>` shows one address's bandwidth, in and out, over 1 hour, 24 hours (the default), 7 or 30 days, and nothing else. An asset platform puts the address into one fixed link to give each of its VIPs a traffic button, or frames the page. Each platform has one key, set up on the settings page with the addresses it may show, the sites it may be opened or framed from, and optionally the viewer networks; the key is kept as a hash and shown once, can be replaced (the old one works for 24 more hours) or withdrawn at once, and each viewer may make 60 requests a minute. The links are kept in `<data>/embeds.json`.
+
 ## 2.4.1
 
 - Overview: Inbound and Outbound now mean which way the bytes went — what arrived at your hosts, what they sent — instead of who opened the connection. On a network whose hosts only connect outwards, Inbound used to be empty (and said the data was still arriving), although most of its traffic is the replies it downloads.

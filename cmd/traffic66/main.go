@@ -32,6 +32,7 @@ import (
 	"github.com/githubflyideas/traffic66/internal/collector"
 	"github.com/githubflyideas/traffic66/internal/detect"
 	"github.com/githubflyideas/traffic66/internal/dnsres"
+	"github.com/githubflyideas/traffic66/internal/embed"
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/flow"
 	"github.com/githubflyideas/traffic66/internal/license"
@@ -56,7 +57,7 @@ var version = ""
 // CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
 // default used to be a hardcoded 0.1.0-dev, and because nothing checked it
 // it stayed that way for two major versions.
-const devVersion = "2.4.1"
+const devVersion = "2.5.0"
 
 func init() {
 	if version == "" {
@@ -412,11 +413,16 @@ func serve(args []string, demo bool) {
 	}
 
 	det := detect.New(st, inv, detect.Config{})
-	if sender := startSyslog(f, lic); sender != nil {
+	var sender *syslogout.Sender
+	if offline == nil {
+		sender = startSyslog(f, lic)
 		defer sender.Close()
-		base := f.syslogBase
+		// the licence is asked at each finding, so a feed stops when a
+		// licence runs out and starts when one is added, without a restart
 		det.OnFinding = func(fi store.Finding) {
-			sender.Send(syslogout.FromFinding(fi, syslogout.PhaseStart, base))
+			if lic != nil && lic.State().Allowed(license.FeatSyslog) {
+				sender.Send(syslogout.FromFinding(fi, syslogout.PhaseStart, sender.Config().BaseURL))
+			}
 		}
 	}
 	if demo {
@@ -518,6 +524,15 @@ func serve(args []string, demo bool) {
 		Demo: demo, Check: checker.Check, Exists: checker.Exists, Accounts: checker, LocalTok: tok, DataDir: f.data, Started: time.Now(), Listen: listens}
 	srv.SNMP = poller.Status
 	srv.License = lic
+	srv.Syslog = sender
+	if offline == nil {
+		emb, err := embed.Open(filepath.Join(f.data, "embeds.json"))
+		if err != nil {
+			fatalf("%v", err)
+		}
+		defer emb.Flush()
+		srv.Embeds = emb
+	}
 	if lic != nil {
 		go lic.Loop(ctx.Done(), 4*time.Hour)
 	}
@@ -980,27 +995,37 @@ func setGoMemoryLimit(frac float64) {
 	log.Printf("memory: database %d MB and program %d MB (soft), from -memory %.2f", lim>>20, lim>>20, frac)
 }
 
-// startSyslog prepares the syslog feed, or returns nil when there is
-// nothing to send to. Unlike HTTPS, a feed that cannot run is not a reason
-// to stop: findings keep being made and keep showing in the web UI, and
-// the one thing lost is that they also go somewhere else.
+// startSyslog prepares the syslog feed. The settings come from the
+// findings page, kept in the data directory; the -syslog flags are the
+// settings until something has been saved there. Unlike HTTPS, a feed
+// that cannot run is not a reason to stop: findings keep being made and
+// keep showing in the web UI, and the one thing lost is that they also go
+// somewhere else.
 func startSyslog(f serveFlags, lic *license.Checker) *syslogout.Sender {
-	if f.syslog == "" {
-		return nil
-	}
-	if lic == nil || !lic.State().Allowed(license.FeatSyslog) {
-		log.Printf("syslog: sending findings to a collector is for registered installations; findings are still made and shown in the web UI")
-		return nil
-	}
-	cfg := syslogout.Config{
-		Enabled: true, Address: f.syslog, Network: f.syslogNet,
-		Format: syslogout.Format(f.syslogFmt), MinSev: f.syslogSev,
-		ASCII: f.syslogASCII, CAFile: f.syslogCA, BaseURL: f.syslogBase,
-	}
-	if err := cfg.Check(); err != nil {
-		fatalf("%v", err)
-	}
 	syslogout.Version = version
-	log.Printf("syslog: sending findings to %s over %s as %s", cfg.Address, cfg.Network, cfg.Format)
+	cfg, saved, err := syslogout.LoadConfig(filepath.Join(f.data, "syslog.json"))
+	if err != nil {
+		log.Printf("%v", err)
+	}
+	switch {
+	case saved && f.syslog != "":
+		log.Printf("syslog: using the settings saved from the web UI; -syslog %s is not used", f.syslog)
+	case !saved && f.syslog != "":
+		cfg = syslogout.Config{
+			Enabled: true, Address: f.syslog, Network: f.syslogNet,
+			Format: syslogout.Format(f.syslogFmt), MinSev: f.syslogSev,
+			ASCII: f.syslogASCII, CAFile: f.syslogCA, BaseURL: f.syslogBase,
+		}
+		if err := cfg.Check(); err != nil {
+			fatalf("%v", err)
+		}
+	}
+	if cfg.Enabled {
+		if lic == nil || !lic.State().Allowed(license.FeatSyslog) {
+			log.Printf("syslog: sending findings to a collector is for registered installations; findings are still made and shown in the web UI")
+		} else {
+			log.Printf("syslog: sending findings to %s over %s as %s", cfg.Address, cfg.Network, cfg.Format)
+		}
+	}
 	return syslogout.New(cfg)
 }

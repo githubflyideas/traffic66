@@ -1,13 +1,14 @@
 // Applies the colour theme before the page is drawn, so it does not flash.
 // The choice is kept per browser; clicking the theme button goes to the next.
+// Black is the default: the pages are mostly charts, often on a wall screen.
 (function () {
   var THEMES = ['light', 'black', 'teal', 'orange'];
   var OLD = {bright: 'light', dim: 'black', dark: 'black', auto: 'light', gray: 'light'};
   function get() {
-    var v = 'light';
-    try { v = localStorage.getItem('t66.theme') || 'light'; } catch (e) {}
+    var v = 'black';
+    try { v = localStorage.getItem('t66.theme') || 'black'; } catch (e) {}
     if (OLD[v]) { v = OLD[v]; try { localStorage.setItem('t66.theme', v); } catch (e) {} }
-    return THEMES.indexOf(v) < 0 ? 'light' : v;
+    return THEMES.indexOf(v) < 0 ? 'black' : v;
   }
   function apply(x) {
     if (x === 'light') document.documentElement.removeAttribute('data-theme');

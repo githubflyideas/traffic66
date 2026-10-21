@@ -131,8 +131,15 @@ func (s *Server) getRacks(w http.ResponseWriter, r *http.Request) {
 func (s *Server) putRackDevice(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Exporter, Name, Room, Rack string
+		// the ports whose name, carrier or circuit changed, so a device
+		// and all its ports are filled in with one form
+		Ifaces []struct {
+			IfIndex      uint32
+			Name         string
+			ISP, Circuit string
+		}
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10)).Decode(&in); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 512<<10)).Decode(&in); err != nil {
 		fail(w, errors.New("bad request"))
 		return
 	}
@@ -141,9 +148,25 @@ func (s *Server) putRackDevice(w http.ResponseWriter, r *http.Request) {
 		fail(w, errors.New("bad exporter address"))
 		return
 	}
+	if len(in.Ifaces) > 4096 {
+		fail(w, errors.New("too many interfaces"))
+		return
+	}
+	for _, f := range in.Ifaces {
+		if f.IfIndex == 0 {
+			fail(w, errors.New("bad interface"))
+			return
+		}
+	}
 	if err := s.Inv.SetDevice(a, clip(in.Name, 80), clip(in.Room, 60), clip(in.Rack, 60)); err != nil {
 		fail(w, err)
 		return
+	}
+	for _, f := range in.Ifaces {
+		if err := s.Inv.SetCircuit(a, f.IfIndex, clip(f.Name, 80), clip(f.ISP, 60), clip(f.Circuit, 80)); err != nil {
+			fail(w, err)
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

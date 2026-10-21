@@ -92,7 +92,7 @@ func v4range(p netip.Prefix) (uint32, uint32, bool) {
 // device they are its own traffic and count.
 func (q Query) oneDevice() bool {
 	for _, f := range q.Filters {
-		if !f.Neg && (f.Field == "exporter" || f.Field == "iface") {
+		if !f.Neg && (f.Field == "exporter" || strings.HasPrefix(f.Field, "iface")) {
 			return true
 		}
 	}
@@ -133,6 +133,15 @@ func (q Query) where() (string, []any, error) {
 				}
 			}
 			c = "(" + strings.Join(parts, " OR ") + ")"
+		case "src", "dst":
+			// one address as the sender, or as the receiver, of the bytes:
+			// what went to an address and what came from it
+			a, err := netip.ParseAddr(v)
+			if err != nil {
+				return "", nil, fmt.Errorf("bad address %q", v)
+			}
+			c = f.Field + " = ?"
+			args = append(args, a.Unmap().String())
 		case "port":
 			port := v
 			if i := strings.IndexByte(v, '/'); i > 0 {
@@ -226,8 +235,9 @@ func (q Query) where() (string, []any, error) {
 			}
 			c = "vlan = ?"
 			args = append(args, n)
-		case "iface":
-			// exporter/ifindex, either direction
+		case "iface", "iface_in", "iface_out":
+			// exporter/ifindex: either direction, or only what came in
+			// through it, or only what went out through it
 			i := strings.LastIndexByte(v, '/')
 			if i <= 0 {
 				return "", nil, fmt.Errorf("bad interface %q", v)
@@ -236,8 +246,17 @@ func (q Query) where() (string, []any, error) {
 			if err != nil {
 				return "", nil, fmt.Errorf("bad interface %q", v)
 			}
-			c = "(exporter = ? AND (in_if = ? OR out_if = ?))"
-			args = append(args, v[:i], n, n)
+			switch f.Field {
+			case "iface_in":
+				c = "(exporter = ? AND in_if = ?)"
+				args = append(args, v[:i], n)
+			case "iface_out":
+				c = "(exporter = ? AND out_if = ?)"
+				args = append(args, v[:i], n)
+			default:
+				c = "(exporter = ? AND (in_if = ? OR out_if = ?))"
+				args = append(args, v[:i], n, n)
+			}
 		default:
 			return "", nil, fmt.Errorf("unknown filter field %q", f.Field)
 		}

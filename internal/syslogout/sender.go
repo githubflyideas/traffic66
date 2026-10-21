@@ -3,6 +3,7 @@ package syslogout
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -93,6 +94,42 @@ type Sender struct {
 	minute  time.Time
 	sent    int
 	dropped int
+
+	st Stats
+}
+
+// Stats is what the settings page shows about the feed: whether messages
+// are going out, and if not, why.
+type Stats struct {
+	Sent      int64     `json:"sent"`
+	Failed    int64     `json:"failed"`
+	Dropped   int       `json:"dropped"`
+	LastSent  time.Time `json:"last_sent,omitzero"`
+	LastError string    `json:"last_error,omitempty"`
+	LastErrAt time.Time `json:"last_error_at,omitzero"`
+}
+
+// Stats returns the counts since this process started.
+func (s *Sender) Stats() Stats {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st := s.st
+	st.Dropped = s.dropped
+	return st
+}
+
+// note records how one message went.
+func (s *Sender) note(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	if err != nil {
+		s.st.Failed++
+		s.st.LastError, s.st.LastErrAt = err.Error(), now
+		return
+	}
+	s.st.Sent++
+	s.st.LastSent = now
 }
 
 // New prepares a sender. It does not connect: a collector that is down
@@ -148,7 +185,9 @@ func (s *Sender) Send(e Event) {
 	}
 	s.mu.Unlock()
 
-	if err := s.write(Message(cfg, e, time.Now())); err != nil {
+	err := s.write(Message(cfg, e, time.Now()))
+	s.note(err)
+	if err != nil {
 		log.Printf("syslog: %v", err)
 	}
 }
@@ -169,7 +208,9 @@ func (s *Sender) Test() error {
 		First: now, Last: now, Extra: map[string]string{},
 	}
 	e.Text = Describe(e)
-	return s.write(Message(cfg, e, now))
+	err := s.write(Message(cfg, e, now))
+	s.note(err)
+	return err
 }
 
 // allow is the ceiling: a flood of findings must not become a flood of
@@ -267,4 +308,33 @@ func title(s string) string {
 		return s
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// LoadConfig reads the configuration saved from the settings page. ok is
+// false when nothing has been saved yet.
+func LoadConfig(path string) (cfg Config, ok bool, err error) {
+	b, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return Config{}, false, nil
+	}
+	if err != nil {
+		return Config{}, false, err
+	}
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		return Config{}, false, fmt.Errorf("syslog: %s: %w", path, err)
+	}
+	return cfg, true, nil
+}
+
+// SaveConfig writes the configuration so it outlives a restart.
+func SaveConfig(path string, cfg Config) error {
+	b, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }

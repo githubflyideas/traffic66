@@ -40,11 +40,13 @@ func TestRacks(t *testing.T) {
 		}
 		return w.Code
 	}
-	if c := put("device", `{"exporter":"10.0.0.1","name":"Core router","room":"Room 1","rack":"A03"}`); c != 200 {
+	// the device and its ports in one go, as the page's one form sends them
+	if c := put("device", `{"exporter":"10.0.0.1","name":"Core router","room":"Room 1","rack":"A03",
+		"ifaces":[{"ifindex":3,"name":"Uplink","isp":"China Telecom","circuit":"SH-12345"}]}`); c != 200 {
 		t.Fatal(c)
 	}
-	if c := put("iface", `{"exporter":"10.0.0.1","ifindex":3,"name":"Uplink","isp":"China Telecom","circuit":"SH-12345"}`); c != 200 {
-		t.Fatal(c)
+	if c := put("device", `{"exporter":"10.0.0.1","ifaces":[{"ifindex":0}]}`); c != 400 {
+		t.Fatalf("an interface without an index was accepted: %d", c)
 	}
 	if c := put("iface", `{"exporter":"not an address","ifindex":3}`); c != 400 {
 		t.Fatalf("a bad exporter was accepted: %d", c)

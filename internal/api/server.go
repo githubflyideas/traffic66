@@ -22,11 +22,13 @@ import (
 	"github.com/githubflyideas/traffic66/internal/collector"
 	"github.com/githubflyideas/traffic66/internal/detect"
 	"github.com/githubflyideas/traffic66/internal/dnsres"
+	"github.com/githubflyideas/traffic66/internal/embed"
 	"github.com/githubflyideas/traffic66/internal/enrich"
 	"github.com/githubflyideas/traffic66/internal/license"
 	"github.com/githubflyideas/traffic66/internal/pipeline"
 	"github.com/githubflyideas/traffic66/internal/sandbox"
 	"github.com/githubflyideas/traffic66/internal/store"
+	"github.com/githubflyideas/traffic66/internal/syslogout"
 )
 
 // Server wires the API together.
@@ -65,6 +67,12 @@ type Server struct {
 	DataDir  string
 	// Listen is the UDP collectors, for the first-run guide on Overview.
 	Listen []ListenInfo
+	// Syslog sends findings to the customer's collector; nil where there
+	// is none to configure (tests, the offline sandbox).
+	Syslog *syslogout.Sender
+	// Embeds are the links other platforms open to show one address's
+	// bandwidth; nil where there are none (tests, the offline sandbox).
+	Embeds *embed.Store
 
 	mu       sync.Mutex
 	sessions map[string]session
@@ -130,6 +138,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /logo", s.logo)
 	mux.HandleFunc("GET /api/loginhint", s.loginHint)
 	mux.HandleFunc("GET /tls.crt", s.certDownload)
+	// the links other platforms open: no session, the key in the link
+	mux.HandleFunc("GET /embed/vip", s.embedPage)
+	mux.HandleFunc("GET /embed/vip/data", s.embedData)
 	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
 	// adminAPI is api plus the administrator check. The permission belongs
 	// in this table rather than inside each handler: a new route's gate is
@@ -164,6 +175,13 @@ func (s *Server) Handler() http.Handler {
 	adminAPI("POST /api/iface", s.putIface)
 	api("GET /api/racks", s.getRacks)
 	adminAPI("POST /api/threats/lists", s.putThreatList)
+	api("GET /api/syslog", s.getSyslog)
+	adminAPI("POST /api/syslog", s.putSyslog)
+	adminAPI("POST /api/syslog/test", s.testSyslog)
+	adminAPI("GET /api/embeds", s.getEmbeds)
+	adminAPI("POST /api/embeds", s.putEmbed)
+	adminAPI("POST /api/embeds/rotate", s.rotateEmbed)
+	adminAPI("DELETE /api/embeds", s.deleteEmbed)
 	adminAPI("DELETE /api/threats/lists", s.deleteThreatList)
 	adminAPI("POST /api/racks/device", s.putRackDevice)
 	adminAPI("POST /api/racks/iface", s.putRackIface)
