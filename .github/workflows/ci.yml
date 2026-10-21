@@ -41,11 +41,25 @@ jobs:
     container: ${{ matrix.container || '' }}
     env:
       GOFLAGS: -buildvcs=false
+      PRO_TOKEN: ${{ secrets.PRO_TOKEN }}
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        if: ${{ env.PRO_TOKEN != '' }}
+        with:
+          repository: githubflyideas/traffic66-pro
+          token: ${{ secrets.PRO_TOKEN }}
+          path: .pro
+      - name: Registered features
+        if: ${{ env.PRO_TOKEN != '' }}
+        run: |
+          cp -R .pro/overlay/tree/. .
+          rm -rf .pro
+          echo "T66_PRO=1" >> "$GITHUB_ENV"
+          echo "GOFLAGS=-buildvcs=false -tags=pro" >> "$GITHUB_ENV"
       - uses: actions/setup-go@v6
         with:
           go-version: "1.26.9"
@@ -96,6 +110,7 @@ jobs:
             # a tag push and a one-click release (a version entered by hand)
             # are both releases; only the builds of every push stay community
             kind=community; [[ "$GITHUB_REF" == refs/tags/* || -n "${{ inputs.version }}" ]] && kind=official
+            if [[ $kind == official && -z "$T66_PRO" ]]; then echo "::error::a release needs the PRO_TOKEN secret"; exit 1; fi
             ldflags="-s -w -X main.version=${ver} -X main.buildKind=${kind}"
             tags=""
             export CGO_ENABLED=1
@@ -114,6 +129,7 @@ jobs:
               macOS)
                 export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}" ;;
             esac
+            [[ -n "$T66_PRO" ]] && tags="${tags:+$tags,}pro"
             go build -trimpath ${tags:+-tags "$tags"} -ldflags "$ldflags" -o "$out" ./cmd/traffic66
             cp README.md "dist/traffic66-${{ matrix.target }}/"
             cp -r docs "dist/traffic66-${{ matrix.target }}/"

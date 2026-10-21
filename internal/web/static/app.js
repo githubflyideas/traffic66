@@ -1731,7 +1731,7 @@ async function ifaceCleanup(el) {
     est.textContent = t('cl.if_estimating');
     const res = await fetch(`/api/cleanup/iface?exporter=${encodeURIComponent(tg.exporter)}&ifindex=${tg.ifindex}&days=${tg.days}`);
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) { est.textContent = j.error === 'not_registered' ? t('cl.if_locked') : (j.error || res.statusText); return; }
+    if (!res.ok) { est.textContent = (j.error === 'not_registered' || res.status === 404) ? t('cl.if_locked') : (j.error || res.statusText); return; }
     const parts = [t('cl.rows', {n: nf(j.rows || 0)}), t('cl.if_counters', {n: nf(j.counters || 0)})];
     if (j.bytes) parts.push(t('cl.if_frees', {s: fmtBytes(j.bytes)}));
     est.textContent = parts.join(' · ') + (j.summaries ? ' — ' + t('cl.if_keep', {n: nf(j.summaries)}) : '');
@@ -1745,7 +1745,7 @@ async function ifaceCleanup(el) {
     run.disabled = true;
     const res = await fetch('/api/cleanup/iface', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(tg)});
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) { m.style.color = 'var(--crit)'; m.textContent = j.error === 'not_registered' ? t('cl.if_locked') : (j.error || res.statusText); return; }
+    if (!res.ok) { m.style.color = 'var(--crit)'; m.textContent = (j.error === 'not_registered' || res.status === 404) ? t('cl.if_locked') : (j.error || res.statusText); return; }
     m.style.color = 'var(--good)';
     m.textContent = t('cl.if_done', {i: name, n: nf(j.rows || 0), c: nf(j.counters || 0), s: fmtBytes(j.bytes || 0)});
     loadStatus();
