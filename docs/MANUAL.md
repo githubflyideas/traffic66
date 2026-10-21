@@ -540,7 +540,7 @@ of each page shows the 8-digit installation number; send it to the author,
 and put the `license.json` you get back in the data directory. Contact:
 <route66traffic66@gmail.com>.
 
-Unregistered installations show a small sponsor banner in the left sidebar. Your browser loads it from GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)), or, when it cannot reach GitHub, from a copy the traffic66 server downloaded from there and keeps in `<data>/sponsor`; traffic66 sends no data about you or the installation. Registering removes it.
+Unregistered installations show a sponsor strip across the top of the page. Only your browser loads it, from GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)); the traffic66 server never contacts GitHub for it and keeps no copy. A browser that cannot reach GitHub shows a short built-in text instead. No data about you or the installation is sent. Registering removes it.
 
 ## 11. Security, sizing, troubleshooting
 

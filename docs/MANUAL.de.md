@@ -516,7 +516,7 @@ Installationsnummer; senden Sie sie an den Autor und legen Sie die
 zurückgeschickte `license.json` in das Datenverzeichnis. Kontakt:
 <route66traffic66@gmail.com>.
 
-Nicht registrierte Installationen zeigen in der linken Seitenleiste ein kleines Sponsorenbanner. Ihr Browser lädt es von GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) oder, wenn GitHub nicht erreichbar ist, aus einer Kopie, die der traffic66-Server von dort geladen hat und in `<data>/sponsor` aufbewahrt; traffic66 sendet keinerlei Daten über Sie oder die Installation. Mit der Registrierung verschwindet es.
+Nicht registrierte Installationen zeigen oben auf der Seite einen Sponsorenstreifen. Nur Ihr Browser lädt ihn von GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)); der traffic66-Server kontaktiert GitHub dafür nie und hält keine Kopie. Ein Browser, der GitHub nicht erreicht, zeigt stattdessen einen kurzen eingebauten Text. Es werden keine Daten über Sie oder die Installation gesendet. Mit der Registrierung verschwindet er.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

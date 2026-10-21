@@ -507,7 +507,7 @@ mostra o número de instalação de 8 dígitos; envie-o ao autor e coloque o
 `license.json` que receber de volta no diretório de dados. Contato:
 <route66traffic66@gmail.com>.
 
-Instalações não registradas mostram um pequeno banner de patrocínio na barra lateral esquerda. O seu navegador o carrega do GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) ou, se não conseguir alcançá-lo, de uma cópia que o servidor traffic66 baixou de lá e guarda em `<data>/sponsor`; o traffic66 não envia nenhum dado sobre você ou a instalação. O registro o remove.
+Instalações não registradas mostram uma faixa de patrocínio no topo da página. Só o seu navegador a carrega, do GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)); o servidor traffic66 nunca contata o GitHub para isso nem guarda cópia. Um navegador que não alcança o GitHub mostra em vez disso um breve texto embutido. Nenhum dado sobre você ou a instalação é enviado. O registro a remove.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

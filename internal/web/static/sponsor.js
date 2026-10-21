@@ -2,13 +2,10 @@
 //
 // The slides are listed in a manifest in
 // https://github.com/githubflyideas/ads-sponsor (folder traffic66/), so they
-// can change without a release. The browser fetches it directly; the
-// traffic66 server never contacts GitHub, and no user or installation data is
-// sent. Order of fallbacks:
-//   1. the manifest and images straight from GitHub (this browser);
-//   2. the last set the traffic66 server downloaded from GitHub (/api/sponsor),
-//      for browsers that cannot reach GitHub;
-//   3. a built-in text box. A broken image is never shown.
+// can change without a release. Only the browser fetches it: the traffic66
+// server never contacts GitHub for it, keeps no copy and serves none, and no
+// user or installation data is sent. A browser that cannot reach GitHub
+// shows a built-in text box instead; a broken image is never shown.
 // Registered installations never call this.
 //
 // Usage: t66Sponsor.load()   t66Sponsor.remove()
@@ -83,9 +80,6 @@
         return m;
       });
   }
-  function local() {
-    return getJSON('/api/sponsor', {credentials: 'same-origin', cache: 'no-cache'});
-  }
   // resolves with the slides whose images loaded, rejects when none did
   function ready(m, base) {
     var want = slidesOf(m, base);
@@ -101,7 +95,7 @@
   function slidesOf(m, base) {
     var list = m && Array.isArray(m.slides) ? m.slides : [], out = [];
     for (var i = 0; i < list.length && out.length < MAX; i++) {
-      var s = list[i] || {}, img = httpURL(s.image, base, base === URL_);
+      var s = list[i] || {}, img = httpURL(s.image, base, true);
       if (!img) continue;
       var alt = str(s.alt, 120), id = slug(str(s.id, 60)) || slug(alt) || ('slide-' + (i + 1));
       var link = httpURL(s.link, base, false);
@@ -193,9 +187,7 @@
       var slot = document.getElementById('sponsor');
       if (started || !slot || !window.URL || !window.Promise) return;
       started = true;
-      var here = location.origin + '/api/sponsor';
       remote().then(function (m) { return ready(m, URL_); })
-        .catch(function () { return local().then(function (m) { return ready(m, here); }); })
         .then(function (ok) { if (started) build(slot, ok); },
               function () {
                 if (!started) return;

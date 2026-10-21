@@ -412,7 +412,7 @@ Linux 需要 root 或 `setcap cap_net_raw,cap_net_admin+ep`，macOS 需要 root�
 
 以 [PolyForm Noncommercial License 1.0.0](../LICENSE.md) 和 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) 公开源码（以英文文本为准）：评估免费，少于 100 人的组织免费；更大的组织在生产使用 30 天后需注册；销售、为他人托管或提供竞争性产品需要商业许可。任何功能都不会被关闭。每个页面底部显示 8 位安装编号；把它发给作者，并把收到的 `license.json` 放进数据目录。联系方式：<route66traffic66@gmail.com>。
 
-未注册的安装会在左侧栏显示一个小的赞助横幅。它由你的浏览器从 GitHub（[ads-sponsor](https://github.com/githubflyideas/ads-sponsor)）加载；浏览器访问不了 GitHub 时，改用 traffic66 服务器从那里下载并缓存在 `<data>/sponsor` 的副本。traffic66 不会发送任何关于你或本安装的数据。注册后横幅即消失。
+未注册的安装会在页面顶部显示一条赞助横幅。它只由你的浏览器从 GitHub（[ads-sponsor](https://github.com/githubflyideas/ads-sponsor)）加载；traffic66 服务器不会为此访问 GitHub，也不保存副本。浏览器访问不了 GitHub 时，显示一段内置的简短文字。不会发送任何关于你或本安装的数据。注册后横幅即消失。
 
 <a id="11-security-sizing-troubleshooting"></a>
 

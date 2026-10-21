@@ -490,7 +490,7 @@ root، وWindows إلى [Npcap](https://npcap.com). تأتي التدفقات ا
 `license.json` الذي تتلقاه في دليل البيانات. للتواصل:
 <route66traffic66@gmail.com>.
 
-تعرض التثبيتات غير المسجلة لافتة رعاية صغيرة في الشريط الجانبي الأيسر. يحمّلها متصفحك من GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor))، أو إن تعذّر الوصول إليه فمن نسخة نزّلها خادم traffic66 من هناك ويحفظها في `<data>/sponsor`؛ ولا يرسل traffic66 أي بيانات عنك أو عن التثبيت. التسجيل يزيلها.
+تعرض التثبيتات غير المسجلة شريط رعاية أعلى الصفحة. يحمّله متصفحك وحده من GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor))؛ ولا يتصل خادم traffic66 بـ GitHub لأجله أبدًا ولا يحتفظ بنسخة منه. والمتصفح الذي لا يصل إلى GitHub يعرض بدلًا منه نصًا قصيرًا مدمجًا. لا تُرسل أي بيانات عنك أو عن التثبيت. ويزول بالتسجيل.
 
 <a id="11-security-sizing-troubleshooting"></a>
 
