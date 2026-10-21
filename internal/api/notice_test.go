@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -138,41 +137,5 @@ func TestNoticeWording(t *testing.T) {
 	}
 	if strings.Contains(n, "\n") {
 		t.Error("the notice spans lines; it is used in single-line places too")
-	}
-}
-
-// The asset CSV is the one file the API hands out, and it needs no notice
-// because an unregistered installation cannot reach it at all: the ledger
-// is a registered-only feature. This records that, so that whoever opens
-// the gate knows the file leaves unmarked until they mark it.
-func TestAssetCSVIsRegisteredOnly(t *testing.T) {
-	s, _ := assetServer(t, nil, 0, 0, 0)
-	r := httptest.NewRequest("GET", "/api/assets/csv?kind=devices", nil)
-	r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, "admin"))
-	w := httptest.NewRecorder()
-	s.getAssetCSV(w, r)
-	if w.Code != 403 {
-		t.Fatalf("an unregistered installation got %d from the asset CSV, want 403; "+
-			"if the gate has gone, the file now needs the notice on it", w.Code)
-	}
-}
-
-// The asset CSV carries the notice as "# " comment lines when unregistered
-// (defence in depth: today the route is registered-only) and none when
-// registered.
-func TestAssetCSVNotice(t *testing.T) {
-	s, _ := assetServer(t, []string{license.FeatDCIM}, 0, 0, 0)
-	r := httptest.NewRequest("GET", "/api/assets/csv?kind=site", nil)
-	r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, "admin"))
-	w := httptest.NewRecorder()
-	s.getAssetCSV(w, r)
-	if w.Code != 200 {
-		t.Fatalf("registered export: %d %s", w.Code, w.Body)
-	}
-	if strings.HasPrefix(w.Body.String(), "#") {
-		t.Errorf("a registered installation marked its CSV: %q", w.Body.String())
-	}
-	if got := commentLines((&Server{}).notice(), "# "); !strings.HasPrefix(got, "# ") || !strings.Contains(got, "not registered") {
-		t.Errorf("unregistered CSV prefix = %q", got)
 	}
 }

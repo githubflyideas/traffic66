@@ -27,7 +27,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/githubflyideas/traffic66/internal/api"
-	"github.com/githubflyideas/traffic66/internal/assets"
 	"github.com/githubflyideas/traffic66/internal/auth"
 	"github.com/githubflyideas/traffic66/internal/capture"
 	"github.com/githubflyideas/traffic66/internal/collector"
@@ -521,18 +520,6 @@ func serve(args []string, demo bool) {
 	srv.License = lic
 	if lic != nil {
 		go lic.Loop(ctx.Done(), 4*time.Hour)
-	}
-	// The asset ledger opens whatever the licence says, so that installing
-	// one later needs no restart and nothing already written down is out of
-	// reach. Who may read and change it is decided per request. Analysing
-	// capture files has no installation to keep a ledger for.
-	if offline == nil {
-		if al, err := assets.Open(f.data); err != nil {
-			log.Printf("asset ledger: %v", err)
-		} else {
-			srv.Assets = al
-			defer al.Close()
-		}
 	}
 	if offline != nil {
 		srv.SB = sandbox.NewWith(filepath.Join(f.data, "sandbox"), inv, asn, thr, sandbox.LocalLimits, 0.25)

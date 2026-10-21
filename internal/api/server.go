@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/githubflyideas/traffic66/internal/assets"
 	"github.com/githubflyideas/traffic66/internal/auth"
 	"github.com/githubflyideas/traffic66/internal/collector"
 	"github.com/githubflyideas/traffic66/internal/detect"
@@ -43,7 +42,6 @@ type Server struct {
 	SB      *sandbox.Sandbox // offline analysis of capture files
 	Offline bool             // started on capture files (traffic66 file.pcap): no live data
 	License *license.Checker // trial or licence state for the page footer
-	Assets  *assets.Store    // the asset ledger; nil when it could not be opened
 	// AutoLogin is a one-time token: /auto?t=<it> signs the browser in once.
 	AutoLogin string
 	Static    fs.FS
@@ -164,14 +162,11 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/inventory", s.getInventory)
 	adminAPI("POST /api/inventory", s.putInventory)
 	adminAPI("POST /api/iface", s.putIface)
+	api("GET /api/racks", s.getRacks)
+	adminAPI("POST /api/racks/device", s.putRackDevice)
+	adminAPI("POST /api/racks/iface", s.putRackIface)
 	api("GET /api/findings", s.data((*Server).findings))
 	api("POST /api/findings", s.data((*Server).setFindings))
-	api("GET /api/assets", s.getAssets)
-	api("GET /api/assets/csv", s.getAssetCSV)
-	api("POST /api/assets/csv", s.postAssetCSV)
-	api("POST /api/assets/paste", s.postPaste)
-	api("POST /api/assets/{kind}", s.putAsset)
-	api("DELETE /api/assets/{kind}", s.deleteAsset)
 	api("GET /api/cleanup", s.getCleanup)
 	adminAPI("POST /api/cleanup", s.postCleanup)
 	api("GET /api/cleanup/iface", s.getCleanupIface)
