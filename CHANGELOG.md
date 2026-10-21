@@ -5,6 +5,7 @@ heading is the version number.
 
 ## 2.4.1
 
+- Overview: Inbound and Outbound now mean which way the bytes went — what arrived at your hosts, what they sent — instead of who opened the connection. On a network whose hosts only connect outwards, Inbound used to be empty (and said the data was still arriving), although most of its traffic is the replies it downloads.
 - 95th-percentile billing is removed: the page, `/api/billing`, `/api/billing/series`, the five-minute rate table it was computed from and the `billed` mark on interface lines (an inventory line that still carries it loads as before). The interface page shows the same counters, and `/api/report` now takes its counter figures from them.
 - The evaluation mark is a step darker and a size larger.
 - Threat lists can be imported from the threat page — a file or a paste, one address or network per line — and removed there. An imported list is saved as `<data>/threats/<name>.txt` and is in use at once, without a restart; it applies to flows from then on.
