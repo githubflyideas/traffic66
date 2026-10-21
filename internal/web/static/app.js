@@ -27,11 +27,12 @@ function markTile() {
   // across the whole view, and the tile's size is what sets how often the
   // word appears. 360x235 puts about half again as many of them on a
   // screen as the 460x300 it started at, which is what makes the mark
-  // legible as a mark; the glyph itself is the same size and the same
-  // faint ink, so nothing underneath became harder to read.
+  // legible as a mark. The glyph is a size up from the 23 it started at
+  // and the ink a step darker (see app.css), and still light enough that
+  // nothing underneath becomes harder to read.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="235">` +
     `<text x="180" y="117" transform="rotate(-24 180 117)" text-anchor="middle" ` +
-    `font-family="system-ui,sans-serif" font-size="23" font-weight="600" ` +
+    `font-family="system-ui,sans-serif" font-size="26" font-weight="600" ` +
     `fill="${esc(ink)}">${esc(text)}</text></svg>`;
   return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
 }
