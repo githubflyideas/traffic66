@@ -315,7 +315,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'cleanup', 'sandbox', 'ifaces', 'billing', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 
 // How often a page redraws itself, by range. It follows the width of the
@@ -423,8 +423,6 @@ async function renderIfsel() {
 }
 async function api(path, extra = {}, filters = state.f) {
   if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
-  // a capture file holds no device counters, so there is no bill in it
-  if (inSB() && path.startsWith('billing')) return {bills: [], points: []};
   const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : extra.range ? extra : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
   // Which clock the day and six-hour columns are cut on. Without it they
   // were cut on UTC, so a day in Tokyo arrived split across two of them
@@ -2467,140 +2465,6 @@ views.ifaces = async (el) => {
 };
 
 // ------------------------------------------------------ 95th percentile
-// The bill a carrier would send: sort the five-minute samples of a period,
-// discard the top five per cent, charge the highest that is left. The
-// period is worked out here rather than on the server, because this is
-// where the user's time zone is known — a calendar month means the
-// customer's midnights, not UTC's.
-// last month by default, this month while last month has no counter
-// samples yet (a new installation)
-let billSel = {p: 'last', from: '', to: '', auto: true};
-const billPeriod = () => {
-  const now = new Date(), mStart = off => new Date(now.getFullYear(), now.getMonth() + off, 1);
-  if (billSel.p === 'this') return [mStart(0), now];
-  if (billSel.p === 'last') return [mStart(-1), mStart(0)];
-  if (billSel.p === '30d') return [new Date(now - 30 * 864e5), now];
-  // Both dates the user typed are days they mean to include, so the end is
-  // the midnight after the one they picked.
-  const f = new Date(billSel.from + 'T00:00'), t = new Date(billSel.to + 'T00:00');
-  if (isNaN(f) || isNaN(t) || t < f) return [mStart(-1), mStart(0)];
-  return [f, new Date(t.getTime() + 864e5)];
-};
-// billGrid lays the buckets out on the period's own five-minute grid. A
-// bucket that holds no measurement stays empty (null) rather than zero:
-// the circuit was not idle, nothing was collected, and the chart says the
-// same thing the figure does by leaving a gap.
-//
-// A month is nearly nine thousand buckets, more than a chart is wide, so
-// above ~600 they are grouped and the highest of each group kept. Taking
-// the highest rather than the average keeps a spike a spike; the dashed
-// line is the figure the server worked out from every bucket, so grouping
-// never moves it.
-function billGrid(d, from, to) {
-  const step = (d.bucket_minutes || 5) * 60000;
-  const n = Math.max(1, Math.round((to - from) / step));
-  const vin = new Array(n).fill(null), vout = new Array(n).fill(null);
-  (d.points || []).forEach(p => {
-    const i = Math.floor((new Date(p.ts).getTime() - from) / step);
-    if (i >= 0 && i < n) { vin[i] = p.in; vout[i] = p.out; }
-  });
-  const g = Math.max(1, Math.ceil(n / 600));
-  if (g === 1) return {times: vin.map((_, i) => from + i * step), in: vin, out: vout};
-  const times = [], gin = [], gout = [];
-  for (let i = 0; i < n; i += g) {
-    const top = a => { let v = null; for (let j = i; j < Math.min(n, i + g); j++) if (a[j] != null && (v == null || a[j] > v)) v = a[j]; return v; };
-    times.push(from + i * step); gin.push(top(vin)); gout.push(top(vout));
-  }
-  return {times, in: gin, out: gout};
-}
-views.billing = async (el) => {
-  const [from, to] = billPeriod();
-  const [d, ifs] = await Promise.all([
-    api('billing', {from: +from, to: +to}).catch(e => ({error: e.message || String(e)})),
-    api('ifaces').catch(() => ({ifaces: []})),
-  ]);
-  const rows = d.bills || [];
-  if (billSel.auto) {
-    billSel = {...billSel, auto: false};
-    if (billSel.p === 'last' && !d.error && !rows.some(b => b.buckets)) { billSel = {...billSel, p: 'this'}; return views.billing(el); }
-  }
-  const ikey = f => f.exporter + '/' + f.ifindex;
-  // A device reports every interface it has. Which of them somebody pays a
-  // carrier for is not something that can be worked out from the traffic,
-  // so it is marked by hand and kept on the interface's line in the names
-  // file, beside its name and its speed.
-  const cand = (ifs.ifaces || []).filter(f => f.ifindex && !f.billed);
-  const markIf = async (f, billed) => {
-    const res = await fetch('/api/iface', {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({exporter: f.exporter, ifindex: f.ifindex, name: f.name || '', tag: f.tag || '', default: !!f.default, billed})});
-    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || res.statusText); return; }
-    ifList = null; render();
-  };
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-  const day = x => new Date(x).toLocaleDateString(LANG);
-  const iso = x => new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  const opt = (v, k) => `<option value="${v}" ${billSel.p === v ? 'selected' : ''}>${esc(t(k))}</option>`;
-  const picker = `<div class="billbar">
-    <label>${esc(t('bill.period'))} <select id="billP">${opt('this', 'bill.this_month')}${opt('last', 'bill.last_month')}${opt('30d', 'bill.last30')}${opt('custom', 'bill.custom')}</select></label>
-    <span id="billC" ${billSel.p === 'custom' ? '' : 'hidden'}><input type="date" id="billF" value="${esc(billSel.from || iso(from))}"> – <input type="date" id="billT" value="${esc(billSel.to || iso(new Date(to.getTime() - 864e5)))}"></span>
-    <span class="muted">${esc(day(from))} – ${esc(day(to.getTime() - 1))} · ${esc(zone)}</span>
-    ${admOnly(cand.length ? `<span style="margin-inline-start:auto"><select id="billAdd"><option value="">${esc(t('bill.add'))}</option>${
-      cand.map(f => `<option value="${esc(ikey(f))}">${esc((f.name || t('bill.ifindex', {n: f.ifindex})) + ' · ' + (f.device || f.exporter))}</option>`).join('')}</select></span>` : '')}</div>
-    <p class="muted" style="margin:0 0 10px;font-size:13px">${esc(d.marked ? t('bill.marked', {n: nf(d.marked)}) : t('bill.all_shown'))}</p>`;
-  const body = d.error ? `<div class="empty">${esc(d.error)}</div>`
-    : !rows.length ? `<div class="empty">${esc(t('bill.empty'))}</div>`
-    : `<table><tr><th>${t('bill.iface')}</th><th class="num">${t('bill.billed')}</th><th class="num">${t('if.in')} 95</th><th class="num">${t('if.out')} 95</th><th class="num">${t('bill.peak')}</th><th class="num">${t('bill.avg')}</th><th class="num">${t('bill.coverage')}</th><th></th></tr>
-      ${rows.map(b => {
-        const nm = b.name || t('bill.ifindex', {n: b.ifindex}), dev = b.device || b.exporter;
-        const cov = b.coverage, low = cov < 0.95;
-        const head = `<td>${esc(nm)}<br><span class="muted" style="font-size:12.5px">${esc(dev)} · ${b.ifindex}</span></td>`;
-        if (!b.buckets) return `<tr>${head}<td colspan="6" class="muted">${esc(t('bill.nodata'))}</td>
-          <td class="nw" style="text-align:end">${admOnly(`<button class="btn" data-unbill="${esc(b.exporter + '/' + b.ifindex)}">${t('bill.remove')}</button>`)}</td></tr>`;
-        return `<tr><td>${esc(nm)}<br><span class="muted" style="font-size:12.5px">${esc(dev)} · ${b.ifindex}</span></td>
-          <td class="num"><b>${esc(fmtBps(b.billed))}</b><br><span class="muted" style="font-size:12.5px">${esc(t(b.dir === 'out' ? 'if.out' : 'if.in'))}</span></td>
-          <td class="num">${esc(fmtBps(b.in95))}</td><td class="num">${esc(fmtBps(b.out95))}</td>
-          <td class="num">${esc(fmtBps(Math.max(b.in_max, b.out_max)))}</td>
-          <td class="num">${esc(fmtBps(Math.max(b.in_avg, b.out_avg)))}</td>
-          <td class="num"${low ? ' style="color:var(--warn)"' : ''}>${esc(nf(cov * 100, 1))}%<br><span class="muted" style="font-size:12.5px">${esc(nf(b.buckets))}/${esc(nf(b.possible))}</span></td>
-          <td class="nw" style="text-align:end">${b.marked ? admOnly(`<button class="btn" data-unbill="${esc(b.exporter + '/' + b.ifindex)}">${t('bill.remove')}</button>`) : ''}</td></tr>`;
-      }).join('')}</table>
-      <p class="muted" style="margin:12px 0 0;font-size:13px">${esc(t('bill.gap_note'))}</p>`;
-  // The line the figure was taken across. The table says what is charged;
-  // somebody who disputes a bill asks to see this. Interfaces that
-  // reported nothing have no chart rather than an empty frame.
-  const charted = rows.filter(b => b.buckets).slice(0, 6);
-  const chTitle = b => (b.name || t('bill.ifindex', {n: b.ifindex})) + ' · ' + (b.device || b.exporter);
-  el.innerHTML = `<div class="grid">${panel('c12', t('bill.title'), t('bill.sub'), picker + body)}
-    ${charted.map((b, i) => panel('c12', esc(chTitle(b)), esc(t('bill.chart_sub')),
-      `<div class="chart" id="billCh${i}" style="height:190px" aria-label="${esc(chTitle(b))}"></div>
-       <div class="legend"><span><i style="background:${IF_IN}"></i>${esc(t('if.in'))}</span><span><i style="background:${IF_OUT}"></i>${esc(t('if.out'))}</span>
-         <span><i class="dash" style="--base:var(--accent)"></i>${esc(t('bill.p95'))}<span class="muted">${esc(fmtBps(b.billed))}</span></span></div>`)).join('')}
-    ${panel('c12', t('bill.how'), '', `<p class="muted" style="margin:0;font-size:13px">${esc(t('bill.how_note'))}<br>${esc(t('bill.retention', {n: nf(d.retention_days || 0)}))}</p>`)}</div>`;
-  charted.forEach(async (b, i) => {
-    const key = b.exporter + '/' + b.ifindex;
-    const sd = await api('billing/series', {from: +from, to: +to, if: key}).catch(() => null);
-    const el2 = document.getElementById('billCh' + i);
-    if (!sd || !el2) return;
-    const g = billGrid(sd, +from, +to);
-    tsChart(el2, {times: g.times, lines: [
-      {name: t('if.in'), color: IF_IN, data: g.in, fill: true},
-      {name: t('if.out'), color: IF_OUT, data: g.out, fill: true},
-      {name: t('bill.p95'), color: 'var(--accent)', data: g.times.map(() => b.billed), dash: true, keep: true},
-    ]});
-  });
-  const sel = $('#billP');
-  sel.onchange = () => { billSel = {...billSel, p: sel.value}; render(); };
-  const f = $('#billF'), tt = $('#billT');
-  if (f) f.onchange = tt.onchange = () => { billSel = {p: 'custom', from: f.value, to: tt.value}; render(); };
-  const add = $('#billAdd');
-  if (add) add.onchange = () => { const f = (ifs.ifaces || []).find(x => ikey(x) === add.value); if (f) markIf(f, true); };
-  el.querySelectorAll('[data-unbill]').forEach(b => b.onclick = () => {
-    const k = b.dataset.unbill, i = k.lastIndexOf('/');
-    const f = (ifs.ifaces || []).find(x => ikey(x) === k) || {exporter: k.slice(0, i), ifindex: +k.slice(i + 1)};
-    markIf(f, false);
-  });
-};
-
 views.sources = async (el) => {
   const [d, gd] = await Promise.all([api('sources'), api('geo').catch(() => ({sources: []}))]);
   const blocked = d.blocked || [];
@@ -2911,7 +2775,7 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'devices', 'billing', 'names']);
+const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'devices', 'names']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;

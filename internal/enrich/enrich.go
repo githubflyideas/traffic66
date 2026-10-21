@@ -52,11 +52,6 @@ type Iface struct {
 	Speed   uint64 // bits per second, 0 if unknown
 	Tag     string // a short label such as "uplink" (tag=)
 	Default bool   // the interface the pages show by default (default)
-	// Billed marks a circuit the 95th-percentile bill is taken over. A
-	// device reports every interface it has, and on a switch that is
-	// dozens; the two or three that somebody pays a carrier for are the
-	// operator's to name. It is a bare word on the line, like default.
-	Billed bool
 }
 
 // Inventory holds operator-provided names. All fields are optional.
@@ -209,7 +204,8 @@ func (inv *Inventory) Parse(text string) error {
 					continue
 				}
 				if w == "billed" {
-					it.Billed = true
+					// marked a circuit for the 95th-percentile bill, which
+					// is gone; a line written then still loads
 					continue
 				}
 				words = append(words, w)
@@ -279,24 +275,9 @@ func (inv *Inventory) DefaultIface() string {
 	return ""
 }
 
-// Billed is the set of interfaces a bill is taken over, keyed
-// "<exporter>/<ifindex>". Empty means none have been marked, which the
-// billing page reads as "show everything" rather than "show nothing".
-func (inv *Inventory) Billed() map[string]bool {
-	inv.mu.RLock()
-	defer inv.mu.RUnlock()
-	out := map[string]bool{}
-	for k, it := range inv.ifaces {
-		if it.Billed {
-			out[k] = true
-		}
-	}
-	return out
-}
-
 // SetIface names, tags or marks as default one interface, editing its
 // iface line in the names (or adding one). Only one interface is default.
-func (inv *Inventory) SetIface(exporter netip.Addr, idx uint32, name, tag string, def, billed bool) error {
+func (inv *Inventory) SetIface(exporter netip.Addr, idx uint32, name, tag string, def bool) error {
 	name = strings.Join(strings.Fields(name), " ")
 	tag = strings.Join(strings.Fields(tag), "_")
 	if name == "" {
@@ -347,9 +328,6 @@ func (inv *Inventory) SetIface(exporter netip.Addr, idx uint32, name, tag string
 	}
 	if def {
 		line += " default"
-	}
-	if billed {
-		line += " billed"
 	}
 	if at < 0 {
 		out = append(out, line)

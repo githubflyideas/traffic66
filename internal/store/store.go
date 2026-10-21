@@ -78,12 +78,6 @@ var schema = []string{
 	`CREATE TABLE IF NOT EXISTS r_host (ts TIMESTAMP, ip VARCHAR, role UTINYINT, internal BOOLEAN, bytes UBIGINT, wire UBIGINT, pkts UBIGINT, flows UBIGINT)`,
 	`CREATE TABLE IF NOT EXISTS r_dim (ts TIMESTAMP, dim VARCHAR, val VARCHAR, bytes UBIGINT, wire UBIGINT, pkts UBIGINT, flows UBIGINT)`,
 	`CREATE TABLE IF NOT EXISTS ifc (ts TIMESTAMP, exporter VARCHAR, ifindex UINTEGER, speed UBIGINT, in_oct UBIGINT, out_oct UBIGINT, in_pkts UBIGINT, out_pkts UBIGINT)`,
-	// Five-minute rates derived from ifc, kept for RollupDays so that a
-	// bill can look back a month. No primary key: RollRates deletes the
-	// span it is about to write, which is what keeps it unique, and an
-	// index over four hundred days of buckets would cost more than it
-	// buys here.
-	`CREATE TABLE IF NOT EXISTS ifr (ts TIMESTAMP, exporter VARCHAR, ifindex UINTEGER, in_bps DOUBLE, out_bps DOUBLE, samples UINTEGER)`,
 	`CREATE TABLE IF NOT EXISTS meta (k VARCHAR PRIMARY KEY, v VARCHAR)`,
 	// findings of the detection rules, and what the rules have seen before
 	`CREATE SEQUENCE IF NOT EXISTS finding_seq`,
@@ -408,7 +402,7 @@ func (s *Store) Retain(now time.Time) error {
 		rows += n
 		return nil
 	}
-	for _, t := range []string{"r_ts", "r_host", "r_dim", "ifr"} {
+	for _, t := range []string{"r_ts", "r_host", "r_dim"} {
 		if err := del(t, rollCut); err != nil {
 			return err
 		}
@@ -526,7 +520,3 @@ func TotalMemory() uint64 { return totalMemory() }
 
 // RetentionDays is how many days of flow detail are kept.
 func (s *Store) RetentionDays() int { return s.opt.RawDays }
-
-// RollupRetentionDays is how many days of rollups and interface rates are
-// kept. It is what bounds how far back a bill can be taken.
-func (s *Store) RollupRetentionDays() int { return s.opt.RollupDays }

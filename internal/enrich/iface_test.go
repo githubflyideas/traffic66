@@ -13,7 +13,7 @@ func TestSetIface(t *testing.T) {
 	}
 	a := netip.MustParseAddr("10.0.0.1")
 	// name and tag a new interface and make it the default
-	if err := inv.SetIface(a, 10, "Telecom 100G", "uplink", true, false); err != nil {
+	if err := inv.SetIface(a, 10, "Telecom 100G", "uplink", true); err != nil {
 		t.Fatal(err)
 	}
 	if it := inv.Iface(a, 10); it.Name != "Telecom 100G" || it.Tag != "uplink" || !it.Default {
@@ -26,7 +26,7 @@ func TestSetIface(t *testing.T) {
 		t.Fatalf("default %q", inv.DefaultIface())
 	}
 	// rename keeps the speed and the place of the line
-	if err := inv.SetIface(a, 3, "ISP #2", "", false, false); err != nil {
+	if err := inv.SetIface(a, 3, "ISP #2", "", false); err != nil {
 		t.Fatal(err)
 	}
 	txt := inv.Text()
