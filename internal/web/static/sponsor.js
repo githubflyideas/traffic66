@@ -12,12 +12,15 @@
 (function () {
   'use strict';
   var URL_ = 'https://raw.githubusercontent.com/githubflyideas/ads-sponsor/main/traffic66/sponsors.json';
-  // MAX is how many banners are fetched: the strip can show three at once
-  // on a wide window, so four left nothing to rotate to.
+  // MAX is how many advertisers are fetched and rotated through.
   var TIMEOUT_MS = 3000, ROTATE_MS = 5500, MAX = 6;
   // A cell narrower than this is not worth drawing a 728x90 banner into, so
   // it decides how many fit across the window.
   var MIN_CELL = 420;
+  // A small banner is 728x90 (1456x180 at 2x) and shown SMALL_COPIES times
+  // side by side; an image LONG_RATIO times as wide as it is high or wider
+  // is a long banner and fills the strip alone.
+  var SMALL_W = 728, SMALL_H = 90, SMALL_COPIES = 3, LONG_RATIO = 12;
   var CACHE_KEY = 't66.sponsor', CACHE_MS = 30 * 60 * 1000;
   var started = false, timerId = null, roId = null;
 
@@ -104,16 +107,23 @@
     return out;
   }
 
-  // The strip: as many banners side by side as the window has room for,
-  // rotating through the rest together. One image element cannot be in two
-  // cells at once, so each cell gets a clone of an already-loaded image —
-  // the bytes are in the browser's cache, nothing is fetched twice.
+  // The strip shows one advertiser at a time and rotates between them.
+  //   - a long banner (LONG_RATIO wide to 1 high or wider, 2880x120 is the
+  //     intended size) has the strip to itself;
+  //   - a small banner (the 728x90 kind) is shown three times side by side,
+  //     the same ad in every cell, so the strip never mixes two advertisers.
+  // A narrow window has room for fewer cells (one per MIN_CELL pixels).
+  // The strip keeps the height of a row of small banners whichever ad is
+  // up, so rotating never moves the page underneath.
+  //
+  // One image element cannot be in two cells at once, so each cell gets a
+  // clone of an already-loaded image; nothing is fetched twice.
   function build(slot, slides) {
     var car = slot.querySelector('.spc');
     car.hidden = false;
     var strip = document.createElement('div'); strip.className = 'spc-strip';
     var dots = document.createElement('div'); dots.className = 'spc-dots';
-    var cells = [], ds = [], cols = 0, off = 0, paused = false;
+    var ds = [], cur = 0, paused = false;
 
     function slideEl(s) {
       var a = document.createElement(s.link ? 'a' : 'div');
@@ -124,30 +134,25 @@
       a.appendChild(img);
       return a;
     }
-    function show(o) {
-      off = ((o % slides.length) + slides.length) % slides.length;
-      cells.forEach(function (box, i) {
-        box.textContent = '';
-        box.appendChild(slideEl(slides[(off + i) % slides.length]));
-      });
-      ds.forEach(function (d, i) { d.classList.toggle('on', i === off); });
-    }
-    // How many cells fit. Rebuilt only when the number changes, so a window
-    // being dragged does not rebuild the strip on every pixel.
-    function fit() {
+    function isLong(s) { return s.img.naturalWidth >= LONG_RATIO * s.img.naturalHeight; }
+    function draw() {
+      var s = slides[cur];
       var w = car.clientWidth || window.innerWidth || MIN_CELL;
-      var k = Math.max(1, Math.min(slides.length, Math.floor(w / MIN_CELL)));
-      if (k === cols) return;
-      cols = k;
+      var k = Math.max(1, Math.min(SMALL_COPIES, Math.floor(w / MIN_CELL)));
+      var rowH = Math.round((w - (k - 1)) / k * SMALL_H / SMALL_W);
+      var n = isLong(s) ? 1 : k;
       strip.textContent = '';
-      cells = [];
-      for (var i = 0; i < k; i++) {
+      strip.style.gridTemplateColumns = 'repeat(' + n + ', minmax(0, 1fr))';
+      for (var i = 0; i < n; i++) {
         var box = document.createElement('div'); box.className = 'spc-cell';
-        strip.appendChild(box); cells.push(box);
+        box.style.height = rowH + 'px';
+        box.appendChild(slideEl(s));
+        strip.appendChild(box);
       }
-      show(off);
+      ds.forEach(function (d, i) { d.classList.toggle('on', i === cur); });
       measure();
     }
+    function show(i) { cur = ((i % slides.length) + slides.length) % slides.length; draw(); }
     // The sidebar's height is the window less this strip (see app.css).
     function measure() {
       try { document.documentElement.style.setProperty('--sp-h', slot.offsetHeight + 'px'); } catch (e) {}
@@ -155,31 +160,25 @@
 
     car.textContent = '';
     car.appendChild(strip);
-    // Dots only when there is more to see than fits: with everything on
-    // screen there is nothing to page to.
-    slides.forEach(function (s, i) {
-      var d = document.createElement('button');
-      d.type = 'button'; d.className = 'spc-dot';
-      d.setAttribute('aria-label', String(i + 1));
-      d.onclick = function () { show(i); };
-      dots.appendChild(d); ds.push(d);
-    });
-    fit();
-    if (slides.length > cols) {
+    if (slides.length > 1) {
+      slides.forEach(function (s, i) {
+        var d = document.createElement('button');
+        d.type = 'button'; d.className = 'spc-dot';
+        d.setAttribute('aria-label', String(i + 1));
+        d.onclick = function () { show(i); };
+        dots.appendChild(d); ds.push(d);
+      });
       car.appendChild(dots);
       ['mouseenter', 'focusin'].forEach(function (e) { car.addEventListener(e, function () { paused = true; }); });
       ['mouseleave', 'focusout'].forEach(function (e) { car.addEventListener(e, function () { paused = false; }); });
       timerId = setInterval(function () {
-        if (!paused && !document.hidden) show(off + cols);
+        if (!paused && !document.hidden) show(cur + 1);
       }, ROTATE_MS);
     }
     slot.hidden = false;
-    measure();
-    // The cells are fluid, so the strip's height changes with the window
-    // even when the number of cells does not: measure on every resize.
-    var onResize = function () { fit(); measure(); };
-    if (window.ResizeObserver) { roId = new ResizeObserver(onResize); roId.observe(car); }
-    else window.addEventListener('resize', onResize);
+    show(0);
+    if (window.ResizeObserver) { roId = new ResizeObserver(draw); roId.observe(car); }
+    else window.addEventListener('resize', draw);
   }
 
   window.t66Sponsor = {

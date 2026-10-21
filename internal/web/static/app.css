@@ -87,18 +87,17 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
    browser at the top of the page, above the sidebar and the content, and it
    scrolls away with the page rather than taking a band of every screen.
 
-   The banners in the manifest are 728x90, so a wide window is filled with
-   several of them side by side instead of one stretched one; the strip
-   decides how many fit and rotates through the rest. Its height is the
-   cell's aspect ratio, which is why the sidebar's own height is measured
-   against it (--sp-h, set by sponsor.js) instead of a fixed 100vh. */
+   One advertiser at a time: a long banner alone, a small 728x90 one three
+   times side by side (sponsor.js decides, and sets the row height). The
+   sidebar's own height is measured against the strip (--sp-h) instead of
+   a fixed 100vh. */
 .sponsor{grid-column:1/-1;background:var(--side);border-bottom:1px solid var(--side-line)}
 .sponsor[hidden]{display:none}
 .sponsor .sp-h{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:3px 12px 2px}
 .sponsor .sp-text{margin:0 12px 8px;border:1px dashed var(--line-2);border-radius:6px;padding:6px 8px;font-size:11.5px;line-height:1.35;color:var(--ink-3);overflow-wrap:anywhere}
 .sponsor .sp-text[hidden],.spc[hidden]{display:none}
 .spc-strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:1px;background:var(--side-line)}
-.spc-cell{position:relative;aspect-ratio:728/90;overflow:hidden;background:var(--surface)}
+.spc-cell{position:relative;overflow:hidden;background:var(--surface)}
 .spc-cell>a,.spc-cell>div{display:block;width:100%;height:100%}
 .spc-cell img{width:100%;height:100%;object-fit:cover;display:block}
 .spc-dots{display:flex;gap:6px;justify-content:center;padding:4px 0 5px}
