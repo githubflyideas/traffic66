@@ -476,11 +476,11 @@ body.mustchange #nav,body.mustchange #acct,body.mustchange .ifsel{display:none}
 body.marked .view.on{position:relative}
 body.marked .view.on::after{
   content:"";position:absolute;inset:0;z-index:40;pointer-events:none;
-  background-image:var(--mark);background-repeat:repeat;opacity:.12}
+  background-image:var(--mark);background-repeat:repeat;opacity:.16}
 @media print{
   /* Print flattens and lightens, so the mark is given a little more to
      survive it — still far below what would obscure a number. */
-  body.marked .view.on::after{opacity:.2;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.marked .view.on::after{opacity:.25;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 
 /* The mark's clickable part. The tile itself cannot take clicks without
