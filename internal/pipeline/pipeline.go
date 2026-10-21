@@ -181,11 +181,6 @@ func (p *Pipeline) Run(ctx context.Context) {
 			if err := p.st.Seal(now); err != nil {
 				p.fail(err)
 			}
-			// Before Retain, which is what deletes the snapshots the
-			// rates are derived from.
-			if err := p.st.RollRates(now); err != nil {
-				p.fail(err)
-			}
 			if err := p.st.Retain(now); err != nil {
 				p.fail(err)
 			}

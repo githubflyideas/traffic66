@@ -40,7 +40,6 @@ type reportIface struct {
 	Device   string `json:"device,omitempty"`
 	Speed    uint64 `json:"speed,omitempty"` // bits/s, 0 when unknown
 	Source   string `json:"source"`
-	Billed   bool   `json:"billed,omitempty"`
 
 	InWire  uint64 `json:"in_wire"` // bytes on the wire, from the flows
 	OutWire uint64 `json:"out_wire"`
@@ -57,11 +56,10 @@ type reportIface struct {
 	UtilPeak float64 `json:"util_peak,omitempty"`
 	Util95   float64 `json:"util95,omitempty"`
 
-	// Coverage is the share of the period that was measured, for counter
-	// rows: a 95th percentile taken over half the period is not wrong, but
-	// it is not the period either.
+	// Coverage is the share of the period's buckets the counters measured,
+	// for counter rows: a 95th percentile taken over half the period is not
+	// wrong, but it is not the period either.
 	Coverage float64 `json:"coverage,omitempty"`
-	Samples  int64   `json:"samples,omitempty"`
 }
 
 // reportOut is the whole report. It is a struct rather than a map so that
@@ -183,18 +181,6 @@ func (s *Server) report(w http.ResponseWriter, r *http.Request) {
 	}
 	out.P95Bps = percentile(bps, 0.95)
 
-	// Interfaces. The device's counters are read once for the whole period
-	// and indexed, rather than queried per interface.
-	bills := map[string]store.Bill{}
-	if bl, err := s.Store.Bills(q.From, q.To, ""); err == nil {
-		for _, b := range bl {
-			bills[ifKey(b.Exporter, b.IfIndex)] = b
-		}
-	}
-	var billed map[string]bool
-	if s.Inv != nil {
-		billed = s.Inv.Billed()
-	}
 	list, err := s.Store.Interfaces(q)
 	if err != nil {
 		fail(w, err)
@@ -206,7 +192,7 @@ func (s *Server) report(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		it := reportIface{Exporter: f.Exporter, IfIndex: f.IfIndex, Speed: f.Speed,
-			InWire: f.InWire, OutWire: f.OutWire, Source: srcFlows, Billed: billed[k]}
+			InWire: f.InWire, OutWire: f.OutWire, Source: srcFlows}
 		if a, err := netip.ParseAddr(f.Exporter); err == nil && s.Inv != nil {
 			ifc := s.Inv.Iface(a, f.IfIndex)
 			it.Name, it.Device = ifc.Name, s.Inv.Device(a)
@@ -214,12 +200,11 @@ func (s *Server) report(w http.ResponseWriter, r *http.Request) {
 				it.Speed = ifc.Speed
 			}
 		}
-		if b, ok := bills[k]; ok && b.Buckets > 0 {
+		if c := s.counterFigures(q, f); c != nil {
 			it.Source = srcCounters
-			it.InAvg, it.OutAvg = b.InAvg, b.OutAvg
-			it.InPeak, it.OutPeak = b.InMax, b.OutMax
-			it.In95, it.Out95 = b.In95, b.Out95
-			it.Coverage, it.Samples = b.Coverage(), b.Samples
+			it.InAvg, it.InPeak, it.In95 = c.in.avg, c.in.peak, c.in.p95
+			it.OutAvg, it.OutPeak, it.Out95 = c.out.avg, c.out.peak, c.out.p95
+			it.Coverage = c.coverage
 		} else if span > 0 {
 			// No counters: the flows are the only measurement there is.
 			// They are sampled, so the row says so through Source.
@@ -294,6 +279,51 @@ func checkIface(v string) error {
 		return fmt.Errorf("if: %q is not an interface number", idx)
 	}
 	return nil
+}
+
+type figures struct{ avg, peak, p95 float64 }
+
+type counterRow struct {
+	in, out  figures
+	coverage float64
+}
+
+// counterFigures is an interface's average, peak and 95th percentile from
+// the device's own counters, over the same buckets the interface page
+// draws them in; nil when the device reported no counters for it in the
+// period. Buckets with no measurement are left out, not counted as zero.
+func (s *Server) counterFigures(q store.Query, f store.IfaceInfo) *counterRow {
+	if !f.Counters {
+		return nil
+	}
+	rc, err := s.Store.Recon(q, f.Exporter, f.IfIndex)
+	if err != nil || !rc.HasCounters {
+		return nil
+	}
+	of := func(v []float64) (figures, int) {
+		var got []float64
+		sum := 0.0
+		for _, x := range v {
+			if x >= 0 {
+				got = append(got, x)
+				sum += x
+			}
+		}
+		if len(got) == 0 {
+			return figures{}, 0
+		}
+		r := figures{avg: sum / float64(len(got)), p95: percentile(got, 0.95)}
+		for _, x := range got {
+			r.peak = math.Max(r.peak, x)
+		}
+		return r, len(got)
+	}
+	in, n := of(rc.InCounter)
+	out, _ := of(rc.OutCounter)
+	if n == 0 {
+		return nil
+	}
+	return &counterRow{in: in, out: out, coverage: float64(n) / float64(len(rc.InCounter))}
 }
 
 func ifKey(exporter string, ifindex uint32) string {

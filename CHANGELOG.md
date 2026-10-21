@@ -3,6 +3,14 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.4.1
+
+- 95th-percentile billing is removed: the page, `/api/billing`, `/api/billing/series`, the five-minute rate table it was computed from and the `billed` mark on interface lines (an inventory line that still carries it loads as before). The interface page shows the same counters, and `/api/report` now takes its counter figures from them.
+- The evaluation mark is a step darker and a size larger.
+- The names page is called Inventory again, in every language (台账 in Chinese).
+- The sponsor strip shows one advertiser at a time: a long banner alone, a small 728x90 one three times side by side.
+- Releases started by hand from Actions report themselves as official builds (2.4.0 said "community build").
+
 ## 2.4.0
 
 - Top 66 opens on the two ends of each conversation (top clients and top servers side by side) instead of the grouped table; the table is still one click away and a shared link still lands where the sender was.
