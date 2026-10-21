@@ -936,9 +936,12 @@ views.help = async (el) => {
   el.querySelectorAll('a[data-hlang]').forEach(a => a.onclick = e => { e.preventDefault(); helpLang = a.dataset.hlang; render(); window.scrollTo(0, 0); });
 };
 views.overview = async (el) => {
-  // total, or only inbound or only outbound traffic (direction from your networks' point of view)
+  // total, or only the bytes that came in or only those that went out,
+  // from your networks' point of view — which way the bytes went, not who
+  // opened the connection: a network whose hosts only connect outwards
+  // still downloads, and those replies are its inbound traffic
   const od = ['inbound', 'outbound'].includes(state.od) ? state.od : '';
-  const [d, ifs, fd] = await Promise.all([api('overview', {}, od ? [...state.f, {f: 'dir', v: od, neg: false}] : state.f), inSB() ? null : loadIfaces(), api('findings', {limit: 3}).catch(() => null)]);
+  const [d, ifs, fd] = await Promise.all([api('overview', {}, od ? [...state.f, {f: 'bytes', v: od === 'inbound' ? 'in' : 'out', neg: false}] : state.f), inSB() ? null : loadIfaces(), api('findings', {limit: 3}).catch(() => null)]);
   // the interface chart: the interface picked at the top, else the default, else the busiest
   const ifl = ifs?.ifaces || [], ikey = f => f.exporter + '/' + f.ifindex;
   const ifk = state.ifv && state.ifv !== 'all' ? state.ifv : (ifs?.default || ((ifl.find(f => !f.peer) || ifl[0]) ? ikey(ifl.find(f => !f.peer) || ifl[0]) : ''));

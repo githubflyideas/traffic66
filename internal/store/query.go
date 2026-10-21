@@ -186,6 +186,23 @@ func (q Query) where() (string, []any, error) {
 			}
 			c = "dir = ?"
 			args = append(args, n)
+		case "bytes":
+			// Which way the bytes went, from your networks' point of view:
+			// "in" is what arrived at an internal host from outside, "out"
+			// what an internal host sent outside. It is not dir, which says
+			// who opened the connection: on a network whose hosts only open
+			// connections outwards, the replies they download are inbound
+			// bytes on outbound connections, and dir=inbound is empty.
+			srcInt := "(CASE WHEN src = client THEN cli_int ELSE srv_int END)"
+			dstInt := "(CASE WHEN dst = client THEN cli_int ELSE srv_int END)"
+			switch v {
+			case "in":
+				c = "(NOT " + srcInt + " AND " + dstInt + ")"
+			case "out":
+				c = "(" + srcInt + " AND NOT " + dstInt + ")"
+			default:
+				return "", nil, fmt.Errorf("bad byte direction %q", v)
+			}
 		case "encap":
 			c = "encap = ?"
 			n, err := strconv.Atoi(v)
