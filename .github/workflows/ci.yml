@@ -93,7 +93,9 @@ jobs:
             if [[ -n "${{ matrix.goarch }}" ]]; then export GOARCH="${{ matrix.goarch }}" CC="${{ matrix.cc }}"; fi
             # one self-contained binary per platform
             out="dist/traffic66-${{ matrix.target }}/$exe"
-            kind=community; [[ "$GITHUB_REF" == refs/tags/* ]] && kind=official
+            # a tag push and a one-click release (a version entered by hand)
+            # are both releases; only the builds of every push stay community
+            kind=community; [[ "$GITHUB_REF" == refs/tags/* || -n "${{ inputs.version }}" ]] && kind=official
             ldflags="-s -w -X main.version=${ver} -X main.buildKind=${kind}"
             tags=""
             export CGO_ENABLED=1
