@@ -79,7 +79,7 @@ func TestFirstBucketCountsOnlyTheCoveredPart(t *testing.T) {
 		t.Fatal(err)
 	}
 	q := Query{From: base.Add(-2 * time.Hour), To: base.Add(4 * time.Hour)}
-	if q.usesRollup() {
+	if s.rollupOK(q) {
 		t.Skip("range answered from the summaries")
 	}
 	for name, get := range map[string]func() (*Series, error){

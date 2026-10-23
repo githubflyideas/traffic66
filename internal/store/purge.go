@@ -132,7 +132,7 @@ func (s *Store) PurgeBefore(before time.Time) (PurgeSize, error) {
 	} else {
 		return done, err
 	}
-	for _, t := range []string{"r_ts", "r_host", "r_dim", "ifc"} {
+	for _, t := range append([]string{"r_ts", "r_host", "r_dim", "ifc"}, viewTables...) {
 		if _, err := s.DB.Exec(`DELETE FROM `+t+` WHERE `+cond, args...); err != nil {
 			return done, err
 		}

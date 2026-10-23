@@ -57,8 +57,6 @@ func (q Query) bucketSQL(step time.Duration) string {
 
 func (q Query) span() time.Duration { return q.To.Sub(q.From) }
 
-// usesRollup reports whether this query can be answered from rollups.
-func (q Query) usesRollup() bool { return len(q.Filters) == 0 && q.span() > 6*time.Hour }
 
 var dirNames = map[string]int{"outbound": DirOutbound, "inbound": DirInbound, "internal": DirInternal, "transit": DirTransit}
 
@@ -391,65 +389,114 @@ func (s *Store) TopNBy(q Query, dim string, limit int, by string, asc ...bool) (
 	if limit <= 0 || limit > 1000 {
 		limit = 66
 	}
-	if q.usesRollup() && d.rollup != "" {
+	if s.rollupOK(q) && d.rollup != "" {
 		return s.topRollup(q, d.rollup, limit, ord[1]+" "+dir)
 	}
 	where, args, err := q.where()
 	if err != nil {
 		return nil, err
 	}
+	cond := where
+	if dim == "threat" {
+		cond += " AND threat <> ''"
+	}
 	// Group by cheap keys (numeric IPv4, port and protocol as integers) and
 	// format for display afterwards: grouping on address text is several
-	// times slower. IPv4 and IPv6 rows never share a group, so they are
-	// aggregated separately and merged.
-	var inner, groups, inner6, groups6, outer, v4conds []string
+	// times slower. An IPv4 address is grouped by its number with no text,
+	// an IPv6 one by its text with the number 0, so the two never share a
+	// group.
+	var parts []keyPart
+	var v4conds []string
 	for i, e := range []string{d.expr, d.expr2, d.expr3} {
 		if e == "" {
-			outer = append(outer, "'' AS k"+strconv.Itoa(i))
 			continue
 		}
 		kp := keyPartFor(e, i)
-		inner = append(inner, kp.inner...)
-		groups = append(groups, kp.groups...)
-		inner6 = append(inner6, kp.inner6...)
-		groups6 = append(groups6, kp.groups6...)
+		parts = append(parts, kp)
 		if kp.v4cond != "" {
 			v4conds = append(v4conds, kp.v4cond)
 		}
-		outer = append(outer, kp.outer+" AS k"+strconv.Itoa(i))
+	}
+	v4 := "true"
+	if len(v4conds) > 0 {
+		v4 = strings.Join(v4conds, " AND ")
+	}
+	var keySel, groups, outer, on []string
+	for _, kp := range parts {
+		for j, g := range kp.groups {
+			if kp.v4cond != "" {
+				// the number for IPv4 rows, the text for the others
+				n, t := kp.inner[0], kp.inner6[1]
+				n, t = n[:strings.LastIndex(n, " AS ")], t[:strings.LastIndex(t, " AS ")]
+				keySel = append(keySel, "CASE WHEN "+v4+" THEN "+n+" ELSE 0 END AS "+kp.groups[0],
+					"CASE WHEN "+v4+" THEN NULL ELSE "+t+" END AS "+kp.groups6[0])
+				groups = append(groups, kp.groups[0], kp.groups6[0])
+				break
+			}
+			keySel = append(keySel, kp.inner[j])
+			groups = append(groups, g)
+		}
+	}
+	for i, e := range []string{d.expr, d.expr2, d.expr3} {
+		if e == "" {
+			outer = append(outer, "'' AS k"+strconv.Itoa(i))
+		} else {
+			outer = append(outer, keyPartFor(e, i).outer+" AS k"+strconv.Itoa(i))
+		}
+	}
+	// pg: the group columns of a step joined back to t, renamed so the
+	// two sides of the join do not both have them
+	var pg, onP []string
+	for _, g := range groups {
+		on = append(on, "t."+g+" IS NOT DISTINCT FROM x."+g)
+		pg = append(pg, "x."+g+" AS p_"+g)
+		onP = append(onP, "t."+g+" IS NOT DISTINCT FROM p.p_"+g)
 	}
 	extra := "''"
 	if d.extra != "" {
 		extra = "coalesce(CAST(" + d.extra + " AS VARCHAR), '')"
 	}
-	peers := "0"
-	if d.peers != "" && q.span() <= 7*24*time.Hour {
-		peers = "approx_count_distinct(" + d.peers + ")"
-	}
 	intc := "false"
 	if d.intCol != "" {
 		intc = d.intCol
 	}
-	cond := where
-	if dim == "threat" {
-		cond += " AND threat <> ''"
+	peerCol := "NULL"
+	if d.peers != "" {
+		peerCol = d.peers
 	}
-	src := s.Source(q.From, q.To)
-	aggs := fmt.Sprintf(`%s AS x_extra, sum(bytes) AS x_b, sum(wire) AS x_w, sum(pkts) AS x_p, sum(flows) AS x_f, %s AS x_peers, %s AS x_int`, extra, peers, intc)
-	part := func(sel, grp []string, c string) string {
-		return fmt.Sprintf(`(SELECT %s, %s FROM %s WHERE %s GROUP BY %s ORDER BY %s %s, x_w DESC LIMIT %d)`,
-			strings.Join(sel, ", "), aggs, src, c, strings.Join(grp, ", "), ord[0], dir, limit)
+	// x is the rows, with their keys, read again by each step below rather
+	// than kept: kept, a week of rows is more than the memory there is.
+	// only the columns the steps below use: the flow files are read by
+	// column, and every other one would be read for nothing
+	x := fmt.Sprintf(`x AS NOT MATERIALIZED (SELECT bytes, wire, pkts, flows, peer_cc, peer_org, app, dir, cli_int, srv_int, %s, %s AS x_pc FROM %s WHERE %s)`,
+		strings.Join(keySel, ", "), peerCol, s.Source(q.From, q.To), cond)
+	g := strings.Join(groups, ", ")
+	sums := fmt.Sprintf(`%s AS x_extra, sum(bytes) AS x_b, sum(wire) AS x_w, sum(pkts) AS x_p, sum(flows) AS x_f, %s AS x_int`, extra, intc)
+	// Rank on what can be summed, which the database can do in any amount
+	// of memory, and count the peers only for the rows that made the list.
+	// Counting them for every group first (two million clients over a week)
+	// is what ran out of memory. Ranked by peers, the distinct pairs are
+	// counted instead, which spills to disk as well.
+	var with string
+	if by == "peers" {
+		with = fmt.Sprintf(`WITH %s,
+			t AS (SELECT %s, count(*) AS x_peers FROM (SELECT DISTINCT %s, x_pc FROM x WHERE x_pc IS NOT NULL) GROUP BY ALL ORDER BY x_peers %s LIMIT %d),
+			p AS (SELECT %s, %s FROM x SEMI JOIN t ON %s GROUP BY ALL)
+			SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM t JOIN p ON %s ORDER BY x_peers %s, x_w DESC`,
+			x, g, g, dir, limit, strings.Join(pg, ", "), sums, strings.Join(on, " AND "), strings.Join(outer, ", "), strings.Join(onP, " AND "), dir)
+	} else {
+		peers := "0"
+		if d.peers != "" {
+			peers = "approx_count_distinct(x_pc)"
+		}
+		with = fmt.Sprintf(`WITH %s,
+			t AS (SELECT %s, %s FROM x GROUP BY ALL ORDER BY %s %s, x_w DESC LIMIT %d),
+			p AS (SELECT %s, %s AS x_peers FROM x SEMI JOIN t ON %s GROUP BY ALL)
+			SELECT %s, x_extra, x_b, x_w, x_p, x_f, coalesce(x_peers, 0), x_int FROM t LEFT JOIN p ON %s ORDER BY %s %s, x_w DESC`,
+			x, g, sums, ord[0], dir, limit, strings.Join(pg, ", "), peers, strings.Join(on, " AND "), strings.Join(outer, ", "),
+			strings.Join(onP, " AND "), ord[0], dir)
 	}
-	body := part(inner, groups, cond)
-	qargs := args
-	if len(v4conds) > 0 {
-		v4 := strings.Join(v4conds, " AND ")
-		body = part(inner, groups, "("+cond+") AND "+v4) + " UNION ALL " + part(inner6, groups6, "("+cond+") AND NOT ("+v4+")")
-		qargs = append(append([]any{}, args...), args...)
-	}
-	sqlq := fmt.Sprintf(`SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM (%s) ORDER BY %s %s, x_w DESC LIMIT %d`,
-		strings.Join(outer, ", "), body, ord[0], dir, limit)
-	rows, err := s.DB.Query(sqlq, qargs...)
+	rows, err := s.DB.Query(with, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -472,14 +519,18 @@ func (s *Store) topRollup(q Query, rollup string, limit int, order string) ([]To
 	args := []any{q.From.UTC(), q.To.UTC()}
 	if strings.HasPrefix(rollup, "host:") {
 		role, _ := strconv.Atoi(rollup[5:])
-		sqlq = fmt.Sprintf(`SELECT ip, sum(bytes), sum(wire), sum(pkts), sum(flows), bool_or(internal) FROM r_host
+		sqlq = fmt.Sprintf(`SELECT ip, sum(bytes), sum(wire), sum(pkts), sum(flows), bool_or(internal) FROM {r_host}
 			WHERE ts >= ? AND ts < ? AND role = %d GROUP BY 1 ORDER BY %s LIMIT %d`, role, order, limit)
 	} else {
-		sqlq = fmt.Sprintf(`SELECT val, sum(bytes), sum(wire), sum(pkts), sum(flows), false FROM r_dim
+		sqlq = fmt.Sprintf(`SELECT val, sum(bytes), sum(wire), sum(pkts), sum(flows), false FROM {r_dim}
 			WHERE ts >= ? AND ts < ? AND dim = ? GROUP BY 1 ORDER BY %s LIMIT %d`, order, limit)
 		args = append(args, rollup)
 	}
-	rows, err := s.DB.Query(sqlq, args...)
+	sqlq, pre, err := s.rollups(q, sqlq)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.DB.Query(sqlq, append(pre, args...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -629,12 +680,17 @@ func StepFor(span time.Duration) time.Duration {
 func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 	step := StepFor(q.span())
 	q.From = q.localTrunc(q.From, step)
-	settled := settledTo(q.To, q.usesRollup())
+	rollup := s.rollupOK(q)
+	settled := settledTo(q.To, rollup)
 	var rows *sql.Rows
 	var err error
 	bucket := q.bucketSQL(step)
-	if q.usesRollup() {
-		rows, err = s.DB.Query(fmt.Sprintf(`SELECT %s AS b, app, sum(wire) FROM r_ts WHERE ts >= ? AND ts < ? GROUP BY 1,2`, bucket), q.From.UTC(), q.To.UTC())
+	if rollup {
+		sqlq, pre, rerr := s.rollups(q, fmt.Sprintf(`SELECT %s AS b, app, sum(wire) FROM {r_ts} WHERE ts >= ? AND ts < ? GROUP BY 1,2`, bucket))
+		if rerr != nil {
+			return nil, rerr
+		}
+		rows, err = s.DB.Query(sqlq, append(pre, q.From.UTC(), q.To.UTC())...)
 	} else {
 		where, args, werr := q.where()
 		if werr != nil {
@@ -730,14 +786,22 @@ type Totals struct {
 
 func (s *Store) Totals(q Query) (Totals, error) {
 	var t Totals
-	if q.usesRollup() {
-		err := s.DB.QueryRow(`SELECT coalesce(sum(bytes),0), coalesce(sum(wire),0), coalesce(sum(pkts),0), coalesce(sum(flows),0) FROM r_ts WHERE ts >= ? AND ts < ?`, q.From.UTC(), q.To.UTC()).
-			Scan(&t.Bytes, &t.Wire, &t.Pkts, &t.Flows)
-		if err != nil {
+	if s.rollupOK(q) {
+		one := func(sqlq string, dst ...any) error {
+			sqlq, pre, err := s.rollups(q, sqlq)
+			if err != nil {
+				return err
+			}
+			return s.DB.QueryRow(sqlq, append(pre, q.From.UTC(), q.To.UTC())...).Scan(dst...)
+		}
+		if err := one(`SELECT coalesce(sum(bytes),0), coalesce(sum(wire),0), coalesce(sum(pkts),0), coalesce(sum(flows),0) FROM {r_ts} WHERE ts >= ? AND ts < ?`,
+			&t.Bytes, &t.Wire, &t.Pkts, &t.Flows); err != nil {
 			return t, err
 		}
-		s.DB.QueryRow(`SELECT count(DISTINCT ip) FILTER (WHERE internal), count(DISTINCT ip) FILTER (WHERE NOT internal) FROM r_host WHERE ts >= ? AND ts < ?`, q.From.UTC(), q.To.UTC()).Scan(&t.Hosts, &t.Peers)
-		s.DB.QueryRow(`SELECT count(DISTINCT val) FROM r_dim WHERE ts >= ? AND ts < ? AND dim = 'country' AND val NOT IN ('', '__internal__')`, q.From.UTC(), q.To.UTC()).Scan(&t.Countries)
+		// the addresses counted by grouping them, which spills to disk
+		// where count(DISTINCT) would not
+		one(`SELECT count(*) FILTER (WHERE i), count(*) FILTER (WHERE NOT i) FROM (SELECT ip, internal AS i FROM {r_host} WHERE ts >= ? AND ts < ? GROUP BY ALL)`, &t.Hosts, &t.Peers)
+		one(`SELECT count(DISTINCT val) FROM {r_dim} WHERE ts >= ? AND ts < ? AND dim = 'country' AND val NOT IN ('', '__internal__')`, &t.Countries)
 		return t, nil
 	}
 	where, args, err := q.where()

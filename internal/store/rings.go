@@ -43,10 +43,17 @@ func (s *Store) Rings(q Query, inner, outer string, nInner, nOuter int) (*RingSe
 	if err != nil {
 		return nil, err
 	}
-	sq := fmt.Sprintf(`WITH p AS (SELECT %s AS i, %s AS o, sum(wire) AS w FROM %s WHERE %s AND %s GROUP BY 1,2),
-		ti AS (SELECT i FROM p GROUP BY i ORDER BY sum(w) DESC LIMIT %d)
-		SELECT CASE WHEN i IN (SELECT i FROM ti) THEN i ELSE '__other__' END, CASE WHEN i IN (SELECT i FROM ti) THEN o ELSE '__other__' END, CAST(sum(w) AS DOUBLE)
-		FROM p GROUP BY 1,2`, ie, oe, s.Source(q.From, q.To), where, cond, nInner)
+	// The rows are read again by each step rather than kept, and the
+	// pairs are added up only for the top inner values: adding up every
+	// pair first (each of a week's clients with each server it reached)
+	// is what ran out of memory. The database keeps each inner value's
+	// top outer values and their total; the rest is the difference.
+	sq := fmt.Sprintf(`WITH x AS NOT MATERIALIZED (SELECT %s AS i, %s AS o, wire AS w FROM %s WHERE %s AND %s),
+		ti AS (SELECT i FROM x GROUP BY i ORDER BY sum(w) DESC LIMIT %d),
+		p AS (SELECT CASE WHEN i IN (SELECT i FROM ti) THEN i ELSE '__other__' END AS pi,
+			CASE WHEN i IN (SELECT i FROM ti) THEN o ELSE '__other__' END AS po, sum(w) AS w FROM x GROUP BY 1,2)
+		SELECT pi, po, CAST(w AS DOUBLE), CAST(sum(w) OVER (PARTITION BY pi) AS DOUBLE) FROM p
+		QUALIFY row_number() OVER (PARTITION BY pi ORDER BY w DESC) <= %d`, ie, oe, s.Source(q.From, q.To), where, cond, nInner, nOuter+1)
 	rows, err := s.DB.Query(sq, args...)
 	if err != nil {
 		return nil, err
@@ -57,12 +64,15 @@ func (s *Store) Rings(q Query, inner, outer string, nInner, nOuter int) (*RingSe
 	rs := &RingSet{Inner: []Ring{}, Outer: []Ring{}}
 	for rows.Next() {
 		var r Ring
-		if err := rows.Scan(&r.Parent, &r.Key, &r.Wire); err != nil {
+		var all float64
+		if err := rows.Scan(&r.Parent, &r.Key, &r.Wire, &all); err != nil {
 			return nil, err
 		}
 		by[r.Parent] = append(by[r.Parent], r)
-		tot[r.Parent] += r.Wire
-		rs.Total += r.Wire
+		if _, seen := tot[r.Parent]; !seen {
+			tot[r.Parent] = all
+			rs.Total += all
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -82,15 +92,16 @@ func (s *Store) Rings(q Query, inner, outer string, nInner, nOuter int) (*RingSe
 		rs.Inner = append(rs.Inner, Ring{Key: k, Wire: tot[k]})
 		os := by[k]
 		sort.Slice(os, func(a, b int) bool { return os[a].Wire > os[b].Wire })
-		var rest float64
+		// what is not among the outer values kept goes to Other: those
+		// the database left out and an outer value called Other itself
+		rest := tot[k]
 		for i, o := range os {
 			if i < nOuter && o.Key != "__other__" {
 				rs.Outer = append(rs.Outer, o)
-			} else {
-				rest += o.Wire
+				rest -= o.Wire
 			}
 		}
-		if rest > 0 {
+		if rest > 0.5 {
 			rs.Outer = append(rs.Outer, Ring{Parent: k, Key: "__other__", Wire: rest})
 		}
 	}
