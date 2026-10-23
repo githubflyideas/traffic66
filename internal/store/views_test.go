@@ -28,6 +28,9 @@ func TestViewsMatchRecords(t *testing.T) {
 				App: []string{"HTTPS", "HTTP"}[i%2], Exporter: "10.0.0.1", InIf: uint32(1 + i%3), OutIf: uint32(1 + m%3),
 				Dir: DirTransit, PeerCC: "US", PeerASN: uint32(64500 + i), PeerOrg: "Org",
 				Bytes: uint64(1000 * (i + 1)), Wire: uint64(1100 * (i + 1)), Pkts: uint64(i + 1), Flows: 1, Dup: i == 5}
+			if i == 4 { // an IPv6 client among the IPv4 ones
+				r.Client, r.Cli4 = "2001:db8::4", 0
+			}
 			r.Src, r.Dst = r.Client, r.Server
 			rows = append(rows, r)
 		}
@@ -52,7 +55,7 @@ func TestViewsMatchRecords(t *testing.T) {
 		{{Field: "iface", Value: "10.0.0.1/3"}, {Field: "iface_in", Value: "10.0.0.1/3"}},
 	} {
 		q := Query{From: from, To: to, Filters: f}
-		if !s.rollupOK(q) {
+		if !s.rollupOK(q, false) {
 			t.Fatalf("%v: not answered from the summaries", f)
 		}
 		answer := func() string {
@@ -91,8 +94,41 @@ func TestViewsMatchRecords(t *testing.T) {
 			}
 			return out + fmt.Sprintf("apps %v %.3f\n", se.Names, sum)
 		}
+		if f[0].Field == "exporter" {
+			tot, _ := s.Totals(q)
+			rs, err := s.Rings(q, "client", "server", 3, 2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var inner, outer float64
+			keys := map[string]bool{}
+			for _, r := range rs.Inner {
+				inner += r.Wire
+				keys[r.Key] = true
+			}
+			for _, r := range rs.Outer {
+				outer += r.Wire
+			}
+			if rs.Total != float64(tot.Wire) || inner != rs.Total || outer != rs.Total || !keys["__other__"] || len(rs.Inner) != 4 {
+				t.Errorf("rings: total %v inner %v outer %v of %d, inner %+v", rs.Total, inner, outer, tot.Wire, rs.Inner)
+			}
+			sv, err := s.Rings(q, "service", "client", 8, 8)
+			if err != nil {
+				t.Fatal(err)
+			}
+			seen6 := false
+			for _, r := range sv.Outer {
+				seen6 = seen6 || r.Key == "2001:db8::4"
+			}
+			if sv.Inner[0].Key != "444/tcp\tHTTP" || !seen6 {
+				t.Errorf("service rings: %+v %+v", sv.Inner, sv.Outer)
+			}
+		}
 		// equal values may come in either order
 		sorted := func(x string) string { l := strings.Split(x, "\n"); sort.Strings(l); return strings.Join(l, "\n") }
+		if a := answer(); f[0].Field == "exporter" && (!strings.Contains(a, "client 2001:db8::4 ") || !strings.Contains(a, " 2001:db8::4 198.")) {
+			t.Errorf("%v: the IPv6 client is missing:\n%s", f, a)
+		}
 		got := sorted(answer())
 		s.viewsReady.Store(false) // the same from the flow records
 		want := sorted(answer())

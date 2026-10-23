@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Ring is one segment of a two-ring chart: an inner value, or an outer value
@@ -20,11 +21,21 @@ type RingSet struct {
 	Total float64 `json:"total"`
 }
 
-var ringDims = map[string]string{
-	"server":  "server",
-	"client":  "client",
-	"service": portProtoExpr + " || chr(9) || app",
+// ringDims are the dimensions of the rings, each as a number and a text
+// for the IPv4 rows and for the others, and how the two are shown. An
+// address is its number where it has one: reading the address text of
+// every row takes longer than everything else the query reads.
+var ringDims = map[string]struct{ num, text, num6, text6, show string }{
+	"server":  {"srv4", "NULL::VARCHAR", "0::UINTEGER", "server", addrText},
+	"client":  {"cli4", "NULL::VARCHAR", "0::UINTEGER", "client", addrText},
+	"service": {"svc_port::UINTEGER * 256 + proto", "app", "svc_port::UINTEGER * 256 + proto", "app", serviceText},
 }
+
+// shown from {n} (the number) and {s} (the text) of a ring value
+const (
+	addrText    = "CASE WHEN {n} <> 0 THEN concat({n} >> 24, '.', ({n} >> 16) & 255, '.', ({n} >> 8) & 255, '.', {n} & 255) ELSE {s} END"
+	serviceText = "concat({n} >> 8, '/', CASE {n} & 255 WHEN 6 THEN 'tcp' WHEN 17 THEN 'udp' ELSE CAST({n} & 255 AS VARCHAR) END, chr(9), {s})"
+)
 
 // Rings splits the traffic by an inner dimension (its top nInner values,
 // the rest as "__other__") and each inner value by an outer dimension (its
@@ -47,13 +58,26 @@ func (s *Store) Rings(q Query, inner, outer string, nInner, nOuter int) (*RingSe
 	// pairs are added up only for the top inner values: adding up every
 	// pair first (each of a week's clients with each server it reached)
 	// is what ran out of memory. The database keeps each inner value's
-	// top outer values and their total; the rest is the difference.
-	sq := fmt.Sprintf(`WITH x AS NOT MATERIALIZED (SELECT %s AS i, %s AS o, wire AS w FROM %s WHERE %s AND %s),
-		ti AS (SELECT i FROM x GROUP BY i ORDER BY sum(w) DESC LIMIT %d),
-		p AS (SELECT CASE WHEN i IN (SELECT i FROM ti) THEN i ELSE '__other__' END AS pi,
-			CASE WHEN i IN (SELECT i FROM ti) THEN o ELSE '__other__' END AS po, sum(w) AS w FROM x GROUP BY 1,2)
-		SELECT pi, po, CAST(w AS DOUBLE), CAST(sum(w) OVER (PARTITION BY pi) AS DOUBLE) FROM p
-		QUALIFY row_number() OVER (PARTITION BY pi ORDER BY w DESC) <= %d`, ie, oe, s.Source(q.From, q.To), where, cond, nInner, nOuter+1)
+	// top outer values and their total; the rest is the difference. A
+	// flow's two ends are the same family, so cli4 <> 0 tells the IPv4
+	// rows for either end.
+	src := s.Source(q.From, q.To)
+	show := func(d struct{ num, text, num6, text6, show string }, n, t string) string {
+		return strings.NewReplacer("{n}", n, "{s}", t).Replace(d.show)
+	}
+	sq := fmt.Sprintf(`WITH x AS NOT MATERIALIZED (
+			SELECT %[1]s AS in_, %[2]s AS is_, %[3]s AS on_, %[4]s AS os_, wire AS w FROM %[5]s WHERE (%[6]s) AND %[7]s AND cli4 <> 0
+			UNION ALL SELECT %[8]s, %[9]s, %[10]s, %[11]s, wire FROM %[5]s WHERE (%[6]s) AND %[7]s AND cli4 = 0),
+		ti AS (SELECT in_, is_, true AS hit FROM x GROUP BY ALL ORDER BY sum(w) DESC LIMIT %[12]d),
+		p AS (SELECT CASE WHEN ti.hit THEN x.in_ END AS pn, CASE WHEN ti.hit THEN x.is_ END AS ps,
+				CASE WHEN ti.hit THEN x.on_ END AS qn, CASE WHEN ti.hit THEN x.os_ END AS qs, sum(x.w) AS w
+			FROM x LEFT JOIN ti ON x.in_ = ti.in_ AND coalesce(x.is_, '') = coalesce(ti.is_, '') GROUP BY ALL)
+		SELECT CASE WHEN pn IS NULL THEN '__other__' ELSE %[13]s END, CASE WHEN qn IS NULL THEN '__other__' ELSE %[14]s END,
+			CAST(w AS DOUBLE), CAST(sum(w) OVER (PARTITION BY pn, ps) AS DOUBLE) FROM p
+		QUALIFY row_number() OVER (PARTITION BY pn, ps ORDER BY w DESC) <= %[15]d`,
+		ie.num, ie.text, oe.num, oe.text, src, where, cond, ie.num6, ie.text6, oe.num6, oe.text6, nInner,
+		show(ie, "pn", "ps"), show(oe, "qn", "qs"), nOuter+1)
+	args = append(append([]any{}, args...), args...)
 	rows, err := s.DB.Query(sq, args...)
 	if err != nil {
 		return nil, err

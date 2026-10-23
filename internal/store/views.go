@@ -12,12 +12,18 @@ import (
 
 // Summaries by device and by interface.
 //
-// The summaries in r_ts, r_host and r_dim are of all the traffic. Narrowed
+// The summaries in r_ts and r_dim are of all the traffic. Narrowed
 // to one device or one interface, which is how most of the pages are read,
 // a range of days used to be answered from the flow records themselves: a
 // week is tens of millions of rows, read two or three times over for one
 // chart. These tables hold the same summaries once per device and once per
 // interface, so those ranges are read from them instead.
+//
+// There is no such table for addresses: a client is seldom seen more than
+// a few times in an hour, so an hourly summary by address and interface
+// has more rows than the flow records it sums. Questions about addresses
+// are read from the flow records, in queries written to stay within the
+// memory there is (query.go, series.go, rings.go).
 //
 // iface is the exporter for a device ("10.0.0.1") or "exporter/ifindex"
 // for an interface. side says how the traffic used the interface:
@@ -41,11 +47,10 @@ const (
 
 var viewSchema = []string{
 	`CREATE TABLE IF NOT EXISTS r_ts_if (ts TIMESTAMP, iface VARCHAR, side UTINYINT, app VARCHAR, bytes UBIGINT, wire UBIGINT, pkts UBIGINT, flows UBIGINT)`,
-	`CREATE TABLE IF NOT EXISTS r_host_if (ts TIMESTAMP, iface VARCHAR, side UTINYINT, ip VARCHAR, role UTINYINT, internal BOOLEAN, bytes UBIGINT, wire UBIGINT, pkts UBIGINT, flows UBIGINT)`,
 	`CREATE TABLE IF NOT EXISTS r_dim_if (ts TIMESTAMP, iface VARCHAR, side UTINYINT, dim VARCHAR, val VARCHAR, bytes UBIGINT, wire UBIGINT, pkts UBIGINT, flows UBIGINT)`,
 }
 
-var viewTables = []string{"r_ts_if", "r_host_if", "r_dim_if"}
+var viewTables = []string{"r_ts_if", "r_dim_if"}
 
 // viewsDone is the meta key set once the summaries cover every flow file.
 const viewsDone = "views_v1"
@@ -75,7 +80,9 @@ var viewDims = [][2]string{
 func viewInserts(src string) []string {
 	// a counter that wrapped below zero (written by 1.6.0 and earlier) is
 	// left out rather than allowed to overflow the sum
-	ok := func(c string) string { return fmt.Sprintf("sum(CASE WHEN %s > %d THEN 0 ELSE %s END)::UBIGINT", c, wrapLimit, c) }
+	ok := func(c string) string {
+		return fmt.Sprintf("sum(CASE WHEN %s > %d THEN 0 ELSE %s END)::UBIGINT", c, wrapLimit, c)
+	}
 	sums := ok("bytes") + ", " + ok("wire") + ", " + ok("pkts") + ", " + ok("flows")
 	v := `(SELECT *, unnest(list_filter([
 			{'f': exporter, 's': 0::UTINYINT, 'ok': true},
@@ -91,8 +98,6 @@ func viewInserts(src string) []string {
 	}
 	return []string{
 		`INSERT INTO r_ts_if SELECT time_bucket(` + tsStep + `, ts), v.f, v.s, app, ` + sums + ` FROM ` + v + ` GROUP BY ALL`,
-		`INSERT INTO r_host_if SELECT date_trunc('hour', ts), v.f, v.s, h.ip, h.role, h.internal, ` + sums + ` FROM (
-			SELECT *, unnest([{'ip': client, 'role': 1::UTINYINT, 'internal': cli_int}, {'ip': server, 'role': 2::UTINYINT, 'internal': srv_int}]) AS h FROM ` + v + `) GROUP BY ALL`,
 		`INSERT INTO r_dim_if SELECT date_trunc('hour', ts), v.f, v.s, d.d, d.v, ` + sums + ` FROM (
 			SELECT *, unnest(list_filter([` + strings.Join(dims, ", ") + `], x -> x.ok)) AS d FROM ` + v + `) GROUP BY ALL`,
 	}
@@ -152,13 +157,14 @@ func (q Query) view() (view, bool) {
 	return view{key: key, sides: sides}, true
 }
 
-// rollupOK reports whether the summaries answer q.
-func (s *Store) rollupOK(q Query) bool {
+// rollupOK reports whether the summaries answer q. hosts: the answer needs
+// the summaries by address, which only all traffic has.
+func (s *Store) rollupOK(q Query, hosts bool) bool {
 	if q.span() <= 6*time.Hour {
 		return false
 	}
 	v, ok := q.view()
-	return ok && (v.key == "" || s.viewsReady.Load())
+	return ok && (v.key == "" || (!hosts && s.viewsReady.Load()))
 }
 
 // rollups replaces the placeholders {r_ts}, {r_host} and {r_dim} in sqlq
@@ -207,12 +213,6 @@ func (s *Store) viewSource(q Query, v view, table string) (string, []any, error)
 	case "r_ts":
 		sel = "SELECT ts, app, bytes, wire, pkts, flows " + sel
 		hot = []string{"SELECT ts, app, bytes, wire, pkts, flows FROM hot WHERE " + where}
-	case "r_host":
-		sel = "SELECT ts, ip, role, internal, bytes, wire, pkts, flows " + sel
-		hot = []string{
-			"SELECT ts, client, 1::UTINYINT, cli_int, bytes, wire, pkts, flows FROM hot WHERE " + where,
-			"SELECT ts, server, 2::UTINYINT, srv_int, bytes, wire, pkts, flows FROM hot WHERE " + where,
-		}
 	case "r_dim":
 		sel = "SELECT ts, dim, val, bytes, wire, pkts, flows " + sel
 		for _, d := range viewDims {
