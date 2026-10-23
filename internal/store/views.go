@@ -247,10 +247,6 @@ func sealViews(tx *sql.Tx, boundary time.Time) error {
 // from the flow records as before.
 func (s *Store) buildViews() {
 	defer s.bg.Done()
-	if s.Meta(viewsDone) != "" {
-		s.viewsReady.Store(true)
-		return
-	}
 	// Start over: an earlier run may have stopped half way. The files
 	// sealed from here on are summarised by the seal itself, so the list
 	// is taken, and the tables emptied, with sealing held off.

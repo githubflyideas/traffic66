@@ -148,7 +148,13 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 			names = append(names, n)
 		}
 	}
-	sort.Slice(names, func(i, j int) bool { return tot[names[i]] > tot[names[j]] })
+	// equal totals by name, so the legend keeps its order between redraws
+	sort.Slice(names, func(i, j int) bool {
+		if tot[names[i]] != tot[names[j]] {
+			return tot[names[i]] > tot[names[j]]
+		}
+		return names[i] < names[j]
+	})
 	if _, ok := tot["__other__"]; ok {
 		names = append(names, "__other__")
 	}

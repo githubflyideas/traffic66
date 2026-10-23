@@ -207,8 +207,24 @@ func Open(opt Options) (*Store, error) {
 	if err := s.repairWrapped(); err != nil {
 		log.Printf("store: %v", err)
 	}
-	s.bg.Add(1)
-	go s.buildViews()
+	// the summaries are ready at once where there is nothing to summarise
+	// first (they were built before, or there are no flow files yet), and
+	// built in the background otherwise
+	s.segMu.RLock()
+	nsegs := len(s.segCache)
+	s.segMu.RUnlock()
+	switch {
+	case s.Meta(viewsDone) != "":
+		s.viewsReady.Store(true)
+	case nsegs == 0:
+		if err := s.SetMeta(viewsDone, time.Now().UTC().Format(time.RFC3339)); err != nil {
+			return nil, err
+		}
+		s.viewsReady.Store(true)
+	default:
+		s.bg.Add(1)
+		go s.buildViews()
+	}
 	log.Printf("store: %s, DuckDB memory limit %d MB, %d threads", opt.Dir, memMB, opt.Threads)
 	return s, nil
 }
