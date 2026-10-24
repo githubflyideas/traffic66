@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -23,19 +24,19 @@ const peerExpr = "CASE WHEN dir = 2 THEN client ELSE server END"
 var seriesDims = map[string]seriesDim{
 	"app": {key: "app", cond: "true",
 		rollup: func(b string) string {
-			return `SELECT ` + b + `, app, sum(wire), sum(pkts) FROM r_ts WHERE ts >= ? AND ts < ? GROUP BY 1,2`
+			return `SELECT ` + b + `, app, sum(wire), sum(pkts) FROM {r_ts} WHERE ts >= ? AND ts < ? GROUP BY 1,2`
 		}},
 	"client": {key: "client", cond: "true", hourly: true,
 		rollup: func(b string) string {
-			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM r_host WHERE ts >= ? AND ts < ? AND role = 1 GROUP BY 1,2`
+			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM {r_host} WHERE ts >= ? AND ts < ? AND role = 1 GROUP BY 1,2`
 		}},
 	"server": {key: "server", cond: "true", hourly: true,
 		rollup: func(b string) string {
-			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM r_host WHERE ts >= ? AND ts < ? AND role = 2 GROUP BY 1,2`
+			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM {r_host} WHERE ts >= ? AND ts < ? AND role = 2 GROUP BY 1,2`
 		}},
 	"service": {key: portProtoExpr + " || chr(9) || app", cond: "svc_port <> 0", hourly: true,
 		rollup: func(b string) string {
-			return `SELECT ` + b + `, val, sum(wire), sum(pkts) FROM r_dim WHERE ts >= ? AND ts < ? AND dim = 'port' AND NOT starts_with(val, '0/') GROUP BY 1,2`
+			return `SELECT ` + b + `, val, sum(wire), sum(pkts) FROM {r_dim} WHERE ts >= ? AND ts < ? AND dim = 'port' AND NOT starts_with(val, '0/') GROUP BY 1,2`
 		}},
 	// AS of the sender and of the receiver of each packet, when that side
 	// is the external one.
@@ -70,7 +71,7 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 	}
 	// decide before the start is rounded down to a bucket: rounding makes a
 	// 6-hour range a little longer, which must not switch it to the summaries
-	rollup := q.usesRollup() && d.rollup != nil
+	rollup := d.rollup != nil && s.rollupOK(q, by == "client" || by == "server")
 	step := StepFor(q.span())
 	if rollup && d.hourly && step < time.Hour {
 		// hourly summaries in 5-minute buckets would show one spike an hour
@@ -82,14 +83,20 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 	var inner string
 	var args []any
 	if rollup {
-		inner = d.rollup(bucket)
-		args = []any{q.From.UTC(), q.To.UTC()}
+		r, pre, err := s.rollups(q, d.rollup(bucket))
+		if err != nil {
+			return nil, err
+		}
+		inner = r
+		args = append(pre, q.From.UTC(), q.To.UTC())
 	} else {
 		where, wargs, err := q.where()
 		if err != nil {
 			return nil, err
 		}
-		inner = fmt.Sprintf(`SELECT %s, %s, sum(wire), sum(pkts) FROM %s WHERE %s AND %s GROUP BY 1,2`, bucket, d.key, s.Source(q.From, q.To), where, d.cond)
+		// the rows themselves: grouped by bucket and value before the top
+		// values are known, a week by client is a group for nearly every row
+		inner = fmt.Sprintf(`SELECT %s, %s, wire, pkts FROM %s WHERE %s AND %s`, bucket, d.key, s.Source(q.From, q.To), where, d.cond)
 		args = wargs
 	}
 	m := "w"
@@ -98,10 +105,17 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 	}
 	// keep the top k values apart, everything else as one series, and count
 	// the values
-	sqlq := fmt.Sprintf(`WITH b AS (%s), b2 AS (SELECT * FROM b AS x(t, k, w, p)),
-			top AS (SELECT k FROM b2 GROUP BY k ORDER BY sum(%s) DESC LIMIT %d)
-		SELECT t, CASE WHEN k IN (SELECT k FROM top) THEN k ELSE '__other__' END AS kk, CAST(sum(%s) AS DOUBLE), (SELECT count(DISTINCT k) FROM b2)
-		FROM b2 GROUP BY 1,2`, inner, m, k, m)
+	// b is read again by each step rather than kept: kept, a week of
+	// buckets by client is more than the memory there is. The values are
+	// counted approximately, in a few kilobytes, where counting them
+	// exactly holds every one of them.
+	sqlq := fmt.Sprintf(`WITH b AS NOT MATERIALIZED (SELECT * FROM (%s) AS x(t, k, w, p)),
+			top AS (SELECT k FROM b GROUP BY k ORDER BY sum(%s) DESC LIMIT %d)
+		SELECT t, CASE WHEN k IN (SELECT k FROM top) THEN k ELSE '__other__' END AS kk, CAST(sum(%s) AS DOUBLE), (SELECT approx_count_distinct(k) FROM b)
+		FROM b GROUP BY 1,2`, inner, m, k, m)
+	if !rollup && (by == "client" || by == "server") {
+		sqlq, args = s.addrSeries(q, by, bucket, m, k)
+	}
 	rows, err := s.DB.Query(sqlq, args...)
 	if err != nil {
 		return nil, err
@@ -134,7 +148,13 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 			names = append(names, n)
 		}
 	}
-	sort.Slice(names, func(i, j int) bool { return tot[names[i]] > tot[names[j]] })
+	// equal totals by name, so the legend keeps its order between redraws
+	sort.Slice(names, func(i, j int) bool {
+		if tot[names[i]] != tot[names[j]] {
+			return tot[names[i]] > tot[names[j]]
+		}
+		return names[i] < names[j]
+	})
 	if _, ok := tot["__other__"]; ok {
 		names = append(names, "__other__")
 	}
@@ -170,4 +190,26 @@ func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
 		se.Values[idx[p.k]][ti] += p.v * f / bucketSecs(start, ti, step, q.To, dataFrom)
 	}
 	return se, nil
+}
+
+// addrSeries is the query of SeriesBy for clients or servers from the flow
+// records. An IPv4 address is read and ranked as its number, and made into
+// text only for the top values: reading the address text of every row
+// takes longer than everything else the query reads. The other addresses
+// (IPv6) are read as text, in a part of their own.
+func (s *Store) addrSeries(q Query, by, bucket, m string, k int) (string, []any) {
+	num := map[string]string{"client": "cli4", "server": "srv4"}[by]
+	where, args, _ := q.where()
+	src := s.Source(q.From, q.To)
+	text := keyPartFor(by, 0).outer
+	text = strings.NewReplacer("g0n", "x.kn", "g0s", "x.ks").Replace(text)
+	sqlq := fmt.Sprintf(`WITH x AS NOT MATERIALIZED (
+			SELECT %[1]s AS t, %[2]s AS kn, NULL::VARCHAR AS ks, wire AS w, pkts AS p FROM %[3]s WHERE (%[4]s) AND %[2]s <> 0
+			UNION ALL SELECT %[1]s, 0::UINTEGER, %[5]s, wire, pkts FROM %[3]s WHERE (%[4]s) AND %[2]s = 0),
+			top AS (SELECT kn, ks, true AS hit FROM x GROUP BY kn, ks ORDER BY sum(%[6]s) DESC LIMIT %[7]d)
+		SELECT x.t, CASE WHEN top.hit THEN %[8]s ELSE '__other__' END, CAST(sum(x.%[6]s) AS DOUBLE),
+			(SELECT approx_count_distinct(hash(kn, ks)) FROM x)
+		FROM x LEFT JOIN top ON x.kn = top.kn AND x.ks IS NOT DISTINCT FROM top.ks GROUP BY 1,2`,
+		bucket, num, src, where, by, m, k, text)
+	return sqlq, append(append([]any{}, args...), args...)
 }

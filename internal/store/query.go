@@ -57,9 +57,6 @@ func (q Query) bucketSQL(step time.Duration) string {
 
 func (q Query) span() time.Duration { return q.To.Sub(q.From) }
 
-// usesRollup reports whether this query can be answered from rollups.
-func (q Query) usesRollup() bool { return len(q.Filters) == 0 && q.span() > 6*time.Hour }
-
 var dirNames = map[string]int{"outbound": DirOutbound, "inbound": DirInbound, "internal": DirInternal, "transit": DirTransit}
 
 // DirName is the stored direction's API name.
@@ -391,65 +388,151 @@ func (s *Store) TopNBy(q Query, dim string, limit int, by string, asc ...bool) (
 	if limit <= 0 || limit > 1000 {
 		limit = 66
 	}
-	if q.usesRollup() && d.rollup != "" {
+	if d.rollup != "" && s.rollupOK(q, strings.HasPrefix(d.rollup, "host:")) {
 		return s.topRollup(q, d.rollup, limit, ord[1]+" "+dir)
 	}
 	where, args, err := q.where()
 	if err != nil {
 		return nil, err
 	}
+	cond := where
+	if dim == "threat" {
+		cond += " AND threat <> ''"
+	}
 	// Group by cheap keys (numeric IPv4, port and protocol as integers) and
 	// format for display afterwards: grouping on address text is several
-	// times slower. IPv4 and IPv6 rows never share a group, so they are
-	// aggregated separately and merged.
-	var inner, groups, inner6, groups6, outer, v4conds []string
+	// times slower. An IPv4 address is grouped by its number with no text,
+	// an IPv6 one by its text with the number 0, so the two never share a
+	// group.
+	var parts []keyPart
+	var v4conds []string
 	for i, e := range []string{d.expr, d.expr2, d.expr3} {
 		if e == "" {
-			outer = append(outer, "'' AS k"+strconv.Itoa(i))
 			continue
 		}
 		kp := keyPartFor(e, i)
-		inner = append(inner, kp.inner...)
-		groups = append(groups, kp.groups...)
-		inner6 = append(inner6, kp.inner6...)
-		groups6 = append(groups6, kp.groups6...)
+		parts = append(parts, kp)
 		if kp.v4cond != "" {
 			v4conds = append(v4conds, kp.v4cond)
 		}
-		outer = append(outer, kp.outer+" AS k"+strconv.Itoa(i))
+	}
+	v4 := "true"
+	if len(v4conds) > 0 {
+		v4 = strings.Join(v4conds, " AND ")
+	}
+	// keySel and keySel6: the keys of the IPv4 rows (an address as its
+	// number, its text NULL) and of the others (the number 0, the text),
+	// read as two parts so the IPv4 rows never read the address text,
+	// which takes longer than everything else the query reads
+	var keySel, keySel6, groups, outer, on []string
+	for _, kp := range parts {
+		if kp.v4cond != "" {
+			n := kp.inner[0][:strings.LastIndex(kp.inner[0], " AS ")]
+			t := kp.inner6[1][:strings.LastIndex(kp.inner6[1], " AS ")]
+			keySel = append(keySel, n+" AS "+kp.groups[0], "NULL::VARCHAR AS "+kp.groups6[0])
+			keySel6 = append(keySel6, "0::UINTEGER AS "+kp.groups[0], t+" AS "+kp.groups6[0])
+			groups = append(groups, kp.groups[0], kp.groups6[0])
+			continue
+		}
+		keySel = append(keySel, kp.inner...)
+		keySel6 = append(keySel6, kp.inner...)
+		groups = append(groups, kp.groups...)
+	}
+	for i, e := range []string{d.expr, d.expr2, d.expr3} {
+		if e == "" {
+			outer = append(outer, "'' AS k"+strconv.Itoa(i))
+		} else {
+			outer = append(outer, keyPartFor(e, i).outer+" AS k"+strconv.Itoa(i))
+		}
+	}
+	// pg: the group columns of a step joined back to t, renamed so the
+	// two sides of the join do not both have them
+	var pg, onP []string
+	// plain equality, which the database joins by hashing; the address
+	// text is NULL for IPv4 rows, so it is compared as '' there
+	for _, g := range groups {
+		text := strings.HasSuffix(g, "s") // an address as text: NULL for IPv4 rows
+		if text {
+			on = append(on, "coalesce(t."+g+", '') = coalesce(x."+g+", '')")
+			onP = append(onP, "coalesce(t."+g+", '') = coalesce(p.p_"+g+", '')")
+		} else {
+			on = append(on, "t."+g+" = x."+g)
+			onP = append(onP, "t."+g+" = p.p_"+g)
+		}
+		pg = append(pg, "x."+g+" AS p_"+g)
 	}
 	extra := "''"
 	if d.extra != "" {
 		extra = "coalesce(CAST(" + d.extra + " AS VARCHAR), '')"
 	}
-	peers := "0"
-	if d.peers != "" && q.span() <= 7*24*time.Hour {
-		peers = "approx_count_distinct(" + d.peers + ")"
-	}
 	intc := "false"
 	if d.intCol != "" {
 		intc = d.intCol
 	}
-	cond := where
-	if dim == "threat" {
-		cond += " AND threat <> ''"
+	// the peer as a hash of its number, or of its text in the IPv6 part,
+	// for the same reason the keys are read that way; a flow's two ends
+	// are always the same family
+	peerCol, peerCol6 := "NULL::UBIGINT", "NULL::UBIGINT"
+	if d.peers != "" {
+		peerCol = "hash(" + map[string]string{"client": "cli4", "server": "srv4"}[d.peers] + ")"
+		peerCol6 = "hash(" + d.peers + ")"
+		if len(v4conds) == 0 {
+			peerCol = peerCol6
+		}
 	}
+	// x is the rows, with their keys, read again by each step below rather
+	// than kept: kept, a week of rows is more than the memory there is.
+	// only the columns the steps below use: the flow files are read by
+	// column, and every other one would be read for nothing
 	src := s.Source(q.From, q.To)
-	aggs := fmt.Sprintf(`%s AS x_extra, sum(bytes) AS x_b, sum(wire) AS x_w, sum(pkts) AS x_p, sum(flows) AS x_f, %s AS x_peers, %s AS x_int`, extra, peers, intc)
-	part := func(sel, grp []string, c string) string {
-		return fmt.Sprintf(`(SELECT %s, %s FROM %s WHERE %s GROUP BY %s ORDER BY %s %s, x_w DESC LIMIT %d)`,
-			strings.Join(sel, ", "), aggs, src, c, strings.Join(grp, ", "), ord[0], dir, limit)
+	// only the columns the steps use: the parts of x are not trimmed to
+	// what is used after it, and every text column read costs as much as
+	// the rest of the query
+	cols := "bytes, wire, pkts, flows"
+	for _, c := range []string{"peer_cc", "peer_org", "app", "dir", "cli_int", "srv_int"} {
+		if strings.Contains(extra+intc, c) {
+			cols += ", " + c
+		}
 	}
-	body := part(inner, groups, cond)
-	qargs := args
+	x := fmt.Sprintf(`x AS NOT MATERIALIZED (SELECT %s, %s, %s AS x_pc FROM %s WHERE (%s) AND %s`,
+		cols, strings.Join(keySel, ", "), peerCol, src, cond, v4)
 	if len(v4conds) > 0 {
-		v4 := strings.Join(v4conds, " AND ")
-		body = part(inner, groups, "("+cond+") AND "+v4) + " UNION ALL " + part(inner6, groups6, "("+cond+") AND NOT ("+v4+")")
-		qargs = append(append([]any{}, args...), args...)
+		x += fmt.Sprintf(` UNION ALL SELECT %s, %s, %s FROM %s WHERE (%s) AND NOT (%s)`,
+			cols, strings.Join(keySel6, ", "), peerCol6, src, cond, v4)
+		args = append(append([]any{}, args...), args...)
 	}
-	sqlq := fmt.Sprintf(`SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM (%s) ORDER BY %s %s, x_w DESC LIMIT %d`,
-		strings.Join(outer, ", "), body, ord[0], dir, limit)
-	rows, err := s.DB.Query(sqlq, qargs...)
+	x += ")"
+	g := strings.Join(groups, ", ")
+	sums := fmt.Sprintf(`%s AS x_extra, sum(bytes) AS x_b, sum(wire) AS x_w, sum(pkts) AS x_p, sum(flows) AS x_f, %s AS x_int`, extra, intc)
+	// Rank on what can be summed, which the database can do in any amount
+	// of memory, and count the peers only for the rows that made the list.
+	// Counting them for every group first (two million clients over a week)
+	// is what ran out of memory. Ranked by peers, the distinct pairs are
+	// counted instead, which spills to disk as well.
+	var with string
+	if by == "peers" {
+		with = fmt.Sprintf(`WITH %s,
+			t AS (SELECT %s, count(*) AS x_peers FROM (SELECT DISTINCT %s, x_pc FROM x WHERE x_pc IS NOT NULL) GROUP BY ALL ORDER BY x_peers %s LIMIT %d),
+			p AS (SELECT %s, %s FROM x SEMI JOIN t ON %s GROUP BY ALL)
+			SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM t JOIN p ON %s ORDER BY x_peers %s, x_w DESC`,
+			x, g, g, dir, limit, strings.Join(pg, ", "), sums, strings.Join(on, " AND "), strings.Join(outer, ", "), strings.Join(onP, " AND "), dir)
+	} else {
+		peers := "0"
+		if d.peers != "" {
+			peers = "approx_count_distinct(x_pc)"
+		}
+		// ranked on the one measure alone: the groups of a week by client
+		// are millions, and each sum carried for all of them made the
+		// ranking several times slower; the sums are taken for the top
+		// rows only, with their peers
+		with = fmt.Sprintf(`WITH %s,
+			t AS (SELECT %s, %s AS x_rank FROM x GROUP BY ALL ORDER BY x_rank %s LIMIT %d),
+			p AS (SELECT %s, %s, %s AS x_peers FROM x SEMI JOIN t ON %s GROUP BY ALL)
+			SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM t JOIN p ON %s ORDER BY x_rank %s, x_w DESC`,
+			x, g, ord[1], dir, limit, strings.Join(pg, ", "), sums, peers, strings.Join(on, " AND "), strings.Join(outer, ", "),
+			strings.Join(onP, " AND "), dir)
+	}
+	rows, err := s.DB.Query(with, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -472,14 +555,18 @@ func (s *Store) topRollup(q Query, rollup string, limit int, order string) ([]To
 	args := []any{q.From.UTC(), q.To.UTC()}
 	if strings.HasPrefix(rollup, "host:") {
 		role, _ := strconv.Atoi(rollup[5:])
-		sqlq = fmt.Sprintf(`SELECT ip, sum(bytes), sum(wire), sum(pkts), sum(flows), bool_or(internal) FROM r_host
+		sqlq = fmt.Sprintf(`SELECT ip, sum(bytes), sum(wire), sum(pkts), sum(flows), bool_or(internal) FROM {r_host}
 			WHERE ts >= ? AND ts < ? AND role = %d GROUP BY 1 ORDER BY %s LIMIT %d`, role, order, limit)
 	} else {
-		sqlq = fmt.Sprintf(`SELECT val, sum(bytes), sum(wire), sum(pkts), sum(flows), false FROM r_dim
+		sqlq = fmt.Sprintf(`SELECT val, sum(bytes), sum(wire), sum(pkts), sum(flows), false FROM {r_dim}
 			WHERE ts >= ? AND ts < ? AND dim = ? GROUP BY 1 ORDER BY %s LIMIT %d`, order, limit)
 		args = append(args, rollup)
 	}
-	rows, err := s.DB.Query(sqlq, args...)
+	sqlq, pre, err := s.rollups(q, sqlq)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.DB.Query(sqlq, append(pre, args...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -629,12 +716,17 @@ func StepFor(span time.Duration) time.Duration {
 func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 	step := StepFor(q.span())
 	q.From = q.localTrunc(q.From, step)
-	settled := settledTo(q.To, q.usesRollup())
+	rollup := s.rollupOK(q, false)
+	settled := settledTo(q.To, rollup)
 	var rows *sql.Rows
 	var err error
 	bucket := q.bucketSQL(step)
-	if q.usesRollup() {
-		rows, err = s.DB.Query(fmt.Sprintf(`SELECT %s AS b, app, sum(wire) FROM r_ts WHERE ts >= ? AND ts < ? GROUP BY 1,2`, bucket), q.From.UTC(), q.To.UTC())
+	if rollup {
+		sqlq, pre, rerr := s.rollups(q, fmt.Sprintf(`SELECT %s AS b, app, sum(wire) FROM {r_ts} WHERE ts >= ? AND ts < ? GROUP BY 1,2`, bucket))
+		if rerr != nil {
+			return nil, rerr
+		}
+		rows, err = s.DB.Query(sqlq, append(pre, q.From.UTC(), q.To.UTC())...)
 	} else {
 		where, args, werr := q.where()
 		if werr != nil {
@@ -667,7 +759,13 @@ func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
 	for n := range tot {
 		names = append(names, n)
 	}
-	sort.Slice(names, func(i, j int) bool { return tot[names[i]] > tot[names[j]] })
+	// equal totals by name, so the legend keeps its order between redraws
+	sort.Slice(names, func(i, j int) bool {
+		if tot[names[i]] != tot[names[j]] {
+			return tot[names[i]] > tot[names[j]]
+		}
+		return names[i] < names[j]
+	})
 	if len(names) > k {
 		names = append(names[:k:k], "__other__")
 	}
@@ -730,15 +828,31 @@ type Totals struct {
 
 func (s *Store) Totals(q Query) (Totals, error) {
 	var t Totals
-	if q.usesRollup() {
-		err := s.DB.QueryRow(`SELECT coalesce(sum(bytes),0), coalesce(sum(wire),0), coalesce(sum(pkts),0), coalesce(sum(flows),0) FROM r_ts WHERE ts >= ? AND ts < ?`, q.From.UTC(), q.To.UTC()).
-			Scan(&t.Bytes, &t.Wire, &t.Pkts, &t.Flows)
+	if s.rollupOK(q, false) {
+		one := func(sqlq string, dst ...any) error {
+			sqlq, pre, err := s.rollups(q, sqlq)
+			if err != nil {
+				return err
+			}
+			return s.DB.QueryRow(sqlq, append(pre, q.From.UTC(), q.To.UTC())...).Scan(dst...)
+		}
+		if err := one(`SELECT coalesce(sum(bytes),0), coalesce(sum(wire),0), coalesce(sum(pkts),0), coalesce(sum(flows),0) FROM {r_ts} WHERE ts >= ? AND ts < ?`,
+			&t.Bytes, &t.Wire, &t.Pkts, &t.Flows); err != nil {
+			return t, err
+		}
+		one(`SELECT count(DISTINCT val) FROM {r_dim} WHERE ts >= ? AND ts < ? AND dim = 'country' AND val NOT IN ('', '__internal__')`, &t.Countries)
+		if v, _ := q.view(); v.key == "" {
+			one(`SELECT count(DISTINCT ip) FILTER (WHERE internal), count(DISTINCT ip) FILTER (WHERE NOT internal) FROM {r_host} WHERE ts >= ? AND ts < ?`, &t.Hosts, &t.Peers)
+			return t, nil
+		}
+		// a device or an interface has no summary by address: its
+		// addresses are counted from the flow records
+		where, args, err := q.where()
 		if err != nil {
 			return t, err
 		}
-		s.DB.QueryRow(`SELECT count(DISTINCT ip) FILTER (WHERE internal), count(DISTINCT ip) FILTER (WHERE NOT internal) FROM r_host WHERE ts >= ? AND ts < ?`, q.From.UTC(), q.To.UTC()).Scan(&t.Hosts, &t.Peers)
-		s.DB.QueryRow(`SELECT count(DISTINCT val) FROM r_dim WHERE ts >= ? AND ts < ? AND dim = 'country' AND val NOT IN ('', '__internal__')`, q.From.UTC(), q.To.UTC()).Scan(&t.Countries)
-		return t, nil
+		err = s.DB.QueryRow(s.hostCounts(q, where), args...).Scan(&t.Hosts, &t.Peers)
+		return t, err
 	}
 	where, args, err := q.where()
 	if err != nil {
@@ -746,18 +860,25 @@ func (s *Store) Totals(q Query) (Totals, error) {
 	}
 	src := s.Source(q.From, q.To)
 	err = s.DB.QueryRow(fmt.Sprintf(`SELECT coalesce(sum(bytes),0), coalesce(sum(wire),0), coalesce(sum(pkts),0), coalesce(sum(flows),0),
-		count(DISTINCT CASE WHEN NOT srv_int THEN server WHEN NOT cli_int THEN client END),
 		count(DISTINCT nullif(peer_cc, ''))
 		FROM %s WHERE %s`, src, where), args...).
-		Scan(&t.Bytes, &t.Wire, &t.Pkts, &t.Flows, &t.Peers, &t.Countries)
+		Scan(&t.Bytes, &t.Wire, &t.Pkts, &t.Flows, &t.Countries)
 	if err != nil {
 		return t, err
 	}
-	// internal addresses on either side, each counted once (a host is often
-	// a client in one conversation and a server in another)
-	err = s.DB.QueryRow(fmt.Sprintf(`SELECT count(*) FROM (SELECT client FROM %s WHERE %s AND cli_int UNION SELECT server FROM %s WHERE %s AND srv_int)`,
-		src, where, src, where), append(append([]any{}, args...), args...)...).Scan(&t.Hosts)
+	err = s.DB.QueryRow(s.hostCounts(q, where), args...).Scan(&t.Hosts, &t.Peers)
 	return t, err
+}
+
+// hostCounts counts the internal addresses on either side, each once (a
+// host is often a client in one conversation and a server in another),
+// and the external ones. They are counted by grouping them, which spills
+// to disk where count(DISTINCT) over a week of addresses ran out of memory.
+func (s *Store) hostCounts(q Query, where string) string {
+	return fmt.Sprintf(`WITH x AS NOT MATERIALIZED (SELECT client, server, cli_int, srv_int FROM %s WHERE %s)
+		SELECT (SELECT count(*) FROM (SELECT client FROM x WHERE cli_int UNION SELECT server FROM x WHERE srv_int)),
+			(SELECT count(*) FROM (SELECT CASE WHEN NOT srv_int THEN server ELSE client END FROM x WHERE NOT srv_int OR NOT cli_int GROUP BY 1))`,
+		s.Source(q.From, q.To), where)
 }
 
 // Record is one detail row for the flow records view.
@@ -845,7 +966,10 @@ func (s *Store) Sankey(q Query, mode string, n0, n2 int) ([]SankeyLink, error) {
 	if !ok {
 		return nil, fmt.Errorf("unknown flow paths mode %q", mode)
 	}
-	sqlq := fmt.Sprintf(`WITH b AS (SELECT %s AS c0, %s AS c1, %s AS c2, sum(wire) AS w FROM %s WHERE %s GROUP BY 1,2,3),
+	// b is the rows, read again by each step rather than summed by all
+	// three columns first: by client and server, a week is a group for
+	// nearly every row, more than the memory there is
+	sqlq := fmt.Sprintf(`WITH b AS NOT MATERIALIZED (SELECT %s AS c0, %s AS c1, %s AS c2, wire AS w FROM %s WHERE %s),
 			t0 AS (SELECT c0 FROM b GROUP BY c0 ORDER BY sum(w) DESC LIMIT %d),
 			t2 AS (SELECT c2 FROM b GROUP BY c2 ORDER BY sum(w) DESC LIMIT %d)
 		SELECT CASE WHEN c0 IN (SELECT c0 FROM t0) THEN c0 ELSE '__other__' END,

@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.1
+
+- Long ranges on large installations no longer run out of database memory, and a device or an interface over days is read from summaries of its own (built once in the background for the data already stored).
+
 ## 2.5.0
 
 - Overview: inbound and outbound follow the interface charted above.

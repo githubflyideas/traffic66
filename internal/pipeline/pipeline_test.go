@@ -250,9 +250,16 @@ func TestRetention(t *testing.T) {
 	if err := st.Retain(now.Add(48 * time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	tot, _ = st.Totals(all)
+	// the flow records are gone; the device's summaries stay, as the
+	// summaries of all traffic do
+	records := all
+	records.Filters = append(records.Filters, store.Filter{Field: "client", Value: "10.1.1.1"})
+	tot, _ = st.Totals(records)
 	if tot.Flows != 0 || st.Usage().Segments != 0 {
 		t.Fatalf("expired data still visible: %+v, %+v", tot, st.Usage())
+	}
+	if tot, _ = st.Totals(all); tot.Flows != 2 {
+		t.Fatalf("the device's summaries went with its records: %+v", tot)
 	}
 }
 

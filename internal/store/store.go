@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	duckdb "github.com/duckdb/duckdb-go/v2"
@@ -112,6 +113,14 @@ type Store struct {
 	segMu    sync.RWMutex
 	segCache []segment
 
+	// the summaries by device and interface (views.go): ready once the
+	// flow files sealed before they existed are summarised too
+	viewsReady atomic.Bool
+	closing    atomic.Bool
+	bg         sync.WaitGroup
+	bgCtx      context.Context
+	bgStop     context.CancelFunc
+
 	dsMu sync.Mutex // guards the cached start of the data
 	dsAt time.Time  // when dsTS was read
 	dsTS time.Time
@@ -183,7 +192,8 @@ func Open(opt Options) (*Store, error) {
 		return nil, fmt.Errorf("cannot open the database in %s: %w", opt.Dir, err)
 	}
 	s := &Store{opt: opt, conn: c, DB: sql.OpenDB(c)}
-	for _, q := range schema {
+	s.bgCtx, s.bgStop = context.WithCancel(context.Background())
+	for _, q := range append(schema, viewSchema...) {
 		if _, err := s.DB.Exec(q); err != nil {
 			return nil, fmt.Errorf("schema: %w", err)
 		}
@@ -196,6 +206,24 @@ func Open(opt Options) (*Store, error) {
 	}
 	if err := s.repairWrapped(); err != nil {
 		log.Printf("store: %v", err)
+	}
+	// the summaries are ready at once where there is nothing to summarise
+	// first (they were built before, or there are no flow files yet), and
+	// built in the background otherwise
+	s.segMu.RLock()
+	nsegs := len(s.segCache)
+	s.segMu.RUnlock()
+	switch {
+	case s.Meta(viewsDone) != "":
+		s.viewsReady.Store(true)
+	case nsegs == 0:
+		if err := s.SetMeta(viewsDone, time.Now().UTC().Format(time.RFC3339)); err != nil {
+			return nil, err
+		}
+		s.viewsReady.Store(true)
+	default:
+		s.bg.Add(1)
+		go s.buildViews()
 	}
 	log.Printf("store: %s, DuckDB memory limit %d MB, %d threads", opt.Dir, memMB, opt.Threads)
 	return s, nil
@@ -322,10 +350,23 @@ func (s *Store) Seal(now time.Time) error {
 	if _, err := s.DB.Exec(q, boundary); err != nil {
 		return fmt.Errorf("seal: %w", err)
 	}
-	if _, err := s.DB.Exec(`INSERT INTO segments VALUES (?, ?, ?, ?)`, path, mn.Time, mx.Time, n); err != nil {
+	// the file, the summaries of what is in it and the rows leaving the hot
+	// table change together, so no query counts them twice or not at all
+	tx, err := s.DB.Begin()
+	if err != nil {
 		return err
 	}
-	if _, err := s.DB.Exec(`DELETE FROM hot WHERE ts < ?`, boundary); err != nil {
+	defer tx.Rollback()
+	if _, err := tx.Exec(`INSERT INTO segments VALUES (?, ?, ?, ?)`, path, mn.Time, mx.Time, n); err != nil {
+		return err
+	}
+	if err := sealViews(tx, boundary); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM hot WHERE ts < ?`, boundary); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
 		return err
 	}
 	s.DB.Exec(`CHECKPOINT`)
@@ -402,7 +443,7 @@ func (s *Store) Retain(now time.Time) error {
 		rows += n
 		return nil
 	}
-	for _, t := range []string{"r_ts", "r_host", "r_dim"} {
+	for _, t := range append([]string{"r_ts", "r_host", "r_dim"}, viewTables...) {
 		if err := del(t, rollCut); err != nil {
 			return err
 		}
@@ -501,6 +542,9 @@ func (s *Store) Usage() Usage {
 
 // Close flushes and closes everything.
 func (s *Store) Close() error {
+	s.closing.Store(true)
+	s.bgStop()
+	s.bg.Wait()
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
 	for _, a := range []*duckdb.Appender{s.appHot, s.appTS, s.appHost, s.appDim, s.appIfc} {
