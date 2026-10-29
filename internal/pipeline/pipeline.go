@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"net/netip"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -216,6 +217,32 @@ func (p *Pipeline) FlushRows() {
 		return
 	}
 	p.Rows.Add(uint64(len(b)))
+}
+
+// Forget drops what is held in memory from before t (everything for a
+// zero t): the rows not written yet and the summaries of the minute being
+// added up. Deleting data calls it first, or up to a minute of what was
+// deleted would be written back a moment later.
+func (p *Pipeline) Forget(t time.Time) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	old := func(ts time.Time) bool { return t.IsZero() || ts.Before(t) }
+	p.batch = slices.DeleteFunc(p.batch, func(r store.Row) bool { return old(r.TS) })
+	for k := range p.rTS {
+		if old(k.TS) {
+			delete(p.rTS, k)
+		}
+	}
+	for k := range p.rHost {
+		if old(k.TS) {
+			delete(p.rHost, k)
+		}
+	}
+	for k := range p.rDim {
+		if old(k.TS) {
+			delete(p.rDim, k)
+		}
+	}
 }
 
 // FlushRollups writes accumulated rollup rows.

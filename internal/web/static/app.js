@@ -383,14 +383,11 @@ setInterval(tickClock, 1000);
 const IFV_VIEWS = new Set(['overview', 'topn', 'traffic', 'sankey', 'geo', 'records', 'detail']);
 const IFV_DATA = new Set(['overview', 'topn', 'series', 'sankey', 'records', 'rings', 'geolines']);
 const ifScoped = path => state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state.v) && IFV_DATA.has(path) && !inSB();
-// What the licence grants, for the pages that have to grey a
-// registered-only option out. The server checks it too and is the only
-// thing that decides: this keeps the page from offering what would be
-// refused.
+// What the licence grants. The server checks it too and is the only thing
+// that decides.
 let lic = null;
 let waiting = null;  // what the collector is still waiting for, from /api/status
 let setup = null;    // sources, UDP ports and addresses, for the first-run guide
-const licOK = f => !!lic && lic.registered && (lic.features || []).includes(f);
 
 let ifList = null, ifListKey = '';
 // the interfaces of the range (busiest first) and the default one, cached a minute
@@ -1003,7 +1000,9 @@ views.overview = async (el) => {
     ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
       ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${fd ? findingsPanel(fd) : ''}
+    ${offlineMode || inSB() ? '' : panel('c12', t('self.title'), '', '<div class="self" id="self"></div>')}
   </div>`;
+  fillSelf();
   const dirWord = od && t(od === 'inbound' ? 'if.in' : 'if.out');
   tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from,
     empty: od && viaIf ? esc(t('ov.dir_empty', {if: ifSel ? ifName(ifSel) : ifk, d: /^[a-z]/i.test(dirWord) ? dirWord.toLocaleLowerCase(LANG) : dirWord})) : ''});
@@ -1688,73 +1687,9 @@ views.cleanup = async (el) => {
     loadStatus(); render();
   });
   if (clDone) { const m = $('#clMsg'); m.style.color = 'var(--good)'; m.textContent = clDone; clDone = ''; }
-  await ifaceCleanup(el);
 };
 let clDone = '';
 
-// Deleting one interface's data (registered only). The summaries hold
-// traffic by application, host and dimension, never by interface, so they
-// cannot have one interface subtracted from them; the panel says so rather
-// than letting anyone believe the interface is gone from every page.
-async function ifaceCleanup(el) {
-  const on = licOK('purge-iface');
-  const ages = [0, ...cleanupDaysUI];
-  const ageOpt = d => `<option value="${d}">${esc(d ? t('cl.days', {n: d}) : t('cl.if_any_age'))}</option>`;
-  const wrap = document.createElement('div');
-  wrap.className = 'grid';
-  wrap.innerHTML = panel('c12' + (on ? '' : ' locked'), t('cl.if_title'), on ? t('cl.if_sub') : t('cl.reg_only'),
-    `<p class="muted" style="margin:0 0 12px;font-size:13px">${esc(t('cl.if_what'))}<br>${esc(t('cl.if_both'))}</p>
-     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-       <select id="clIf" ${on ? '' : 'disabled'} style="max-width:420px"><option>${esc(t('cl.if_pick'))}</option></select>
-       <select id="clIfAge" ${on ? '' : 'disabled'}>${ages.map(ageOpt).join('')}</select>
-       <button class="btn danger" id="clIfRun" disabled>${t('cl.run')}</button>
-     </div>
-     <div id="clIfEst" class="muted" style="margin-top:10px;font-size:13px"></div>
-     <div id="clIfMsg" style="margin-top:6px;font-size:13px"></div>`);
-  el.append(...wrap.children);
-  if (!on) { $('#clIfEst').textContent = t('cl.if_locked'); return; }
-
-  const d = await api('ifaces', {from: 0, to: Date.now()}).catch(() => ({ifaces: []}));
-  const list = (d.ifaces || []).filter(f => f.ifindex);
-  const sel = $('#clIf');
-  if (!list.length) { sel.innerHTML = `<option>${esc(t('cl.if_none'))}</option>`; sel.disabled = true; $('#clIfAge').disabled = true; return; }
-  const groups = new Map();
-  list.forEach(f => { const g = f.device || f.exporter; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(f); });
-  let html = '';
-  groups.forEach((fs, g) => { html += `<optgroup label="${esc(g)}">${fs.map(f => `<option value="${esc(f.exporter + '/' + f.ifindex)}" title="${esc((f.device || f.exporter) + ' · ' + f.ifindex)}">${esc(ifName(f) + (f.tag ? ' [' + f.tag + ']' : ''))}</option>`).join('')}</optgroup>`; });
-  sel.innerHTML = html;
-
-  const target = () => { const [exporter, ifindex] = sel.value.split('/'); return {exporter, ifindex: +ifindex, days: +$('#clIfAge').value}; };
-  const estimate = async () => {
-    const tg = target(), est = $('#clIfEst'), run = $('#clIfRun');
-    run.disabled = true;
-    est.textContent = t('cl.if_estimating');
-    const res = await fetch(`/api/cleanup/iface?exporter=${encodeURIComponent(tg.exporter)}&ifindex=${tg.ifindex}&days=${tg.days}`);
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) { est.textContent = (j.error === 'not_registered' || res.status === 404) ? t('cl.if_locked') : (j.error || res.statusText); return; }
-    const parts = [t('cl.rows', {n: nf(j.rows || 0)}), t('cl.if_counters', {n: nf(j.counters || 0)})];
-    if (j.bytes) parts.push(t('cl.if_frees', {s: fmtBytes(j.bytes)}));
-    est.textContent = parts.join(' · ') + (j.summaries ? ' — ' + t('cl.if_keep', {n: nf(j.summaries)}) : '');
-    run.disabled = !(j.rows || j.counters);
-  };
-  sel.onchange = $('#clIfAge').onchange = estimate;
-  $('#clIfRun').onclick = async () => {
-    const tg = target(), name = sel.selectedOptions[0].textContent;
-    if (!confirm(t(tg.days ? 'cl.if_confirm_days' : 'cl.if_confirm', {i: name, n: tg.days}))) return;
-    const run = $('#clIfRun'), m = $('#clIfMsg');
-    run.disabled = true;
-    const res = await fetch('/api/cleanup/iface', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(tg)});
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) { m.style.color = 'var(--crit)'; m.textContent = (j.error === 'not_registered' || res.status === 404) ? t('cl.if_locked') : (j.error || res.statusText); return; }
-    m.style.color = 'var(--good)';
-    m.textContent = t('cl.if_done', {i: name, n: nf(j.rows || 0), c: nf(j.counters || 0), s: fmtBytes(j.bytes || 0)});
-    loadStatus();
-    await estimate();
-  };
-  await estimate();
-}
-// the ages offered, mirroring the server's own list
-const cleanupDaysUI = [120, 90, 60, 30, 7];
 
 // Controls only an administrator gets. The calls behind them are gated
 // server-side too (adminAPI, in internal/api/server.go) — this only keeps
@@ -1781,7 +1716,7 @@ views.racks = async (el) => {
   if (res.status === 401) { showLogin(); return; }
   const d = await res.json().catch(() => ({}));
   const devs = d.devices || [], can = !!d.admin;
-  if (!devs.length) { el.innerHTML = `<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="empty">${esc(t('rk.empty'))}</div>`)}</div>`; return; }
+  if (!devs.length) { el.innerHTML = `${invTabs('racks')}<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="empty">${esc(t('rk.empty'))}</div>`)}</div>`; return; }
   const rooms = new Map();
   devs.forEach((x, i) => {
     const room = x.room || '', rack = x.rack || '';
@@ -1818,7 +1753,7 @@ views.racks = async (el) => {
       ${names.map(rack => `<div class="rkrack"><div class="rkrh"><span>${esc(rack ? t('rk.rack_n', {x: rack}) : t('rk.no_rack'))}</span></div><div class="rkbay">${racks.get(rack).map(device).join('')}</div></div>`).join('')}
       </div></section>`;
   }).join('');
-  el.innerHTML = `<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="rksum">${esc(sum)}</div>` + body)}</div>`;
+  el.innerHTML = `${invTabs('racks')}<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="rksum">${esc(sum)}</div>` + body)}</div>`;
   const uniq = k => [...new Set(devs.map(x => x[k]).filter(Boolean))].sort();
   const carriers = [...new Set(ports.map(f => f.isp).filter(Boolean))].sort();
   el.querySelectorAll('[data-rkd]').forEach(b => b.onclick = async () => {
@@ -2446,9 +2381,14 @@ views.sources = async (el) => {
 // recording a rack, and it is the one page there that an unregistered
 // installation keeps: a flow analyser that cannot tell you which address is
 // which is of little use, and that is not a feature to sell.
+// The inventory page has two tabs: the inventory itself and where the
+// devices stand.
+const invTabs = cur => `<div class="seg invtabs" role="tablist">${[['names', 'src.names'], ['racks', 'nav.racks']].map(([v, k]) =>
+  `<button role="tab" data-invtab="${v}" aria-selected="${cur === v}" aria-pressed="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
+document.addEventListener('click', e => { const b = e.target.closest('[data-invtab]'); if (b) go(b.dataset.invtab); });
 views.names = async (el) => {
   const inv = await api('inventory').catch(() => ({text: ''}));
-  el.innerHTML = `<div class="grid">
+  el.innerHTML = `${invTabs('names')}<div class="grid">
     ${panel('c12', t('src.names'), t('src.names_sub'), `${admOnly(`<div class="nmform" id="nmForm">
         <select id="nmK">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
         <input id="nmA" autocomplete="off" spellcheck="false"><input id="nmI" autocomplete="off" inputmode="numeric" placeholder="${esc(t('nm.ifindex'))}" hidden>
@@ -2663,9 +2603,11 @@ async function render(push) {
   renderFilters();
   renderFbar();
   writeHash(push);
-  $('#title').textContent = t('nav.' + state.v);  // the detail view refines it
+  // device locations is a tab of the inventory page, and lights its entry
+  const navV = state.v === 'racks' ? 'names' : state.v;
+  $('#title').textContent = t('nav.' + navV);  // the detail view refines it
   document.title = t('nav.' + state.v) + ' · traffic66';
-  document.querySelectorAll('#nav button').forEach(b => b.dataset.v === state.v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  document.querySelectorAll('#nav button').forEach(b => b.dataset.v === navV ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   renderRange();
   await renderIfsel();
   writeHash(false);
@@ -2710,34 +2652,36 @@ async function loadStatus() {
       // registered to whom, and as what: a licence bought by one person is
       // not a company's, and the footer is where a screenshot shows it
       const as = L.registered ? ` <span class="tag">${esc(licenseeText(L))}</span>` : '';
-      $('#lic').innerHTML = `<b>${esc(head)}</b>${as}${tail ? tail : ' '}${id}`;
-      $('#lic').className = 'lic ' + L.kind; $('#lic').hidden = false;
+      $('#licText').innerHTML = `<b>${esc(head)}</b>${as}${tail ? tail : ' '}${id}`;
+      $('#lic').className = 'lic ' + L.kind; $('#licText').hidden = false;
 
       marked = !!L.watermark;
       markNotice = L.notice || '';
       applyMark();
-      const b = $('#licBadge');
-      const bt = L.registered ? (L.days < 0 ? t('lic.badge_ok') : t('lic.badge_days', {n: L.days})) : t('lic.badge_get');
-      // the badge carries the name under the word, so the sidebar says who
-      // this installation belongs to and not only that it is licensed
-      b.innerHTML = esc(bt) + (L.registered && L.customer ? `<span class="who">${esc(L.customer)}</span>` : '');
-      b.className = 'licbadge ' + L.kind;
-      b.title = head + (L.registered ? ' · ' + licenseeText(L) : '');
-      b.hidden = false;
     }
     $('#verNo').textContent = 'v' + s.version + (s.build && s.build !== 'official' ? ' · ' + s.build : '');
     if (s.now) clockSkew = s.now - Date.now();
-    $('#self').hidden = offlineMode;  // nothing is collected
-    const live = s.records_per_sec > 0.2;
-    $('#self').innerHTML = `<div class="live ${live ? 'ok' : 'idle'}"><i></i>${t(live ? 'self.receiving' : 'self.idle')}</div>
-      <span class="k">${t('self.ingest')}</span><span class="val">${esc(t('self.per_sec', {n: nf(s.records_per_sec, s.records_per_sec < 10 ? 1 : 0)}))}</span>
-      <span class="k">${t('self.dropped')}</span><span class="val" style="${s.dropped ? 'color:var(--crit)' : ''}">${nf(s.dropped)}</span>
-      <span class="k">${t('self.disk')}</span><span class="val">${fmtBytes(s.disk_bytes)}</span>
-      <span class="k">${t('self.free')}</span><span class="val" ${s.disk_need > s.disk_free ? 'style="color:var(--crit)"' : ''} title="${esc(s.disk_need >= 0 ? t('self.need', {d: nf(s.retention_days), n: fmtBytes(s.disk_need)}) : t('self.need_later', {d: nf(s.retention_days)}))}">${fmtBytes(s.disk_free)}</span>
-      ${s.write_errors ? `<span class="k" style="color:var(--crit)">!</span><span class="val" style="color:var(--crit)" title="${esc(s.last_error)}">${nf(s.write_errors)}</span>` : ''}`;
+    selfStatus = s;
+    fillSelf();
     $('#srcBadge').hidden = !s.source_warnings; $('#srcBadge').textContent = s.source_warnings;
     $('#findBadge').hidden = !s.findings_open; $('#findBadge').textContent = s.findings_open;
   } catch (e) {}
+}
+
+// How collection is going, at the foot of the overview: whether records
+// are arriving, how fast, what was dropped and how the disk stands.
+let selfStatus = null;
+function fillSelf() {
+  const el = $('#self'), s = selfStatus;
+  if (!el || !s) return;
+  const live = s.records_per_sec > 0.2;
+  const it = (k, v, attrs = '') => `<div class="it"><span class="k">${k}</span><span class="val" ${attrs}>${v}</span></div>`;
+  el.innerHTML = `<div class="live ${live ? 'ok' : 'idle'}"><i></i>${t(live ? 'self.receiving' : 'self.idle')}</div>
+    ${it(t('self.ingest'), esc(t('self.per_sec', {n: nf(s.records_per_sec, s.records_per_sec < 10 ? 1 : 0)})))}
+    ${it(t('self.dropped'), nf(s.dropped), s.dropped ? 'style="color:var(--crit)"' : '')}
+    ${it(t('self.disk'), fmtBytes(s.disk_bytes))}
+    ${it(t('self.free'), fmtBytes(s.disk_free), `${s.disk_need > s.disk_free ? 'style="color:var(--crit)"' : ''} title="${esc(s.disk_need >= 0 ? t('self.need', {d: nf(s.retention_days), n: fmtBytes(s.disk_need)}) : t('self.need_later', {d: nf(s.retention_days)}))}"`)}
+    ${s.write_errors ? it('!', nf(s.write_errors), `style="color:var(--crit)" title="${esc(s.last_error)}"`) : ''}`;
 }
 
 function showLogin() {

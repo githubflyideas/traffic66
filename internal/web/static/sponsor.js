@@ -14,13 +14,11 @@
   var URL_ = 'https://raw.githubusercontent.com/githubflyideas/ads-sponsor/main/traffic66/sponsors.json';
   // MAX is how many advertisers are fetched and rotated through.
   var TIMEOUT_MS = 3000, ROTATE_MS = 5500, MAX = 6;
-  // A cell narrower than this is not worth drawing a 728x90 banner into, so
-  // it decides how many fit across the window.
-  var MIN_CELL = 420;
-  // A small banner is 728x90 (1456x180 at 2x) and shown SMALL_COPIES times
-  // side by side; an image LONG_RATIO times as wide as it is high or wider
-  // is a long banner and fills the strip alone.
-  var SMALL_W = 728, SMALL_H = 90, SMALL_COPIES = 3, LONG_RATIO = 12;
+  // A small banner is 728x90 (1456x180 at 2x). The slot is in the
+  // sidebar, as wide as it is, so only small banners are shown there: an
+  // image LONG_RATIO times as wide as it is high or wider is a long banner,
+  // too thin at that width to read, and is left out.
+  var SMALL_W = 728, SMALL_H = 90, LONG_RATIO = 12;
   var CACHE_KEY = 't66.sponsor', CACHE_MS = 30 * 60 * 1000;
   var started = false, timerId = null, roId = null;
 
@@ -89,7 +87,10 @@
     if (!want.length) return Promise.reject();
     return settle(want.map(function (s) { return loadImg(s.src); })).then(function (imgs) {
       var ok = [];
-      want.forEach(function (s, i) { if (imgs[i]) { s.img = imgs[i]; ok.push(s); } });
+      want.forEach(function (s, i) {
+        var im = imgs[i];
+        if (im && im.naturalWidth < LONG_RATIO * im.naturalHeight) { s.img = im; ok.push(s); }
+      });
       if (!ok.length) throw 0;
       return ok;
     });
@@ -107,17 +108,8 @@
     return out;
   }
 
-  // The strip shows one advertiser at a time and rotates between them.
-  //   - a long banner (LONG_RATIO wide to 1 high or wider, 2880x120 is the
-  //     intended size) has the strip to itself;
-  //   - a small banner (the 728x90 kind) is shown three times side by side,
-  //     the same ad in every cell, so the strip never mixes two advertisers.
-  // A narrow window has room for fewer cells (one per MIN_CELL pixels).
-  // The strip keeps the height of a row of small banners whichever ad is
-  // up, so rotating never moves the page underneath.
-  //
-  // One image element cannot be in two cells at once, so each cell gets a
-  // clone of an already-loaded image; nothing is fetched twice.
+  // The slot shows one advertiser at a time and rotates between them, at
+  // the sidebar's width and the banner's own proportions.
   function build(slot, slides) {
     var car = slot.querySelector('.spc');
     car.hidden = false;
@@ -134,29 +126,17 @@
       a.appendChild(img);
       return a;
     }
-    function isLong(s) { return s.img.naturalWidth >= LONG_RATIO * s.img.naturalHeight; }
     function draw() {
       var s = slides[cur];
-      var w = car.clientWidth || window.innerWidth || MIN_CELL;
-      var k = Math.max(1, Math.min(SMALL_COPIES, Math.floor(w / MIN_CELL)));
-      var rowH = Math.round((w - (k - 1)) / k * SMALL_H / SMALL_W);
-      var n = isLong(s) ? 1 : k;
+      var w = car.clientWidth || SMALL_W;
       strip.textContent = '';
-      strip.style.gridTemplateColumns = 'repeat(' + n + ', minmax(0, 1fr))';
-      for (var i = 0; i < n; i++) {
-        var box = document.createElement('div'); box.className = 'spc-cell';
-        box.style.height = rowH + 'px';
-        box.appendChild(slideEl(s));
-        strip.appendChild(box);
-      }
+      var box = document.createElement('div'); box.className = 'spc-cell';
+      box.style.height = Math.round(w * SMALL_H / SMALL_W) + 'px';
+      box.appendChild(slideEl(s));
+      strip.appendChild(box);
       ds.forEach(function (d, i) { d.classList.toggle('on', i === cur); });
-      measure();
     }
     function show(i) { cur = ((i % slides.length) + slides.length) % slides.length; draw(); }
-    // The sidebar's height is the window less this strip (see app.css).
-    function measure() {
-      try { document.documentElement.style.setProperty('--sp-h', slot.offsetHeight + 'px'); } catch (e) {}
-    }
 
     car.textContent = '';
     car.appendChild(strip);
@@ -192,14 +172,12 @@
                 if (!started) return;
                 slot.querySelector('.sp-text').hidden = false;
                 slot.hidden = false;
-                try { document.documentElement.style.setProperty('--sp-h', slot.offsetHeight + 'px'); } catch (e) {}
               });
     },
     remove: function () {
       started = false;
       if (timerId) clearInterval(timerId);
       if (roId) { roId.disconnect(); roId = null; }
-      try { document.documentElement.style.setProperty('--sp-h', '0px'); } catch (e) {}
       var slot = document.getElementById('sponsor');
       if (slot) slot.remove();
     }
