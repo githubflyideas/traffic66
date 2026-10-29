@@ -53,6 +53,9 @@ func (s *Server) postCleanup(w http.ResponseWriter, r *http.Request) {
 		fail(w, errors.New("days must be 0 or more"))
 		return
 	}
+	if s.Pipe != nil {
+		s.Pipe.Forget(before)
+	}
 	disk := s.Store.Usage().DiskBytes
 	done, err := s.Store.PurgeBefore(before)
 	if err != nil {

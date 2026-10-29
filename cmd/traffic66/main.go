@@ -55,7 +55,7 @@ var version = ""
 // CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
 // default used to be a hardcoded 0.1.0-dev, and because nothing checked it
 // it stayed that way for two major versions.
-const devVersion = "2.5.1"
+const devVersion = "2.5.2"
 
 func init() {
 	if version == "" {

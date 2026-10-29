@@ -3,6 +3,14 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.2
+
+- The sponsor banner is in the sidebar, above the language and theme; the strip at the top of the page is gone.
+- The version is in the page footer; the collection status is at the foot of the overview.
+- Rooms and racks is called Device locations and is a tab of the inventory page.
+- Deleting one interface's data is removed.
+- Deleting data no longer leaves the last minute, or summaries still being built, to be written back afterwards.
+
 ## 2.5.1
 
 - Long ranges on large installations no longer run out of database memory, and a device or an interface over days is read from summaries of its own (built once in the background for the data already stored).

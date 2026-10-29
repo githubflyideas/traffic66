@@ -72,6 +72,20 @@ func (s *Store) PurgeSizeBefore(before time.Time) PurgeSize {
 func (s *Store) PurgeBefore(before time.Time) (PurgeSize, error) {
 	all := before.IsZero()
 	var done PurgeSize
+	// A build of the summaries still running would write back what is
+	// deleted here. It is stopped first and, where something is left to
+	// summarise, started again afterwards; deleting everything leaves
+	// nothing to summarise.
+	building := s.stopViews()
+	defer func() {
+		switch {
+		case all:
+			s.SetMeta(viewsDone, time.Now().UTC().Format(time.RFC3339))
+			s.viewsReady.Store(true)
+		case building:
+			s.startViews()
+		}
+	}()
 	s.segMu.RLock()
 	var old []segment
 	for _, g := range s.segCache {

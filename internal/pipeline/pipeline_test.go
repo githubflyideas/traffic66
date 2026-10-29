@@ -608,3 +608,41 @@ func TestRingsAndSegmentCountries(t *testing.T) {
 		t.Error("three-letter country accepted")
 	}
 }
+
+// Deleting data drops what is still held in memory from before the cut,
+// so it is not written back a moment after the delete.
+func TestForget(t *testing.T) {
+	st, err := store.Open(store.Options{Dir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	p := New(Config{}, st, enrich.NewInventory(), enrich.NewASNDB(), enrich.NewThreats())
+	now := time.Now().UTC().Truncate(time.Minute)
+	rec := func(at time.Time) flow.Record {
+		return flow.Record{Start: at, End: at, Src: netip.MustParseAddr("10.1.1.1"), Dst: netip.MustParseAddr("198.51.100.9"),
+			SrcPort: 50000, DstPort: 443, Proto: 6, Bytes: 1000, Packets: 1, Mult: 1, SamplingKnown: true,
+			Exporter: netip.MustParseAddr("10.0.0.1"), Source: flow.SrcIPFIX}
+	}
+	p.Ingest([]flow.Record{rec(now.Add(-3 * time.Hour)), rec(now.Add(-time.Minute))})
+	p.Forget(now.Add(-time.Hour))
+	p.FlushRows()
+	p.FlushRollups()
+	for _, q := range []store.Query{
+		{From: now.Add(-4 * time.Hour), To: now.Add(-2 * time.Hour)},                                                              // the records
+		{From: now.Add(-12 * time.Hour), To: now.Add(-2 * time.Hour).Truncate(time.Hour)},                                         // the summaries
+		{From: now.Add(-12 * time.Hour), To: now.Add(time.Minute), Filters: []store.Filter{{Field: "client", Value: "10.1.1.1"}}}, // what is left
+	} {
+		tot, err := st.Totals(q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := uint64(0)
+		if len(q.Filters) > 0 {
+			want = 1 // the recent flow stays
+		}
+		if tot.Flows != want {
+			t.Errorf("%v..%v: %d flows, want %d", q.From, q.To, tot.Flows, want)
+		}
+	}
+}

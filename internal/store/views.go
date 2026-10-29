@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -245,8 +246,13 @@ func sealViews(tx *sql.Tx, boundary time.Time) error {
 // existed, once per data directory, a file at a time so the memory it
 // needs is a file's worth. Until it is done the pages read those ranges
 // from the flow records as before.
-func (s *Store) buildViews() {
-	defer s.bg.Done()
+func (s *Store) buildViews(ctx context.Context) {
+	defer func() {
+		s.vmu.Lock()
+		s.vStop = nil
+		s.vmu.Unlock()
+		s.bg.Done()
+	}()
 	// Start over: an earlier run may have stopped half way. The files
 	// sealed from here on are summarised by the seal itself, so the list
 	// is taken, and the tables emptied, with sealing held off.
@@ -264,23 +270,23 @@ func (s *Store) buildViews() {
 	s.wmu.Unlock()
 	t0 := time.Now()
 	for i, g := range segs {
-		if s.closing.Load() {
+		if ctx.Err() != nil {
 			return
 		}
 		src := "(SELECT * FROM read_parquet('" + sqlPath(g.path) + "'))"
-		tx, err := s.DB.BeginTx(s.bgCtx, nil)
+		tx, err := s.DB.BeginTx(ctx, nil)
 		if err != nil {
 			log.Printf("store: summaries: %v", err)
 			return
 		}
 		for _, q := range viewInserts(src) {
-			if _, err = tx.ExecContext(s.bgCtx, q); err != nil {
+			if _, err = tx.ExecContext(ctx, q); err != nil {
 				break
 			}
 		}
 		if err != nil {
 			tx.Rollback()
-			if !s.closing.Load() {
+			if ctx.Err() == nil {
 				log.Printf("store: summaries of %s: %v", g.path, err)
 			}
 			return
@@ -301,4 +307,28 @@ func (s *Store) buildViews() {
 	if len(segs) > 0 {
 		log.Printf("store: summarised %d flow files by device and interface in %s", len(segs), time.Since(t0).Round(time.Second))
 	}
+}
+
+// startViews builds the summaries of the flow files in the background.
+func (s *Store) startViews() {
+	ctx, stop := context.WithCancel(context.Background())
+	s.vmu.Lock()
+	s.vStop = stop
+	s.vmu.Unlock()
+	s.bg.Add(1)
+	go s.buildViews(ctx)
+}
+
+// stopViews stops a build in progress, waits for it, and reports whether
+// there was one.
+func (s *Store) stopViews() bool {
+	s.vmu.Lock()
+	stop := s.vStop
+	s.vmu.Unlock()
+	if stop == nil {
+		return false
+	}
+	stop()
+	s.bg.Wait()
+	return true
 }

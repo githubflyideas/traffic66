@@ -118,8 +118,8 @@ type Store struct {
 	viewsReady atomic.Bool
 	closing    atomic.Bool
 	bg         sync.WaitGroup
-	bgCtx      context.Context
-	bgStop     context.CancelFunc
+	vmu        sync.Mutex
+	vStop      context.CancelFunc // stops the build in progress, nil when none
 
 	dsMu sync.Mutex // guards the cached start of the data
 	dsAt time.Time  // when dsTS was read
@@ -192,7 +192,6 @@ func Open(opt Options) (*Store, error) {
 		return nil, fmt.Errorf("cannot open the database in %s: %w", opt.Dir, err)
 	}
 	s := &Store{opt: opt, conn: c, DB: sql.OpenDB(c)}
-	s.bgCtx, s.bgStop = context.WithCancel(context.Background())
 	for _, q := range append(schema, viewSchema...) {
 		if _, err := s.DB.Exec(q); err != nil {
 			return nil, fmt.Errorf("schema: %w", err)
@@ -222,8 +221,7 @@ func Open(opt Options) (*Store, error) {
 		}
 		s.viewsReady.Store(true)
 	default:
-		s.bg.Add(1)
-		go s.buildViews()
+		s.startViews()
 	}
 	log.Printf("store: %s, DuckDB memory limit %d MB, %d threads", opt.Dir, memMB, opt.Threads)
 	return s, nil
@@ -543,8 +541,7 @@ func (s *Store) Usage() Usage {
 // Close flushes and closes everything.
 func (s *Store) Close() error {
 	s.closing.Store(true)
-	s.bgStop()
-	s.bg.Wait()
+	s.stopViews()
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
 	for _, a := range []*duckdb.Appender{s.appHot, s.appTS, s.appHost, s.appDim, s.appIfc} {

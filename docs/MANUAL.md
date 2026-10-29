@@ -496,21 +496,14 @@ The data directory holds `raw/` (detail, one file per hour),
 `traffic66.duckdb` (summaries and counters), `password`, `inventory.txt`,
 `license.json`, your logo and databases. Back up by stopping traffic66 and
 copying it; upgrade by replacing the program file. **Data cleanup** deletes
-data older than 7–120 days, or all of it. A registered copy can also delete
-one interface's data on its own — the flow records that went in or out of it
-and its counter samples — for when a link is decommissioned or its data must
-not be kept. A flow record names both the interface it came in on and the
-one it went out by, so those flows leave the other interface's view too;
-they are the same records. The hourly and daily summaries record traffic by
-application, host and dimension, never by interface, so they keep their
-totals.
+data older than 7–120 days, or all of it.
 
-### Rooms and racks
+### Device locations
 
-A picture of where the flows come from: for every device that sends flows,
+A tab of the inventory page. A picture of where the flows come from: for every device that sends flows,
 the room and rack it stands in, and for each of its ports the carrier and
 circuit ID it goes out to. Devices and ports appear by themselves from the
-flows; click ✎ to type in the room, rack, carrier and circuit. It is filled
+flows; click Edit to type in the device's room and rack and every port's carrier and circuit in one form. It is filled
 in once and kept in `inventory.txt` beside the names
 (`device 192.0.2.1 Core router room=Room_1 rack=A03`,
 `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`; a space is
