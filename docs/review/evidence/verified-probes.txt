@@ -1,0 +1,91 @@
+Absolute workspace paths redacted; test results otherwise unchanged.
+Baseline: a0c7c54c0cdfed21d96ee6a146fb4bf632889c05
+Platform: win32
+
+=== toolchain ===
+command: ['[REVIEW_WORKSPACE]/deep-data/toolchain/go/bin/go.exe', 'version']
+REVIEW_EXPECT_FIXED=
+go version go1.27.3 windows/amd64
+
+exit=0
+
+=== unmodified package baseline ===
+command: ['[REVIEW_WORKSPACE]/deep-data/toolchain/go/bin/go.exe', 'test', '-count=1', './internal/decode/nf', './internal/decode/sflow', './internal/auth']
+REVIEW_EXPECT_FIXED=
+ok  	github.com/githubflyideas/traffic66/internal/decode/nf	5.381s
+ok  	github.com/githubflyideas/traffic66/internal/decode/sflow	1.141s
+ok  	github.com/githubflyideas/traffic66/internal/auth	2.902s
+
+exit=0
+
+=== NF observed characterization ===
+command: ['[REVIEW_WORKSPACE]/deep-data/toolchain/go/bin/go.exe', 'test', '-count=1', '-v', '-run', '^TestReview', './internal/decode/nf']
+REVIEW_EXPECT_FIXED=
+=== RUN   TestReviewCrossDomainLending
+    review_lending_test.go:22: domain9=100 domain10=1000 borrowed_by_domain11=1000 cached=1000 raw_bytes=1500 scaled_bytes=1.5e+06
+    review_lending_test.go:22: domain9=1000 domain10=100 borrowed_by_domain11=100 cached=100 raw_bytes=1500 scaled_bytes=150000
+    review_lending_test.go:22: domain9=100 domain10=100 borrowed_by_domain11=100 cached=100 raw_bytes=1500 scaled_bytes=150000
+--- PASS: TestReviewCrossDomainLending (0.00s)
+=== RUN   TestReviewAmbiguousSessionCanBeOverwritten
+    review_lending_test.go:37: domain9 rates=[100 1000], domain10 rate=100, borrower=100 cache=100
+--- PASS: TestReviewAmbiguousSessionCanBeOverwritten (0.00s)
+=== RUN   TestReviewCumulativeInterval
+    review_totals_interval_test.go:22: report=1 bytes=6000 packets=60 Start=2023-11-15T07:13:00+09:00 End=2023-11-15T07:14:00+09:00 duration=1m0s
+    review_totals_interval_test.go:22: report=2 bytes=6000 packets=60 Start=2023-11-15T07:13:00+09:00 End=2023-11-15T07:15:00+09:00 duration=2m0s
+    review_totals_interval_test.go:22: report=3 bytes=6000 packets=60 Start=2023-11-15T07:13:00+09:00 End=2023-11-15T07:16:00+09:00 duration=3m0s
+--- PASS: TestReviewCumulativeInterval (0.05s)
+PASS
+ok  	github.com/githubflyideas/traffic66/internal/decode/nf	1.142s
+
+exit=0
+
+=== desired invariants (failure expected on reviewed baseline) ===
+command: ['[REVIEW_WORKSPACE]/deep-data/toolchain/go/bin/go.exe', 'test', '-count=1', '-v', '-run', '^TestReview', './internal/decode/nf', './internal/decode/sflow', './internal/auth']
+REVIEW_EXPECT_FIXED=1
+=== RUN   TestReviewCrossDomainLending
+    review_lending_test.go:22: domain9=100 domain10=1000 borrowed_by_domain11=1000 cached=1000 raw_bytes=1500 scaled_bytes=1.5e+06
+    review_lending_test.go:24: borrowed 1000 want 0
+    review_lending_test.go:22: domain9=1000 domain10=100 borrowed_by_domain11=100 cached=100 raw_bytes=1500 scaled_bytes=150000
+    review_lending_test.go:24: borrowed 100 want 0
+    review_lending_test.go:22: domain9=100 domain10=100 borrowed_by_domain11=100 cached=100 raw_bytes=1500 scaled_bytes=150000
+--- FAIL: TestReviewCrossDomainLending (0.00s)
+=== RUN   TestReviewAmbiguousSessionCanBeOverwritten
+    review_lending_test.go:37: domain9 rates=[100 1000], domain10 rate=100, borrower=100 cache=100
+    review_lending_test.go:39: borrowed 100 want 0
+--- FAIL: TestReviewAmbiguousSessionCanBeOverwritten (0.00s)
+=== RUN   TestReviewCumulativeInterval
+    review_totals_interval_test.go:22: report=1 bytes=6000 packets=60 Start=2023-11-15T07:13:00+09:00 End=2023-11-15T07:14:00+09:00 duration=1m0s
+    review_totals_interval_test.go:22: report=2 bytes=6000 packets=60 Start=2023-11-15T07:13:00+09:00 End=2023-11-15T07:15:00+09:00 duration=2m0s
+    review_totals_interval_test.go:26: delta Start=2023-11-15 07:13:00 +0900 JST want previous End=2023-11-15 07:14:00 +0900 JST
+    review_totals_interval_test.go:22: report=3 bytes=6000 packets=60 Start=2023-11-15T07:13:00+09:00 End=2023-11-15T07:16:00+09:00 duration=3m0s
+    review_totals_interval_test.go:26: delta Start=2023-11-15 07:13:00 +0900 JST want previous End=2023-11-15 07:15:00 +0900 JST
+--- FAIL: TestReviewCumulativeInterval (0.05s)
+FAIL
+FAIL	github.com/githubflyideas/traffic66/internal/decode/nf	0.499s
+=== RUN   TestReviewExpandedSourceCollision
+    review_protocol_test.go:34: expanded input indices: 1 and 16777217; decoded IDs: 1 and 1
+    review_protocol_test.go:36: distinct expanded data sources collapse to the same identity
+--- FAIL: TestReviewExpandedSourceCollision (0.00s)
+=== RUN   TestReviewTruncatedCounterRejected
+    review_protocol_test.go:46: zero-length counter sample accepted without error (mandatory fields absent)
+--- FAIL: TestReviewTruncatedCounterRejected (0.00s)
+FAIL
+FAIL	github.com/githubflyideas/traffic66/internal/decode/sflow	1.088s
+=== RUN   TestReviewConcurrentAccountUpdates
+    review_accounts_test.go:34: Set returned error: open [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp: The process cannot access the file because it is being used by another process.
+    review_accounts_test.go:34: Set returned error: open [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp: The process cannot access the file because it is being used by another process.
+    review_accounts_test.go:34: Set returned error: rename [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password: Access is denied.
+    review_accounts_test.go:34: Set returned error: open [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp: The process cannot access the file because it is being used by another process.
+    review_accounts_test.go:34: Set returned error: open [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp: The process cannot access the file because it is being used by another process.
+    review_accounts_test.go:34: Set returned error: open [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp: The process cannot access the file because it is being used by another process.
+    review_accounts_test.go:34: Set returned error: open [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp: The process cannot access the file because it is being used by another process.
+    review_accounts_test.go:34: Set returned error: open [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp: The process cannot access the file because it is being used by another process.
+    review_accounts_test.go:34: Set returned error: open [REVIEW_WORKSPACE]\parent-native-review\tmp\TestReviewConcurrentAccountUpdates888739420\001\password.tmp: The process cannot access the file because it is being used by another process.
+    review_accounts_test.go:41: requested=17 completed-with-error=9 stored=2
+    review_accounts_test.go:43: concurrent account changes are not preserved: errors=9 stored=2 want=17
+--- FAIL: TestReviewConcurrentAccountUpdates (0.38s)
+FAIL
+FAIL	github.com/githubflyideas/traffic66/internal/auth	0.993s
+FAIL
+
+exit=1

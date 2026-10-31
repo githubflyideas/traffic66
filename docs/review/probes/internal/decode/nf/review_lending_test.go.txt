@@ -1,0 +1,40 @@
+package nf
+
+import (
+ "os"
+ "testing"
+ "github.com/githubflyideas/traffic66/internal/encode"
+)
+
+func reviewDeclare(t *testing.T,d *Decoder,domain,id,rate,seq uint32) {
+ t.Helper(); opt,vals:=sampler(id,rate)
+ m:=encode.NewIPFIX();m.AddTemplate(opt);m.AddData(opt.ID,[]encode.Values{vals})
+ if _,err:=d.Decode(m.IPFIX(uint32(base.Unix()),seq,domain),exp,base);err!=nil {t.Fatal(err)}
+}
+
+func TestReviewCrossDomainLending(t *testing.T) {
+ for _,rates:=range [][2]uint32{{100,1000},{1000,100},{100,100}} {
+  d:=NewDecoder()
+  reviewDeclare(t,d,9,1,rates[0],0)
+  reviewDeclare(t,d,10,1,rates[1],0)
+  // The third domain supplies no rate; different domains declare conflicting rates.
+  got:=decodeOne(t,d,11,nil,nil,ipfixFlow(1,2))
+  t.Logf("domain9=%d domain10=%d borrowed_by_domain11=%v cached=%d raw_bytes=1500 scaled_bytes=%v",rates[0],rates[1],got,d.byAddr[exp],1500*got)
+  want:=float64(rates[1]); if rates[0]!=rates[1] && os.Getenv("REVIEW_EXPECT_FIXED")=="1" {want=0}
+  if got!=want {t.Errorf("borrowed %v want %v",got,want)}
+  // A domain's explicit own rate still wins. This is not corruption of every domain.
+  own:=decodeOne(t,d,9,nil,nil,ipfixFlow(1,2))
+  if own!=float64(rates[0]) {t.Errorf("own rate=%v want=%d",own,rates[0])}
+ }
+}
+
+func TestReviewAmbiguousSessionCanBeOverwritten(t *testing.T) {
+ d:=NewDecoder()
+ reviewDeclare(t,d,9,1,100,0);reviewDeclare(t,d,9,2,1000,1)
+ if got:=d.byAddr[exp];got!=0 {t.Fatalf("same-domain conflict should remove lender, got %d",got)}
+ reviewDeclare(t,d,10,1,100,0)
+ got:=decodeOne(t,d,11,nil,nil,ipfixFlow(1,2))
+ t.Logf("domain9 rates=[100 1000], domain10 rate=100, borrower=%v cache=%d",got,d.byAddr[exp])
+ want:=float64(100);if os.Getenv("REVIEW_EXPECT_FIXED")=="1" {want=0}
+ if got!=want {t.Errorf("borrowed %v want %v",got,want)}
+}

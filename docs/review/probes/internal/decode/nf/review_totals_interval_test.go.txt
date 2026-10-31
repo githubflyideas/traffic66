@@ -1,0 +1,29 @@
+package nf
+
+import (
+ "net/netip"
+ "os"
+ "testing"
+ "time"
+ "github.com/githubflyideas/traffic66/internal/encode"
+)
+
+func TestReviewCumulativeInterval(t *testing.T) {
+ d:=NewDecoder();d.Unsampled=map[netip.Addr]bool{exp:true}
+ start:=base.Truncate(time.Minute)
+ var sum uint64
+ for i:=0;i<3;i++ {
+  end:=start.Add(time.Duration(i+1)*time.Minute)
+  m:=encode.NewIPFIX();m.AddTemplate(totalTmpl)
+  m.AddData(totalTmpl.ID,[]encode.Values{totRec(uint64(start.UnixMilli()),uint64(end.UnixMilli()),uint64(6000*(i+1)),uint64(60*(i+1)))})
+  res,err:=d.Decode(m.IPFIX(uint32(end.Unix()),uint32(i),1),exp,end)
+  if err!=nil || len(res.Records)!=1 {t.Fatalf("decode %d: %+v %v",i,res,err)}
+  r:=res.Records[0];sum+=r.Bytes
+  t.Logf("report=%d bytes=%d packets=%d Start=%s End=%s duration=%s",i+1,r.Bytes,r.Packets,r.Start.Format(time.RFC3339),r.End.Format(time.RFC3339),r.End.Sub(r.Start))
+  if r.Bytes!=6000 || r.Packets!=60 {t.Errorf("delta counters wrong %+v",r)}
+  want:=start
+  if os.Getenv("REVIEW_EXPECT_FIXED")=="1" {want=start.Add(time.Duration(i)*time.Minute)}
+  if !r.Start.Equal(want) {t.Errorf("delta Start=%s want previous End=%s",r.Start,want)}
+ }
+ if sum!=18000 {t.Errorf("total=%d want 18000",sum)}
+}

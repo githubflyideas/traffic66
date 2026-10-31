@@ -1,0 +1,48 @@
+package sflow
+
+import (
+	"encoding/binary"
+	"testing"
+	"time"
+)
+
+func reviewWords(words ...uint32) []byte {
+	b := make([]byte, 4*len(words))
+	for i, word := range words {
+		binary.BigEndian.PutUint32(b[i*4:], word)
+	}
+	return b
+}
+
+func reviewDatagram(format uint32, body []byte) []byte {
+	header := reviewWords(5, 1, 0xc0000201, 0, 1, 1000, 1, format, uint32(len(body)))
+	return append(header, body...)
+}
+
+func TestReviewExpandedSourceCollision(t *testing.T) {
+	get := func(index uint32) uint32 {
+		// expanded flow sample: sequence, type, full index, rate, pool,
+		// drops, input format/value, output format/value, record count.
+		body := reviewWords(1, 0, index, 100, 1000, 0, 0, 1, 0, 2, 0)
+		d, err := Decode(reviewDatagram(3, body), time.Unix(1000, 0))
+		if err != nil || len(d.Flows) != 1 {
+			t.Fatalf("decode expanded index %d: result=%v error=%v", index, d, err)
+		}
+		return d.Flows[0].SourceID
+	}
+	a, b := get(1), get(0x01000001)
+	t.Logf("expanded input indices: 1 and 16777217; decoded IDs: %d and %d", a, b)
+	if a == b {
+		t.Fatal("distinct expanded data sources collapse to the same identity")
+	}
+}
+
+func TestReviewTruncatedCounterRejected(t *testing.T) {
+	if _, err := Decode(reviewDatagram(2, reviewWords(1, 1, 0)), time.Unix(1000, 0)); err != nil {
+		t.Fatalf("control: a complete zero-record counter sample must decode: %v", err)
+	}
+	_, err := Decode(reviewDatagram(2, nil), time.Unix(1000, 0))
+	if err == nil {
+		t.Fatal("zero-length counter sample accepted without error (mandatory fields absent)")
+	}
+}

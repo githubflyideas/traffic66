@@ -1,0 +1,45 @@
+package auth
+
+import (
+	"fmt"
+	"sync"
+	"testing"
+)
+
+// This is a concurrent filesystem stress probe, not a deterministic scheduler.
+func TestReviewConcurrentAccountUpdates(t *testing.T) {
+	dir := t.TempDir()
+	if err := Set(dir, "admin", "admin-review-password"); err != nil {
+		t.Fatal(err)
+	}
+	const workers = 16
+	start := make(chan struct{})
+	errs := make(chan error, workers)
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			errs <- Set(dir, fmt.Sprintf("review-user-%02d", i), "review-password")
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+	close(errs)
+	failed := 0
+	for err := range errs {
+		if err != nil {
+			failed++
+			t.Logf("Set returned error: %v", err)
+		}
+	}
+	entries, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load after concurrent updates: %v", err)
+	}
+	t.Logf("requested=%d completed-with-error=%d stored=%d", workers+1, failed, len(entries))
+	if failed != 0 || len(entries) != workers+1 {
+		t.Fatalf("concurrent account changes are not preserved: errors=%d stored=%d want=%d", failed, len(entries), workers+1)
+	}
+}
