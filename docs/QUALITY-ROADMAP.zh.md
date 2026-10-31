@@ -69,7 +69,7 @@
 
 ### 10. 提取 Linux 探针子集，两个产品共享一个核心
 
-**架构决定：vyos-sflow 是 traffic66 的 Linux 轻量探针子集，不是原生 hsflowd 包装。** 路由器端保留包采样、真实接口计数、sFlow 导出和健康状态；DuckDB、历史存储、Web/TUI、地理库与威胁分析留在 traffic66。
+**架构决定：vyos-sflow 是 traffic66 的 Linux 轻量探针子集，只支持 sFlow，不实现或预留 NetFlow/IPFIX，也不是原生 hsflowd 包装。** 路由器端保留包采样、真实接口计数、sFlow 导出和健康状态；DuckDB、历史存储、Web/TUI、地理库与威胁分析留在 traffic66。traffic66 原有的多协议分析能力不随子集一起迁入。
 
 当前 `internal/capture/capture.go` 输出的是聚合 flow.Record，已丢掉原始包头；`internal/encode/encode.go` 主要服务模拟器，不能直接认定为生产导出器。需要先分离原始包源与聚合器，再提取生产采样/编码核心。不能从聚合记录重造包样本。
 
