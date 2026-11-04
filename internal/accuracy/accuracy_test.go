@@ -290,3 +290,51 @@ func TestSFlowBurstTailLost(t *testing.T) {
 	got := wireTotal(t, p, st, agent.String(), start.Add(-time.Hour), start.Add(time.Hour))
 	check(t, "sFlow 1:1 burst with its tail lost", got, truth, 0.02)
 }
+
+// sFlow, 1:100, two samplers under one source id (one per direction), each
+// with its own pool and sequence number, the receiver losing runs of
+// datagrams: both count in full.
+func TestSFlowTwoSamplersOneSource(t *testing.T) {
+	c, p, st := setup(t)
+	agent := netip.MustParseAddr("10.0.0.5")
+	rng := rand.New(rand.NewPCG(5, 6))
+	start := time.Now().UTC().Truncate(time.Minute).Add(-20 * time.Minute)
+	var truth float64
+	pool := [2]uint32{1_000_000, 70_000}
+	seq := [2]uint32{10_000, 700}
+	var dseq uint32
+	var batch []encode.SFlowSample
+	now := start
+	lose := 0
+	send := func() {
+		dseq++
+		if lose == 0 && rng.Float64() < 0.02 {
+			lose = 1 + rng.IntN(20)
+		}
+		if lose > 0 {
+			lose--
+		} else {
+			c.Handle(encode.SFlow(agent, 0, dseq, 1000, batch, nil), agent, now)
+		}
+		batch = batch[:0]
+	}
+	for i := 0; i < 20_000; i++ {
+		now = start.Add(time.Duration(i) * 5 * time.Millisecond)
+		d := rng.IntN(2) // either direction, in no order
+		ip := 40 + rng.IntN(1460)
+		step := uint32(1 + rng.IntN(199)) // packets per sample, 100 on average
+		pool[d] += step
+		seq[d]++
+		truth += float64(step) * float64(ip+18)
+		hdr, _ := encode.Frame(clients[d], servers[d], 40000, 443, 6, 0, ip, 0x18)
+		batch = append(batch, encode.SFlowSample{Seq: seq[d], SourceID: 5, Rate: 100, Pool: pool[d], In: 5, Out: 6, FrameLen: uint32(ip + 18), Header: hdr})
+		if len(batch) == 7 {
+			send()
+		}
+	}
+	if len(batch) > 0 {
+		send()
+	}
+	got := wireTotal(t, p, st, agent.String(), start.Add(-time.Hour), start.Add(time.Hour))
+	check(t, "sFlow 1:100, two samplers under one source id", got, truth, 0.02)
+}
