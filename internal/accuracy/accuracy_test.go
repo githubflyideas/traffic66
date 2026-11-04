@@ -190,3 +190,54 @@ func TestIPFIXLateSamplingRate(t *testing.T) {
 	got := wireTotal(t, p, st, exp.String(), start.Add(-time.Hour), start.Add(time.Hour))
 	check(t, "IPFIX with the sampling rate announced 2 min late", got, truth, 0.001)
 }
+
+// sFlow, 1:1, a one-second burst in which the receiver loses runs of
+// datagrams: the samples that arrive make up for those that did not.
+func TestSFlowBurstWithRunsLost(t *testing.T) {
+	c, p, st := setup(t)
+	agent := netip.MustParseAddr("10.0.0.3")
+	rng := rand.New(rand.NewPCG(3, 4))
+	start := time.Now().UTC().Truncate(time.Minute).Add(-20 * time.Minute)
+	var truth float64
+	var pool, seq, dseq uint32
+	var batch []encode.SFlowSample
+	now := start
+	lose := 0
+	send := func() {
+		dseq++
+		if lose == 0 && rng.Float64() < 0.01 {
+			lose = 10 + rng.IntN(300) // a run of datagrams lost together
+		}
+		if lose > 0 {
+			lose--
+		} else {
+			c.Handle(encode.SFlow(agent, 0, dseq, 1000, batch, nil), agent, now)
+		}
+		batch = batch[:0]
+	}
+	// a quiet minute first, then 15,000 packets in a second, then quiet
+	for i := 0; i < 16_200; i++ {
+		ip := 1500
+		switch {
+		case i < 600:
+			now, ip = start.Add(time.Duration(i)*100*time.Millisecond), 80
+		case i < 15_600:
+			now = start.Add(time.Minute + time.Duration(i-600)*time.Second/15_000)
+		default:
+			now, ip = start.Add(2*time.Minute+time.Duration(i-15_600)*100*time.Millisecond), 80
+		}
+		truth += float64(ip + 18)
+		pool++
+		seq++
+		hdr, _ := encode.Frame(clients[0], servers[0], 40000, 443, 6, 0, ip, 0x18)
+		batch = append(batch, encode.SFlowSample{Seq: seq, SourceID: 5, Rate: 1, Pool: pool, In: 5, Out: 6, FrameLen: uint32(ip + 18), Header: hdr})
+		if len(batch) == 7 {
+			send()
+		}
+	}
+	if len(batch) > 0 {
+		send()
+	}
+	got := wireTotal(t, p, st, agent.String(), start.Add(-time.Hour), start.Add(time.Hour))
+	check(t, "sFlow 1:1 burst with runs of datagrams lost", got, truth, 0.01)
+}
