@@ -241,3 +241,52 @@ func TestSFlowBurstWithRunsLost(t *testing.T) {
 	got := wireTotal(t, p, st, agent.String(), start.Add(-time.Hour), start.Add(time.Hour))
 	check(t, "sFlow 1:1 burst with runs of datagrams lost", got, truth, 0.01)
 }
+
+// sFlow, 1:1, a burst of full-size packets whose second half the receiver
+// loses in one run, up to its end; the first sample to arrive after it is
+// a small packet. The lost packets count as the burst they were part of.
+func TestSFlowBurstTailLost(t *testing.T) {
+	c, p, st := setup(t)
+	agent := netip.MustParseAddr("10.0.0.4")
+	start := time.Now().UTC().Truncate(time.Minute).Add(-20 * time.Minute)
+	var truth float64
+	var pool, seq, dseq uint32
+	var batch []encode.SFlowSample
+	now := start
+	const burst = 15_000
+	send := func(lost bool) {
+		dseq++
+		if !lost {
+			c.Handle(encode.SFlow(agent, 0, dseq, 1000, batch, nil), agent, now)
+		}
+		batch = batch[:0]
+	}
+	sample := func(ip int, lost bool) {
+		truth += float64(ip + 18)
+		pool++
+		seq++
+		hdr, _ := encode.Frame(clients[0], servers[0], 40000, 443, 6, 0, ip, 0x18)
+		batch = append(batch, encode.SFlowSample{Seq: seq, SourceID: 5, Rate: 1, Pool: pool, In: 5, Out: 6, FrameLen: uint32(ip + 18), Header: hdr})
+		if len(batch) == 6 {
+			send(lost)
+		}
+	}
+	for i := 0; i < 300; i++ { // quiet before
+		now = start.Add(time.Duration(i) * 200 * time.Millisecond)
+		sample(80, false)
+	}
+	for i := 0; i < burst; i++ {
+		now = start.Add(time.Minute + time.Duration(i)*time.Second/burst)
+		ip := 1500
+		if i%15 == 14 {
+			ip = 52 // an ack now and then
+		}
+		sample(ip, i > burst/2)
+	}
+	for i := 0; i < 300; i++ { // quiet after
+		now = start.Add(2*time.Minute + time.Duration(i)*200*time.Millisecond)
+		sample(80, false)
+	}
+	got := wireTotal(t, p, st, agent.String(), start.Add(-time.Hour), start.Add(time.Hour))
+	check(t, "sFlow 1:1 burst with its tail lost", got, truth, 0.02)
+}

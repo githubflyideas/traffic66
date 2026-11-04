@@ -119,7 +119,7 @@ func TestSampleWeights(t *testing.T) {
 	} {
 		st := &sfState{evalAt: now}
 		for i, x := range c.in {
-			if got := st.update(&sflow.FlowSample{Rate: c.rate, Pool: x.pool, Seq: x.seq}, now); got != x.want {
+			if got, _ := st.update(&sflow.FlowSample{Rate: c.rate, Pool: x.pool, Seq: x.seq}, now); got != x.want {
 				t.Errorf("%s: sample %d (pool %d): weight %v, want %v", name, i, x.pool, got, x.want)
 			}
 		}
