@@ -290,7 +290,6 @@ func TestSFlowBurstTailLost(t *testing.T) {
 	got := wireTotal(t, p, st, agent.String(), start.Add(-time.Hour), start.Add(time.Hour))
 	check(t, "sFlow 1:1 burst with its tail lost", got, truth, 0.02)
 }
-<<<<<<< HEAD
 
 // sFlow, 1:100, two samplers under one source id (one per direction), each
 // with its own pool and sequence number, the receiver losing runs of
@@ -339,5 +338,3 @@ func TestSFlowTwoSamplersOneSource(t *testing.T) {
 	got := wireTotal(t, p, st, agent.String(), start.Add(-time.Hour), start.Add(time.Hour))
 	check(t, "sFlow 1:100, two samplers under one source id", got, truth, 0.02)
 }
-=======
->>>>>>> origin/main
