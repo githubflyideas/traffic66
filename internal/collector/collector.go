@@ -8,9 +8,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"net/netip"
 	"runtime/debug"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -73,19 +75,60 @@ type sfState struct {
 	rate                         uint32
 	lost, drops                  uint64
 
-	// ref is the newest sample pool seen and refSeq that sample's sequence
-	// number; checks and sum say whether the pool counts packets the way it
-	// should, from the first samples
+	// ref and refSeq are the pool and sequence number of the newest
+	// sample; checks and sum say whether the pool counts packets the way
+	// it should, from the first samples
 	ref    uint32
 	refSeq uint32
 	checks int
 	sum    float64
 	poolOK bool
 
+	// streams: some agents run more than one sampler under one source id
+	// (one per direction, say), each with its own pool and sequence
+	streams []sfStream
+	tick    uint64
+	// dlost is how many of the agent's datagrams were lost so far, when
+	// known: a run of samples can only have been lost with some of them
+	dlost  uint64
+	dknown bool
+	dper   int // most samples the agent put in one datagram
+
 	// recent are the last records of this source, which the samples lost
 	// before a newer one are counted as
 	recent []flow.Record
 	next   int
+}
+
+// sfStream is one sampler's counters: the newest pool and sequence number,
+// the sequence numbers it skipped (a reordered sample may still bring one)
+// and the ones it recently had (one delivered twice adds nothing).
+type sfStream struct {
+	pool, seq, drops uint32
+	dlost            uint64
+	missing          []uint32
+	seen             [streamSeen]struct{ seq, pool uint32 }
+	nseen            int
+	used             uint64
+}
+
+const (
+	maxStreams = 4
+	streamSeen = 64
+)
+
+func (h *sfStream) saw(seq, pool uint32) {
+	h.seen[h.nseen%streamSeen] = struct{ seq, pool uint32 }{seq, pool}
+	h.nseen++
+}
+
+func (h *sfStream) had(seq, pool uint32) bool {
+	for i := 0; i < min(h.nseen, streamSeen); i++ {
+		if h.seen[i].seq == seq && h.seen[i].pool == pool {
+			return true
+		}
+	}
+	return false
 }
 
 // recentKept is how many records of a source the lost samples are spread
@@ -111,6 +154,7 @@ type sfAgent struct {
 	lastSeen  time.Time
 	firstSeen time.Time // the agent's first datagram
 	decodeErr uint64
+	perDgram  int // most flow samples seen in one datagram
 }
 
 func New(sink Sink) *Collector {
@@ -292,6 +336,7 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 		ag.decodeErr++
 	}
 	ag.datagrams++
+	ag.perDgram = max(ag.perDgram, len(d.Flows))
 	if last, ok := ag.lastSeq[d.SubAgent]; ok {
 		if gap := d.Seq - last - 1; gap > 0 && gap < 1<<20 {
 			ag.lostDgram += uint64(gap)
@@ -308,6 +353,7 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 			st = &sfState{evalAt: now}
 			c.sf[sfKey{agentAddr, d.SubAgent, s.SourceID}] = st
 		}
+		st.dlost, st.dknown, st.dper = ag.lostDgram, true, ag.perDgram
 		w, gap := st.update(s, now)
 		// The samples lost before this one, and one whose packet could
 		// not be read, count as the source's recent records rather than
@@ -354,7 +400,11 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 // configured rate where the pool cannot be used; and how many samples were
 // lost just before it.
 func (st *sfState) update(s *sflow.FlowSample, now time.Time) (float64, uint32) {
-	w, gap := st.weight(s)
+	w, gap, h, ahead := st.weight(s)
+	if h == nil {
+		// late or repeated: already accounted for
+		return w, gap
+	}
 	if st.init && s.Rate != st.rate {
 		// The agent's configured rate changed. Everything measured so far
 		// was measured against the old one, and the effective rate is only
@@ -370,19 +420,14 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) (float64, uint32) 
 		st.evalAt = now
 	}
 	st.rate = s.Rate
-	if st.init {
-		dp := s.Pool - st.lastPool
-		if dp < 1<<31 {
-			st.winPool += float64(dp)
-			st.winRecv++
-		}
-		if gap := s.Seq - st.lastSeq - 1; gap > 0 && gap < 1<<20 {
-			st.lost += uint64(gap)
-		}
-		if dd := s.Drops - st.lastDrops; dd < 1<<31 {
+	if ahead > 0 {
+		st.winPool += float64(ahead)
+		st.winRecv++
+		if dd := s.Drops - h.drops; dd < 1<<31 {
 			st.drops += uint64(dd)
 		}
 	}
+	h.drops = s.Drops
 	st.init = true
 	st.lastPool, st.lastSeq, st.lastDrops = s.Pool, s.Seq, s.Drops
 	if now.Sub(st.evalAt) >= 30*time.Second && st.winRecv >= 30 {
@@ -398,49 +443,103 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) (float64, uint32) 
 	return w, gap
 }
 
-func (st *sfState) weight(s *sflow.FlowSample) (float64, uint32) {
+// weight is what a sample counts for and how many samples of its sampler
+// were lost just before it. h is the sampler it moved forward (nil for a
+// late or repeated one) and ahead how far its pool moved.
+func (st *sfState) weight(s *sflow.FlowSample) (w float64, gap uint32, h *sfStream, ahead uint32) {
 	rate := float64(max(s.Rate, 1))
 	limit := rate * 1000
-	ahead, back := s.Pool-st.ref, st.ref-s.Pool
-	// late: behind the newest sample in both its pool and its sequence
-	// number, by a little; an agent that restarted starts both again
-	seqBack, seqAhead := st.refSeq-s.Seq, s.Seq-st.refSeq
-	late := back < 1<<31 && float64(back) <= limit && seqBack >= 1 && seqBack <= 1000
-	switch {
-	case !st.init:
+	st.tick++
+	for i := range st.streams {
+		c := &st.streams[i]
+		// the same sample again
+		if c.had(s.Seq, s.Pool) {
+			return 0, 0, nil, 0
+		}
+		// late: a sequence number this sampler skipped, its pool a little
+		// behind; the newer sample already counted its packets
+		if k := slices.Index(c.missing, s.Seq); k >= 0 && c.pool-s.Pool < 1<<31 && float64(c.pool-s.Pool) <= limit {
+			c.missing = slices.Delete(c.missing, k, k+1)
+			c.saw(s.Seq, s.Pool)
+			if !st.poolOK {
+				return rate, 0, nil, 0
+			}
+			return 0, 0, nil, 0
+		}
+	}
+	// the sampler this sample moves forward: its sequence number and pool
+	// both ahead, the pool by about the rate per sequence number (a run of
+	// lost samples moves the sequence number as far); of several, the one
+	// whose pool moved closest to that. A jump of more than 1000 is taken
+	// for another sampler rather than a loss: the two look the same.
+	best, bestOff := -1, 0.0
+	for i := range st.streams {
+		c := &st.streams[i]
+		sa, pa := s.Seq-c.seq, s.Pool-c.pool
+		// samples skipped can only have been lost in the datagrams lost
+		// or the drops the agent counted; more, and the sample is another
+		// sampler's
+		could := uint64(s.Drops - c.drops)
+		if could >= 1<<31 {
+			could = 0
+		}
+		could += (st.dlost - c.dlost) * uint64(max(st.dper, 1))
+		if sa >= 1 && sa < 1<<20 && (!st.dknown || uint64(sa-1) <= could) && pa >= 1 && pa < 1<<31 && (float64(pa) <= limit || float64(pa) <= rate*float64(sa)*20) {
+			if off := math.Abs(float64(pa) - rate*float64(sa)); best < 0 || off < bestOff {
+				best, bestOff = i, off
+			}
+		}
+	}
+	if best >= 0 {
+		h = &st.streams[best]
+		sa, pa := s.Seq-h.seq, s.Pool-h.pool
+		if sa > 1 && sa <= streamSeen {
+			for q := h.seq + 1; q != s.Seq; q++ {
+				h.missing = append(h.missing, q)
+			}
+			if n := len(h.missing); n > streamSeen {
+				h.missing = append(h.missing[:0], h.missing[n-streamSeen:]...)
+			}
+		}
+		h.pool, h.seq, h.used, h.dlost = s.Pool, s.Seq, st.tick, st.dlost
+		h.saw(s.Seq, s.Pool)
 		st.ref, st.refSeq = s.Pool, s.Seq
-		return rate, 0
-	case ahead >= 1 && (float64(ahead) <= limit || seqAhead >= 1 && seqAhead < 1<<20 && float64(ahead) <= rate*float64(seqAhead)*20):
-		// (a long run of lost samples moves the sequence number as far)
-		st.ref, st.refSeq = s.Pool, s.Seq
+		gap = sa - 1
+		st.lost += uint64(gap)
 		if !st.poolOK {
 			// the first ten samples show whether the pool counts packets
 			// (some agents leave it at 0 or count samples instead)
 			if st.checks < 10 {
 				st.checks++
-				st.sum += float64(ahead)
+				st.sum += float64(pa) / float64(sa)
 				if st.checks == 10 {
 					m := st.sum / 10
 					st.poolOK = m >= rate*0.5 && m <= rate*20
 				}
 			}
-			return rate, 0
+			return rate, 0, h, pa
 		}
-		var gap uint32
-		if seqAhead > 1 && seqAhead < 1<<20 {
-			gap = seqAhead - 1
-		}
-		return float64(ahead), gap
-	case late:
-		if !st.poolOK {
-			return rate, 0
-		}
-		return 0, 0
-	default:
-		// a restart, a pool that does not move, or one that jumped
-		st.ref, st.refSeq = s.Pool, s.Seq
-		return rate, 0
+		return float64(pa), gap, h, pa
 	}
+	// a sampler not seen yet: another one under this source id, or the
+	// agent restarted; it counts at the configured rate until it moves
+	n := sfStream{pool: s.Pool, seq: s.Seq, drops: s.Drops, used: st.tick, dlost: st.dlost}
+	n.saw(s.Seq, s.Pool)
+	if len(st.streams) < maxStreams {
+		st.streams = append(st.streams, n)
+		h = &st.streams[len(st.streams)-1]
+	} else {
+		old := 0
+		for i := range st.streams {
+			if st.streams[i].used < st.streams[old].used {
+				old = i
+			}
+		}
+		st.streams[old] = n
+		h = &st.streams[old]
+	}
+	st.ref, st.refSeq = s.Pool, s.Seq
+	return rate, 0, h, 0
 }
 
 // SourceInfo summarises one exporter for the UI.
