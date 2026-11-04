@@ -72,6 +72,15 @@ type sfState struct {
 	eff                          float64
 	rate                         uint32
 	lost, drops                  uint64
+
+	// ref is the newest sample pool seen and refSeq that sample's sequence
+	// number; checks and sum say whether the pool counts packets the way it
+	// should, from the first samples
+	ref    uint32
+	refSeq uint32
+	checks int
+	sum    float64
+	poolOK bool
 }
 
 type sfAgent struct {
@@ -278,15 +287,13 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 			st = &sfState{evalAt: now}
 			c.sf[sfKey{agentAddr, d.SubAgent, s.SourceID}] = st
 		}
-		st.update(s, now)
-		if !s.Decoded {
+		w := st.update(s, now)
+		if !s.Decoded || w == 0 {
 			continue
 		}
 		r := s.Record
 		r.Exporter = agentAddr
-		if st.eff > 0 {
-			r.Mult = st.eff
-		}
+		r.Mult = w
 		recs = append(recs, r)
 	}
 	for i := range d.Counters {
@@ -299,9 +306,13 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 }
 
 // update tracks the effective sampling rate: packets offered for sampling
-// (sample_pool) per sample actually received. Lost datagrams and samples
-// dropped by the agent both raise it, compensating for the missing data.
-func (st *sfState) update(s *sflow.FlowSample, now time.Time) {
+// (sample_pool) per sample actually received, shown on the sources page.
+// It returns what the sample counts for: the packets the pool advanced by
+// since the newest sample before it, which covers the samples lost or
+// dropped on the way; 0 for a sample older than one already counted; the
+// configured rate where the pool cannot be used.
+func (st *sfState) update(s *sflow.FlowSample, now time.Time) float64 {
+	w := st.weight(s)
 	if st.init && s.Rate != st.rate {
 		// The agent's configured rate changed. Everything measured so far
 		// was measured against the old one, and the effective rate is only
@@ -341,6 +352,47 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) {
 		st.eff = e
 		st.winPool, st.winRecv = 0, 0
 		st.evalAt = now
+	}
+	return w
+}
+
+func (st *sfState) weight(s *sflow.FlowSample) float64 {
+	rate := float64(max(s.Rate, 1))
+	limit := rate * 1000
+	ahead, back := s.Pool-st.ref, st.ref-s.Pool
+	// late: behind the newest sample in both its pool and its sequence
+	// number, by a little; an agent that restarted starts both again
+	seqBack := st.refSeq - s.Seq
+	late := back < 1<<31 && float64(back) <= limit && seqBack >= 1 && seqBack <= 1000
+	switch {
+	case !st.init:
+		st.ref, st.refSeq = s.Pool, s.Seq
+		return rate
+	case ahead >= 1 && float64(ahead) <= limit:
+		st.ref, st.refSeq = s.Pool, s.Seq
+		if !st.poolOK {
+			// the first ten samples show whether the pool counts packets
+			// (some agents leave it at 0 or count samples instead)
+			if st.checks < 10 {
+				st.checks++
+				st.sum += float64(ahead)
+				if st.checks == 10 {
+					m := st.sum / 10
+					st.poolOK = m >= rate*0.5 && m <= rate*20
+				}
+			}
+			return rate
+		}
+		return float64(ahead)
+	case late:
+		if !st.poolOK {
+			return rate
+		}
+		return 0
+	default:
+		// a restart, a pool that does not move, or one that jumped
+		st.ref, st.refSeq = s.Pool, s.Seq
+		return rate
 	}
 }
 

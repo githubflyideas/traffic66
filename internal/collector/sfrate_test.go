@@ -89,3 +89,52 @@ func TestSteadyRateKeepsMeasuring(t *testing.T) {
 		t.Error("no effective rate measured although the rate never changed")
 	}
 }
+
+// Each sample counts for the packets the pool advanced by since the newest
+// sample before it: samples lost on the way are made up for at once, an
+// older sample arriving late counts for nothing, a restart starts over, and
+// a pool that does not count packets falls back to the configured rate.
+func TestSampleWeights(t *testing.T) {
+	now := time.Now()
+	for name, c := range map[string]struct {
+		rate uint32
+		in   []wIn
+	}{
+		// the first sample and the ten that check the pool count at the rate
+		"a loss": {1000, append(steady(1000, 1000, 11, 0),
+			wIn{12500, 12, 1500}, wIn{15500, 14, 3000}, // sample 13 was lost
+		)},
+		"late and duplicate": {1000, append(steady(1000, 1000, 11, 0),
+			wIn{13000, 13, 2000}, wIn{12000, 12, 0}, wIn{12000, 12, 0}, wIn{14000, 14, 1000},
+		)},
+		"agent restart": {1000, append(steady(1000, 1000, 11, 50000),
+			wIn{900, 1, 1000}, wIn{1900, 2, 1000}, wIn{2900, 3, 1000},
+		)},
+		"pool left at 0":        {1000, append(steady(1000, 0, 11, 0), wIn{0, 12, 1000}, wIn{0, 13, 1000})},
+		"pool counting samples": {1000, append(steady(1000, 1, 11, 0), wIn{12, 12, 1000}, wIn{14, 14, 1000})},
+		"one in one":            {1, append(steady(1, 1, 11, 0), wIn{19, 19, 8})},
+	} {
+		st := &sfState{evalAt: now}
+		for i, x := range c.in {
+			if got := st.update(&sflow.FlowSample{Rate: c.rate, Pool: x.pool, Seq: x.seq}, now); got != x.want {
+				t.Errorf("%s: sample %d (pool %d): weight %v, want %v", name, i, x.pool, got, x.want)
+			}
+		}
+	}
+}
+
+type wIn struct {
+	pool, seq uint32
+	want      float64
+}
+
+// steady is n samples whose pool advances by step each and whose sequence
+// numbers start after seq0, counted at the configured rate while the pool
+// is checked.
+func steady(rate float64, step uint32, n int, seq0 uint32) []wIn {
+	out := make([]wIn, n)
+	for i := range out {
+		out[i] = wIn{step * uint32(i+1), seq0 + uint32(i+1), rate}
+	}
+	return out
+}
