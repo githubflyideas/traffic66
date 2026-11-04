@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.3
+
+- More accurate sFlow traffic figures when samples are lost or arrive in bursts.
+
 ## 2.5.2
 
 - The sponsor banner is in the sidebar, above the language and theme; the strip at the top of the page is gone.
