@@ -362,13 +362,14 @@ func (st *sfState) weight(s *sflow.FlowSample) float64 {
 	ahead, back := s.Pool-st.ref, st.ref-s.Pool
 	// late: behind the newest sample in both its pool and its sequence
 	// number, by a little; an agent that restarted starts both again
-	seqBack := st.refSeq - s.Seq
+	seqBack, seqAhead := st.refSeq-s.Seq, s.Seq-st.refSeq
 	late := back < 1<<31 && float64(back) <= limit && seqBack >= 1 && seqBack <= 1000
 	switch {
 	case !st.init:
 		st.ref, st.refSeq = s.Pool, s.Seq
 		return rate
-	case ahead >= 1 && float64(ahead) <= limit:
+	case ahead >= 1 && (float64(ahead) <= limit || seqAhead >= 1 && seqAhead < 1<<20 && float64(ahead) <= rate*float64(seqAhead)*20):
+		// (a long run of lost samples moves the sequence number as far)
 		st.ref, st.refSeq = s.Pool, s.Seq
 		if !st.poolOK {
 			// the first ten samples show whether the pool counts packets

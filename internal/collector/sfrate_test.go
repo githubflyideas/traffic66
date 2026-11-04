@@ -113,6 +113,9 @@ func TestSampleWeights(t *testing.T) {
 		"pool left at 0":        {1000, append(steady(1000, 0, 11, 0), wIn{0, 12, 1000}, wIn{0, 13, 1000})},
 		"pool counting samples": {1000, append(steady(1000, 1, 11, 0), wIn{12, 12, 1000}, wIn{14, 14, 1000})},
 		"one in one":            {1, append(steady(1, 1, 11, 0), wIn{19, 19, 8})},
+		// thousands of samples lost in a row: the sequence number moved as far
+		"one in one, a long run lost": {1, append(steady(1, 1, 11, 0), wIn{5011, 5011, 5000}, wIn{5012, 5012, 1})},
+		"a pool that jumps alone":     {1000, append(steady(1000, 1000, 11, 0), wIn{11000 + 5e6, 12, 1000}, wIn{11000 + 5e6 + 1000, 13, 1000})},
 	} {
 		st := &sfState{evalAt: now}
 		for i, x := range c.in {
