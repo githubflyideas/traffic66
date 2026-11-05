@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## Unreleased
+
+- Web UI: the left sidebar now fits without scrolling, even at 1366×768: language and theme sit under the logo, Help sits beside Logout, and Ledger and Account moved into Settings as tabs. The ledger no longer shows device location (the API is unchanged). Old #v=racks and #v=ledger links open the Settings ledger tab.
+
 ## 2.5.6
 
 - Web UI: new Midnight theme (deep navy with cyan and violet, frosted-glass cards), the fifth in the theme picker. All three flow-line palettes and Auto (violet) work with it; the map ramp runs dark to bright. The four existing themes are unchanged.
