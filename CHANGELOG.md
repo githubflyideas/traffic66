@@ -3,7 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## Unreleased
+## 2.5.7
 
 - Web UI: the left sidebar now fits without scrolling, even at 1366×768: language and theme sit under the logo, Help sits beside Logout, and Ledger and Account moved into Settings as tabs. The ledger no longer shows device location (the API is unchanged). Old #v=racks and #v=ledger links open the Settings ledger tab.
 
