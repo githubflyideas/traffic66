@@ -3,7 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## Unreleased
+## 2.5.8
 
 - Web UI: square sponsor ads show in the sidebar at their own proportions (capped height); wide banners move to a slim strip at the top of the main area (not in the sidebar). The brand logo stays at its full size on short screens.
 
