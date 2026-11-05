@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.5
+
+- sFlow traffic is counted as in 2.5.2 again.
+
 ## 2.5.4
 
 - sFlow: traffic is counted in full from devices that send two samplers' samples under one interface.
