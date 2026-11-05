@@ -281,6 +281,7 @@ type Message struct {
 	ipfix bool
 	sets  [][]byte
 	data  int
+	tmpls int // template records, which a v9 header counts too
 }
 
 func NewV9() *Message    { return &Message{} }
@@ -297,6 +298,7 @@ func (m *Message) set(id uint16, body []byte) {
 }
 
 func (m *Message) AddTemplate(t Template) {
+	m.tmpls++
 	w := &buf{}
 	if len(t.Scope) == 0 {
 		w.u16(t.ID)
@@ -354,11 +356,12 @@ func (m *Message) AddData(id uint16, recs []Values) {
 // DataRecords is the number of data records added so far.
 func (m *Message) DataRecords() int { return m.data }
 
-// V9 builds the NetFlow v9 packet.
+// V9 builds the NetFlow v9 packet. Its count is every record in it,
+// template and options template records included (RFC 3954).
 func (m *Message) V9(uptime, secs, seq, sourceID uint32) []byte {
 	w := &buf{}
 	w.u16(9)
-	w.u16(uint16(m.data))
+	w.u16(uint16(m.data + m.tmpls))
 	w.u32(uptime)
 	w.u32(secs)
 	w.u32(seq)
