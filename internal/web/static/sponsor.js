@@ -131,7 +131,7 @@
       var w = car.clientWidth || SMALL_W;
       strip.textContent = '';
       var box = document.createElement('div'); box.className = 'spc-cell';
-      box.style.height = Math.round(w * SMALL_H / SMALL_W) + 'px';
+      box.style.height = Math.round(w * SMALL_H / SMALL_W * 1.2) + 'px';
       box.appendChild(slideEl(s));
       strip.appendChild(box);
       ds.forEach(function (d, i) { d.classList.toggle('on', i === cur); });

@@ -117,22 +117,22 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
 /* The sponsor slot of an unregistered installation: in the sidebar, above
    the language and theme, one small banner at a time at the sidebar's
    width (sponsor.js decides, and sets the height). */
-.sponsor{border-top:1px solid var(--side-line);padding:8px 12px 4px}
+.sponsor{border-top:1px solid var(--side-line);padding:10px 12px 5px}
 .sponsor[hidden]{display:none}
-.sponsor .sp-h{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 0 3px}
-.sponsor .sp-text{margin:0 0 6px;border:1px dashed var(--line-2);border-radius:6px;padding:6px 8px;font-size:11.5px;line-height:1.35;color:var(--ink-3);overflow-wrap:anywhere}
+.sponsor .sp-h{font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 0 4px}
+.sponsor .sp-text{margin:0 0 8px;border:1px dashed var(--line-2);border-radius:6px;padding:8px 10px;font-size:13.5px;line-height:1.4;color:var(--ink-3);overflow-wrap:anywhere}
 .sponsor .sp-text[hidden],.spc[hidden]{display:none}
 .spc-strip{display:grid;border-radius:4px;overflow:hidden}
 .spc-cell{position:relative;overflow:hidden;background:var(--surface)}
 .spc-cell>a,.spc-cell>div{display:block;width:100%;height:100%}
 .spc-cell img{width:100%;height:100%;object-fit:cover;display:block}
-.spc-dots{display:flex;gap:6px;justify-content:center;padding:4px 0 5px}
-.spc-dot{width:6px;height:6px;padding:0;border-radius:50%;border:0;cursor:pointer;background:var(--line-2)}
+.spc-dots{display:flex;gap:7px;justify-content:center;padding:5px 0 6px}
+.spc-dot{width:7px;height:7px;padding:0;border-radius:50%;border:0;cursor:pointer;background:var(--line-2)}
 .spc-dot.on{background:var(--accent)}
 @media print{.sponsor{display:none}}
 /* shorter screens: tighten the sidebar so the menu still fits without scrolling */
-@media (max-height:900px) and (min-width:821px){.brand{padding:8px 14px 6px}.brand .logo{max-height:52px}nav.dash button{padding:5px 12px;font-size:14px}nav.dash hr{margin:3px 8px}aside>.pick{padding:6px 12px}.foot{padding:2px 12px 6px}#logout,#help{padding:4px}.sponsor{padding:5px 12px 2px}}
-@media (max-height:780px) and (min-width:821px){.brand .logo{max-height:40px}nav.dash{padding:4px 8px}nav.dash button{padding:3.5px 12px;font-size:13.5px}nav.dash hr{margin:2px 8px}.sponsor .sp-h{padding:0 0 1px}}
+@media (max-height:900px) and (min-width:821px){.brand{padding:8px 14px 6px}nav.dash button{padding:5px 12px;font-size:14px}nav.dash hr{margin:3px 8px}aside>.pick{padding:6px 12px}.foot{padding:2px 12px 6px}#logout,#help{padding:4px}.sponsor{padding:5px 12px 2px}}
+@media (max-height:780px) and (min-width:821px){nav.dash{padding:4px 8px}nav.dash button{padding:3.5px 12px;font-size:13.5px}nav.dash hr{margin:2px 8px}.sponsor .sp-h{padding:0 0 1px}}
 aside>.pick{display:grid;grid-template-columns:1fr auto;gap:6px;padding:8px 12px;border-bottom:1px solid var(--side-line)}
 #theme{display:flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:6px;padding:4px 10px;background:var(--surface);color:var(--ink);cursor:pointer;font-size:13px;white-space:nowrap}
 #theme i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:inset 0 0 0 2px var(--surface),0 0 0 1px var(--line-2)}
