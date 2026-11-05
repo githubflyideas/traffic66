@@ -45,6 +45,32 @@
   --m1:#fde3c4; --m2:#f9b56a; --m3:#ef8a1f; --m4:#c45f00; --m5:#7a3a00;
   --sb-bg:#fff0dc;
 }
+/* Midnight: deep navy with cyan and violet, frosted-glass cards. On a dark
+   background the map ramp runs dark to bright: brighter is more traffic. */
+:root[data-theme=midnight]{
+  color-scheme:dark;
+  --bg:#0b1020; --surface:#161e3a; --surface-2:#141c38; --line:#1f2a4d; --line-2:#2c3a66;
+  --ink:#e8ecff; --ink-2:#b4bce0; --ink-3:#7c86b0;
+  --accent:#22d3ee; --accent-soft:rgba(34,211,238,.18); --accent-ink:#67e8f9; --on-accent:#06121f;
+  --side:#0e1530; --side-hover:#18224a; --side-line:#1c2648;
+  --c1:#22d3ee; --c2:#a78bfa; --c3:#34d399; --c4:#fbbf24; --c5:#f472b6; --c6:#60a5fa; --c7:#818cf8; --c8:#f87171; --other:#475080; --map-none:#1a2244;
+  --m1:#1e2a55; --m2:#2b4c8c; --m3:#2f7fc0; --m4:#22b8e0; --m5:#8be9ff;
+  --base:#7c86b0;
+  --good:#34d399; --warn:#fbbf24; --crit:#f87171; --warn-ink:#fbbf24; --crit-soft:rgba(248,113,113,.18);
+  --sb-bg:rgba(167,139,250,.14); --sb-line:rgba(167,139,250,.45); --sb-ink:#c4b5fd;
+  --shadow:rgba(0,0,0,.55);
+}
+/* frosted glass where the browser can blur; solid --surface otherwise */
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root[data-theme=midnight]{--surface:rgba(22,30,58,.72)}
+  :root[data-theme=midnight] .panel,:root[data-theme=midnight] .topbar{-webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%)}
+}
+:root[data-theme=midnight] body{background:radial-gradient(1200px 700px at 85% -10%,rgba(167,139,250,.12),transparent 60%),radial-gradient(1000px 600px at -10% 110%,rgba(34,211,238,.08),transparent 60%),var(--bg);background-attachment:fixed}
+:root[data-theme=midnight] .panel{border-color:rgba(124,134,176,.22);border-radius:14px;box-shadow:0 8px 28px var(--shadow)}
+:root[data-theme=midnight] svg path[fill-opacity=".14"]{filter:drop-shadow(0 -2px 8px rgba(34,211,238,.35))}
+:root[data-theme=midnight] .sb span{background:linear-gradient(90deg,#22d3ee,#a78bfa);box-shadow:0 0 6px rgba(34,211,238,.35)}
+:root[data-theme=midnight] nav.dash button[aria-current="page"]{background:linear-gradient(90deg,rgba(34,211,238,.16),rgba(167,139,250,.10));box-shadow:0 0 0 1px rgba(34,211,238,.35),0 0 14px rgba(34,211,238,.18)}
+:root[data-theme=midnight] nav.dash button[aria-current="page"]::before{background:linear-gradient(180deg,#22d3ee,#a78bfa);box-shadow:0 0 8px rgba(34,211,238,.6)}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);
   font:14px/1.5 "Segoe UI Variable","Segoe UI",-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans","Microsoft YaHei","Noto Sans","Noto Sans CJK SC","Noto Sans Devanagari","Noto Sans Bengali","Noto Sans Arabic",sans-serif;

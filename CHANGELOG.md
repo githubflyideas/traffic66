@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## Unreleased
+
+- Web UI: new Midnight theme (deep navy with cyan and violet, frosted-glass cards), the fifth in the theme picker. All three flow-line palettes and Auto (violet) work with it; the map ramp runs dark to bright. The four existing themes are unchanged.
+
 ## 2.5.5
 
 - sFlow traffic is counted as in 2.5.2 again.

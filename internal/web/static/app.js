@@ -1569,8 +1569,10 @@ const LINE_PAL = {
   pp: ['#f7a8d0', '#e57ab8', '#c34fa8', '#8e3a9e', '#5a2585']
 };
 // theme -> palette when the choice is "follow theme"
-const THEME_PAL = {light: 'or', black: 'pp', teal: 'gb', orange: 'or'};
+const THEME_PAL = {light: 'or', black: 'pp', teal: 'gb', orange: 'or', midnight: 'pp'};
 const curTheme = () => window.t66Theme ? t66Theme.get() : 'light';
+// Black and Midnight have dark backgrounds
+const isDarkTheme = () => window.t66Theme && t66Theme.isDark ? t66Theme.isDark() : curTheme() === 'black';
 function linePalName() {
   let v = 'auto';
   try { v = localStorage.getItem('t66.mappal') || 'auto'; } catch (e) {}
@@ -1580,7 +1582,7 @@ function linePal() {
   const p = LINE_PAL[linePalName()];
   // on the black theme the two darkest shades would sink into the
   // background: lift them towards white so every level stays visible
-  return curTheme() === 'black' ? p.map((c, i) => i >= 3 ? `color-mix(in oklab, ${c} ${i === 3 ? 75 : 60}%, #fff)` : c) : p;
+  return isDarkTheme() ? p.map((c, i) => i >= 3 ? `color-mix(in oklab, ${c} ${i === 3 ? 75 : 60}%, #fff)` : c) : p;
 }
 function lineLevel(v, vmin, vmax) {
   if (!(v > 0) || !(vmax > vmin)) return v > 0 ? 14 : 0;
@@ -2285,7 +2287,7 @@ views.sources = async (el) => {
       <table><tr><th>${t('geo.col_db')}</th><th>${t('geo.col_holds')}</th><th>${t('geo.col_lic')}</th></tr>${freeRows}</table>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0">${t('geo.where')}</p>`)}
     ${panel('c12', t('logo.title'), t('logo.sub'), `<div class="logoprev"><img id="logoPrev" src="/logo?v=${Date.now()}" alt="logo">
-      <div style="display:grid;gap:8px">${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent);color:#fff;font-weight:600">${t('logo.upload')}<input type="file" id="logoFile" accept=".png,.svg,.jpg,.jpeg,.webp,.gif,image/*" hidden></label><button class="btn" id="logoReset">${t('logo.reset')}</button></div>`)}
+      <div style="display:grid;gap:8px">${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent);color:var(--on-accent);font-weight:600">${t('logo.upload')}<input type="file" id="logoFile" accept=".png,.svg,.jpg,.jpeg,.webp,.gif,image/*" hidden></label><button class="btn" id="logoReset">${t('logo.reset')}</button></div>`)}
       ${admOnly(`<span class="muted" style="font-size:12.5px">${t('logo.hint')}</span>`)}<span id="logoMsg" style="font-size:13px"></span></div></div>`)}
   </div>`;
   // Installing a licence from the page. Until now the only way to register
@@ -2361,7 +2363,7 @@ views.sources = async (el) => {
   };
   const logoDone = (ok, text) => {
     const m = $('#logoMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text;
-    if (ok) { const v = Date.now(), dk = document.documentElement.dataset.theme === 'black' ? 1 : 0; $('#logoPrev').src = '/logo?v=' + v; document.querySelectorAll('img.logo').forEach(i => i.src = `/logo?dark=${dk}&v=${v}`); }
+    if (ok) { const v = Date.now(), dk = isDarkTheme() ? 1 : 0; $('#logoPrev').src = '/logo?v=' + v; document.querySelectorAll('img.logo').forEach(i => i.src = `/logo?dark=${dk}&v=${v}`); }
   };
   $('#logoFile').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
