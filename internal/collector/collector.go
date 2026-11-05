@@ -102,6 +102,9 @@ func (c *Collector) Listen(addr, proto string) (*Listener, error) {
 	}
 	want := 16 << 20
 	conn.SetReadBuffer(want)
+	if readBufSize(conn) < want {
+		forceReadBuf(conn, want)
+	}
 	l := &Listener{Addr: addr, Proto: proto, conn: conn}
 	l.RcvBuf = readBufSize(conn)
 	if l.RcvBuf > 0 && l.RcvBuf < 4<<20 {
@@ -278,8 +281,7 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 			st = &sfState{evalAt: now}
 			c.sf[sfKey{agentAddr, d.SubAgent, s.SourceID}] = st
 		}
-		st.update(s, now)
-		if !s.Decoded {
+		if !st.update(s, now) || !s.Decoded {
 			continue
 		}
 		r := s.Record
@@ -301,7 +303,11 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 // update tracks the effective sampling rate: packets offered for sampling
 // (sample_pool) per sample actually received. Lost datagrams and samples
 // dropped by the agent both raise it, compensating for the missing data.
-func (st *sfState) update(s *sflow.FlowSample, now time.Time) {
+func (st *sfState) update(s *sflow.FlowSample, now time.Time) bool {
+	// the same sample delivered again adds nothing
+	if st.init && s.Seq == st.lastSeq && s.Pool == st.lastPool {
+		return false
+	}
 	if st.init && s.Rate != st.rate {
 		// The agent's configured rate changed. Everything measured so far
 		// was measured against the old one, and the effective rate is only
@@ -342,6 +348,7 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) {
 		st.winPool, st.winRecv = 0, 0
 		st.evalAt = now
 	}
+	return true
 }
 
 // SourceInfo summarises one exporter for the UI.

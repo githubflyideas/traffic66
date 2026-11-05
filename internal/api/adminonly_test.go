@@ -19,19 +19,15 @@ import (
 // that writes has to go through adminAPI, and TestEveryWriteIsDecided
 // fails when a new route is added without that decision being made.
 var openWrites = map[string]string{
-	"POST /api/login":           "signing in is how you stop being anonymous",
-	"POST /api/logout":          "ending one's own session",
-	"POST /api/password":        "one's own password; the old one is asked for again",
-	"POST /api/users":           "admin()'s own gate, which also refuses a fixed password file",
-	"DELETE /api/users":         "same",
-	"POST /api/resolve":         "reverse DNS for the names on screen; stores nothing",
-	"POST /api/findings":        "marking an alert handled is the everyday work, not administration",
-	"POST /api/sandbox/files":   "offline analysis: uploading a capture to look at",
-	"POST /api/sandbox/active":  "choosing which uploaded capture to look at",
-	"POST /api/assets/csv":      "ledgerAdmin: the licence gate and the admin check together",
-	"POST /api/assets/paste":    "same",
-	"POST /api/assets/{kind}":   "same",
-	"DELETE /api/assets/{kind}": "same",
+	"POST /api/login":          "signing in is how you stop being anonymous",
+	"POST /api/logout":         "ending one's own session",
+	"POST /api/password":       "one's own password; the old one is asked for again",
+	"POST /api/users":          "admin()'s own gate, which also refuses a fixed password file",
+	"DELETE /api/users":        "same",
+	"POST /api/resolve":        "reverse DNS for the names on screen; stores nothing",
+	"POST /api/findings":       "marking an alert handled is the everyday work, not administration",
+	"POST /api/sandbox/files":  "offline analysis: uploading a capture to look at",
+	"POST /api/sandbox/active": "choosing which uploaded capture to look at",
 }
 
 // TestEveryWriteIsDecided reads the route table and fails on a writing

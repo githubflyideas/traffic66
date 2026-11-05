@@ -337,7 +337,7 @@ Ethernet a NetFlow/IPFIX (`-l2-overhead`).
 ## 7. Nombres, países y listas de amenazas
 
 Haga clic en cualquier dirección y elija **Ponerle nombre…**, o use
-**Configuración → Nombres**. Los nombres se guardan en `inventory.txt`
+**Inventario**. Los nombres se guardan en `inventory.txt`
 dentro del directorio de datos:
 
 ```
@@ -512,7 +512,7 @@ pie de cada página muestra el número de instalación de 8 dígitos; envíelo
 al autor y ponga el `license.json` que reciba en el directorio de datos.
 Contacto: <route66traffic66@gmail.com>.
 
-Las instalaciones no registradas muestran un pequeño banner de patrocinio en la barra lateral izquierda. Tu navegador lo carga desde GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) o, si no puede alcanzarlo, desde una copia que el servidor traffic66 descargó de allí y guarda en `<data>/sponsor`; traffic66 no envía ningún dato sobre ti ni sobre la instalación. Al registrarse desaparece.
+Las instalaciones no registradas muestran una franja de patrocinio en la parte superior de la página. Solo tu navegador la carga, desde GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)); el servidor traffic66 nunca contacta con GitHub para ello ni guarda una copia. Un navegador que no alcanza GitHub muestra en su lugar un breve texto incorporado. No se envía ningún dato sobre ti ni sobre la instalación. Al registrarte desaparece.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

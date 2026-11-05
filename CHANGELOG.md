@@ -7,6 +7,67 @@ heading is the version number.
 
 - Web UI: new Midnight theme (deep navy with cyan and violet, frosted-glass cards), the fifth in the theme picker. All three flow-line palettes and Auto (violet) work with it; the map ramp runs dark to bright. The four existing themes are unchanged.
 
+## 2.5.5
+
+- sFlow traffic is counted as in 2.5.2 again.
+
+## 2.5.4
+
+- sFlow: traffic is counted in full from devices that send two samplers' samples under one interface.
+
+## 2.5.3
+
+- More accurate sFlow traffic figures when samples are lost or arrive in bursts.
+
+## 2.5.2
+
+- The sponsor banner is in the sidebar, above the language and theme; the strip at the top of the page is gone.
+- The version is in the page footer; the collection status is at the foot of the overview.
+- Rooms and racks is called Device locations and is a tab of the inventory page.
+- Deleting one interface's data is removed.
+- Deleting data no longer leaves the last minute, or summaries still being built, to be written back afterwards.
+
+## 2.5.1
+
+- Long ranges on large installations no longer run out of database memory, and a device or an interface over days is read from summaries of its own (built once in the background for the data already stored).
+
+## 2.5.0
+
+- Overview: inbound and outbound follow the interface charted above.
+- Rooms and racks: new look; a device and its ports are edited in one form.
+- Filter chips only on the traffic pages.
+- Black is the default theme.
+- Syslog for findings can be set from the findings page.
+- Links that show one address's bandwidth on another platform (registered installations).
+
+## 2.4.1
+
+- Overview: Inbound and Outbound now mean which way the bytes went — what arrived at your hosts, what they sent — instead of who opened the connection. On a network whose hosts only connect outwards, Inbound used to be empty (and said the data was still arriving), although most of its traffic is the replies it downloads.
+- 95th-percentile billing is removed: the page, `/api/billing`, `/api/billing/series`, the five-minute rate table it was computed from and the `billed` mark on interface lines (an inventory line that still carries it loads as before). The interface page shows the same counters, and `/api/report` now takes its counter figures from them.
+- The evaluation mark is a step darker and a size larger.
+- Threat lists can be imported from the threat page — a file or a paste, one address or network per line — and removed there. An imported list is saved as `<data>/threats/<name>.txt` and is in use at once, without a restart; it applies to flows from then on.
+- Rooms and racks is a picture instead of an asset ledger, and free: every device that sends flows, in its room and rack, with each port and the carrier and circuit ID it goes out to. Devices and ports come from the flows; the room, rack, carrier and circuit are typed in once and kept in `inventory.txt` (`room=`, `rack=` on device lines, `isp=`, `circuit=` on interface lines). The ledger it replaces is removed — device pages, ports, cabling, circuits, networks, paste and CSV import — and its `assets.duckdb` is no longer opened (it can be deleted).
+- The names page is called Inventory again, in every language (台账 in Chinese).
+- The sponsor strip shows one advertiser at a time: a long banner alone, a small 728x90 one three times side by side.
+- Releases started by hand from Actions report themselves as official builds (2.4.0 said "community build").
+
+## 2.4.0
+
+- Top 66 opens on the two ends of each conversation (top clients and top servers side by side) instead of the grouped table; the table is still one click away and a shared link still lands where the sender was.
+- The sponsor banner of an unregistered installation is a strip across the top of the browser instead of a column in the sidebar: the 728x90 banners are shown side by side, as many as the window has room for, and the rest rotate in together. It scrolls away with the page and is left out of print.
+- The traffic66 server no longer downloads the sponsor banner. Only the viewer's browser fetches it from GitHub; a browser that cannot reach GitHub shows the built-in text. `/api/sponsor` and the copy in `<data>/sponsor` are gone (an existing folder can be deleted).
+- The evaluation mark is on every page — the overview, the sources, the account and the help page were left out before — and the word repeats about half as often again, in the same faint ink and the same size. The login screen is not marked.
+- Every page that shows incoming data refreshes itself, on a beat that follows the range: 20 s on 15 minutes, 30 s on an hour, a minute on 6 and 24 hours, five minutes on 7 and 30 days. The traffic, Top 66, flow paths, geo and interface pages used to stand still on a 6-hour or 24-hour range until something was clicked, which is what "the chart lags behind the data" looked like. The top bar says the beat the range actually uses.
+- The source and destination network charts count traffic whose AS the database could not place, as "unknown", the way the AS table beside them already did. Leaving it out emptied whole buckets on short ranges and drew the chart as blocks with gaps between them.
+- 95th-percentile billing shows the line its figure was taken across: one chart per billed interface, inbound and outbound over the period, with a dashed line at the figure charged. `GET /api/billing/series?from&to&if` returns the same five-minute buckets. Buckets the device reported nothing for stay empty, as they are left out of the percentile.
+- Geo map: the three line widths are 1.5 / 3 / 4.5 px (were 1.5 / 4 / 8). The widest line drowned the five shades that carry the same figure.
+- A licence says who it is made out to — a person or an organisation — and the sidebar, the footer and the licence page say it beside the name. The signed message gains a third version; licences issued before it still verify and show "kind not stated" rather than a guess.
+- The asset ledger's address assignment is removed: the IP page, the addresses, the utilisation bars, the free-address suggestions, the conflict report, their CSV columns and the two paste formats that only fed them (`show ip arp`, `show mac address-table`). What is left is a note beside a device's ports: the networks it carries, added on the device's own page. Nothing is looked up in them. Sites and racks, and names, now stand on their own in the sidebar instead of under an asset-management group. A ledger filled in before this keeps its address rows; nothing reads them.
+- `GET /api/report?from&to&if` answers the numbers behind a period report: traffic and flow totals, average, peak and 95th percentile of the whole period, a row per interface, the top hosts, applications and countries, and how many findings the detection rules raised, by severity. `if=exporter/ifindex` narrows the whole report to one interface (its totals, its top lists, its row).
+- Each interface row says which measurement it rests on: `counters` where the device's own interface counters were read (what a carrier bills against — average, peak and 95th percentile per direction, with the share of the period that was measured), `flows` where there are none and the sampled flows are the only measurement there is. Utilisation against the interface speed is given only where that speed is known, rather than as a percentage of a guess.
+- The peak and the percentile leave out the bucket that is still filling, so a report that reaches up to now no longer takes its peak from a half-counted minute.
+- `TestAttackFound` no longer fails now and then: the test builds its traffic from a fixed hour of the day, so the 1:4096 sampling of the demo attack draws the same records on every run and on every platform (the port scan reaches detection as 18 distinct ports against a threshold of 5, instead of coming within one port of it at 15:00).
+
 ## 2.3.9
 
 - NetFlow / IPFIX loss compensation starts much sooner: a session is compensated once 100 records have arrived and the factor is recomputed every 5 seconds (was 30 seconds), so totals in the first minute after start are no longer low when the exporter or the kernel drops packets. With 37% loss the compensated total at 30 s rose from 0.62 to 0.98 of the real total.

@@ -2,22 +2,25 @@
 //
 // The slides are listed in a manifest in
 // https://github.com/githubflyideas/ads-sponsor (folder traffic66/), so they
-// can change without a release. The browser fetches it directly; the
-// traffic66 server never contacts GitHub, and no user or installation data is
-// sent. Order of fallbacks:
-//   1. the manifest and images straight from GitHub (this browser);
-//   2. the last set the traffic66 server downloaded from GitHub (/api/sponsor),
-//      for browsers that cannot reach GitHub;
-//   3. a built-in text box. A broken image is never shown.
+// can change without a release. Only the browser fetches it: the traffic66
+// server never contacts GitHub for it, keeps no copy and serves none, and no
+// user or installation data is sent. A browser that cannot reach GitHub
+// shows a built-in text box instead; a broken image is never shown.
 // Registered installations never call this.
 //
 // Usage: t66Sponsor.load()   t66Sponsor.remove()
 (function () {
   'use strict';
   var URL_ = 'https://raw.githubusercontent.com/githubflyideas/ads-sponsor/main/traffic66/sponsors.json';
-  var TIMEOUT_MS = 3000, ROTATE_MS = 5500, MAX = 4;
+  // MAX is how many advertisers are fetched and rotated through.
+  var TIMEOUT_MS = 3000, ROTATE_MS = 5500, MAX = 6;
+  // A small banner is 728x90 (1456x180 at 2x). The slot is in the
+  // sidebar, as wide as it is, so only small banners are shown there: an
+  // image LONG_RATIO times as wide as it is high or wider is a long banner,
+  // too thin at that width to read, and is left out.
+  var SMALL_W = 728, SMALL_H = 90, LONG_RATIO = 12;
   var CACHE_KEY = 't66.sponsor', CACHE_MS = 30 * 60 * 1000;
-  var started = false, timerId = null;
+  var started = false, timerId = null, roId = null;
 
   function httpURL(v, base, httpsOnly) {
     if (typeof v !== 'string' || !v.trim()) return null;
@@ -78,16 +81,16 @@
         return m;
       });
   }
-  function local() {
-    return getJSON('/api/sponsor', {credentials: 'same-origin', cache: 'no-cache'});
-  }
   // resolves with the slides whose images loaded, rejects when none did
   function ready(m, base) {
     var want = slidesOf(m, base);
     if (!want.length) return Promise.reject();
     return settle(want.map(function (s) { return loadImg(s.src); })).then(function (imgs) {
       var ok = [];
-      want.forEach(function (s, i) { if (imgs[i]) { s.img = imgs[i]; ok.push(s); } });
+      want.forEach(function (s, i) {
+        var im = imgs[i];
+        if (im && im.naturalWidth < LONG_RATIO * im.naturalHeight) { s.img = im; ok.push(s); }
+      });
       if (!ok.length) throw 0;
       return ok;
     });
@@ -96,7 +99,7 @@
   function slidesOf(m, base) {
     var list = m && Array.isArray(m.slides) ? m.slides : [], out = [];
     for (var i = 0; i < list.length && out.length < MAX; i++) {
-      var s = list[i] || {}, img = httpURL(s.image, base, base === URL_);
+      var s = list[i] || {}, img = httpURL(s.image, base, true);
       if (!img) continue;
       var alt = str(s.alt, 120), id = slug(str(s.id, 60)) || slug(alt) || ('slide-' + (i + 1));
       var link = httpURL(s.link, base, false);
@@ -105,45 +108,57 @@
     return out;
   }
 
+  // The slot shows one advertiser at a time and rotates between them, at
+  // the sidebar's width and the banner's own proportions.
   function build(slot, slides) {
     var car = slot.querySelector('.spc');
     car.hidden = false;
-    var track = document.createElement('div'); track.className = 'spc-track';
+    var strip = document.createElement('div'); strip.className = 'spc-strip';
     var dots = document.createElement('div'); dots.className = 'spc-dots';
-    var els = [], ds = [], cur = 0, paused = false;
-    function show(i) {
-      cur = i;
-      els.forEach(function (e, j) { e.classList.toggle('on', j === i); });
-      ds.forEach(function (e, j) { e.classList.toggle('on', j === i); });
-    }
-    slides.forEach(function (s, i) {
+    var ds = [], cur = 0, paused = false;
+
+    function slideEl(s) {
       var a = document.createElement(s.link ? 'a' : 'div');
-      a.className = 'spc-slide';
       if (s.link) { a.href = s.link; a.target = '_blank'; a.rel = 'noopener noreferrer sponsored'; }
       if (s.title || s.alt) a.title = s.title || s.alt;
-      s.img.alt = s.alt;
-      a.appendChild(s.img);
-      track.appendChild(a); els.push(a);
-      if (slides.length > 1) {
+      var img = s.img.cloneNode(false);
+      img.alt = s.alt;
+      a.appendChild(img);
+      return a;
+    }
+    function draw() {
+      var s = slides[cur];
+      var w = car.clientWidth || SMALL_W;
+      strip.textContent = '';
+      var box = document.createElement('div'); box.className = 'spc-cell';
+      box.style.height = Math.round(w * SMALL_H / SMALL_W) + 'px';
+      box.appendChild(slideEl(s));
+      strip.appendChild(box);
+      ds.forEach(function (d, i) { d.classList.toggle('on', i === cur); });
+    }
+    function show(i) { cur = ((i % slides.length) + slides.length) % slides.length; draw(); }
+
+    car.textContent = '';
+    car.appendChild(strip);
+    if (slides.length > 1) {
+      slides.forEach(function (s, i) {
         var d = document.createElement('button');
         d.type = 'button'; d.className = 'spc-dot';
         d.setAttribute('aria-label', String(i + 1));
         d.onclick = function () { show(i); };
         dots.appendChild(d); ds.push(d);
-      }
-    });
-    car.textContent = '';
-    car.appendChild(track);
-    if (slides.length > 1) car.appendChild(dots);
-    show(0);
-    if (slides.length > 1) {
+      });
+      car.appendChild(dots);
       ['mouseenter', 'focusin'].forEach(function (e) { car.addEventListener(e, function () { paused = true; }); });
       ['mouseleave', 'focusout'].forEach(function (e) { car.addEventListener(e, function () { paused = false; }); });
       timerId = setInterval(function () {
-        if (!paused && !document.hidden) show((cur + 1) % slides.length);
+        if (!paused && !document.hidden) show(cur + 1);
       }, ROTATE_MS);
     }
     slot.hidden = false;
+    show(0);
+    if (window.ResizeObserver) { roId = new ResizeObserver(draw); roId.observe(car); }
+    else window.addEventListener('resize', draw);
   }
 
   window.t66Sponsor = {
@@ -151,15 +166,18 @@
       var slot = document.getElementById('sponsor');
       if (started || !slot || !window.URL || !window.Promise) return;
       started = true;
-      var here = location.origin + '/api/sponsor';
       remote().then(function (m) { return ready(m, URL_); })
-        .catch(function () { return local().then(function (m) { return ready(m, here); }); })
         .then(function (ok) { if (started) build(slot, ok); },
-              function () { if (started) { slot.querySelector('.sp-text').hidden = false; slot.hidden = false; } });
+              function () {
+                if (!started) return;
+                slot.querySelector('.sp-text').hidden = false;
+                slot.hidden = false;
+              });
     },
     remove: function () {
       started = false;
       if (timerId) clearInterval(timerId);
+      if (roId) { roId.disconnect(); roId = null; }
       var slot = document.getElementById('sponsor');
       if (slot) slot.remove();
     }

@@ -343,7 +343,7 @@ minutes et ajoute 18 octets par paquet de surcoût Ethernet à NetFlow/IPFIX
 ## 7. Noms, pays et listes de menaces
 
 Cliquez sur n'importe quelle adresse et choisissez **Nommer…**, ou utilisez
-**Paramètres → Noms**. Les noms sont enregistrés dans `inventory.txt` dans
+**Inventaire**. Les noms sont enregistrés dans `inventory.txt` dans
 le répertoire de données :
 
 ```
@@ -522,7 +522,7 @@ d'installation à 8 chiffres ; envoyez-le à l'auteur et placez le
 `license.json` reçu en retour dans le répertoire de données. Contact :
 <route66traffic66@gmail.com>.
 
-Les installations non enregistrées affichent une petite bannière de sponsor dans la barre latérale gauche. Votre navigateur la charge depuis GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) ou, s'il ne peut pas l'atteindre, depuis une copie que le serveur traffic66 y a téléchargée et garde dans `<data>/sponsor` ; traffic66 n'envoie aucune donnée sur vous ni sur l'installation. L'enregistrement la supprime.
+Les installations non enregistrées affichent un bandeau de sponsor en haut de la page. Seul votre navigateur le charge, depuis GitHub ([ads-sponsor](https://github.com/githubflyideas/ads-sponsor)) ; le serveur traffic66 ne contacte jamais GitHub pour cela et n'en garde aucune copie. Un navigateur qui ne peut pas atteindre GitHub affiche à la place un court texte intégré. Aucune donnée sur vous ni sur l'installation n'est envoyée. L'enregistrement le fait disparaître.
 
 <a id="11-security-sizing-troubleshooting"></a>
 

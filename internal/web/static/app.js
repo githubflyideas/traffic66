@@ -2,17 +2,14 @@
 'use strict';
 
 // ------------------------------------------------------------ the evaluation mark
-// Every page an unregistered installation might hand to somebody else
-// carries the mark; these three do not. The overview is the first thing a
-// new installation sees and the mark would be the first thing it says, and
-// the settings and the account are a person working on their own machine
-// rather than a page anybody reads twice.
+// Every page of an unregistered installation carries the mark, with no
+// exceptions. The overview, the sources, the account and the help page
+// used to be left out as pages nobody hands on; but a screenshot of the
+// overview is exactly what gets pasted into a report, and a list of
+// exceptions is a list somebody has to keep right as pages are added.
 //
-// It is a list of what is NOT marked on purpose: a page added later is
-// marked unless somebody decides otherwise, which is the right way round —
-// the cost of forgetting is then an extra mark, not a report that leaves
-// the building looking finished when it is not.
-const NOMARK = new Set(['overview', 'sources', 'account', 'help']);
+// The login screen is not one of these views, so it is never marked:
+// nobody has been shown anything yet.
 let marked = false;  // from the licence: true until the installation is registered
 let markNotice = '';  // the server's wording, so a copy says what a file says
 
@@ -26,18 +23,23 @@ function markTile() {
   // read here and written into the tile instead, which is also why the
   // tile is rebuilt whenever the theme changes.
   const ink = getComputedStyle(document.body).getPropertyValue('--ink-3').trim() || '#8a8a8a';
-  // One large glyph per tile rather than many small ones: the tile is
-  // repeated across the whole view.
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="460" height="300">` +
-    `<text x="230" y="150" transform="rotate(-24 230 150)" text-anchor="middle" ` +
-    `font-family="system-ui,sans-serif" font-size="23" font-weight="600" ` +
+  // One glyph per tile rather than many small ones: the tile is repeated
+  // across the whole view, and the tile's size is what sets how often the
+  // word appears. 360x235 puts about half again as many of them on a
+  // screen as the 460x300 it started at, which is what makes the mark
+  // legible as a mark. The glyph is a size up from the 23 it started at
+  // and the ink a step darker (see app.css), and still light enough that
+  // nothing underneath becomes harder to read.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="235">` +
+    `<text x="180" y="117" transform="rotate(-24 180 117)" text-anchor="middle" ` +
+    `font-family="system-ui,sans-serif" font-size="26" font-weight="600" ` +
     `fill="${esc(ink)}">${esc(text)}</text></svg>`;
   return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
 }
 
 // applyMark decides whether the view on screen carries the mark.
 function applyMark() {
-  const on = marked && !NOMARK.has(state.v);
+  const on = marked;
   document.body.classList.toggle('marked', on);
   if (on) document.body.style.setProperty('--mark', markTile());
   markChip(on);
@@ -162,12 +164,12 @@ async function loadLang(code) {
   try { localStorage.setItem('t66.lang', code); } catch (e) {}
   regionNames = null;
   document.querySelectorAll('[data-i]').forEach(el => { el.textContent = t(el.dataset.i); });
-  $('#refresh').textContent = t('top.refresh');
+  refreshLabel();
   themeLabel();
 }
 // the theme button shows the current theme; a click goes to the next one
 function themeLabel() {
-  const b = $('#theme'), cur = window.t66Theme ? t66Theme.get() : 'light';
+  const b = $('#theme'), cur = window.t66Theme ? t66Theme.get() : 'black';
   b.querySelector('span').textContent = t('theme.' + cur);
   b.title = t('theme.label') + ': ' + t('theme.' + cur) + ' · ' + t('theme.next');
   b.setAttribute('aria-label', b.title);
@@ -313,8 +315,22 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'devices', 'ipam', 'cleanup', 'sandbox', 'ifaces', 'billing', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
+
+// How often a page redraws itself, by range. It follows the width of the
+// buckets the range is drawn in: a 15-minute or 1-hour range is drawn per
+// minute, so half a minute is as often as it can say anything new, while a
+// 30-day range is drawn in three-hour buckets and a redraw every five
+// minutes is already generous. A range the user typed ends in the past and
+// never changes, so it has no beat at all.
+const REFRESH_MS = {'15m': 20000, '1h': 30000, '6h': 60000, '24h': 60000, '7d': 300000, '30d': 300000};
+
+// The pages that show incoming data. The others (help, the account, the
+// asset and name pages, data cleanup, the sandbox, the bill) change when
+// somebody changes them, not on their own.
+const LIVE_VIEWS = new Set(['overview', 'findings', 'topn', 'traffic', 'detail', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources']);
+
 const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'both', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
@@ -322,7 +338,7 @@ function readHash() {
   if (RANGES.includes(p.get('r'))) state.r = p.get('r');
   if (p.get('r') === 'custom' && +p.get('from') > 0 && +p.get('to') > +p.get('from')) { state.r = 'custom'; state.cf = +p.get('from'); state.ct = +p.get('to'); }
   if (p.get('dim')) state.dim = p.get('dim');
-  state.tm = p.get('tm') === 'talkers' ? 'talkers' : 'table';  // Top 66 opens on the table
+  state.tm = p.get('tm') === 'table' ? 'table' : 'talkers';  // Top 66 opens on the two ends
   state.sk = ['segment', 'conv'].includes(p.get('by')) ? p.get('by') : 'host';
   state.ra = p.get('ra') === 'client' ? 'client' : 'server';
   state.ds = p.get('ds') === 'sb' ? 'sb' : '';
@@ -339,7 +355,7 @@ function writeHash(push) {
   const p = new URLSearchParams({v: state.v, r: state.r});
   if (state.r === 'custom') { p.set('from', state.cf); p.set('to', state.ct); }
   if (state.ds) p.set('ds', state.ds);
-  if (state.v === 'topn') { if (state.tm === 'talkers') p.set('tm', 'talkers'); else p.set('dim', state.dim); }
+  if (state.v === 'topn') { if (state.tm === 'table') { p.set('tm', 'table'); p.set('dim', state.dim); } }
   if (state.v === 'sankey' && state.sk !== 'host') p.set('by', state.sk);
   if (state.v === 'records' && state.rl) p.set('live', '1');
   if (state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state.v)) p.set('if', state.ifv);
@@ -367,14 +383,11 @@ setInterval(tickClock, 1000);
 const IFV_VIEWS = new Set(['overview', 'topn', 'traffic', 'sankey', 'geo', 'records', 'detail']);
 const IFV_DATA = new Set(['overview', 'topn', 'series', 'sankey', 'records', 'rings', 'geolines']);
 const ifScoped = path => state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state.v) && IFV_DATA.has(path) && !inSB();
-// What the licence grants, for the pages that have to grey a
-// registered-only option out. The server checks it too and is the only
-// thing that decides: this keeps the page from offering what would be
-// refused.
+// What the licence grants. The server checks it too and is the only thing
+// that decides.
 let lic = null;
 let waiting = null;  // what the collector is still waiting for, from /api/status
 let setup = null;    // sources, UDP ports and addresses, for the first-run guide
-const licOK = f => !!lic && lic.registered && (lic.features || []).includes(f);
 
 let ifList = null, ifListKey = '';
 // the interfaces of the range (busiest first) and the default one, cached a minute
@@ -407,8 +420,6 @@ async function renderIfsel() {
 }
 async function api(path, extra = {}, filters = state.f) {
   if (inSB() && (path === 'ifaces' || path === 'recon')) return {ifaces: []};
-  // a capture file holds no device counters, so there is no bill in it
-  if (inSB() && path === 'billing') return {bills: []};
   const p = new URLSearchParams(inSB() && SB_DATA.has(path) ? {ds: 'sb', ...sbRange(), ...extra} : extra.range ? extra : state.r === 'custom' ? {from: state.cf, to: state.ct, ...extra} : {range: state.r, ...extra});
   // Which clock the day and six-hour columns are cut on. Without it they
   // were cut on UTC, so a day in Tokyo arrived split across two of them
@@ -501,7 +512,7 @@ function axisTicks(from, to, max, span) {
 // dataFrom is when the stored data begins: the buckets that end before it
 // are left out (a gap), not drawn as traffic of zero. Lines marked keep
 // (a baseline from another day, device counters) are not cut.
-function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = fmtBps, settledTo = 0, dataFrom = 0}) {
+function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = fmtBps, settledTo = 0, dataFrom = 0, empty = ''}) {
   const stepMs = times && times.length > 1 ? times[1] - times[0] : 0;
   if (dataFrom && times) {
     const cut = d => (d || []).map((v, i) => times[i] + stepMs <= dataFrom ? null : v);
@@ -512,7 +523,7 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
     const W = el.clientWidth, H = el.clientHeight; if (W < 120 || H < 60 || !times || !times.length) { el.innerHTML = ''; return; }
     // nothing at all to draw: say so instead of an axis from 0 to 1
     const has = d => (d || []).some(v => v != null && v >= 0);
-    if (!areas.some(a => has(a.data)) && !lines.some(l => has(l.data))) { el.innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
+    if (!areas.some(a => has(a.data)) && !lines.some(l => has(l.data))) { el.innerHTML = `<div class="empty">${empty || emptyText()}</div>`; return; }
     const rtl = document.documentElement.dir === 'rtl';
     const L = rtl ? 8 : 50, R = rtl ? 50 : 8, T = 8, B = 22, n = times.length;
     const x = i => rtl ? W - R - (W - L - R) * i / Math.max(1, n - 1) : L + (W - L - R) * i / Math.max(1, n - 1);
@@ -726,7 +737,9 @@ const FBAR_VIEWS = new Set(['topn', 'traffic']);
 function renderFbar() {
   const bar = $('#fbar'), on = FBAR_VIEWS.has(state.v);
   bar.hidden = !on;
-  $('#filters').hidden = !on && !state.f.length;
+  // the pages that are not about the traffic (settings, the inventory,
+  // rooms and racks, cleanup...) are not filtered, so they show no chips
+  $('#filters').hidden = NOBAR_VIEWS.has(state.v) || (!on && !state.f.length);
   if (bar.hidden) return;
   bar.innerHTML = FBAR.map(([f, lab]) => {
     const cur = state.f.find(x => x.f === f && !x.neg);
@@ -922,14 +935,23 @@ views.help = async (el) => {
   el.querySelectorAll('a[data-hlang]').forEach(a => a.onclick = e => { e.preventDefault(); helpLang = a.dataset.hlang; render(); window.scrollTo(0, 0); });
 };
 views.overview = async (el) => {
-  // total, or only inbound or only outbound traffic (direction from your networks' point of view)
+  // total, or only what came in or only what went out. Which way is read
+  // off the interface charted above, the same way that chart reads it: in
+  // through it is inbound, out through it outbound. Telling it by address
+  // instead (outside to inside) left the chart empty wherever the served
+  // addresses are public and not listed as your networks, or private at
+  // both ends: by address all of that is transit or internal. Without an
+  // interface, the address is all there is to go by.
   const od = ['inbound', 'outbound'].includes(state.od) ? state.od : '';
-  const [d, ifs, fd] = await Promise.all([api('overview', {}, od ? [...state.f, {f: 'dir', v: od, neg: false}] : state.f), inSB() ? null : loadIfaces(), api('findings', {limit: 3}).catch(() => null)]);
+  const [d, ifs, fd] = await Promise.all([api('overview'), inSB() ? null : loadIfaces(), api('findings', {limit: 3}).catch(() => null)]);
   // the interface chart: the interface picked at the top, else the default, else the busiest
   const ifl = ifs?.ifaces || [], ikey = f => f.exporter + '/' + f.ifindex;
   const ifk = state.ifv && state.ifv !== 'all' ? state.ifv : (ifs?.default || ((ifl.find(f => !f.peer) || ifl[0]) ? ikey(ifl.find(f => !f.peer) || ifl[0]) : ''));
   const ifSel = ifl.find(f => ikey(f) === ifk);
-  const [iIn, iOut] = ifk && !inSB() ? await Promise.all(['if_in', 'if_out'].map(by => api('series', {by, measure: 'wire', top: 20, dup: 1}, [...state.f, {f: 'iface', v: ifk, neg: false}]).catch(() => null))) : [null, null];
+  const viaIf = ifk && !inSB();
+  const [iIn, iOut, dirSeries] = await Promise.all([
+    ...(viaIf ? ['if_in', 'if_out'].map(by => api('series', {by, measure: 'wire', top: 20, dup: 1}, [...state.f, {f: 'iface', v: ifk, neg: false}]).catch(() => null)) : [null, null]),
+    od ? api('series', {by: 'app', measure: 'wire', top: 8, dup: 1}, [...state.f, viaIf ? {f: od === 'inbound' ? 'iface_in' : 'iface_out', v: ifk, neg: false} : {f: 'bytes', v: od === 'inbound' ? 'in' : 'out', neg: false}]).catch(() => null) : null]);
   const tot = d.totals, base = d.base_totals, basis = d.basis;
   // a baseline that was nearly idle gives figures like +57,695%: more than
   // ten times the baseline reads ">10×", and a baseline under 1 kB is no
@@ -947,9 +969,9 @@ views.overview = async (el) => {
     acc = any ? {n: nf(worst * 100, 1) + '<small>%</small>', d: bad ? t('kpi.check') : t('kpi.trust'), kind: bad ? 'warn' : 'ok'} : {n: '—', d: t('kpi.no_flow'), kind: null};
   }
   const peakTxt = d.peak_at ? t('kpi.peak', {v: fmtBps(d.peak_bps), t: fmtTime(d.peak_at, spanMs())}) : '';
-  const series = d.series || {times: [], names: [], values: []};
+  const series = (od ? dirSeries : d.series) || {times: [], names: [], values: []};
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
-  const lines = d.baseline && basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, keep: true, data: d.baseline}] : [];
+  const lines = !od && d.baseline && basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, keep: true, data: d.baseline}] : [];
   const dirParts = (d.dir || []).map((p, i) => ({n: t('dir.' + p.key), v: p.wire, c: color(i), val: DIRS[p.key]}));
   const protoParts = (d.proto || []).map((p, i) => ({n: p.key === '__other__' ? t('other') : proto(+p.key), v: p.wire, c: color(i, p.key), val: p.key === '__other__' ? null : p.key}));
   const cl = d.top_clients || [], cmax = Math.max(1, ...cl.map(r => r.wire));
@@ -967,8 +989,8 @@ views.overview = async (el) => {
     ${iIn ? `<div class="panel c12"><div class="ph"><h2>${t('if.bw')} · ${esc(ifSel ? ifName(ifSel) : ifk)}${ifSel?.tag ? `<span class="iftag">${esc(ifSel.tag)}</span>` : ''}</h2><span class="sub">${esc(t('ov.if_sub'))}</span></div>
       <div class="chart" id="chIf" style="height:220px" aria-label="${esc(t('if.bw'))}"></div>
       <div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div></div>` : ''}
-    <div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[od])}</h2><span class="sub">${lines.length ? esc(baseText(d, 'sub')) : ''}</span>
-      <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'dir.2'], ['outbound', 'dir.1']].map(([k, l]) => `<button data-od="${k}" aria-pressed="${od === k}">${t(l)}</button>`).join('')}</div></div>
+    <div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[od])}</h2><span class="sub">${od && viaIf ? esc(ifSel ? ifName(ifSel) : ifk) : lines.length ? esc(baseText(d, 'sub')) : ''}</span>
+      <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'if.in'], ['outbound', 'if.out']].map(([k, l]) => `<button data-od="${k}" aria-pressed="${od === k}">${t(l)}</button>`).join('')}</div></div>
       <div class="chart" id="chStack" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}${lines.length ? `<span><i class="dash"></i>${esc(lines[0].name)}</span>` : ''}</div></div>
     ${panel('c6', t('ov.dir'), '', '<div class="donut" id="dDir"></div>')}
@@ -978,8 +1000,12 @@ views.overview = async (el) => {
     ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
       ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${fd ? findingsPanel(fd) : ''}
+    ${offlineMode || inSB() ? '' : panel('c12', t('self.title'), '', '<div class="self" id="self"></div>')}
   </div>`;
-  tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from});
+  fillSelf();
+  const dirWord = od && t(od === 'inbound' ? 'if.in' : 'if.out');
+  tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from,
+    empty: od && viaIf ? esc(t('ov.dir_empty', {if: ifSel ? ifName(ifSel) : ifk, d: /^[a-z]/i.test(dirWord) ? dirWord.toLocaleLowerCase(LANG) : dirWord})) : ''});
   if (iIn) {
     const pk = s => { const i = (s?.names || []).indexOf(ifk); return i < 0 ? (s?.times || []).map(() => 0) : s.values[i]; };
     tsChart($('#chIf'), {times: iIn.times, settledTo: iIn.settled_to, dataFrom: iIn.data_from, lines: [{name: t('if.in'), color: IF_IN, data: pk(iIn), fill: true}, {name: t('if.out'), color: IF_OUT, data: pk(iOut), fill: true}]});
@@ -1101,10 +1127,60 @@ views.findings = async (el) => {
       <div class="seg" role="group"><button data-fd="open" aria-pressed="${!all}">${t('fd.open')}</button><button data-fd="all" aria-pressed="${all}">${t('fd.all')}</button></div></div></div>
     ${learning > Date.now() ? `<div class="verdict warn" style="margin:0 0 10px">${esc(t('fd.learning', {t: new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(learning))}))}</div>` : ''}
     ${fs.length ? `<table class="fd">${findingRows(fs, true)}</table>` : `<div class="empty">${all ? t('fd.none') : status('ok', t('fd.none_open'))}</div>`}
-    <p class="fdnote">${esc(t('fd.note'))}</p></div></div>`;
+    <p class="fdnote">${esc(t('fd.note'))}</p></div><div class="panel c12" id="slPanel"></div></div>`;
   el.querySelectorAll('[data-fd]').forEach(b => b.onclick = () => { state.fd = b.dataset.fd; render(); });
   bindFindings(el);
+  await syslogPanel($('#slPanel'));
 };
+
+// The syslog feed: the findings above, sent on to the customer's SIEM as
+// they are made. Registered installations send; the others see the
+// settings greyed out and why. Only an administrator changes them.
+async function syslogPanel(el) {
+  const d = await fetch('/api/syslog').then(r => r.json()).catch(() => null);
+  if (!d || !d.available) { el.remove(); return; }
+  const c = d.config || {}, st = d.stats || {}, can = d.admin && d.registered;
+  const dis = can ? '' : ' disabled';
+  const opt = (v, cur, lab) => `<option value="${v}"${v === cur ? ' selected' : ''}>${esc(lab)}</option>`;
+  const fmtLab = {cef: 'CEF', leef: 'LEEF', json: 'JSON', text: t('sl.fmt_text')};
+  const when = x => x && !x.startsWith('0001') ? ago(Date.parse(x)) : '';
+  el.innerHTML = `<div class="ph"><h2>${esc(t('sl.title'))}</h2><span class="sub">${esc(t('sl.sub'))}</span>
+      ${d.registered ? `<span class="slstate ${c.enabled ? 'on' : ''}">${esc(t(c.enabled ? 'sl.on' : 'sl.off'))}</span>` : ''}</div>
+    ${d.registered ? '' : `<div class="verdict warn" style="margin:0 0 12px">${esc(t('sl.locked'))}</div>`}
+    <div class="slform">
+      <label class="slchk"><input type="checkbox" id="slOn"${c.enabled ? ' checked' : ''}${dis}> ${esc(t('sl.enabled'))}</label>
+      <div class="afield"><label for="slAddr">${esc(t('sl.address'))}</label><input id="slAddr" value="${esc(c.address || '')}" placeholder="10.0.0.5:514" maxlength="255"${dis}></div>
+      <div class="afield"><label for="slNet">${esc(t('sl.network'))}</label><select id="slNet"${dis}>${['udp', 'tcp', 'tls'].map(v => opt(v, c.network || 'udp', v.toUpperCase())).join('')}</select></div>
+      <div class="afield"><label for="slFmt">${esc(t('sl.format'))}</label><select id="slFmt"${dis}>${(d.formats || ['cef']).map(v => opt(v, c.format || 'cef', fmtLab[v] || v)).join('')}</select></div>
+      <div class="afield"><label for="slSev">${esc(t('sl.min_sev'))}</label><select id="slSev"${dis}>${[1, 2, 3].map(v => opt(String(v), String(c.min_sev || 1), t('sev.' + SEV[v]))).join('')}</select></div>
+      <div class="afield slwide"><label for="slBase">${esc(t('sl.base_url'))}</label><input id="slBase" value="${esc(c.base_url || '')}" placeholder="https://traffic66.example.com" maxlength="255"${dis}></div>
+      <label class="slchk slwide"><input type="checkbox" id="slAscii"${c.ascii ? ' checked' : ''}${dis}> ${esc(t('sl.ascii'))}</label>
+    </div>
+    ${can ? `<div class="afbtns" style="justify-content:flex-start"><button class="btn primary" id="slSave">${esc(t('sl.save'))}</button><button class="btn" id="slTest">${esc(t('sl.test'))}</button><span id="slMsg" class="slmsg" role="status"></span></div>` : ''}
+    ${d.registered ? `<p class="slstats">${esc(t('sl.stats', {s: nf(st.sent || 0), f: nf(st.failed || 0), d: nf(st.dropped || 0)}))}${st.last_sent && when(st.last_sent) ? ' · ' + esc(t('sl.last_sent', {t: when(st.last_sent)})) : ''}
+      ${st.last_error ? `<br><span class="slerr">${esc(t('sl.last_err', {t: when(st.last_error_at), e: st.last_error}))}</span>` : ''}</p>` : ''}`;
+  if (!can) return;
+  const msg = (ok, text) => { const m = $('#slMsg'); m.className = 'slmsg ' + (ok ? 'ok' : 'bad'); m.textContent = text; };
+  const body = () => ({enabled: $('#slOn').checked, address: $('#slAddr').value.trim(), network: $('#slNet').value, format: $('#slFmt').value,
+    min_sev: +$('#slSev').value, base_url: $('#slBase').value.trim(), ascii: $('#slAscii').checked});
+  const post = async (path, b) => {
+    const r = await fetch('/api/syslog' + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: b ? JSON.stringify(b) : undefined});
+    const j = await r.json().catch(() => ({}));
+    return r.ok ? null : j.error === 'not_registered' ? t('sl.locked') : (j.error || r.statusText);
+  };
+  $('#slSave').onclick = async () => {
+    const err = await post('', body());
+    if (err) { msg(false, err); return; }
+    await syslogPanel(el); msg(true, t('sl.saved'));
+  };
+  // a test sends with what is saved: save first, so what is on screen is
+  // what is tried
+  $('#slTest').onclick = async () => {
+    const err = await post('', body()) || await post('/test');
+    await syslogPanel(el);
+    msg(!err, err || t('sl.test_ok'));
+  };
+}
 
 
 // ------------------------------------------------------------ series charts
@@ -1116,7 +1192,7 @@ function seriesLabel(by, k) {
   if (k === '__other__') return t('other');
   if (by === 'client' || by === 'server') return names.get(k) || k;
   if (by === 'service') { const [p, a] = k.split('\t'); return a ? p + ' ' + a : p; }
-  if (by.startsWith('asn')) { const [n, o] = k.split('\t'); return 'AS' + n + (o ? ' ' + o : ''); }
+  if (by.startsWith('asn')) { const [n, o] = k.split('\t'); return n === '0' ? t('unknown') : 'AS' + n + (o ? ' ' + o : ''); }
   if (by.startsWith('if_')) return ifaceNames.get(k) || k;
   return appLabel(k);
 }
@@ -1482,8 +1558,11 @@ function drawMap(el, w, rows, gl) {
 // over the lines' own range, cut into 15 equal steps), not by quantiles:
 // a few huge flows then do not flatten the rest, and equal traffic always
 // gets an equal level. Level l -> width LINE_W[floor(l/5)], shade l%5.
+// The three widths are close together on purpose: a widest line several
+// times the narrowest one dominated the map and the shades stopped being
+// read at all, so the step carries less of the difference than the colour.
 // The palette follows the theme unless one is picked in the legend.
-const LINE_W = [1.5, 4, 8];
+const LINE_W = [1.5, 3, 4.5];
 const LINE_PAL = {
   gb: ['#7fd6a0', '#3fb8a0', '#1f97b5', '#1f6fb8', '#163f8f'],
   or: ['#ffc266', '#ff9a3c', '#f26a2e', '#d63a2a', '#9e1622'],
@@ -1610,214 +1689,9 @@ views.cleanup = async (el) => {
     loadStatus(); render();
   });
   if (clDone) { const m = $('#clMsg'); m.style.color = 'var(--good)'; m.textContent = clDone; clDone = ''; }
-  await ifaceCleanup(el);
 };
 let clDone = '';
 
-// Deleting one interface's data (registered only). The summaries hold
-// traffic by application, host and dimension, never by interface, so they
-// cannot have one interface subtracted from them; the panel says so rather
-// than letting anyone believe the interface is gone from every page.
-async function ifaceCleanup(el) {
-  const on = licOK('purge-iface');
-  const ages = [0, ...cleanupDaysUI];
-  const ageOpt = d => `<option value="${d}">${esc(d ? t('cl.days', {n: d}) : t('cl.if_any_age'))}</option>`;
-  const wrap = document.createElement('div');
-  wrap.className = 'grid';
-  wrap.innerHTML = panel('c12' + (on ? '' : ' locked'), t('cl.if_title'), on ? t('cl.if_sub') : t('cl.reg_only'),
-    `<p class="muted" style="margin:0 0 12px;font-size:13px">${esc(t('cl.if_what'))}<br>${esc(t('cl.if_both'))}</p>
-     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-       <select id="clIf" ${on ? '' : 'disabled'} style="max-width:420px"><option>${esc(t('cl.if_pick'))}</option></select>
-       <select id="clIfAge" ${on ? '' : 'disabled'}>${ages.map(ageOpt).join('')}</select>
-       <button class="btn danger" id="clIfRun" disabled>${t('cl.run')}</button>
-     </div>
-     <div id="clIfEst" class="muted" style="margin-top:10px;font-size:13px"></div>
-     <div id="clIfMsg" style="margin-top:6px;font-size:13px"></div>`);
-  el.append(...wrap.children);
-  if (!on) { $('#clIfEst').textContent = t('cl.if_locked'); return; }
-
-  const d = await api('ifaces', {from: 0, to: Date.now()}).catch(() => ({ifaces: []}));
-  const list = (d.ifaces || []).filter(f => f.ifindex);
-  const sel = $('#clIf');
-  if (!list.length) { sel.innerHTML = `<option>${esc(t('cl.if_none'))}</option>`; sel.disabled = true; $('#clIfAge').disabled = true; return; }
-  const groups = new Map();
-  list.forEach(f => { const g = f.device || f.exporter; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(f); });
-  let html = '';
-  groups.forEach((fs, g) => { html += `<optgroup label="${esc(g)}">${fs.map(f => `<option value="${esc(f.exporter + '/' + f.ifindex)}" title="${esc((f.device || f.exporter) + ' · ' + f.ifindex)}">${esc(ifName(f) + (f.tag ? ' [' + f.tag + ']' : ''))}</option>`).join('')}</optgroup>`; });
-  sel.innerHTML = html;
-
-  const target = () => { const [exporter, ifindex] = sel.value.split('/'); return {exporter, ifindex: +ifindex, days: +$('#clIfAge').value}; };
-  const estimate = async () => {
-    const tg = target(), est = $('#clIfEst'), run = $('#clIfRun');
-    run.disabled = true;
-    est.textContent = t('cl.if_estimating');
-    const res = await fetch(`/api/cleanup/iface?exporter=${encodeURIComponent(tg.exporter)}&ifindex=${tg.ifindex}&days=${tg.days}`);
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) { est.textContent = j.error === 'not_registered' ? t('cl.if_locked') : (j.error || res.statusText); return; }
-    const parts = [t('cl.rows', {n: nf(j.rows || 0)}), t('cl.if_counters', {n: nf(j.counters || 0)})];
-    if (j.bytes) parts.push(t('cl.if_frees', {s: fmtBytes(j.bytes)}));
-    est.textContent = parts.join(' · ') + (j.summaries ? ' — ' + t('cl.if_keep', {n: nf(j.summaries)}) : '');
-    run.disabled = !(j.rows || j.counters);
-  };
-  sel.onchange = $('#clIfAge').onchange = estimate;
-  $('#clIfRun').onclick = async () => {
-    const tg = target(), name = sel.selectedOptions[0].textContent;
-    if (!confirm(t(tg.days ? 'cl.if_confirm_days' : 'cl.if_confirm', {i: name, n: tg.days}))) return;
-    const run = $('#clIfRun'), m = $('#clIfMsg');
-    run.disabled = true;
-    const res = await fetch('/api/cleanup/iface', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(tg)});
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) { m.style.color = 'var(--crit)'; m.textContent = j.error === 'not_registered' ? t('cl.if_locked') : (j.error || res.statusText); return; }
-    m.style.color = 'var(--good)';
-    m.textContent = t('cl.if_done', {i: name, n: nf(j.rows || 0), c: nf(j.counters || 0), s: fmtBytes(j.bytes || 0)});
-    loadStatus();
-    await estimate();
-  };
-  await estimate();
-}
-// the ages offered, mirroring the server's own list
-const cleanupDaysUI = [120, 90, 60, 30, 7];
-
-// ------------------------------------------------------- the asset ledger
-// Sites, racks, devices and their ports, the cables between them, and the
-// networks and addresses assigned on them. It is a ledger: everything here
-// was written down by someone, never discovered. Registered installations
-// only — the panels are shown and explained rather than hidden, so what
-// registering buys is visible, and the server refuses every call anyway.
-let assetData = null;
-const assetSel = {site: 0, rack: 0, device: 0, subnet: 0};
-
-async function loadAssets() {
-  const res = await fetch('/api/assets');
-  if (res.status === 401) { showLogin(); throw new Error('login'); }
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) return assetData = {locked: j.error === 'not_registered', error: j.error || res.statusText};
-  j.by = {
-    site: new Map((j.sites || []).map(x => [x.id, x])),
-    rack: new Map((j.racks || []).map(x => [x.id, x])),
-    device: new Map((j.devices || []).map(x => [x.id, x])),
-    port: new Map((j.ports || []).map(x => [x.id, x])),
-  };
-  return assetData = j;
-}
-
-async function assetSave(kind, rec) {
-  const res = await fetch('/api/assets/' + kind, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(rec)});
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j.detail || j.error || res.statusText);
-  return j;
-}
-
-async function assetDelete(kind, id) {
-  const res = await fetch(`/api/assets/${kind}?id=${id}`, {method: 'DELETE'});
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j.detail || j.error || res.statusText);
-}
-
-// The locked panel every asset page shows without a licence. It says what
-// the page would do, because a prospect has to see what they would buy.
-function assetLocked(el, titleKey, whatKey) {
-  el.innerHTML = `<div class="grid">${panel('c12 locked', t(titleKey), t('cl.reg_only'),
-    `<p class="muted" style="margin:0;font-size:13px">${esc(t(whatKey))}</p>
-     <p style="margin:10px 0 0;font-size:13px">${esc(t('as.locked'))}</p>`)}</div>`;
-}
-
-// assetPage loads the ledger and handles the two states that are not the
-// page: no licence, and a failure worth showing.
-async function assetPage(el, titleKey, whatKey) {
-  const d = await loadAssets();
-  if (d.locked) { assetLocked(el, titleKey, whatKey); return null; }
-  if (d.error) { el.innerHTML = `<div class="grid">${panel('c12', t(titleKey), '', `<div class="empty">${esc(d.error)}</div>`)}</div>`; return null; }
-  return d;
-}
-
-// ------------------------------------------------------------ the editor
-// One form over one record. Fields describe what to show; saving posts the
-// whole record back, so a field the form does not show is carried over
-// untouched rather than cleared.
-const ASSET_FIELDS = {
-  site: [['name', 'text', 1], ['address', 'text'], ['note', 'area'], ['hidden', 'check']],
-  rack: [['name', 'text', 1], ['site_id', 'site'], ['units', 'num'], ['note', 'area'], ['hidden', 'check']],
-  device: [['name', 'text', 1], ['role', 'text'], ['vendor', 'text'], ['model', 'text'], ['serial', 'text'],
-    ['mgmt_ip', 'text'], ['rack_id', 'rack'], ['pos_u', 'num'], ['height_u', 'num'], ['tags', 'tags'],
-    ['note', 'area'], ['hidden', 'check']],
-  port: [['name', 'text', 1], ['ifindex', 'num'], ['speed', 'num'], ['kind', 'text'], ['note', 'area']],
-  circuit: [['name', 'text', 1], ['carrier', 'text'], ['kind', 'text'], ['bandwidth', 'text'],
-    ['site_id', 'site'], ['port_id', 'port'], ['contract', 'text'], ['starts', 'day'], ['ends', 'day'],
-    ['tags', 'tags'], ['note', 'area'], ['hidden', 'check']],
-  subnet: [['prefix', 'text', 1], ['name', 'text'], ['vlan', 'num'], ['site_id', 'site'],
-    ['gateway', 'text'], ['tags', 'tags'], ['note', 'area'], ['hidden', 'check']],
-  addr: [['ip', 'text', 1], ['name', 'text'], ['kind', 'akind'], ['device_id', 'device'], ['port_id', 'port'],
-    ['mac', 'text'], ['tags', 'tags'], ['note', 'area'], ['hidden', 'check']],
-};
-const ADDR_KINDS = ['static', 'dhcp', 'reserved', 'gateway', 'vip'];
-
-function assetOptions(type, cur) {
-  const none = `<option value="0">${esc(t('as.none'))}</option>`;
-  const opt = (v, l) => `<option value="${v}"${+cur === +v ? ' selected' : ''}>${esc(l)}</option>`;
-  if (type === 'site') return none + (assetData.sites || []).map(x => opt(x.id, x.name)).join('');
-  if (type === 'rack') return none + (assetData.racks || []).map(x => opt(x.id, rackLabel(x))).join('');
-  if (type === 'device') return none + (assetData.devices || []).map(x => opt(x.id, x.name)).join('');
-  if (type === 'port') return none + (assetData.ports || []).map(x => opt(x.id, portLabel(x))).join('');
-  if (type === 'akind') return ADDR_KINDS.map(k => opt(k, t('as.kind_' + k))).join('');
-  return '';
-}
-const rackLabel = r => (r.site_id && assetData.by.site.get(r.site_id) ? assetData.by.site.get(r.site_id).name + ' · ' : '') + r.name;
-const portLabel = p => (assetData.by.device.get(p.device_id)?.name || '?') + ' · ' + p.name;
-
-// assetEdit opens the editor for one record and resolves when it is saved
-// (to the saved record) or cancelled (to null).
-function assetEdit(kind, rec) {
-  return new Promise(resolve => {
-    const fields = ASSET_FIELDS[kind];
-    const val = f => rec[f] ?? '';
-    const row = ([f, type, req]) => {
-      const id = 'af_' + f, lab = `<label for="${id}">${esc(t('as.f_' + f))}${req ? ' *' : ''}</label>`;
-      if (type === 'check') return `<div class="afield afwide"><label class="afcheck"><input type="checkbox" id="${id}"${rec[f] ? ' checked' : ''}> ${esc(t('as.f_' + f))}</label>
-        <span class="muted" style="font-size:12px">${esc(t('as.hidden_hint'))}</span></div>`;
-      if (type === 'area') return `<div class="afield afwide">${lab}<textarea id="${id}" rows="2">${esc(val(f))}</textarea></div>`;
-      if (type === 'tags') return `<div class="afield afwide">${lab}<input id="${id}" value="${esc((rec[f] || []).join(', '))}" placeholder="${esc(t('as.tags_hint'))}"></div>`;
-      if (type === 'num') return `<div class="afield">${lab}<input id="${id}" type="number" min="0" value="${rec[f] || ''}"></div>`;
-      if (type === 'day') return `<div class="afield">${lab}<input id="${id}" type="date" value="${esc(val(f))}"></div>`;
-      if (['site', 'rack', 'device', 'port', 'akind'].includes(type)) return `<div class="afield">${lab}<select id="${id}">${assetOptions(type, rec[f])}</select></div>`;
-      return `<div class="afield">${lab}<input id="${id}" value="${esc(val(f))}"></div>`;
-    };
-    const dlg = document.createElement('dialog');
-    dlg.className = 'aedit';
-    dlg.innerHTML = `<form method="dialog"><h2>${esc(t(rec.id ? 'as.edit_' + kind : 'as.add_' + kind))}</h2>
-      <div class="aform">${fields.map(row).join('')}</div>
-      <div id="afMsg" class="afmsg"></div>
-      <div class="afbtns"><button type="button" class="btn" id="afCancel">${esc(t('as.cancel'))}</button>
-        <button type="button" class="btn primary" id="afSave">${esc(t('as.save'))}</button></div></form>`;
-    document.body.append(dlg);
-    const close = v => { dlg.close(); dlg.remove(); resolve(v); };
-    dlg.querySelector('#afCancel').onclick = () => close(null);
-    dlg.addEventListener('cancel', e => { e.preventDefault(); close(null); });
-    dlg.querySelector('#afSave').onclick = async () => {
-      const out = {...rec};
-      for (const [f, type] of fields) {
-        const e = dlg.querySelector('#af_' + f);
-        if (type === 'check') out[f] = e.checked;
-        else if (type === 'tags') out[f] = e.value.split(',').map(s => s.trim()).filter(Boolean);
-        else if (type === 'num' || ['site', 'rack', 'device', 'port'].includes(type)) out[f] = +e.value || 0;
-        else out[f] = e.value.trim();
-      }
-      const m = dlg.querySelector('#afMsg');
-      m.textContent = '';
-      try { close(await assetSave(kind, out)); }
-      catch (err) { m.textContent = err.message; }
-    };
-    dlg.showModal();
-    dlg.querySelector('input, select, textarea')?.focus();
-  });
-}
-
-// assetRemove asks first and names what is going.
-async function assetRemove(kind, rec, label) {
-  if (!confirm(t('as.confirm_delete', {x: label}))) return false;
-  try { await assetDelete(kind, rec.id); return true; }
-  catch (err) { alert(err.message); return false; }
-}
 
 // Controls only an administrator gets. The calls behind them are gated
 // server-side too (adminAPI, in internal/api/server.go) — this only keeps
@@ -1826,379 +1700,203 @@ async function assetRemove(kind, rec, label) {
 const adm = () => !!(me && me.admin);
 const admOnly = html => adm() ? html : '';
 
-// Buttons an administrator gets and nobody else: the ledger is read by
-// everyone and written by the one who keeps it.
-const adminOnly = html => assetData.admin ? html : '';
-const quotaLine = (have, limit) => limit > 0 ? `${nf(have)} / ${nf(limit)}` : nf(have);
-
-// ------------------------------------------------- the asset management
-// One page for where the equipment is — sites, racks and the devices in
-// them — and a page of its own for a device, reached by clicking it. The
-// device page is not in the navigation because it is about one device:
-// there is nothing to show until one has been chosen.
-const ASSET_VIEWS = new Set(['racks', 'devices', 'ipam', 'names']);
-
-// goDevice opens one device's own page.
-function goDevice(id) { assetSel.device = id; go('devices'); }
-
+// ------------------------------------------------------- rooms and racks
+// A picture of where the flows come from: room, rack, device, port, and
+// the carrier and circuit the port goes out to. It is written down once,
+// beside the names in the inventory file, and nothing is looked up in it.
+// Devices and ports come from the flows themselves; only the places and
+// the carriers are typed in.
+const RK_SHOWN = 8;  // ports listed before the rest fold away
+// one colour per carrier, the same on every device, so the eye finds all
+// of one carrier's lines at once
+const rkHue = s => { let h = 0; for (const c of s) h = (h * 31 + c.codePointAt(0)) % 360; return h; };
+const rkISP = f => f.isp || f.circuit
+  ? `<span class="rkisp" style="--h:${rkHue(f.isp || f.circuit)}">${esc(f.isp || '—')}</span>`
+  : `<span class="rkisp none">${esc(t('rk.no_carrier'))}</span>`;
 views.racks = async (el) => {
-  const d = await assetPage(el, 'nav.racks', 'as.what_racks');
-  if (!d) return;
-  const sites = d.sites || [], racks = d.racks || [], ports = d.ports || [];
-  if (assetSel.site && !d.by.site.has(assetSel.site)) assetSel.site = 0;
-  const shown = assetSel.site ? racks.filter(r => r.site_id === assetSel.site) : racks;
-  const devOf = r => (d.devices || []).filter(x => x.rack_id === r.id);
-  const siteRow = s => `<tr${assetSel.site === s.id ? ' class="on"' : ''}><td><button class="lnk" data-site="${s.id}">${esc(s.name)}</button>
-      ${s.hidden ? `<span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}</td>
-    <td class="muted">${esc(s.address || '')}</td>
-    <td class="num">${nf(racks.filter(r => r.site_id === s.id).length)}</td>
-    <td style="text-align:end">${adminOnly(`<button class="btn sm" data-esite="${s.id}">${esc(t('as.edit'))}</button>
-      <button class="btn sm danger" data-dsite="${s.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  // the devices of the chosen site, or of every site
-  const devices = assetSel.site ? (d.devices || []).filter(x => d.by.rack.get(x.rack_id)?.site_id === assetSel.site) : (d.devices || []);
-  const devRow = x => `<tr><td><button class="lnk" data-dev="${x.id}">${esc(x.name)}</button>
-      ${x.hidden ? `<span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}
-      ${(x.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join('')}</td>
-    <td class="muted">${esc(x.role || '')}</td>
-    <td class="muted">${esc([x.vendor, x.model].filter(Boolean).join(' '))}</td>
-    <td>${x.mgmt_ip ? ipCell(x.mgmt_ip) : ''}</td>
-    <td>${devPlace(d, x)}</td>
-    <td class="num">${nf(ports.filter(p => p.device_id === x.id).length)}</td></tr>`;
-  el.innerHTML = `<div class="grid">
-    ${panel('c12', t('nav.racks'), assetCounts(d), `<p class="muted" style="margin:0 0 12px;font-size:13px">${esc(t('as.what_racks'))}</p>
-      <table><tr><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_address'))}</th><th class="num">${esc(t('as.racks'))}</th><th></th></tr>
-      ${sites.map(siteRow).join('') || `<tr><td colspan="4" class="empty">${esc(t('as.no_sites'))}</td></tr>`}</table>
-      ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddSite">${esc(t('as.add_site'))}</button>
-        ${sites.length ? `<button class="btn" id="asAddRack">${esc(t('as.add_rack'))}</button>` : ''}</div>`)}`)}
-    ${panel('c12', t('as.racks') + (assetSel.site ? ' · ' + esc(d.by.site.get(assetSel.site).name) : ''), '',
-      shown.length ? `<div class="rackwrap">${shown.map(r => rackCard(r, devOf(r))).join('')}</div>`
-        : `<div class="empty">${esc(t('as.no_racks'))}</div>`)}
-    ${panel('c12', t('as.devices'), t('as.devices_sub'), `<table><tr><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_role'))}</th>
-        <th>${esc(t('as.f_model'))}</th><th>${esc(t('as.f_mgmt_ip'))}</th><th>${esc(t('as.place'))}</th><th class="num">${esc(t('as.ports'))}</th></tr>
-      ${devices.map(devRow).join('') || `<tr><td colspan="6" class="empty">${esc(t('as.no_devices'))}</td></tr>`}</table>
-      ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddDev">${esc(t('as.add_device'))}</button></div>`)}`)}
-    ${adminOnly(pastePanel(d) + csvPanel())}
-  </div>`;
-  el.querySelectorAll('[data-site]').forEach(b => b.onclick = () => { assetSel.site = assetSel.site === +b.dataset.site ? 0 : +b.dataset.site; render(); });
-  el.querySelectorAll('[data-esite]').forEach(b => b.onclick = async () => { if (await assetEdit('site', {...d.by.site.get(+b.dataset.esite)})) render(); });
-  el.querySelectorAll('[data-dsite]').forEach(b => b.onclick = async () => {
-    const s = d.by.site.get(+b.dataset.dsite);
-    if (await assetRemove('site', s, s.name)) render();
+  const res = await fetch('/api/racks');
+  if (res.status === 401) { showLogin(); return; }
+  const d = await res.json().catch(() => ({}));
+  const devs = d.devices || [], can = !!d.admin;
+  if (!devs.length) { el.innerHTML = `${invTabs('racks')}<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="empty">${esc(t('rk.empty'))}</div>`)}</div>`; return; }
+  const rooms = new Map();
+  devs.forEach((x, i) => {
+    const room = x.room || '', rack = x.rack || '';
+    if (!rooms.has(room)) rooms.set(room, new Map());
+    const racks = rooms.get(room);
+    if (!racks.has(rack)) racks.set(rack, []);
+    racks.get(rack).push(i);
   });
-  el.querySelectorAll('[data-erack]').forEach(b => b.onclick = async () => { if (await assetEdit('rack', {...d.by.rack.get(+b.dataset.erack)})) render(); });
-  el.querySelectorAll('[data-drack]').forEach(b => b.onclick = async () => {
-    const r = d.by.rack.get(+b.dataset.drack);
-    if (await assetRemove('rack', r, r.name)) render();
-  });
-  // a device in a rack and a device in the list both open its own page
-  el.querySelectorAll('[data-rdev]').forEach(b => b.onclick = () => goDevice(+b.dataset.rdev));
-  el.querySelectorAll('[data-dev]').forEach(b => b.onclick = () => goDevice(+b.dataset.dev));
-  const add = $('#asAddSite'); if (add) add.onclick = async () => { if (await assetEdit('site', {})) render(); };
-  const addR = $('#asAddRack'); if (addR) addR.onclick = async () => { if (await assetEdit('rack', {site_id: assetSel.site || sites[0].id, units: d.default_units || 46})) render(); };
-  const addD = $('#asAddDev'); if (addD) addD.onclick = async () => {
-    const made = await assetEdit('device', {height_u: 1, rack_id: 0});
-    if (made) { assetData = null; goDevice(made.id); }
+  // rooms in name order, the devices nobody has placed yet last
+  const byName = (a, b) => (a === '') - (b === '') || a.localeCompare(b, LANG, {numeric: true});
+  const order = [...rooms.keys()].sort(byName);
+  const ports = devs.flatMap(x => x.ifaces || []);
+  const sum = t('rk.summary', {r: nf(order.filter(Boolean).length), k: nf([...rooms.values()].reduce((n, m) => n + [...m.keys()].filter(Boolean).length, 0)),
+    d: nf(devs.length), p: nf(ports.filter(f => f.isp || f.circuit).length), n: nf(ports.length)});
+  const port = f => `<div class="rkif">
+      <span class="rkport"><b>${esc(f.name || t('rk.ifindex', {n: f.ifindex}))}</b><span class="muted">#${f.ifindex}${f.speed ? ' · ' + esc(fmtBps(f.speed)) : ''}</span></span>
+      ${rkISP(f)}<span class="rkcirc mono">${esc(f.circuit || '')}</span></div>`;
+  const device = i => {
+    const x = devs[i], fs = x.ifaces || [];
+    // the ports with a carrier always show; of the rest, the busiest
+    const lead = fs.filter((f, k) => f.isp || f.circuit || k < RK_SHOWN), rest = fs.filter(f => !lead.includes(f));
+    return `<div class="rkdev"><div class="rkfp"><i class="rkled${x.seen ? '' : ' off'}" title="${esc(x.seen ? '' : t('rk.quiet'))}"></i>
+        <span class="rkdn"><b>${esc(x.name || x.exporter)}</b>${x.name ? `<span class="mono">${esc(x.exporter)}</span>` : ''}</span>
+        ${x.seen ? '' : `<span class="tag">${esc(t('rk.quiet'))}</span>`}
+        ${can ? `<button class="btn rkedit" data-rkd="${i}">${esc(t('rk.edit'))}</button>` : ''}</div>
+      <div class="rkports">${lead.map(port).join('') || `<div class="rkif muted">${esc(t('rk.no_ifaces'))}</div>`}
+      ${rest.length ? `<details class="rkmore"><summary>${esc(t('rk.more', {n: nf(rest.length)}))}</summary>${rest.map(port).join('')}</details>` : ''}</div></div>`;
   };
-  wirePaste();
-  wireCSV();
+  const roomIcon = '<svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>';
+  const body = order.map(room => {
+    const racks = rooms.get(room), names = [...racks.keys()].sort(byName);
+    const n = [...racks.values()].reduce((k, v) => k + v.length, 0);
+    return `<section class="rkroom${room ? '' : ' unplaced'}"><h3>${roomIcon}<span>${esc(room || t('rk.unplaced'))}</span><span class="muted">${esc(t('rk.room_n', {k: nf(names.filter(Boolean).length), d: nf(n)}))}</span></h3><div class="rkracks">
+      ${names.map(rack => `<div class="rkrack"><div class="rkrh"><span>${esc(rack ? t('rk.rack_n', {x: rack}) : t('rk.no_rack'))}</span></div><div class="rkbay">${racks.get(rack).map(device).join('')}</div></div>`).join('')}
+      </div></section>`;
+  }).join('');
+  el.innerHTML = `${invTabs('racks')}<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="rksum">${esc(sum)}</div>` + body)}</div>`;
+  const uniq = k => [...new Set(devs.map(x => x[k]).filter(Boolean))].sort();
+  const carriers = [...new Set(ports.map(f => f.isp).filter(Boolean))].sort();
+  el.querySelectorAll('[data-rkd]').forEach(b => b.onclick = async () => {
+    const x = devs[+b.dataset.rkd];
+    const v = await rkEdit(x, {rooms: uniq('room'), racks: uniq('rack'), carriers});
+    if (!v) return;
+    const r = await fetch('/api/racks/device', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({exporter: x.exporter, ...v})});
+    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || r.statusText); return; }
+    ifList = null; render();
+  });
 };
 
-const assetCounts = d => [
-  t('as.c_sites', {x: quotaLine(d.counts.sites, d.quota.sites)}),
-  t('as.c_racks', {x: quotaLine(d.counts.racks, d.quota.racks)}),
-  t('as.c_devices', {x: quotaLine(d.counts.devices, d.quota.devices)}),
-].join(' · ');
-
-// where a device stands, for the lists
-function devPlace(d, x) {
-  const r = d.by.rack.get(x.rack_id);
-  if (!r) return `<span class="muted">${esc(t('as.unracked'))}</span>`;
-  return esc(r.name) + (x.pos_u ? ` <span class="muted">U${x.pos_u}</span>` : '');
-}
-
-// One rack drawn by the unit, numbered from the bottom as racks are. A
-// device fills the units it occupies, so a gap on the page is a gap in the
-// cabinet; a device in the rack whose unit nobody wrote down is listed
-// under it rather than placed somewhere invented.
-function rackCard(r, devs) {
-  // one rack unit in pixels; .rack .ru in app.css draws the same height
-  const H = 14, placed = devs.filter(x => x.pos_u > 0), loose = devs.filter(x => !x.pos_u);
-  const units = [];
-  for (let u = r.units; u >= 1; u--) units.push(`<div class="ru"><span>${u}</span></div>`);
-  const blocks = placed.map(x => {
-    const h = Math.max(1, x.height_u || 1), top = (r.units - (x.pos_u + h - 1)) * H;
-    const title = `${x.name} · ${t('as.units_at', {u: x.pos_u, n: h})}${x.model ? ' · ' + x.model : ''}`;
-    return `<button class="rdev" data-rdev="${x.id}" style="top:${top}px;height:${h * H - 2}px" title="${esc(title)}">${esc(x.name)}</button>`;
-  });
-  const free = r.units - placed.reduce((n, x) => n + Math.max(1, x.height_u || 1), 0);
-  return `<div class="rackcard"><div class="rh"><b>${esc(r.name)}</b>
-      <span class="muted">${esc(t('as.units_free', {n: free, t: r.units}))}</span>
-      ${adminOnly(`<span class="rbtns"><button class="btn sm" data-erack="${r.id}">${esc(t('as.edit'))}</button><button class="btn sm danger" data-drack="${r.id}">${esc(t('as.delete'))}</button></span>`)}</div>
-    <div class="rack" style="height:${r.units * H}px">${units.join('')}${blocks.join('')}</div>
-    ${loose.length ? `<div class="rloose">${esc(t('as.unplaced'))}: ${loose.map(x => `<button class="lnk" data-rdev="${x.id}">${esc(x.name)}</button>`).join(', ')}</div>` : ''}</div>`;
-}
-
-// ------------------------------------------------------- one device
-// Reached by clicking a device, never from the navigation: what it is,
-// where it stands, and every port with the port at the other end of its
-// cable.
-views.devices = async (el) => {
-  const d = await assetPage(el, 'as.device', 'as.what_devices');
-  if (!d) return;
-  const x = assetSel.device ? d.by.device.get(assetSel.device) : null;
-  if (!x) { go('racks'); return; }
-  $('#title').textContent = x.name;
-  document.title = x.name + ' · traffic66';
-  const ports = (d.ports || []).filter(p => p.device_id === x.id);
-  const peer = new Map();
-  (d.links || []).forEach(l => { peer.set(l.a_port, l.b_port); peer.set(l.b_port, l.a_port); });
-  const fact = (k, v) => v ? `<div class="afact"><span class="k">${esc(t(k))}</span><span class="v">${v}</span></div>` : '';
-  el.innerHTML = `<div class="grid">
-    ${panel('c12', esc(x.name), esc(x.role || ''), `<div class="dtop">
-        <button class="btn sm" id="asBack">← ${esc(t('nav.racks'))}</button>
-        ${adminOnly(`<span style="margin-inline-start:auto;display:flex;gap:6px"><button class="btn sm" id="asEditDev">${esc(t('as.edit'))}</button>
-          <button class="btn sm danger" id="asDelDev">${esc(t('as.delete'))}</button></span>`)}</div>
-      <div class="afacts">
-        ${fact('as.f_vendor', esc([x.vendor, x.model].filter(Boolean).join(' ')))}
-        ${fact('as.f_serial', esc(x.serial || ''))}
-        ${fact('as.f_mgmt_ip', x.mgmt_ip ? ipCell(x.mgmt_ip) : '')}
-        ${fact('as.place', devPlace(d, x))}
-        ${fact('as.f_height_u', x.height_u ? esc(x.height_u + 'U') : '')}
-        ${fact('as.f_tags', (x.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join(''))}
-        ${x.hidden ? fact('as.f_hidden', `<span class="tag">${esc(t('as.f_hidden'))}</span>`) : ''}
+// rkEdit is one form for a device and every port on it: where it stands,
+// what it is called, and for each port the carrier and circuit. It
+// resolves to what to save (only the ports that changed), or to null when
+// cancelled. The lists offer what was typed before, so one room or one
+// carrier is not written three ways.
+function rkEdit(x, {rooms, racks, carriers}) {
+  return new Promise(resolve => {
+    const fs = x.ifaces || [];
+    const dl = (id, list) => list.length ? `<datalist id="${id}">${list.map(o => `<option value="${esc(o)}">`).join('')}</datalist>` : '';
+    const inp = (name, v, list, ph) => `<input name="${name}" value="${esc(v || '')}" maxlength="80"${list ? ` list="${list}"` : ''}${ph ? ` placeholder="${esc(ph)}"` : ''}>`;
+    const dlg = document.createElement('dialog');
+    dlg.className = 'aedit rkdlg';
+    dlg.innerHTML = `<form method="dialog"><h2>${esc(x.name || x.exporter)} <span class="mono muted">${esc(x.exporter)}</span></h2>
+      <div class="aform rkdform">
+        <div class="afield"><label>${esc(t('rk.device_name'))}</label>${inp('name', x.name)}</div>
+        <div class="afield"><label>${esc(t('rk.room'))}</label>${inp('room', x.room, 'rkl_room')}</div>
+        <div class="afield"><label>${esc(t('rk.rack'))}</label>${inp('rack', x.rack, 'rkl_rack')}</div>
       </div>
-      ${x.note ? `<p class="muted" style="margin:10px 0 0;font-size:13px;white-space:pre-wrap">${esc(x.note)}</p>` : ''}`)}
-    ${panel('c12', t('as.ports_of', {x: x.name}), portUse(ports, peer), portTable(d, ports, peer))}
-  </div>`;
-  $('#asBack').onclick = () => go('racks');
-  const ed = $('#asEditDev'); if (ed) ed.onclick = async () => { if (await assetEdit('device', {...x})) render(); };
-  const del = $('#asDelDev'); if (del) del.onclick = async () => {
-    if (await assetRemove('device', x, x.name)) { assetSel.device = 0; assetData = null; go('racks'); }
-  };
-  el.querySelectorAll('[data-eport]').forEach(b => b.onclick = async () => { if (await assetEdit('port', {...d.by.port.get(+b.dataset.eport)})) render(); });
-  el.querySelectorAll('[data-dport]').forEach(b => b.onclick = async () => {
-    const p = d.by.port.get(+b.dataset.dport);
-    if (await assetRemove('port', p, portLabel(p))) render();
+      ${fs.length ? `<div class="rkptab"><table><thead><tr><th>${esc(t('rk.port'))}</th><th>${esc(t('rk.iface_name'))}</th><th>${esc(t('rk.isp'))}</th><th>${esc(t('rk.circuit'))}</th></tr></thead><tbody>
+        ${fs.map((f, k) => `<tr data-k="${k}"><td class="nw"><b>#${f.ifindex}</b>${f.speed ? `<span class="muted"> ${esc(fmtBps(f.speed))}</span>` : ''}</td>
+          <td>${inp('name', f.name, '', t('rk.ifindex', {n: f.ifindex}))}</td><td>${inp('isp', f.isp, 'rkl_isp')}</td><td>${inp('circuit', f.circuit)}</td></tr>`).join('')}
+      </tbody></table></div>` : `<p class="muted">${esc(t('rk.no_ifaces'))}</p>`}
+      ${dl('rkl_room', rooms)}${dl('rkl_rack', racks)}${dl('rkl_isp', carriers)}
+      <div class="afbtns"><button class="btn" value="cancel">${esc(t('rk.cancel'))}</button><button class="btn primary" value="ok">${esc(t('rk.save'))}</button></div></form>`;
+    document.body.appendChild(dlg);
+    dlg.addEventListener('close', () => {
+      const val = (root, n) => root.querySelector(`input[name="${n}"]`).value.trim();
+      const top = dlg.querySelector('.rkdform');
+      const out = {name: val(top, 'name'), room: val(top, 'room'), rack: val(top, 'rack'), ifaces: []};
+      dlg.querySelectorAll('tr[data-k]').forEach(tr => {
+        const f = fs[+tr.dataset.k], v = {name: val(tr, 'name'), isp: val(tr, 'isp'), circuit: val(tr, 'circuit')};
+        if (v.name !== (f.name || '') || v.isp !== (f.isp || '') || v.circuit !== (f.circuit || '')) out.ifaces.push({ifindex: f.ifindex, ...v});
+      });
+      const ok = dlg.returnValue === 'ok';
+      dlg.remove();
+      resolve(ok ? out : null);
+    });
+    dlg.showModal();
+    dlg.querySelector('input')?.focus();
   });
-  el.querySelectorAll('[data-cable]').forEach(b => b.onclick = () => cablePort(d, +b.dataset.cable, peer));
-  const addP = $('#asAddPort'); if (addP) addP.onclick = async () => { if (await assetEdit('port', {device_id: x.id})) render(); };
-};
-
-// Port occupancy in one line: how many of the ports written down carry a
-// cable. It counts the ledger, not the link state — nothing here is polled.
-function portUse(ps, peer) {
-  if (!ps.length) return '';
-  const used = ps.filter(p => peer.has(p.id)).length;
-  return t('as.port_use', {u: nf(used), n: nf(ps.length), p: nf(Math.round(used / ps.length * 100))});
 }
 
-function portTable(d, ps, peer) {
-  const row = p => {
-    const o = peer.get(p.id), op = o ? d.by.port.get(o) : null;
-    return `<tr><td><b>${esc(p.name)}</b></td>
-      <td class="muted">${p.ifindex ? nf(p.ifindex) : ''}</td>
-      <td class="muted">${p.speed ? fmtBps(p.speed) : ''}</td>
-      <td class="muted">${esc(p.kind || '')}</td>
-      <td>${op ? esc(portLabel(op)) : `<span class="muted">${esc(t('as.port_free'))}</span>`}</td>
-      <td style="text-align:end">${adminOnly(`<button class="btn sm" data-cable="${p.id}">${esc(t(op ? 'as.recable' : 'as.cable'))}</button>
-        <button class="btn sm" data-eport="${p.id}">${esc(t('as.edit'))}</button>
-        <button class="btn sm danger" data-dport="${p.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  };
-  return `<table><tr><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_ifindex'))}</th><th>${esc(t('as.f_speed'))}</th>
-      <th>${esc(t('as.f_kind'))}</th><th>${esc(t('as.cabled_to'))}</th><th></th></tr>
-    ${ps.map(row).join('') || `<tr><td colspan="6" class="empty">${esc(t('as.no_ports'))}</td></tr>`}</table>
-    ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddPort">${esc(t('as.add_port'))}</button></div>`)}`;
-}
-
-// Cabling a port: pick the other end, or pull the cable out. A port holds
-// one cable, so choosing a port that already has one moves it.
-function cablePort(d, portID, peer) {
-  const others = (d.ports || []).filter(p => p.id !== portID);
-  const cur = peer.get(portID) || 0;
-  const dlg = document.createElement('dialog');
-  dlg.className = 'aedit';
-  dlg.innerHTML = `<form method="dialog"><h2>${esc(t('as.cable_title', {x: portLabel(d.by.port.get(portID))}))}</h2>
-    <div class="aform"><div class="afield afwide"><label for="afPeer">${esc(t('as.cabled_to'))}</label>
-      <select id="afPeer"><option value="0">${esc(t('as.no_cable'))}</option>
-        ${others.map(p => `<option value="${p.id}"${cur === p.id ? ' selected' : ''}>${esc(portLabel(p))}</option>`).join('')}</select></div></div>
-    <div id="afMsg" class="afmsg"></div>
-    <div class="afbtns"><button type="button" class="btn" id="afCancel">${esc(t('as.cancel'))}</button>
-      <button type="button" class="btn primary" id="afSave">${esc(t('as.save'))}</button></div></form>`;
-  document.body.append(dlg);
-  const close = () => { dlg.close(); dlg.remove(); };
-  dlg.querySelector('#afCancel').onclick = close;
-  dlg.addEventListener('cancel', e => { e.preventDefault(); close(); });
-  dlg.querySelector('#afSave').onclick = async () => {
-    const to = +dlg.querySelector('#afPeer').value;
-    const link = (d.links || []).find(l => l.a_port === portID || l.b_port === portID);
-    try {
-      if (!to) { if (link) await assetDelete('link', link.id); }
-      else await assetSave('link', {id: link ? link.id : 0, a_port: portID, b_port: to});
-      close(); render();
-    } catch (err) { dlg.querySelector('#afMsg').textContent = err.message; }
-  };
-  dlg.showModal();
-}
-
-// ------------------------------------------------------- import and export
-// Pasting what a switch printed. The operator runs the command they
-// already run; there is nothing to install on the device, no SNMP
-// community to hand out and no credentials to keep anywhere. Nothing is
-// written until the plan has been shown and accepted, so a paste of the
-// wrong buffer is seen rather than suffered.
-function pastePanel(d) {
-  const opt = x => `<option value="${x.id}"${assetSel.device === x.id ? ' selected' : ''}>${esc(x.name)}</option>`;
-  return panel('c12', t('as.paste_title'), t('as.paste_sub'),
-    `<p class="muted" style="margin:0 0 10px;font-size:13px">${esc(t('as.paste_what'))}</p>
-     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-       <label for="asPasteDev" style="font-size:13px">${esc(t('as.paste_from'))}</label>
-       <select id="asPasteDev"><option value="0">${esc(t('as.none'))}</option>${(d.devices || []).map(opt).join('')}</select>
-     </div>
-     <textarea id="asPasteText" rows="7" class="pastebox" placeholder="${esc(t('as.paste_hint'))}"></textarea>
-     <div style="margin-top:8px;display:flex;gap:8px"><button class="btn" id="asPasteCheck">${esc(t('as.preview'))}</button>
-       <button class="btn primary" id="asPasteApply" disabled>${esc(t('as.apply'))}</button></div>
-     <div id="asPastePlan" style="margin-top:10px"></div>`);
-}
-
-// The ledger as a spreadsheet, in and out. Export, edit, import: the id
-// column ties each row back to its record, so a file that came from here
-// updates what it came from instead of doubling it.
-function csvPanel() {
-  const kinds = ['site', 'rack', 'device', 'port', 'circuit', 'subnet', 'addr'];
-  const opt = k => `<option value="${k}">${esc(t('as.kind_of_' + k))}</option>`;
-  return panel('c12', t('as.csv_title'), t('as.csv_sub'),
-    `<p class="muted" style="margin:0 0 10px;font-size:13px">${esc(t('as.csv_what'))}</p>
-     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-       <select id="asCsvKind">${kinds.map(opt).join('')}</select>
-       <button class="btn" id="asCsvOut">${esc(t('as.csv_export'))}</button>
-       <input type="file" id="asCsvFile" accept=".csv,text/csv" style="font-size:13px">
-     </div>
-     <div style="margin-top:8px;display:flex;gap:8px"><button class="btn" id="asCsvCheck" disabled>${esc(t('as.preview'))}</button>
-       <button class="btn primary" id="asCsvApply" disabled>${esc(t('as.apply'))}</button></div>
-     <div id="asCsvPlan" style="margin-top:10px"></div>`);
-}
-
-// A plan, as a table of what would happen. Errors are shown with the rest
-// rather than instead of it: one bad line in a spreadsheet does not make
-// the other fifty wrong.
-function planTable(plan) {
-  if (!plan) return '';
-  const rows = plan.changes || [];
-  if (!rows.length && !(plan.skipped || []).length) return `<div class="empty">${esc(t('as.plan_none'))}</div>`;
-  const row = c => `<tr><td class="muted">${esc(t('as.kind_of_' + c.kind) || c.kind)}</td>
-    <td><span class="st ${c.action === 'error' ? 'crit' : c.action === 'same' ? 'ok' : 'warn'}">${esc(t('as.act_' + c.action))}</span></td>
-    <td>${esc(c.what)}</td><td class="muted">${esc(c.error || '')}</td></tr>`;
-  const n = rows.filter(c => c.action !== 'error' && c.action !== 'same').length;
-  return `<p style="margin:0 0 8px;font-size:13px">${esc(t(plan.applied ? 'as.plan_done' : 'as.plan_would', {n: nf(n)}))}</p>
-    <table><tr><th></th><th></th><th>${esc(t('as.what'))}</th><th>${esc(t('as.detail'))}</th></tr>${rows.map(row).join('')}</table>
-    ${(plan.skipped || []).length ? `<p class="muted" style="margin:8px 0 0;font-size:12.5px">${esc(t('as.plan_skipped'))}: ${esc(plan.skipped.slice(0, 8).join(' | '))}</p>` : ''}`;
-}
-
-// wirePaste and wireCSV are called after the devices page is drawn.
-function wirePaste() {
-  const box = $('#asPasteText'), check = $('#asPasteCheck'), apply = $('#asPasteApply'), out = $('#asPastePlan');
-  if (!box) return;
-  const send = async applyIt => {
-    const body = {text: box.value, device_id: +$('#asPasteDev').value, apply: applyIt};
-    const res = await fetch('/api/assets/paste', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) { out.innerHTML = `<div class="empty">${esc(j.detail || j.error || res.statusText)}</div>`; apply.disabled = true; return null; }
-    out.innerHTML = planTable(j);
+// ------------------------------------------------------------ links for other platforms
+// One key per platform. Its links are the same URL with the address put
+// in, so an asset platform adds a "traffic" button beside each of its
+// service addresses without keeping a secret per address. The key is
+// shown once, when it is made or replaced.
+async function embedPanel(el) {
+  const d = await fetch('/api/embeds').then(r => r.json()).catch(() => null);
+  if (!d) { el.remove(); return; }
+  const links = d.links || [], reg = d.registered;
+  const when = x => x && !x.startsWith('0001') ? ago(Date.parse(x)) : t('emb.never');
+  const list = xs => (xs || []).length ? xs.map(x => `<code>${esc(x)}</code>`).join(' ') : `<span class="muted">${esc(t('emb.any'))}</span>`;
+  el.innerHTML = `<div class="ph"><h2>${esc(t('emb.title'))}</h2><span class="sub">${esc(t('emb.sub'))}</span>
+      ${reg ? `<button class="btn primary" id="embNew" style="margin-inline-start:auto">${esc(t('emb.new'))}</button>` : ''}</div>
+    ${reg ? '' : `<div class="verdict warn" style="margin:0 0 12px">${esc(t('emb.locked'))}</div>`}
+    ${location.protocol === 'http:' ? `<p class="embnote">${esc(t('emb.http_warn'))}</p>` : ''}
+    <div id="embKey"></div>
+    ${links.length ? `<table class="embt"><tr><th>${esc(t('emb.col_name'))}</th><th>${esc(t('emb.col_ranges'))}</th><th>${esc(t('emb.col_origins'))}</th><th>${esc(t('emb.col_clients'))}</th><th>${esc(t('emb.col_key'))}</th><th>${esc(t('emb.col_used'))}</th><th></th></tr>
+      ${links.map((x, i) => `<tr><td><b>${esc(x.name)}</b></td><td>${list(x.ranges)}</td><td>${list(x.origins)}</td><td>${list(x.clients)}</td>
+        <td class="nw"><code>${esc(x.prefix)}…</code>${x.old_until ? `<br><span class="muted" style="font-size:12px">${esc(t('emb.old_until', {t: new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'short'}).format(new Date(x.old_until))}))}</span>` : ''}</td>
+        <td class="nw">${esc(when(x.last_used))}<br><span class="muted" style="font-size:12px">${esc(t('emb.hits', {n: nf(x.hits || 0)}))}</span></td>
+        <td class="nw" style="text-align:end">${reg ? `<button class="btn sm" data-emed="${i}">${esc(t('emb.edit'))}</button> <button class="btn sm" data-emrot="${i}">${esc(t('emb.rotate'))}</button> ` : ''}<button class="btn sm danger" data-emdel="${i}">${esc(t('emb.revoke'))}</button></td></tr>`).join('')}</table>`
+      : `<div class="empty">${esc(t('emb.none'))}</div>`}
+    <p class="embnote">${esc(t('emb.rate', {n: nf(d.per_minute || 60)}))}</p>`;
+  const send = async (method, path, body) => {
+    const r = await fetch('/api/embeds' + path, {method, headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(j.error === 'not_registered' ? t('emb.locked') : (j.error || r.statusText)); return null; }
     return j;
   };
-  check.onclick = async () => { const j = await send(false); apply.disabled = !j || !(j.changes || []).some(c => c.action !== 'error' && c.action !== 'same'); };
-  apply.onclick = async () => { if (await send(true)) { apply.disabled = true; assetData = null; } };
-}
-
-function wireCSV() {
-  const kind = $('#asCsvKind'), file = $('#asCsvFile'), check = $('#asCsvCheck'), apply = $('#asCsvApply'), out = $('#asCsvPlan');
-  if (!kind) return;
-  let text = '';
-  $('#asCsvOut').onclick = () => { location.href = '/api/assets/csv?kind=' + encodeURIComponent(kind.value); };
-  file.onchange = async () => {
-    const f = file.files[0];
-    if (!f) { text = ''; check.disabled = true; return; }
-    text = await f.text();
-    check.disabled = false;
-    apply.disabled = true;
-    out.innerHTML = '';
+  // the key, shown this once, as the link the platform builds
+  const showKey = async key => {
+    await embedPanel(el);
+    const link = `${location.origin}/embed/vip?ip={VIP}&k=${key}`;
+    const frame = `<iframe src="${location.origin}/embed/vip?ip={VIP}&k=${key}" width="100%" height="460" style="border:0"></iframe>`;
+    $('#embKey').innerHTML = `<div class="embkey"><b>${esc(t('emb.key_once'))}</b>
+      <label>${esc(t('emb.link'))}</label><div class="embcopy"><code>${esc(link)}</code><button class="btn sm" data-copy="${esc(link)}">${esc(t('emb.copy'))}</button></div>
+      <label>${esc(t('emb.frame'))}</label><div class="embcopy"><code>${esc(frame)}</code><button class="btn sm" data-copy="${esc(frame)}">${esc(t('emb.copy'))}</button></div></div>`;
+    el.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy); toast(t('emb.copied')); } catch (e) { toast(b.dataset.copy); }
+    });
   };
-  const send = async applyIt => {
-    const res = await fetch('/api/assets/csv', {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({kind: kind.value, text, apply: applyIt})});
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) { out.innerHTML = `<div class="empty">${esc(j.detail || j.error || res.statusText)}</div>`; apply.disabled = true; return null; }
-    out.innerHTML = planTable(j);
-    return j;
+  const edit = async x => {
+    const v = await embedForm(x || {});
+    if (!v) return;
+    const j = await send('POST', '', {...v, id: x?.id || ''});
+    if (!j) return;
+    if (j.key) showKey(j.key); else embedPanel(el);
   };
-  check.onclick = async () => { const j = await send(false); apply.disabled = !j || !(j.changes || []).some(c => c.action !== 'error' && c.action !== 'same'); };
-  apply.onclick = async () => { if (await send(true)) { apply.disabled = true; assetData = null; } };
+  if ($('#embNew')) $('#embNew').onclick = () => edit(null);
+  el.querySelectorAll('[data-emed]').forEach(b => b.onclick = () => edit(links[+b.dataset.emed]));
+  el.querySelectorAll('[data-emrot]').forEach(b => b.onclick = async () => {
+    const x = links[+b.dataset.emrot];
+    if (!confirm(t('emb.rotate_confirm', {n: x.name}))) return;
+    const j = await send('POST', '/rotate', {id: x.id});
+    if (j?.key) showKey(j.key);
+  });
+  el.querySelectorAll('[data-emdel]').forEach(b => b.onclick = async () => {
+    const x = links[+b.dataset.emdel];
+    if (!confirm(t('emb.revoke_confirm', {n: x.name}))) return;
+    if (await send('DELETE', '?id=' + encodeURIComponent(x.id))) embedPanel(el);
+  });
 }
-
-// ------------------------------------------------------------- addresses
-views.ipam = async (el) => {
-  const d = await assetPage(el, 'nav.ipam', 'as.what_ipam');
-  if (!d) return;
-  const res = await fetch('/api/assets/ipam');
-  const ip = await res.json().catch(() => ({}));
-  if (!res.ok) { el.innerHTML = `<div class="grid">${panel('c12', t('nav.ipam'), '', `<div class="empty">${esc(ip.error || res.statusText)}</div>`)}</div>`; return; }
-  const subs = ip.subnets || [], conflicts = ip.conflicts || [];
-  if (assetSel.subnet && !subs.some(s => s.id === assetSel.subnet)) assetSel.subnet = 0;
-  const sel = subs.find(s => s.id === assetSel.subnet) || null;
-  const [addrs, free] = await Promise.all([
-    sel ? fetch(`/api/assets/addrs?subnet=${sel.id}`).then(r => r.json()).then(j => j.addrs || []) : Promise.resolve([]),
-    sel ? fetch(`/api/assets/free?subnet=${sel.id}&n=8`).then(r => r.json()).then(j => j.free || []) : Promise.resolve([]),
-  ]);
-  const fill = s => s.hosts > 0 ? Math.min(100, Math.round(s.assigned / s.hosts * 100)) : 0;
-  const subRow = s => `<tr${assetSel.subnet === s.id ? ' class="on"' : ''}><td><button class="lnk" data-sub="${s.id}">${esc(s.prefix)}</button>
-      ${s.hidden ? `<span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}
-      ${(s.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join('')}</td>
-    <td class="muted">${esc(s.name || '')}</td>
-    <td class="muted">${s.vlan ? nf(s.vlan) : ''}</td>
-    <td class="muted">${esc(d.by.site.get(s.site_id)?.name || '')}</td>
-    <td class="num">${nf(s.assigned)}${s.hosts >= 0 ? ' / ' + nf(s.hosts) : ''}</td>
-    <td style="width:22%">${s.hosts >= 0 ? bar(s.assigned, s.hosts, fill(s) > 90 ? 'var(--crit)' : fill(s) > 75 ? 'var(--warn)' : '') : `<span class="muted">${esc(t('as.too_large'))}</span>`}</td>
-    <td style="text-align:end">${adminOnly(`<button class="btn sm" data-esub="${s.id}">${esc(t('as.edit'))}</button>
-      <button class="btn sm danger" data-dsub="${s.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  const addrRow = a => `<tr><td><b>${esc(a.ip)}</b>${a.hidden ? ` <span class="tag">${esc(t('as.f_hidden'))}</span>` : ''}</td>
-    <td>${esc(a.name || '')}</td>
-    <td class="muted">${esc(t('as.kind_' + (a.kind || 'static')))}</td>
-    <td class="muted">${esc(d.by.device.get(a.device_id)?.name || '')}</td>
-    <td class="muted mono">${esc(a.mac || '')}</td>
-    <td>${(a.tags || []).map(tg => `<span class="tag">${esc(tg)}</span>`).join('')}</td>
-    <td style="text-align:end">${adminOnly(`<button class="btn sm" data-eaddr="${a.id}">${esc(t('as.edit'))}</button>
-      <button class="btn sm danger" data-daddr="${a.id}">${esc(t('as.delete'))}</button>`)}</td></tr>`;
-  el.innerHTML = `<div class="grid">
-    ${panel('c12', t('nav.ipam'), '', `<p class="muted" style="margin:0 0 12px;font-size:13px">${esc(t('as.what_ipam'))}</p>
-      <table><tr><th>${esc(t('as.f_prefix'))}</th><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_vlan'))}</th>
-        <th>${esc(t('as.f_site_id'))}</th><th class="num">${esc(t('as.assigned'))}</th><th></th><th></th></tr>
-      ${subs.map(subRow).join('') || `<tr><td colspan="7" class="empty">${esc(t('as.no_subnets'))}</td></tr>`}</table>
-      ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddSub">${esc(t('as.add_subnet'))}</button></div>`)}`)}
-    ${sel ? panel('c12', t('as.addrs_of', {x: sel.prefix}), sel.hosts >= 0 ? t('as.free_count', {n: nf(sel.free)}) : '',
-      `${free.length ? `<p class="freelist">${esc(t('as.next_free'))}: ${free.map(f => `<button class="lnk mono" data-free="${esc(f)}">${esc(f)}</button>`).join('')}</p>` : ''}
-       <table><tr><th>${esc(t('as.f_ip'))}</th><th>${esc(t('as.f_name'))}</th><th>${esc(t('as.f_kind'))}</th>
-         <th>${esc(t('as.f_device_id'))}</th><th>${esc(t('as.f_mac'))}</th><th>${esc(t('as.f_tags'))}</th><th></th></tr>
-       ${addrs.map(addrRow).join('') || `<tr><td colspan="7" class="empty">${esc(t('as.no_addrs'))}</td></tr>`}</table>
-       ${adminOnly(`<div style="margin-top:10px"><button class="btn" id="asAddAddr">${esc(t('as.add_addr'))}</button></div>`)}`) : ''}
-    ${conflicts.length ? panel('c12', t('as.conflicts'), t('as.conflicts_sub'),
-      `<table><tr><th>${esc(t('as.f_ip'))}</th><th>${esc(t('as.what'))}</th><th>${esc(t('as.detail'))}</th></tr>
-       ${conflicts.map(c => `<tr><td class="mono">${esc(c.ip)}</td><td>${esc(t('as.cf_' + c.kind))}</td><td class="muted">${esc(c.detail)}</td></tr>`).join('')}</table>`) : ''}
-  </div>`;
-  el.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => { assetSel.subnet = assetSel.subnet === +b.dataset.sub ? 0 : +b.dataset.sub; render(); });
-  el.querySelectorAll('[data-esub]').forEach(b => b.onclick = async () => { if (await assetEdit('subnet', {...subs.find(s => s.id === +b.dataset.esub)})) render(); });
-  el.querySelectorAll('[data-dsub]').forEach(b => b.onclick = async () => {
-    const s = subs.find(x => x.id === +b.dataset.dsub);
-    if (await assetRemove('subnet', s, s.prefix)) render();
+// embedForm asks for one platform's name and limits; one entry per line.
+function embedForm(x) {
+  return new Promise(resolve => {
+    const area = (k, v, hint, ph) => `<div class="afield afwide"><label for="emf_${k}">${esc(t('emb.f_' + k))}</label>
+      <textarea id="emf_${k}" name="${k}" rows="3" placeholder="${esc(ph)}">${esc((v || []).join('\n'))}</textarea><span class="afhint">${esc(t(hint))}</span></div>`;
+    const dlg = document.createElement('dialog');
+    dlg.className = 'aedit embdlg';
+    dlg.innerHTML = `<form method="dialog"><h2>${esc(x.name || t('emb.new'))}</h2><div class="aform">
+        <div class="afield afwide"><label for="emf_name">${esc(t('emb.f_name'))}</label><input id="emf_name" name="name" value="${esc(x.name || '')}" maxlength="80"></div>
+        ${area('ranges', x.ranges, 'emb.f_ranges_hint', '203.0.113.0/24\n198.51.100.10')}
+        ${area('origins', x.origins, 'emb.f_origins_hint', 'assets.example.com')}
+        ${area('clients', x.clients, 'emb.f_clients_hint', '192.0.2.0/24')}
+      </div><div class="afbtns"><button class="btn" value="cancel">${esc(t('rk.cancel'))}</button><button class="btn primary" value="ok">${esc(t('rk.save'))}</button></div></form>`;
+    document.body.appendChild(dlg);
+    dlg.addEventListener('close', () => {
+      const lines = n => dlg.querySelector(`[name="${n}"]`).value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      const out = {name: dlg.querySelector('[name="name"]').value.trim(), ranges: lines('ranges'), origins: lines('origins'), clients: lines('clients')};
+      const ok = dlg.returnValue === 'ok';
+      dlg.remove();
+      resolve(ok ? out : null);
+    });
+    dlg.showModal();
+    dlg.querySelector('input')?.focus();
   });
-  el.querySelectorAll('[data-eaddr]').forEach(b => b.onclick = async () => { if (await assetEdit('addr', {...addrs.find(a => a.id === +b.dataset.eaddr)})) render(); });
-  el.querySelectorAll('[data-daddr]').forEach(b => b.onclick = async () => {
-    const a = addrs.find(x => x.id === +b.dataset.daddr);
-    if (await assetRemove('addr', a, a.ip)) render();
-  });
-  el.querySelectorAll('[data-free]').forEach(b => b.onclick = async () => { if (await assetEdit('addr', {ip: b.dataset.free, kind: 'static'})) render(); });
-  const addS = $('#asAddSub'); if (addS) addS.onclick = async () => { if (await assetEdit('subnet', {})) render(); };
-  const addA = $('#asAddAddr'); if (addA) addA.onclick = async () => { if (await assetEdit('addr', {ip: free[0] || '', kind: 'static'})) render(); };
-};
+}
 
 // ------------------------------------------------------------ offline analysis
 // Capture files are imported into a database of their own; "Analyse" shows
@@ -2344,7 +2042,39 @@ views.threats = async (el) => {
     </div></div>
     ${panel('c12', t('thr.table'), t('thr.sub'), nLists === 0 ? `<div class="empty">${t('thr.no_lists')}</div>` : `<table><tr><th>${t('col.list')}</th><th>${t('col.client')}</th><th>${t('col.server')}</th><th>${t('col.country')}</th><th>${t('col.direction')}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.flows')}</th></tr>
       ${rows.map(r => { const [cc, dir] = r.extra.split('|'); const out = dir === '1'; return `<tr><td>${status(out ? 'bad' : 'warn', r.key)}</td><td>${ipCell(r.key2)}</td><td>${ipCell(r.key3)}</td><td>${cc ? V('country', cc, country(cc)) : ''}</td><td class="${out ? 'up' : ''}">${t('dir.' + dir)}</td><td class="num ${out ? 'up' : ''}">${fmtBytes(r.wire)}</td><td class="num">${nf(r.flows)}</td></tr>`; }).join('') || `<tr><td colspan="7" class="empty">${t('thr.none')}</td></tr>`}</table>`)}
+    ${panel('c12', t('thr.manage'), t('thr.manage_sub'), `<table><tr><th>${t('thr.col_name')}</th><th class="num">${t('thr.col_entries')}</th><th></th></tr>
+      ${Object.keys(lists).sort().map(n => `<tr><td>${esc(n)}</td><td class="num">${nf(lists[n])}</td><td style="text-align:end">${admOnly(`<button class="btn sm danger" data-thrm="${esc(n)}">${esc(t('thr.remove'))}</button>`)}</td></tr>`).join('') || `<tr><td colspan="3" class="empty">${esc(t('thr.no_lists'))}</td></tr>`}</table>
+      ${admOnly(`<h3 class="subhead">${esc(t('thr.import'))}</h3><div class="thrimp">
+        <input id="thrName" maxlength="40" placeholder="${esc(t('thr.name_ph'))}">
+        <label class="btn" style="cursor:pointer">${esc(t('thr.file'))}<input type="file" id="thrFile" accept=".txt,.csv,.netset,.list,text/plain" hidden></label>
+        <span id="thrFileName" class="muted" style="font-size:12.5px"></span></div>
+        <textarea class="inv" id="thrText" rows="5" spellcheck="false" placeholder="${esc(t('thr.paste_ph'))}"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="primary" id="thrGo">${esc(t('thr.import_btn'))}</button><span id="thrMsg" style="font-size:13px"></span></div>`)}`)}
   </div>`;
+  el.querySelectorAll('[data-thrm]').forEach(b => b.onclick = async () => {
+    if (!confirm(t('thr.confirm_rm', {x: b.dataset.thrm}))) return;
+    const r = await fetch('/api/threats/lists?name=' + encodeURIComponent(b.dataset.thrm), {method: 'DELETE'});
+    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || r.statusText); return; }
+    render();
+  });
+  const file = $('#thrFile'), go = $('#thrGo');
+  if (!go) return;
+  let fromFile = '';
+  file.onchange = async () => {
+    const f = file.files[0]; if (!f) return;
+    fromFile = await f.text();
+    $('#thrFileName').textContent = f.name;
+    // a list is usually called what its file is called
+    if (!$('#thrName').value) $('#thrName').value = f.name.replace(/\.[^.]*$/, '').replace(/[^A-Za-z0-9._-]+/g, '-').slice(0, 40);
+  };
+  go.onclick = async () => {
+    const msg = $('#thrMsg'), text = $('#thrText').value.trim() || fromFile;
+    const r = await fetch('/api/threats/lists', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: $('#thrName').value.trim(), text})});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { msg.style.color = 'var(--crit)'; msg.textContent = j.error || r.statusText; return; }
+    toast(t('thr.imported', {n: nf(j.entries), x: j.name}));
+    render();
+  };
 };
 
 const REC_COLS = [['time', 1], ['client', 1], ['cport', 1], ['server', 1], ['port', 1], ['proto', 1], ['app', 1], ['country', 1], ['encap', 1], ['traffic', 1], ['packets', 1], ['device', 1],
@@ -2493,92 +2223,6 @@ views.ifaces = async (el) => {
 };
 
 // ------------------------------------------------------ 95th percentile
-// The bill a carrier would send: sort the five-minute samples of a period,
-// discard the top five per cent, charge the highest that is left. The
-// period is worked out here rather than on the server, because this is
-// where the user's time zone is known — a calendar month means the
-// customer's midnights, not UTC's.
-// last month by default, this month while last month has no counter
-// samples yet (a new installation)
-let billSel = {p: 'last', from: '', to: '', auto: true};
-const billPeriod = () => {
-  const now = new Date(), mStart = off => new Date(now.getFullYear(), now.getMonth() + off, 1);
-  if (billSel.p === 'this') return [mStart(0), now];
-  if (billSel.p === 'last') return [mStart(-1), mStart(0)];
-  if (billSel.p === '30d') return [new Date(now - 30 * 864e5), now];
-  // Both dates the user typed are days they mean to include, so the end is
-  // the midnight after the one they picked.
-  const f = new Date(billSel.from + 'T00:00'), t = new Date(billSel.to + 'T00:00');
-  if (isNaN(f) || isNaN(t) || t < f) return [mStart(-1), mStart(0)];
-  return [f, new Date(t.getTime() + 864e5)];
-};
-views.billing = async (el) => {
-  const [from, to] = billPeriod();
-  const [d, ifs] = await Promise.all([
-    api('billing', {from: +from, to: +to}).catch(e => ({error: e.message || String(e)})),
-    api('ifaces').catch(() => ({ifaces: []})),
-  ]);
-  const rows = d.bills || [];
-  if (billSel.auto) {
-    billSel = {...billSel, auto: false};
-    if (billSel.p === 'last' && !d.error && !rows.some(b => b.buckets)) { billSel = {...billSel, p: 'this'}; return views.billing(el); }
-  }
-  const ikey = f => f.exporter + '/' + f.ifindex;
-  // A device reports every interface it has. Which of them somebody pays a
-  // carrier for is not something that can be worked out from the traffic,
-  // so it is marked by hand and kept on the interface's line in the names
-  // file, beside its name and its speed.
-  const cand = (ifs.ifaces || []).filter(f => f.ifindex && !f.billed);
-  const markIf = async (f, billed) => {
-    const res = await fetch('/api/iface', {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({exporter: f.exporter, ifindex: f.ifindex, name: f.name || '', tag: f.tag || '', default: !!f.default, billed})});
-    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || res.statusText); return; }
-    ifList = null; render();
-  };
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-  const day = x => new Date(x).toLocaleDateString(LANG);
-  const iso = x => new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  const opt = (v, k) => `<option value="${v}" ${billSel.p === v ? 'selected' : ''}>${esc(t(k))}</option>`;
-  const picker = `<div class="billbar">
-    <label>${esc(t('bill.period'))} <select id="billP">${opt('this', 'bill.this_month')}${opt('last', 'bill.last_month')}${opt('30d', 'bill.last30')}${opt('custom', 'bill.custom')}</select></label>
-    <span id="billC" ${billSel.p === 'custom' ? '' : 'hidden'}><input type="date" id="billF" value="${esc(billSel.from || iso(from))}"> – <input type="date" id="billT" value="${esc(billSel.to || iso(new Date(to.getTime() - 864e5)))}"></span>
-    <span class="muted">${esc(day(from))} – ${esc(day(to.getTime() - 1))} · ${esc(zone)}</span>
-    ${admOnly(cand.length ? `<span style="margin-inline-start:auto"><select id="billAdd"><option value="">${esc(t('bill.add'))}</option>${
-      cand.map(f => `<option value="${esc(ikey(f))}">${esc((f.name || t('bill.ifindex', {n: f.ifindex})) + ' · ' + (f.device || f.exporter))}</option>`).join('')}</select></span>` : '')}</div>
-    <p class="muted" style="margin:0 0 10px;font-size:13px">${esc(d.marked ? t('bill.marked', {n: nf(d.marked)}) : t('bill.all_shown'))}</p>`;
-  const body = d.error ? `<div class="empty">${esc(d.error)}</div>`
-    : !rows.length ? `<div class="empty">${esc(t('bill.empty'))}</div>`
-    : `<table><tr><th>${t('bill.iface')}</th><th class="num">${t('bill.billed')}</th><th class="num">${t('if.in')} 95</th><th class="num">${t('if.out')} 95</th><th class="num">${t('bill.peak')}</th><th class="num">${t('bill.avg')}</th><th class="num">${t('bill.coverage')}</th><th></th></tr>
-      ${rows.map(b => {
-        const nm = b.name || t('bill.ifindex', {n: b.ifindex}), dev = b.device || b.exporter;
-        const cov = b.coverage, low = cov < 0.95;
-        const head = `<td>${esc(nm)}<br><span class="muted" style="font-size:12.5px">${esc(dev)} · ${b.ifindex}</span></td>`;
-        if (!b.buckets) return `<tr>${head}<td colspan="6" class="muted">${esc(t('bill.nodata'))}</td>
-          <td class="nw" style="text-align:end">${admOnly(`<button class="btn" data-unbill="${esc(b.exporter + '/' + b.ifindex)}">${t('bill.remove')}</button>`)}</td></tr>`;
-        return `<tr><td>${esc(nm)}<br><span class="muted" style="font-size:12.5px">${esc(dev)} · ${b.ifindex}</span></td>
-          <td class="num"><b>${esc(fmtBps(b.billed))}</b><br><span class="muted" style="font-size:12.5px">${esc(t(b.dir === 'out' ? 'if.out' : 'if.in'))}</span></td>
-          <td class="num">${esc(fmtBps(b.in95))}</td><td class="num">${esc(fmtBps(b.out95))}</td>
-          <td class="num">${esc(fmtBps(Math.max(b.in_max, b.out_max)))}</td>
-          <td class="num">${esc(fmtBps(Math.max(b.in_avg, b.out_avg)))}</td>
-          <td class="num"${low ? ' style="color:var(--warn)"' : ''}>${esc(nf(cov * 100, 1))}%<br><span class="muted" style="font-size:12.5px">${esc(nf(b.buckets))}/${esc(nf(b.possible))}</span></td>
-          <td class="nw" style="text-align:end">${b.marked ? admOnly(`<button class="btn" data-unbill="${esc(b.exporter + '/' + b.ifindex)}">${t('bill.remove')}</button>`) : ''}</td></tr>`;
-      }).join('')}</table>
-      <p class="muted" style="margin:12px 0 0;font-size:13px">${esc(t('bill.gap_note'))}</p>`;
-  el.innerHTML = `<div class="grid">${panel('c12', t('bill.title'), t('bill.sub'), picker + body)}
-    ${panel('c12', t('bill.how'), '', `<p class="muted" style="margin:0;font-size:13px">${esc(t('bill.how_note'))}<br>${esc(t('bill.retention', {n: nf(d.retention_days || 0)}))}</p>`)}</div>`;
-  const sel = $('#billP');
-  sel.onchange = () => { billSel = {...billSel, p: sel.value}; render(); };
-  const f = $('#billF'), tt = $('#billT');
-  if (f) f.onchange = tt.onchange = () => { billSel = {p: 'custom', from: f.value, to: tt.value}; render(); };
-  const add = $('#billAdd');
-  if (add) add.onchange = () => { const f = (ifs.ifaces || []).find(x => ikey(x) === add.value); if (f) markIf(f, true); };
-  el.querySelectorAll('[data-unbill]').forEach(b => b.onclick = () => {
-    const k = b.dataset.unbill, i = k.lastIndexOf('/');
-    const f = (ifs.ifaces || []).find(x => ikey(x) === k) || {exporter: k.slice(0, i), ifindex: +k.slice(i + 1)};
-    markIf(f, false);
-  });
-};
-
 views.sources = async (el) => {
   const [d, gd] = await Promise.all([api('sources'), api('geo').catch(() => ({sources: []}))]);
   const blocked = d.blocked || [];
@@ -2623,12 +2267,14 @@ views.sources = async (el) => {
       ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
     ${admOnly(panel('c12', t('lic.install'), t('lic.install_sub'), `<div class="licbox">
+      ${lic?.registered ? `<p style="margin:0 0 4px"><b>${esc(t('lic.who'))}: ${esc(lic.customer || '—')}</b> <span class="tag">${esc(licenseeText(lic))}</span>${lic.tier ? ` <span class="tag">${esc(lic.tier)}</span>` : ''}</p>` : ''}
       <p class="muted" style="margin:0 0 8px;font-size:13px">${esc(t('lic.id', {id: lic?.installation_id || '—'}))}</p>
       <textarea class="inv" id="licText" spellcheck="false" placeholder="${esc(t('lic.paste'))}"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <label class="btn" style="cursor:pointer"><input type="file" id="licFile" accept=".json,application/json" hidden>${t('lic.choose')}</label>
         <button class="primary" id="licSave">${t('lic.install_btn')}</button>
         <span id="licMsg" style="font-size:13px"></span></div></div>`))}
+    ${admOnly('<div class="panel c12" id="embPanel"></div>')}
     ${admOnly(blocked.length ? panel('c12', t('blk.title'), t('blk.sub'), `<table><tr><th>${t('blk.col_addr')}</th><th>${t('blk.col_since')}</th><th class="num">${t('blk.col_dropped')}</th><th>${t('blk.col_note')}</th><th></th></tr>
       ${blocked.map(b => `<tr><td class="nw"><code>${esc(b.address)}</code></td>
         <td class="nw muted">${b.since ? esc(new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'short'}).format(new Date(b.since))) : ''}</td>
@@ -2666,6 +2312,7 @@ views.sources = async (el) => {
       loadStatus(); // the badge, the footer and the watermark all follow from it
     };
   }
+  if (adm()) embedPanel($('#embPanel'));
   const geoMsg = (ok, text) => { const m = $('#geoMsg'); m.style.color = ok === null ? '' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
   if (adm()) {
   const reblock = async (method, path, okMsg) => {
@@ -2736,9 +2383,14 @@ views.sources = async (el) => {
 // recording a rack, and it is the one page there that an unregistered
 // installation keeps: a flow analyser that cannot tell you which address is
 // which is of little use, and that is not a feature to sell.
+// The inventory page has two tabs: the inventory itself and where the
+// devices stand.
+const invTabs = cur => `<div class="seg invtabs" role="tablist">${[['names', 'src.names'], ['racks', 'nav.racks']].map(([v, k]) =>
+  `<button role="tab" data-invtab="${v}" aria-selected="${cur === v}" aria-pressed="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
+document.addEventListener('click', e => { const b = e.target.closest('[data-invtab]'); if (b) go(b.dataset.invtab); });
 views.names = async (el) => {
   const inv = await api('inventory').catch(() => ({text: ''}));
-  el.innerHTML = `<div class="grid">
+  el.innerHTML = `${invTabs('names')}<div class="grid">
     ${panel('c12', t('src.names'), t('src.names_sub'), `${admOnly(`<div class="nmform" id="nmForm">
         <select id="nmK">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
         <input id="nmA" autocomplete="off" spellcheck="false"><input id="nmI" autocomplete="off" inputmode="numeric" placeholder="${esc(t('nm.ifindex'))}" hidden>
@@ -2888,20 +2540,28 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'devices', 'ipam', 'billing', 'names']);
+const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'names']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
-  $('#refresh').hidden = off || $('#range').hidden;
+  $('#refresh').hidden = off || $('#range').hidden || !REFRESH_MS[state.r];
+  refreshLabel();
   $('#share').hidden = off;
+}
+// The label says the beat this range actually redraws on, rather than one
+// number for every range; a range that ends in the past has no beat and
+// the label is hidden with it.
+function refreshLabel() {
+  const beat = REFRESH_MS[state.r];
+  $('#refresh').textContent = beat ? t('top.refresh', {n: beat / 1000}) : '';
 }
 // The sandbox bar replaces the time range while capture files are shown.
 function renderSB() {
-  const on = inSB() && !['ifaces', 'sources', 'racks', 'devices', 'ipam'].includes(state.v);
+  const on = inSB() && !['ifaces', 'sources', 'racks'].includes(state.v);
   $('#sbbar').hidden = !on;
   $('#range').hidden = on;
   $('#refresh').hidden = on;
-  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources], #nav [data-v=cleanup], #nav .navgrp').forEach(b => b.hidden = inSB() || offlineMode);
+  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources], #nav [data-v=cleanup], #nav [data-v=racks], #nav [data-v=names]').forEach(b => b.hidden = inSB() || offlineMode);
   if (!on) return;
   const r = sbRange(), span = r.to - r.from;
   const df = new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}), tf = new Intl.DateTimeFormat(LANG, {timeStyle: 'short'});
@@ -2934,6 +2594,8 @@ async function loadSB() {
   if (offlineMode && sbInfo.ready) state.ds = 'sb';  // nothing else to show
 }
 
+// When the page on screen was last drawn, for the refresh beat below.
+let drawnAt = 0;
 async function render(push) {
   // the default password of a new installation is changed before anything else
   if (me?.must_change) state.v = 'account';
@@ -2943,14 +2605,11 @@ async function render(push) {
   renderFilters();
   renderFbar();
   writeHash(push);
-  $('#title').textContent = t('nav.' + state.v);  // the detail view refines it
+  // device locations is a tab of the inventory page, and lights its entry
+  const navV = state.v === 'racks' ? 'names' : state.v;
+  $('#title').textContent = t('nav.' + navV);  // the detail view refines it
   document.title = t('nav.' + state.v) + ' · traffic66';
-  document.querySelectorAll('#nav button').forEach(b => b.dataset.v === state.v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-  // a group whose page is open says so even when it is folded away
-  document.querySelectorAll('#nav .navgrp').forEach(g => {
-    const inside = [...g.querySelectorAll('[data-v]')].some(b => b.dataset.v === state.v) || (g.id === 'grpAssets' && ASSET_VIEWS.has(state.v));
-    g.querySelector('.grphead').dataset.in = inside ? '1' : '0';
-  });
+  document.querySelectorAll('#nav button').forEach(b => b.dataset.v === navV ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   renderRange();
   await renderIfsel();
   writeHash(false);
@@ -2962,10 +2621,16 @@ async function render(push) {
   } catch (e) {
     if (e.message !== 'login' && seq === loadSeq) el.innerHTML = errorBox(e);
   }
-  if (seq === loadSeq) resolveNames();
+  if (seq === loadSeq) { drawnAt = Date.now(); resolveNames(); }
 }
 function go(v) { state.v = v; render(true); window.scrollTo(0, 0); }
 
+// What a licence says it is made out to: a person, an organisation, or —
+// for one issued before licences carried it — nothing, which is said as
+// "not stated" rather than guessed at.
+function licenseeText(L) {
+  return t(L.licensee === 'individual' ? 'lic.as_ind' : L.licensee === 'organization' ? 'lic.as_org' : 'lic.as_unknown');
+}
 async function loadStatus() {
   try {
     const res = await fetch('/api/status');
@@ -2986,31 +2651,39 @@ async function loadStatus() {
       else if (L.kind === 'expired') head = t('lic.exp', {c: L.customer, d: L.expires});
       else head = t('lic.unreg');
       const tail = L.registered ? '' : `<br>${esc(t('lic.free'))} ${esc(t('lic.mark'))} `;
-      $('#lic').innerHTML = `<b>${esc(head)}</b>${tail ? tail : ' '}${id}`;
-      $('#lic').className = 'lic ' + L.kind; $('#lic').hidden = false;
+      // registered to whom, and as what: a licence bought by one person is
+      // not a company's, and the footer is where a screenshot shows it
+      const as = L.registered ? ` <span class="tag">${esc(licenseeText(L))}</span>` : '';
+      $('#licText').innerHTML = `<b>${esc(head)}</b>${as}${tail ? tail : ' '}${id}`;
+      $('#lic').className = 'lic ' + L.kind; $('#licText').hidden = false;
 
       marked = !!L.watermark;
       markNotice = L.notice || '';
       applyMark();
-      const b = $('#licBadge');
-      b.textContent = L.registered ? (L.days < 0 ? t('lic.badge_ok') : t('lic.badge_days', {n: L.days})) : t('lic.badge_get');
-      b.className = 'licbadge ' + L.kind;
-      b.title = head;
-      b.hidden = false;
     }
     $('#verNo').textContent = 'v' + s.version + (s.build && s.build !== 'official' ? ' · ' + s.build : '');
     if (s.now) clockSkew = s.now - Date.now();
-    $('#self').hidden = offlineMode;  // nothing is collected
-    const live = s.records_per_sec > 0.2;
-    $('#self').innerHTML = `<div class="live ${live ? 'ok' : 'idle'}"><i></i>${t(live ? 'self.receiving' : 'self.idle')}</div>
-      <span class="k">${t('self.ingest')}</span><span class="val">${esc(t('self.per_sec', {n: nf(s.records_per_sec, s.records_per_sec < 10 ? 1 : 0)}))}</span>
-      <span class="k">${t('self.dropped')}</span><span class="val" style="${s.dropped ? 'color:var(--crit)' : ''}">${nf(s.dropped)}</span>
-      <span class="k">${t('self.disk')}</span><span class="val">${fmtBytes(s.disk_bytes)}</span>
-      <span class="k">${t('self.free')}</span><span class="val" ${s.disk_need > s.disk_free ? 'style="color:var(--crit)"' : ''} title="${esc(s.disk_need >= 0 ? t('self.need', {d: nf(s.retention_days), n: fmtBytes(s.disk_need)}) : t('self.need_later', {d: nf(s.retention_days)}))}">${fmtBytes(s.disk_free)}</span>
-      ${s.write_errors ? `<span class="k" style="color:var(--crit)">!</span><span class="val" style="color:var(--crit)" title="${esc(s.last_error)}">${nf(s.write_errors)}</span>` : ''}`;
+    selfStatus = s;
+    fillSelf();
     $('#srcBadge').hidden = !s.source_warnings; $('#srcBadge').textContent = s.source_warnings;
     $('#findBadge').hidden = !s.findings_open; $('#findBadge').textContent = s.findings_open;
   } catch (e) {}
+}
+
+// How collection is going, at the foot of the overview: whether records
+// are arriving, how fast, what was dropped and how the disk stands.
+let selfStatus = null;
+function fillSelf() {
+  const el = $('#self'), s = selfStatus;
+  if (!el || !s) return;
+  const live = s.records_per_sec > 0.2;
+  const it = (k, v, attrs = '') => `<div class="it"><span class="k">${k}</span><span class="val" ${attrs}>${v}</span></div>`;
+  el.innerHTML = `<div class="live ${live ? 'ok' : 'idle'}"><i></i>${t(live ? 'self.receiving' : 'self.idle')}</div>
+    ${it(t('self.ingest'), esc(t('self.per_sec', {n: nf(s.records_per_sec, s.records_per_sec < 10 ? 1 : 0)})))}
+    ${it(t('self.dropped'), nf(s.dropped), s.dropped ? 'style="color:var(--crit)"' : '')}
+    ${it(t('self.disk'), fmtBytes(s.disk_bytes))}
+    ${it(t('self.free'), fmtBytes(s.disk_free), `${s.disk_need > s.disk_free ? 'style="color:var(--crit)"' : ''} title="${esc(s.disk_need >= 0 ? t('self.need', {d: nf(s.retention_days), n: fmtBytes(s.disk_need)}) : t('self.need_later', {d: nf(s.retention_days)}))}"`)}
+    ${s.write_errors ? it('!', nf(s.write_errors), `style="color:var(--crit)" title="${esc(s.last_error)}"`) : ''}`;
 }
 
 function showLogin() {
@@ -3064,13 +2737,24 @@ function startTimers() {
     if (document.activeElement?.closest?.('.cols, #recPer')) return;
     render();
   }, 5000);
+  // Every live page, on a beat that follows the range. The old rule named
+  // four pages and two ranges, which left the traffic, Top 66, flow paths,
+  // geo and interface pages standing still on a 6-hour or a 24-hour range
+  // until somebody clicked something: the records were arriving and the
+  // numbers were right, and the page was simply old.
+  //
+  // The beat is checked every few seconds and a page is redrawn once what
+  // is on it is older than its range's beat, so changing the range takes
+  // effect at once instead of at the end of a cycle somebody cannot see.
   setInterval(() => {
     // not while something is being typed or picked (the names form, filters)
     if (document.hidden || pop.style.display === 'block' || ['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName)) return;
-    if (state.v === 'records' && state.rl) return;
-    if (state.v === 'help') return;
-    if (state.v === 'sources' || state.v === 'records' || state.v === 'overview' || state.v === 'findings' || state.r === '15m' || state.r === '1h') render();
-  }, 30000);
+    if (state.v === 'records' && state.rl) return;  // its own, faster beat
+    if (!LIVE_VIEWS.has(state.v)) return;
+    const beat = REFRESH_MS[state.r];
+    if (!beat || Date.now() - drawnAt < beat) return;  // a range in the past never moves
+    render();
+  }, 5000);
 }
 $('#logout').onclick = async () => { await fetch('/api/logout', {method: 'POST'}); me = null; showLogin(); };
 $('#acct').onclick = () => go('account');
@@ -3093,18 +2777,11 @@ async function init() {
   };
   document.addEventListener('click', e => { const p = $('#rangePop'); if (p && !p.hidden && !e.target.closest('#rangePop')) p.hidden = true; });
   $('#nav').onclick = e => {
-    const g = e.target.closest('[data-grp]');
-    if (g) { const open = g.getAttribute('aria-expanded') !== 'true'; g.setAttribute('aria-expanded', open); try { localStorage.setItem('grp.' + g.dataset.grp, open ? '1' : '0'); } catch (_) {} return; }
     const b = e.target.closest('[data-v]');
     if (!b) return;
     if (b.dataset.v === 'records') state.rl = true;
     go(b.dataset.v);
   };
-  document.querySelectorAll('#nav [data-grp]').forEach(g => {
-    let open = '1';
-    try { open = localStorage.getItem('grp.' + g.dataset.grp) ?? '1'; } catch (_) {}
-    g.setAttribute('aria-expanded', open === '1');
-  });
   $('#share').onclick = () => { navigator.clipboard?.writeText(location.href).then(() => toast(t('top.copied')), () => toast(location.href)); };
   document.addEventListener('click', e => { if (!e.target.closest('.cols')) { const m = $('#colMenu'); if (m) m.hidden = true; } });
   readHash();

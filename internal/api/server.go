@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/githubflyideas/traffic66/internal/assets"
 	"github.com/githubflyideas/traffic66/internal/auth"
 	"github.com/githubflyideas/traffic66/internal/collector"
 	"github.com/githubflyideas/traffic66/internal/detect"
@@ -29,6 +28,9 @@ import (
 	"github.com/githubflyideas/traffic66/internal/sandbox"
 	"github.com/githubflyideas/traffic66/internal/store"
 )
+
+// extRoutes add routes from parts that are compiled in separately.
+var extRoutes []func(s *Server, mux *http.ServeMux, api, adminAPI func(string, http.HandlerFunc))
 
 // Server wires the API together.
 type Server struct {
@@ -43,7 +45,6 @@ type Server struct {
 	SB      *sandbox.Sandbox // offline analysis of capture files
 	Offline bool             // started on capture files (traffic66 file.pcap): no live data
 	License *license.Checker // trial or licence state for the page footer
-	Assets  *assets.Store    // the asset ledger; nil when it could not be opened
 	// AutoLogin is a one-time token: /auto?t=<it> signs the browser in once.
 	AutoLogin string
 	Static    fs.FS
@@ -154,9 +155,9 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/threats", s.data((*Server).threats))
 	api("GET /api/rings", s.data((*Server).rings))
 	api("GET /api/geolines", s.data((*Server).geoLines))
+	api("GET /api/report", s.data((*Server).report))
 	api("GET /api/ifaces", s.ifaces)
 	api("GET /api/recon", s.recon)
-	api("GET /api/billing", s.billing)
 	api("GET /api/sources", s.sources)
 	adminAPI("POST /api/sources/block", s.postBlock)
 	adminAPI("DELETE /api/sources/block", s.deleteBlock)
@@ -164,34 +165,29 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/inventory", s.getInventory)
 	adminAPI("POST /api/inventory", s.putInventory)
 	adminAPI("POST /api/iface", s.putIface)
+	api("GET /api/racks", s.getRacks)
+	adminAPI("POST /api/threats/lists", s.putThreatList)
+	adminAPI("DELETE /api/threats/lists", s.deleteThreatList)
+	adminAPI("POST /api/racks/device", s.putRackDevice)
+	adminAPI("POST /api/racks/iface", s.putRackIface)
 	api("GET /api/findings", s.data((*Server).findings))
 	api("POST /api/findings", s.data((*Server).setFindings))
-	api("GET /api/assets", s.getAssets)
-	api("GET /api/assets/ipam", s.getIPAM)
-	api("GET /api/assets/addrs", s.getAddrs)
-	api("GET /api/assets/free", s.getFreeAddrs)
-	api("GET /api/assets/csv", s.getAssetCSV)
-	api("POST /api/assets/csv", s.postAssetCSV)
-	api("POST /api/assets/paste", s.postPaste)
-	api("POST /api/assets/{kind}", s.putAsset)
-	api("DELETE /api/assets/{kind}", s.deleteAsset)
 	api("GET /api/cleanup", s.getCleanup)
 	adminAPI("POST /api/cleanup", s.postCleanup)
-	api("GET /api/cleanup/iface", s.getCleanupIface)
-	adminAPI("POST /api/cleanup/iface", s.postCleanupIface)
 	api("GET /api/sandbox", s.getSandbox)
 	api("POST /api/sandbox/files", s.putSandboxFile)
 	adminAPI("DELETE /api/sandbox/files", s.deleteSandbox)
 	api("POST /api/sandbox/active", s.putSandboxActive)
 	adminAPI("POST /api/license", s.putLicense)
-	api("GET /api/sponsor", s.getSponsor)
-	api("GET /api/sponsor/img/{name}", s.getSponsorImg)
 	adminAPI("POST /api/logo", s.putLogo)
 	adminAPI("DELETE /api/logo", s.deleteLogo)
 	api("GET /api/geo", s.getGeo)
 	adminAPI("POST /api/geo", s.putGeo)
 	adminAPI("DELETE /api/geo", s.deleteGeo)
 	adminAPI("POST /api/geo/dbip", s.updateDBIP)
+	for _, f := range extRoutes {
+		f(s, mux, api, adminAPI)
+	}
 	static := http.FileServer(http.FS(s.Static))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")

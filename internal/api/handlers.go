@@ -394,7 +394,6 @@ func (s *Server) ifaces(w http.ResponseWriter, r *http.Request) {
 		Name    string  `json:"name"`
 		Tag     string  `json:"tag,omitempty"`
 		Default bool    `json:"default,omitempty"`
-		Billed  bool    `json:"billed,omitempty"`
 		Device  string  `json:"device"`
 		InDev   float64 `json:"in_dev"`
 		OutDev  float64 `json:"out_dev"`
@@ -412,7 +411,7 @@ func (s *Server) ifaces(w http.ResponseWriter, r *http.Request) {
 		if a, err := netip.ParseAddr(f.Exporter); err == nil {
 			it.Device = s.Inv.Device(a)
 			ifc := s.Inv.Iface(a, f.IfIndex)
-			it.Name, it.Tag, it.Default, it.Billed = ifc.Name, ifc.Tag, ifc.Default, ifc.Billed
+			it.Name, it.Tag, it.Default = ifc.Name, ifc.Tag, ifc.Default
 			if it.Speed == 0 {
 				it.Speed = ifc.Speed
 			}
@@ -771,7 +770,6 @@ func (s *Server) putIface(w http.ResponseWriter, r *http.Request) {
 		Name     string `json:"name"`
 		Tag      string `json:"tag"`
 		Default  bool   `json:"default"`
-		Billed   bool   `json:"billed"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&in); err != nil {
 		fail(w, err)
@@ -782,7 +780,7 @@ func (s *Server) putIface(w http.ResponseWriter, r *http.Request) {
 		fail(w, errors.New("bad interface"))
 		return
 	}
-	if err := s.Inv.SetIface(a, in.IfIndex, in.Name, in.Tag, in.Default, in.Billed); err != nil {
+	if err := s.Inv.SetIface(a, in.IfIndex, in.Name, in.Tag, in.Default); err != nil {
 		fail(w, err)
 		return
 	}
