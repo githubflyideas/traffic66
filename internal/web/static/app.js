@@ -315,7 +315,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'racks', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 
 // How often a page redraws itself, by range. It follows the width of the
@@ -335,6 +335,8 @@ const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'b
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
   if (VIEWS.includes(p.get('v'))) state.v = p.get('v');
+  // device locations left the inventory; old links land on it
+  if (['racks', 'ledger'].includes(p.get('v'))) state.v = 'names';
   if (RANGES.includes(p.get('r'))) state.r = p.get('r');
   if (p.get('r') === 'custom' && +p.get('from') > 0 && +p.get('to') > +p.get('from')) { state.r = 'custom'; state.cf = +p.get('from'); state.ct = +p.get('to'); }
   if (p.get('dim')) state.dim = p.get('dim');
@@ -1700,116 +1702,6 @@ let clDone = '';
 const adm = () => !!(me && me.admin);
 const admOnly = html => adm() ? html : '';
 
-// ------------------------------------------------------- rooms and racks
-// A picture of where the flows come from: room, rack, device, port, and
-// the carrier and circuit the port goes out to. It is written down once,
-// beside the names in the inventory file, and nothing is looked up in it.
-// Devices and ports come from the flows themselves; only the places and
-// the carriers are typed in.
-const RK_SHOWN = 8;  // ports listed before the rest fold away
-// one colour per carrier, the same on every device, so the eye finds all
-// of one carrier's lines at once
-const rkHue = s => { let h = 0; for (const c of s) h = (h * 31 + c.codePointAt(0)) % 360; return h; };
-const rkISP = f => f.isp || f.circuit
-  ? `<span class="rkisp" style="--h:${rkHue(f.isp || f.circuit)}">${esc(f.isp || '—')}</span>`
-  : `<span class="rkisp none">${esc(t('rk.no_carrier'))}</span>`;
-views.racks = async (el) => {
-  const res = await fetch('/api/racks');
-  if (res.status === 401) { showLogin(); return; }
-  const d = await res.json().catch(() => ({}));
-  const devs = d.devices || [], can = !!d.admin;
-  if (!devs.length) { el.innerHTML = `${invTabs('racks')}<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="empty">${esc(t('rk.empty'))}</div>`)}</div>`; return; }
-  const rooms = new Map();
-  devs.forEach((x, i) => {
-    const room = x.room || '', rack = x.rack || '';
-    if (!rooms.has(room)) rooms.set(room, new Map());
-    const racks = rooms.get(room);
-    if (!racks.has(rack)) racks.set(rack, []);
-    racks.get(rack).push(i);
-  });
-  // rooms in name order, the devices nobody has placed yet last
-  const byName = (a, b) => (a === '') - (b === '') || a.localeCompare(b, LANG, {numeric: true});
-  const order = [...rooms.keys()].sort(byName);
-  const ports = devs.flatMap(x => x.ifaces || []);
-  const sum = t('rk.summary', {r: nf(order.filter(Boolean).length), k: nf([...rooms.values()].reduce((n, m) => n + [...m.keys()].filter(Boolean).length, 0)),
-    d: nf(devs.length), p: nf(ports.filter(f => f.isp || f.circuit).length), n: nf(ports.length)});
-  const port = f => `<div class="rkif">
-      <span class="rkport"><b>${esc(f.name || t('rk.ifindex', {n: f.ifindex}))}</b><span class="muted">#${f.ifindex}${f.speed ? ' · ' + esc(fmtBps(f.speed)) : ''}</span></span>
-      ${rkISP(f)}<span class="rkcirc mono">${esc(f.circuit || '')}</span></div>`;
-  const device = i => {
-    const x = devs[i], fs = x.ifaces || [];
-    // the ports with a carrier always show; of the rest, the busiest
-    const lead = fs.filter((f, k) => f.isp || f.circuit || k < RK_SHOWN), rest = fs.filter(f => !lead.includes(f));
-    return `<div class="rkdev"><div class="rkfp"><i class="rkled${x.seen ? '' : ' off'}" title="${esc(x.seen ? '' : t('rk.quiet'))}"></i>
-        <span class="rkdn"><b>${esc(x.name || x.exporter)}</b>${x.name ? `<span class="mono">${esc(x.exporter)}</span>` : ''}</span>
-        ${x.seen ? '' : `<span class="tag">${esc(t('rk.quiet'))}</span>`}
-        ${can ? `<button class="btn rkedit" data-rkd="${i}">${esc(t('rk.edit'))}</button>` : ''}</div>
-      <div class="rkports">${lead.map(port).join('') || `<div class="rkif muted">${esc(t('rk.no_ifaces'))}</div>`}
-      ${rest.length ? `<details class="rkmore"><summary>${esc(t('rk.more', {n: nf(rest.length)}))}</summary>${rest.map(port).join('')}</details>` : ''}</div></div>`;
-  };
-  const roomIcon = '<svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>';
-  const body = order.map(room => {
-    const racks = rooms.get(room), names = [...racks.keys()].sort(byName);
-    const n = [...racks.values()].reduce((k, v) => k + v.length, 0);
-    return `<section class="rkroom${room ? '' : ' unplaced'}"><h3>${roomIcon}<span>${esc(room || t('rk.unplaced'))}</span><span class="muted">${esc(t('rk.room_n', {k: nf(names.filter(Boolean).length), d: nf(n)}))}</span></h3><div class="rkracks">
-      ${names.map(rack => `<div class="rkrack"><div class="rkrh"><span>${esc(rack ? t('rk.rack_n', {x: rack}) : t('rk.no_rack'))}</span></div><div class="rkbay">${racks.get(rack).map(device).join('')}</div></div>`).join('')}
-      </div></section>`;
-  }).join('');
-  el.innerHTML = `${invTabs('racks')}<div class="grid">${panel('c12', t('nav.racks'), t('rk.sub'), `<div class="rksum">${esc(sum)}</div>` + body)}</div>`;
-  const uniq = k => [...new Set(devs.map(x => x[k]).filter(Boolean))].sort();
-  const carriers = [...new Set(ports.map(f => f.isp).filter(Boolean))].sort();
-  el.querySelectorAll('[data-rkd]').forEach(b => b.onclick = async () => {
-    const x = devs[+b.dataset.rkd];
-    const v = await rkEdit(x, {rooms: uniq('room'), racks: uniq('rack'), carriers});
-    if (!v) return;
-    const r = await fetch('/api/racks/device', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({exporter: x.exporter, ...v})});
-    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || r.statusText); return; }
-    ifList = null; render();
-  });
-};
-
-// rkEdit is one form for a device and every port on it: where it stands,
-// what it is called, and for each port the carrier and circuit. It
-// resolves to what to save (only the ports that changed), or to null when
-// cancelled. The lists offer what was typed before, so one room or one
-// carrier is not written three ways.
-function rkEdit(x, {rooms, racks, carriers}) {
-  return new Promise(resolve => {
-    const fs = x.ifaces || [];
-    const dl = (id, list) => list.length ? `<datalist id="${id}">${list.map(o => `<option value="${esc(o)}">`).join('')}</datalist>` : '';
-    const inp = (name, v, list, ph) => `<input name="${name}" value="${esc(v || '')}" maxlength="80"${list ? ` list="${list}"` : ''}${ph ? ` placeholder="${esc(ph)}"` : ''}>`;
-    const dlg = document.createElement('dialog');
-    dlg.className = 'aedit rkdlg';
-    dlg.innerHTML = `<form method="dialog"><h2>${esc(x.name || x.exporter)} <span class="mono muted">${esc(x.exporter)}</span></h2>
-      <div class="aform rkdform">
-        <div class="afield"><label>${esc(t('rk.device_name'))}</label>${inp('name', x.name)}</div>
-        <div class="afield"><label>${esc(t('rk.room'))}</label>${inp('room', x.room, 'rkl_room')}</div>
-        <div class="afield"><label>${esc(t('rk.rack'))}</label>${inp('rack', x.rack, 'rkl_rack')}</div>
-      </div>
-      ${fs.length ? `<div class="rkptab"><table><thead><tr><th>${esc(t('rk.port'))}</th><th>${esc(t('rk.iface_name'))}</th><th>${esc(t('rk.isp'))}</th><th>${esc(t('rk.circuit'))}</th></tr></thead><tbody>
-        ${fs.map((f, k) => `<tr data-k="${k}"><td class="nw"><b>#${f.ifindex}</b>${f.speed ? `<span class="muted"> ${esc(fmtBps(f.speed))}</span>` : ''}</td>
-          <td>${inp('name', f.name, '', t('rk.ifindex', {n: f.ifindex}))}</td><td>${inp('isp', f.isp, 'rkl_isp')}</td><td>${inp('circuit', f.circuit)}</td></tr>`).join('')}
-      </tbody></table></div>` : `<p class="muted">${esc(t('rk.no_ifaces'))}</p>`}
-      ${dl('rkl_room', rooms)}${dl('rkl_rack', racks)}${dl('rkl_isp', carriers)}
-      <div class="afbtns"><button class="btn" value="cancel">${esc(t('rk.cancel'))}</button><button class="btn primary" value="ok">${esc(t('rk.save'))}</button></div></form>`;
-    document.body.appendChild(dlg);
-    dlg.addEventListener('close', () => {
-      const val = (root, n) => root.querySelector(`input[name="${n}"]`).value.trim();
-      const top = dlg.querySelector('.rkdform');
-      const out = {name: val(top, 'name'), room: val(top, 'room'), rack: val(top, 'rack'), ifaces: []};
-      dlg.querySelectorAll('tr[data-k]').forEach(tr => {
-        const f = fs[+tr.dataset.k], v = {name: val(tr, 'name'), isp: val(tr, 'isp'), circuit: val(tr, 'circuit')};
-        if (v.name !== (f.name || '') || v.isp !== (f.isp || '') || v.circuit !== (f.circuit || '')) out.ifaces.push({ifindex: f.ifindex, ...v});
-      });
-      const ok = dlg.returnValue === 'ok';
-      dlg.remove();
-      resolve(ok ? out : null);
-    });
-    dlg.showModal();
-    dlg.querySelector('input')?.focus();
-  });
-}
-
 // ------------------------------------------------------------ links for other platforms
 // One key per platform. Its links are the same URL with the address put
 // in, so an asset platform adds a "traffic" button beside each of its
@@ -1983,7 +1875,7 @@ views.account = async (el) => {
   const userRows = users ? users.users.map(u => `<tr><td><b>${esc(u)}</b>${u === users.admin ? ` <span class="tag">${t('acct.admin_tag')}</span>` : ''}</td>
       <td class="nw"><button class="btn" data-reset="${esc(u)}">${t('acct.reset')}</button>${u === users.admin ? '' : ` <button class="btn" data-udel="${esc(u)}">${t('acct.delete')}</button>`}</td></tr>
       <tr data-resetrow="${esc(u)}" hidden><td colspan="2"><form class="acctinline" data-resetform="${esc(u)}"><input type="password" name="pw" placeholder="${esc(t('acct.new'))}" autocomplete="new-password" required> <button class="primary" type="submit">${t('acct.save')}</button></form></td></tr>`).join('') : '';
-  el.innerHTML = `<div class="grid">
+  el.innerHTML = `${setTabs('account')}<div class="grid">
     ${panel(users ? 'c6' : 'c12', t('acct.title_pw'), esc(m.user || ''), pwForm)}
     ${users ? panel('c6', t('acct.users'), t('acct.users_sub'), `<table class="accttable">${userRows}</table>
       <form class="acctinline" id="addUser" autocomplete="off"><input name="user" placeholder="${esc(t('acct.user'))}" required> <input type="password" name="pw" placeholder="${esc(t('acct.new'))}" autocomplete="new-password" required> <button class="primary" type="submit">${t('acct.add')}</button></form>
@@ -2260,7 +2152,7 @@ views.sources = async (el) => {
   const snmp = (d.snmp || []).map(x => `<span class="tag" title="${esc(x.error || '')}">${esc(x.name ? x.name + " " + x.exporter : x.exporter)} · ${x.ok
     ? '<span style="color:var(--good)">✔</span> ' + esc(t('src.snmp_ok', {n: nf(x.interfaces)}))
     : '<span style="color:var(--crit)">✖</span> ' + esc(t('src.snmp_fail'))}</span>`).join(' ');
-  el.innerHTML = `<div class="grid">
+  el.innerHTML = `${setTabs('sources')}<div class="grid">
     ${panel('c12', t('src.title'), t('src.sub'), `<table><tr><th>${t('col.device')}</th><th>${t('col.proto')}</th><th class="num">${t('col.rate')}</th><th>${t('col.sampling')}</th><th class="num">${t('col.lost')}</th><th>${t('col.last')}</th><th>${t('col.status')}</th>${admOnly('<th></th>')}</tr>
       ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${waitHint(firstText())}</td></tr>`}</table>
       <p style="margin:12px 0 0;font-size:12.5px"><span class="muted">${t('src.listeners')}</span> ${lis || '—'} ${caps}</p>
@@ -2383,14 +2275,20 @@ views.sources = async (el) => {
 // recording a rack, and it is the one page there that an unregistered
 // installation keeps: a flow analyser that cannot tell you which address is
 // which is of little use, and that is not a feature to sell.
-// The inventory page has two tabs: the inventory itself and where the
-// devices stand.
-const invTabs = cur => `<div class="seg invtabs" role="tablist">${[['names', 'src.names'], ['racks', 'nav.racks']].map(([v, k]) =>
-  `<button role="tab" data-invtab="${v}" aria-selected="${cur === v}" aria-pressed="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
-document.addEventListener('click', e => { const b = e.target.closest('[data-invtab]'); if (b) go(b.dataset.invtab); });
+// Settings has three tabs: the settings themselves, the inventory (the
+// names of addresses) and one's account. Capture files and offline mode
+// have only the account.
+const SET_TABS = [['sources', 'nav.sources'], ['names', 'src.names'], ['account', 'nav.account']];
+const SET_VIEWS = new Set(['sources', 'names', 'account']);
+const setTabs = cur => {
+  const tabs = SET_TABS.filter(([v]) => v === 'account' || !(inSB() || offlineMode));
+  return `<div class="seg settabs" role="tablist">${tabs.map(([v, k]) =>
+    `<button role="tab" data-settab="${v}" aria-selected="${cur === v}" aria-pressed="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
+};
+document.addEventListener('click', e => { const b = e.target.closest('[data-settab]'); if (b) go(b.dataset.settab); });
 views.names = async (el) => {
   const inv = await api('inventory').catch(() => ({text: ''}));
-  el.innerHTML = `${invTabs('names')}<div class="grid">
+  el.innerHTML = `${setTabs('names')}<div class="grid">
     ${panel('c12', t('src.names'), t('src.names_sub'), `${admOnly(`<div class="nmform" id="nmForm">
         <select id="nmK">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
         <input id="nmA" autocomplete="off" spellcheck="false"><input id="nmI" autocomplete="off" inputmode="numeric" placeholder="${esc(t('nm.ifindex'))}" hidden>
@@ -2540,7 +2438,7 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'racks', 'names']);
+const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'names']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
@@ -2557,11 +2455,11 @@ function refreshLabel() {
 }
 // The sandbox bar replaces the time range while capture files are shown.
 function renderSB() {
-  const on = inSB() && !['ifaces', 'sources', 'racks'].includes(state.v);
+  const on = inSB() && !['ifaces', 'sources'].includes(state.v);
   $('#sbbar').hidden = !on;
   $('#range').hidden = on;
   $('#refresh').hidden = on;
-  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=sources], #nav [data-v=cleanup], #nav [data-v=racks], #nav [data-v=names]').forEach(b => b.hidden = inSB() || offlineMode);
+  document.querySelectorAll('#nav [data-v=ifaces], #nav [data-v=cleanup]').forEach(b => b.hidden = inSB() || offlineMode);
   if (!on) return;
   const r = sbRange(), span = r.to - r.from;
   const df = new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}), tf = new Intl.DateTimeFormat(LANG, {timeStyle: 'short'});
@@ -2605,11 +2503,11 @@ async function render(push) {
   renderFilters();
   renderFbar();
   writeHash(push);
-  // device locations is a tab of the inventory page, and lights its entry
-  const navV = state.v === 'racks' ? 'names' : state.v;
-  $('#title').textContent = t('nav.' + navV);  // the detail view refines it
+  // the inventory and the account are tabs of the settings, and light its entry
+  const navV = SET_VIEWS.has(state.v) ? 'sources' : state.v;
+  $('#title').textContent = t('nav.' + state.v);  // the detail view refines it
   document.title = t('nav.' + state.v) + ' · traffic66';
-  document.querySelectorAll('#nav button').forEach(b => b.dataset.v === navV ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  document.querySelectorAll('#nav button, #help').forEach(b => b.dataset.v === navV ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   renderRange();
   await renderIfsel();
   writeHash(false);
@@ -2706,7 +2604,6 @@ function showLogin() {
 let me = null;
 async function loadMe() {
   try { const r = await fetch('/api/me'); if (r.ok) me = await r.json(); } catch (e) {}
-  $('#acctName').textContent = me?.user ? me.user : t('nav.account');
 }
 $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -2757,7 +2654,7 @@ function startTimers() {
   }, 5000);
 }
 $('#logout').onclick = async () => { await fetch('/api/logout', {method: 'POST'}); me = null; showLogin(); };
-$('#acct').onclick = () => go('account');
+$('#help').onclick = () => go('help');
 
 async function init() {
   $('#lang').innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
@@ -2780,6 +2677,8 @@ async function init() {
     const b = e.target.closest('[data-v]');
     if (!b) return;
     if (b.dataset.v === 'records') state.rl = true;
+    // with capture files or offline, the settings have only the account
+    if (b.dataset.v === 'sources' && (inSB() || offlineMode)) { go('account'); return; }
     go(b.dataset.v);
   };
   $('#share').onclick = () => { navigator.clipboard?.writeText(location.href).then(() => toast(t('top.copied')), () => toast(location.href)); };
