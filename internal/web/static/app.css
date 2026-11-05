@@ -90,9 +90,9 @@ aside{background:var(--side);border-inline-end:1px solid var(--side-line);displa
 .brand b{color:var(--accent)}
 nav.dash .demo{display:inline-block;margin:6px 12px 0;font-size:11px;font-weight:600;background:var(--warn);color:#1b2432;border-radius:4px;padding:1px 6px;letter-spacing:0;opacity:.85}
 nav.dash .demo[hidden]{display:none}
-nav.dash{padding:8px 10px;overflow-y:auto;flex:1}
-nav.dash hr{border:0;border-top:1px solid var(--side-line);margin:8px 8px}
-nav.dash button{position:relative;display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;text-align:start;color:var(--ink-2);font-size:14.5px;line-height:1.25;font-weight:600;letter-spacing:.005em;transition:background .18s,color .18s,transform .18s}
+nav.dash{padding:6px 10px;overflow-y:auto;flex:1}
+nav.dash hr{border:0;border-top:1px solid var(--side-line);margin:5px 8px}
+nav.dash button{position:relative;display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:7px 12px;border-radius:8px;cursor:pointer;text-align:start;color:var(--ink-2);font-size:14.5px;line-height:1.25;font-weight:600;letter-spacing:.005em;transition:background .18s,color .18s,transform .18s}
 nav.dash button>span:first-of-type{flex:1}
 nav.dash button:hover{background:var(--side-hover);color:var(--ink);transform:translateX(2px)}
 [dir=rtl] nav.dash button:hover{transform:translateX(-2px)}
@@ -111,7 +111,9 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
 .self .live{display:flex;align-items:center;gap:7px;font-weight:600}
 .self .live i{width:8px;height:8px;border-radius:50%;background:currentColor}
 .self .live.ok{color:var(--good)}.self .live.idle{color:var(--ink-3)}
-.foot{display:flex;flex-direction:column;gap:8px;padding:0 16px 14px}
+.foot{padding:4px 12px 10px;border-top:1px solid var(--side-line)}
+.footrow{display:flex;align-items:center;gap:4px}
+.footrow .linkbtn{flex:1;justify-content:center}
 /* The sponsor slot of an unregistered installation: in the sidebar, above
    the language and theme, one small banner at a time at the sidebar's
    width (sponsor.js decides, and sets the height). */
@@ -128,13 +130,17 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
 .spc-dot{width:6px;height:6px;padding:0;border-radius:50%;border:0;cursor:pointer;background:var(--line-2)}
 .spc-dot.on{background:var(--accent)}
 @media print{.sponsor{display:none}}
-.foot .pick{display:grid;grid-template-columns:1fr auto;gap:6px}
+/* shorter screens: tighten the sidebar so the menu still fits without scrolling */
+@media (max-height:900px) and (min-width:821px){.brand{padding:8px 14px 6px}.brand .logo{max-height:52px}nav.dash button{padding:5px 12px;font-size:14px}nav.dash hr{margin:3px 8px}aside>.pick{padding:6px 12px}.foot{padding:2px 12px 6px}#logout,#help{padding:4px}.sponsor{padding:5px 12px 2px}}
+@media (max-height:780px) and (min-width:821px){.brand .logo{max-height:40px}nav.dash{padding:4px 8px}nav.dash button{padding:3.5px 12px;font-size:13.5px}nav.dash hr{margin:2px 8px}.sponsor .sp-h{padding:0 0 1px}}
+aside>.pick{display:grid;grid-template-columns:1fr auto;gap:6px;padding:8px 12px;border-bottom:1px solid var(--side-line)}
 #theme{display:flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:6px;padding:4px 10px;background:var(--surface);color:var(--ink);cursor:pointer;font-size:13px;white-space:nowrap}
 #theme i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:inset 0 0 0 2px var(--surface),0 0 0 1px var(--line-2)}
-.foot select{width:100%;min-width:0;color:var(--ink);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px;background:var(--surface);font-size:13px}
+aside>.pick select{width:100%;min-width:0;color:var(--ink);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px;background:var(--surface);font-size:13px}
 .linkbtn{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:12.5px;padding:2px;white-space:nowrap}
-#logout,#acct{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;padding:6px 4px;border-radius:6px}
-#logout .ni,#acct .ni{width:16px;height:16px}
+#logout,#help{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;padding:6px 4px;border-radius:6px}
+#logout .ni,#help .ni{width:16px;height:16px}
+#help[aria-current="page"]{color:var(--accent-ink);background:var(--side-hover)}
 .linkbtn:hover{color:var(--accent-ink)}
 
 .main{min-width:0}
@@ -506,7 +512,7 @@ dialog.aedit h2{margin:0 0 14px;font-size:16px}
 .accttable td{padding:8px 4px;border-bottom:1px solid var(--line)}
 .acctinline{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .acctinline input{min-width:0;flex:1 1 140px}
-body.mustchange #nav,body.mustchange #acct,body.mustchange .ifsel{display:none}
+body.mustchange #nav,body.mustchange .settabs,body.mustchange .ifsel{display:none}
 
 /* The evaluation mark: drawn over the view, light enough that nothing
    underneath becomes unreadable, and kept when the page is printed. */
@@ -602,4 +608,5 @@ dialog.embdlg{width:min(620px,96vw)}
 .afhint{font-size:11.5px;color:var(--ink-3)}
 
 /* the tabs of the inventory page: the inventory and device locations */
-.invtabs{display:inline-flex;margin:0 0 14px}
+.settabs{display:inline-flex;margin:0 0 14px}
+
