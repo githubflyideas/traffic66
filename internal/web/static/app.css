@@ -114,22 +114,28 @@ nav.dash button[aria-current="page"] .ni{opacity:1}
 .foot{padding:4px 12px 10px;border-top:1px solid var(--side-line)}
 .footrow{display:flex;align-items:center;gap:4px}
 .footrow .linkbtn{flex:1;justify-content:center}
-/* The sponsor slot of an unregistered installation: in the sidebar, above
-   the language and theme, one small banner at a time at the sidebar's
-   width (sponsor.js decides, and sets the height). */
-.sponsor{border-top:1px solid var(--side-line);padding:10px 12px 5px}
+/* Sidebar sponsor: square-ish ads (ratio < 3) at the image's own
+   proportions; height is set by sponsor.js, capped. Wide banners go to
+   .sponsor-top above the page header instead. */
+.sponsor{border-top:1px solid var(--side-line);padding:8px 12px 4px}
 .sponsor[hidden]{display:none}
-.sponsor .sp-h{font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 0 4px}
-.sponsor .sp-text{margin:0 0 8px;border:1px dashed var(--line-2);border-radius:6px;padding:8px 10px;font-size:13.5px;line-height:1.4;color:var(--ink-3);overflow-wrap:anywhere}
+.sponsor .sp-h{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 0 3px}
+.sponsor .sp-text{margin:0 0 6px;border:1px dashed var(--line-2);border-radius:6px;padding:6px 8px;font-size:11.5px;line-height:1.35;color:var(--ink-3);overflow-wrap:anywhere}
 .sponsor .sp-text[hidden],.spc[hidden]{display:none}
 .spc-strip{display:grid;border-radius:4px;overflow:hidden}
 .spc-cell{position:relative;overflow:hidden;background:var(--surface)}
 .spc-cell>a,.spc-cell>div{display:block;width:100%;height:100%}
-.spc-cell img{width:100%;height:100%;object-fit:cover;display:block}
-.spc-dots{display:flex;gap:7px;justify-content:center;padding:5px 0 6px}
-.spc-dot{width:7px;height:7px;padding:0;border-radius:50%;border:0;cursor:pointer;background:var(--line-2)}
+.spc-cell img{width:100%;height:100%;object-fit:contain;display:block}
+.spc-dots{display:flex;gap:6px;justify-content:center;padding:4px 0 5px}
+.spc-dot{width:6px;height:6px;padding:0;border-radius:50%;border:0;cursor:pointer;background:var(--line-2)}
 .spc-dot.on{background:var(--accent)}
-@media print{.sponsor{display:none}}
+/* Top strip: wide banners (ratio >= 3), slim, centred, max ~728x90. */
+.sponsor-top{display:flex;justify-content:center;padding:6px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.sponsor-top[hidden]{display:none}
+.sponsor-top .spc{width:100%;max-width:728px}
+.sponsor-top .spc-cell{background:transparent}
+.sponsor-top .spc-dots{padding:3px 0 0}
+@media print{.sponsor,.sponsor-top{display:none}}
 /* shorter screens: tighten the sidebar so the menu still fits without scrolling */
 @media (max-height:900px) and (min-width:821px){.brand{padding:8px 14px 6px}nav.dash button{padding:5px 12px;font-size:14px}nav.dash hr{margin:3px 8px}aside>.pick{padding:6px 12px}.foot{padding:2px 12px 6px}#logout,#help{padding:4px}.sponsor{padding:5px 12px 2px}}
 @media (max-height:780px) and (min-width:821px){nav.dash{padding:4px 8px}nav.dash button{padding:3.5px 12px;font-size:13.5px}nav.dash hr{margin:2px 8px}.sponsor .sp-h{padding:0 0 1px}}
