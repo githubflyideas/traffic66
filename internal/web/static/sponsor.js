@@ -1,4 +1,4 @@
-// Remote sponsor banner for unregistered installations.
+// Remote sponsor banners for unregistered installations.
 //
 // The slides are listed in a manifest in
 // https://github.com/githubflyideas/ads-sponsor (folder traffic66/), so they
@@ -8,19 +8,24 @@
 // shows a built-in text box instead; a broken image is never shown.
 // Registered installations never call this.
 //
+// Classification is by each image's natural size (no manifest field):
+//   width/height >= WIDE_RATIO  → slim banner at the top of the main area
+//   otherwise                   → square-ish ad in the sidebar
+//
 // Usage: t66Sponsor.load()   t66Sponsor.remove()
 (function () {
   'use strict';
   var URL_ = 'https://raw.githubusercontent.com/githubflyideas/ads-sponsor/main/traffic66/sponsors.json';
-  // MAX is how many advertisers are fetched and rotated through.
   var TIMEOUT_MS = 3000, ROTATE_MS = 5500, MAX = 6;
-  // A small banner is 728x90 (1456x180 at 2x). The slot is in the
-  // sidebar, as wide as it is, so only small banners are shown there: an
-  // image LONG_RATIO times as wide as it is high or wider is a long banner,
-  // too thin at that width to read, and is left out.
-  var SMALL_W = 728, SMALL_H = 90, LONG_RATIO = 12;
+  // Images this many times as wide as they are high (or wider) are wide
+  // banners for the top strip; the rest are square-ish for the sidebar.
+  var WIDE_RATIO = 3;
+  // Sidebar: width fills the slot, height follows the image, capped.
+  var SIDE_MAX_H = 220;
+  // Top strip: classic 728x90 proportions, capped.
+  var TOP_MAX_W = 728, TOP_MAX_H = 90;
   var CACHE_KEY = 't66.sponsor', CACHE_MS = 30 * 60 * 1000;
-  var started = false, timerId = null, roId = null;
+  var started = false, timers = [], ros = [];
 
   function httpURL(v, base, httpsOnly) {
     if (typeof v !== 'string' || !v.trim()) return null;
@@ -47,7 +52,7 @@
       var img = new Image();
       img.decoding = 'async';
       img.referrerPolicy = 'no-referrer';
-      img.onload = function () { img.naturalWidth > 0 ? ok(img) : bad(); };
+      img.onload = function () { img.naturalWidth > 0 && img.naturalHeight > 0 ? ok(img) : bad(); };
       img.onerror = bad;
       img.src = src;
     });
@@ -81,20 +86,6 @@
         return m;
       });
   }
-  // resolves with the slides whose images loaded, rejects when none did
-  function ready(m, base) {
-    var want = slidesOf(m, base);
-    if (!want.length) return Promise.reject();
-    return settle(want.map(function (s) { return loadImg(s.src); })).then(function (imgs) {
-      var ok = [];
-      want.forEach(function (s, i) {
-        var im = imgs[i];
-        if (im && im.naturalWidth < LONG_RATIO * im.naturalHeight) { s.img = im; ok.push(s); }
-      });
-      if (!ok.length) throw 0;
-      return ok;
-    });
-  }
 
   function slidesOf(m, base) {
     var list = m && Array.isArray(m.slides) ? m.slides : [], out = [];
@@ -108,36 +99,53 @@
     return out;
   }
 
-  // The slot shows one advertiser at a time and rotates between them, at
-  // the sidebar's width and the banner's own proportions.
-  function build(slot, slides) {
-    var car = slot.querySelector('.spc');
-    car.hidden = false;
+  // Load images, drop broken ones, split into square (sidebar) and wide (top).
+  function ready(m, base) {
+    var want = slidesOf(m, base);
+    if (!want.length) return Promise.reject();
+    return settle(want.map(function (s) { return loadImg(s.src); })).then(function (imgs) {
+      var square = [], wide = [];
+      want.forEach(function (s, i) {
+        var im = imgs[i];
+        if (!im) return;
+        s.img = im;
+        if (im.naturalWidth >= WIDE_RATIO * im.naturalHeight) wide.push(s);
+        else square.push(s);
+      });
+      if (!square.length && !wide.length) throw 0;
+      return {square: square, wide: wide};
+    });
+  }
+
+  function slideEl(s) {
+    var a = document.createElement(s.link ? 'a' : 'div');
+    if (s.link) { a.href = s.link; a.target = '_blank'; a.rel = 'noopener noreferrer sponsored'; }
+    if (s.title || s.alt) a.title = s.title || s.alt;
+    var img = s.img.cloneNode(false);
+    img.alt = s.alt;
+    a.appendChild(img);
+    return a;
+  }
+
+  // One rotating carousel inside `car`. heightFn(carWidth, slide) → px height.
+  function carousel(car, slides, heightFn) {
     var strip = document.createElement('div'); strip.className = 'spc-strip';
     var dots = document.createElement('div'); dots.className = 'spc-dots';
     var ds = [], cur = 0, paused = false;
 
-    function slideEl(s) {
-      var a = document.createElement(s.link ? 'a' : 'div');
-      if (s.link) { a.href = s.link; a.target = '_blank'; a.rel = 'noopener noreferrer sponsored'; }
-      if (s.title || s.alt) a.title = s.title || s.alt;
-      var img = s.img.cloneNode(false);
-      img.alt = s.alt;
-      a.appendChild(img);
-      return a;
-    }
     function draw() {
       var s = slides[cur];
-      var w = car.clientWidth || SMALL_W;
+      var w = car.clientWidth || TOP_MAX_W;
       strip.textContent = '';
       var box = document.createElement('div'); box.className = 'spc-cell';
-      box.style.height = Math.round(w * SMALL_H / SMALL_W) + 'px';
+      box.style.height = Math.max(1, Math.round(heightFn(w, s))) + 'px';
       box.appendChild(slideEl(s));
       strip.appendChild(box);
       ds.forEach(function (d, i) { d.classList.toggle('on', i === cur); });
     }
     function show(i) { cur = ((i % slides.length) + slides.length) % slides.length; draw(); }
 
+    car.hidden = false;
     car.textContent = '';
     car.appendChild(strip);
     if (slides.length > 1) {
@@ -151,35 +159,88 @@
       car.appendChild(dots);
       ['mouseenter', 'focusin'].forEach(function (e) { car.addEventListener(e, function () { paused = true; }); });
       ['mouseleave', 'focusout'].forEach(function (e) { car.addEventListener(e, function () { paused = false; }); });
-      timerId = setInterval(function () {
+      timers.push(setInterval(function () {
         if (!paused && !document.hidden) show(cur + 1);
-      }, ROTATE_MS);
+      }, ROTATE_MS));
     }
-    slot.hidden = false;
     show(0);
-    if (window.ResizeObserver) { roId = new ResizeObserver(draw); roId.observe(car); }
-    else window.addEventListener('resize', draw);
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(draw);
+      ro.observe(car);
+      ros.push(ro);
+    } else {
+      window.addEventListener('resize', draw);
+    }
+  }
+
+  function sideHeight(w, s) {
+    var ratio = s.img.naturalHeight / s.img.naturalWidth;
+    return Math.min(SIDE_MAX_H, w * ratio);
+  }
+  function topHeight(w, s) {
+    var ratio = s.img.naturalHeight / s.img.naturalWidth;
+    return Math.min(TOP_MAX_H, w * ratio);
+  }
+
+  function showDefault(slot) {
+    if (!slot) return;
+    var t = slot.querySelector('.sp-text');
+    if (t) t.hidden = false;
+    var c = slot.querySelector('.spc');
+    if (c) { c.hidden = true; c.textContent = ''; }
+    slot.hidden = false;
+  }
+
+  function buildSidebar(slot, slides) {
+    if (!slot) return;
+    if (!slides.length) { showDefault(slot); return; }
+    var t = slot.querySelector('.sp-text');
+    if (t) t.hidden = true;
+    carousel(slot.querySelector('.spc'), slides, sideHeight);
+    slot.hidden = false;
+  }
+
+  function buildTop(slot, slides) {
+    if (!slot) return;
+    if (!slides.length) { slot.hidden = true; slot.textContent = ''; return; }
+    slot.textContent = '';
+    var wrap = document.createElement('div'); wrap.className = 'spc';
+    slot.appendChild(wrap);
+    carousel(wrap, slides, topHeight);
+    slot.hidden = false;
+  }
+
+  function clearTimers() {
+    timers.forEach(function (id) { clearInterval(id); });
+    timers = [];
+    ros.forEach(function (ro) { try { ro.disconnect(); } catch (e) {} });
+    ros = [];
   }
 
   window.t66Sponsor = {
     load: function () {
-      var slot = document.getElementById('sponsor');
-      if (started || !slot || !window.URL || !window.Promise) return;
+      var side = document.getElementById('sponsor');
+      var top = document.getElementById('sponsorTop');
+      if (started || !side || !window.URL || !window.Promise) return;
       started = true;
       remote().then(function (m) { return ready(m, URL_); })
-        .then(function (ok) { if (started) build(slot, ok); },
-              function () {
-                if (!started) return;
-                slot.querySelector('.sp-text').hidden = false;
-                slot.hidden = false;
-              });
+        .then(function (parts) {
+          if (!started) return;
+          buildSidebar(side, parts.square);
+          buildTop(top, parts.wide);
+        }, function () {
+          if (!started) return;
+          showDefault(side);
+          if (top) top.hidden = true;
+        });
     },
     remove: function () {
       started = false;
-      if (timerId) clearInterval(timerId);
-      if (roId) { roId.disconnect(); roId = null; }
-      var slot = document.getElementById('sponsor');
-      if (slot) slot.remove();
+      clearTimers();
+      var side = document.getElementById('sponsor');
+      if (side) side.remove();
+      var top = document.getElementById('sponsorTop');
+      if (top) top.remove();
     }
   };
 })();
