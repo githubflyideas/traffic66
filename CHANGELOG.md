@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## Unreleased
+
+- Web UI: new Midnight theme (deep navy with cyan and violet, frosted-glass cards), the fifth in the theme picker. All three flow-line palettes and Auto (violet) work with it; the map ramp runs dark to bright. The four existing themes are unchanged.
+
 ## 2.3.9
 
 - NetFlow / IPFIX loss compensation starts much sooner: a session is compensated once 100 records have arrived and the factor is recomputed every 5 seconds (was 30 seconds), so totals in the first minute after start are no longer low when the exporter or the kernel drops packets. With 37% loss the compensated total at 30 s rose from 0.62 to 0.98 of the real total.
