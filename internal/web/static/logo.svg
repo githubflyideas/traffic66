@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="272" height="92" viewBox="0 0 272 92">
+  <rect x="6" y="18" width="56" height="56" rx="12" fill="#2a78d6"/>
+  <path d="M16 58l12-16 10 8 14-20" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="52" cy="30" r="4" fill="#fff"/>
+  <text x="74" y="60" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="38" font-weight="700" letter-spacing="-1" fill="#1b2432">traffic<tspan fill="#2a78d6">66</tspan></text>
+</svg>

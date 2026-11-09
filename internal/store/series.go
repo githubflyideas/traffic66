@@ -1,0 +1,215 @@
+package store
+
+import (
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+)
+
+// Series dimensions: what one chart line stands for. key is the SQL
+// expression of the value, cond limits the rows (true for all). rollup, when
+// set, answers long ranges from the hourly summaries: the query selects
+// (bucket, key, wire, pkts) for the given bucket expression and range.
+type seriesDim struct {
+	key, cond string
+	rollup    func(bucket string) string
+	hourly    bool // the rollup has one row per hour: no finer buckets
+}
+
+// peerExpr is the external side of a conversation: the server, or the
+// client of inbound traffic.
+const peerExpr = "CASE WHEN dir = 2 THEN client ELSE server END"
+
+var seriesDims = map[string]seriesDim{
+	"app": {key: "app", cond: "true",
+		rollup: func(b string) string {
+			return `SELECT ` + b + `, app, sum(wire), sum(pkts) FROM {r_ts} WHERE ts >= ? AND ts < ? GROUP BY 1,2`
+		}},
+	"client": {key: "client", cond: "true", hourly: true,
+		rollup: func(b string) string {
+			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM {r_host} WHERE ts >= ? AND ts < ? AND role = 1 GROUP BY 1,2`
+		}},
+	"server": {key: "server", cond: "true", hourly: true,
+		rollup: func(b string) string {
+			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM {r_host} WHERE ts >= ? AND ts < ? AND role = 2 GROUP BY 1,2`
+		}},
+	"service": {key: portProtoExpr + " || chr(9) || app", cond: "svc_port <> 0", hourly: true,
+		rollup: func(b string) string {
+			return `SELECT ` + b + `, val, sum(wire), sum(pkts) FROM {r_dim} WHERE ts >= ? AND ts < ? AND dim = 'port' AND NOT starts_with(val, '0/') GROUP BY 1,2`
+		}},
+	// AS of the sender and of the receiver of each packet, when that side
+	// is the external one.
+	//
+	// Traffic whose peer has no AS number counts as AS 0, the way the AS
+	// table beside these charts counts it. Leaving it out instead made the
+	// chart disagree with the table under it, and worse: on an installation
+	// without a good AS database most minutes carried no AS at all, so
+	// whole buckets came back empty and the chart was drawn as a run of
+	// blocks with nothing between them. A bucket is empty here only when
+	// nothing went through it.
+	"asn_src": {key: "CAST(peer_asn AS VARCHAR) || chr(9) || peer_org", cond: "src = " + peerExpr},
+	"asn_dst": {key: "CAST(peer_asn AS VARCHAR) || chr(9) || peer_org", cond: "dst = " + peerExpr},
+	// interfaces of the flow exporters, as "exporter/ifindex"
+	"if_in":  {key: "exporter || '/' || in_if", cond: "in_if <> 0"},
+	"if_out": {key: "exporter || '/' || out_if", cond: "out_if <> 0"},
+}
+
+// SeriesBy returns a measure over time split by a dimension: bits per
+// second ("wire") or packets per second ("pkts"), for the top k values; the
+// rest is summed as "__other__". Distinct is how many values there were.
+func (s *Store) SeriesBy(q Query, by, measure string, k int) (*Series, error) {
+	d, ok := seriesDims[by]
+	if !ok {
+		return nil, fmt.Errorf("unknown series %q", by)
+	}
+	if measure != "wire" && measure != "pkts" {
+		return nil, fmt.Errorf("unknown measure %q", measure)
+	}
+	if k <= 0 || k > 20 {
+		k = 8
+	}
+	// decide before the start is rounded down to a bucket: rounding makes a
+	// 6-hour range a little longer, which must not switch it to the summaries
+	rollup := d.rollup != nil && s.rollupOK(q, by == "client" || by == "server")
+	step := StepFor(q.span())
+	if rollup && d.hourly && step < time.Hour {
+		// hourly summaries in 5-minute buckets would show one spike an hour
+		step = time.Hour
+	}
+	q.From = q.localTrunc(q.From, step)
+	settled := settledTo(q.To, rollup)
+	bucket := q.bucketSQL(step)
+	var inner string
+	var args []any
+	if rollup {
+		r, pre, err := s.rollups(q, d.rollup(bucket))
+		if err != nil {
+			return nil, err
+		}
+		inner = r
+		args = append(pre, q.From.UTC(), q.To.UTC())
+	} else {
+		where, wargs, err := q.where()
+		if err != nil {
+			return nil, err
+		}
+		// the rows themselves: grouped by bucket and value before the top
+		// values are known, a week by client is a group for nearly every row
+		inner = fmt.Sprintf(`SELECT %s, %s, wire, pkts FROM %s WHERE %s AND %s`, bucket, d.key, s.Source(q.From, q.To), where, d.cond)
+		args = wargs
+	}
+	m := "w"
+	if measure == "pkts" {
+		m = "p"
+	}
+	// keep the top k values apart, everything else as one series, and count
+	// the values
+	// b is read again by each step rather than kept: kept, a week of
+	// buckets by client is more than the memory there is. The values are
+	// counted approximately, in a few kilobytes, where counting them
+	// exactly holds every one of them.
+	sqlq := fmt.Sprintf(`WITH b AS NOT MATERIALIZED (SELECT * FROM (%s) AS x(t, k, w, p)),
+			top AS (SELECT k FROM b GROUP BY k ORDER BY sum(%s) DESC LIMIT %d)
+		SELECT t, CASE WHEN k IN (SELECT k FROM top) THEN k ELSE '__other__' END AS kk, CAST(sum(%s) AS DOUBLE), (SELECT approx_count_distinct(k) FROM b)
+		FROM b GROUP BY 1,2`, inner, m, k, m)
+	if !rollup && (by == "client" || by == "server") {
+		sqlq, args = s.addrSeries(q, by, bucket, m, k)
+	}
+	rows, err := s.DB.Query(sqlq, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	type pt struct {
+		t time.Time
+		k string
+		v float64
+	}
+	var pts []pt
+	tot := map[string]float64{}
+	distinct := 0
+	for rows.Next() {
+		var p pt
+		var v float64
+		if err := rows.Scan(&p.t, &p.k, &v, &distinct); err != nil {
+			return nil, err
+		}
+		p.v = v
+		pts = append(pts, p)
+		tot[p.k] += v
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(tot))
+	for n := range tot {
+		if n != "__other__" {
+			names = append(names, n)
+		}
+	}
+	// equal totals by name, so the legend keeps its order between redraws
+	sort.Slice(names, func(i, j int) bool {
+		if tot[names[i]] != tot[names[j]] {
+			return tot[names[i]] > tot[names[j]]
+		}
+		return names[i] < names[j]
+	})
+	if _, ok := tot["__other__"]; ok {
+		names = append(names, "__other__")
+	}
+	idx := map[string]int{}
+	for i, n := range names {
+		idx[n] = i
+	}
+	start := q.From
+	n := bucketCount(start, q.To, step)
+	se := &Series{Step: int64(step.Seconds()), Names: names, Values: make([][]float64, len(names)), Distinct: distinct}
+	se.SettledTo = unsettledMark(settled, q.To)
+	dataFrom := s.DataStart()
+	se.DataFrom = dataFromMark(start, dataFrom)
+	se.Totals = make([]float64, len(names))
+	for i, nm := range names {
+		se.Totals[i] = tot[nm]
+	}
+	for i := 0; i < n; i++ {
+		se.Times = append(se.Times, start.Add(time.Duration(i)*step).UnixMilli())
+	}
+	for i := range se.Values {
+		se.Values[i] = make([]float64, n)
+	}
+	f := 8.0 // bytes to bits
+	if measure == "pkts" {
+		f = 1
+	}
+	for _, p := range pts {
+		ti := int(p.t.UTC().Sub(start) / step)
+		if ti < 0 || ti >= n {
+			continue
+		}
+		se.Values[idx[p.k]][ti] += p.v * f / bucketSecs(start, ti, step, q.To, dataFrom)
+	}
+	return se, nil
+}
+
+// addrSeries is the query of SeriesBy for clients or servers from the flow
+// records. An IPv4 address is read and ranked as its number, and made into
+// text only for the top values: reading the address text of every row
+// takes longer than everything else the query reads. The other addresses
+// (IPv6) are read as text, in a part of their own.
+func (s *Store) addrSeries(q Query, by, bucket, m string, k int) (string, []any) {
+	num := map[string]string{"client": "cli4", "server": "srv4"}[by]
+	where, args, _ := q.where()
+	src := s.Source(q.From, q.To)
+	text := keyPartFor(by, 0).outer
+	text = strings.NewReplacer("g0n", "x.kn", "g0s", "x.ks").Replace(text)
+	sqlq := fmt.Sprintf(`WITH x AS NOT MATERIALIZED (
+			SELECT %[1]s AS t, %[2]s AS kn, NULL::VARCHAR AS ks, wire AS w, pkts AS p FROM %[3]s WHERE (%[4]s) AND %[2]s <> 0
+			UNION ALL SELECT %[1]s, 0::UINTEGER, %[5]s, wire, pkts FROM %[3]s WHERE (%[4]s) AND %[2]s = 0),
+			top AS (SELECT kn, ks, true AS hit FROM x GROUP BY kn, ks ORDER BY sum(%[6]s) DESC LIMIT %[7]d)
+		SELECT x.t, CASE WHEN top.hit THEN %[8]s ELSE '__other__' END, CAST(sum(x.%[6]s) AS DOUBLE),
+			(SELECT approx_count_distinct(hash(kn, ks)) FROM x)
+		FROM x LEFT JOIN top ON x.kn = top.kn AND x.ks IS NOT DISTINCT FROM top.ks GROUP BY 1,2`,
+		bucket, num, src, where, by, m, k, text)
+	return sqlq, append(append([]any{}, args...), args...)
+}

@@ -1,0 +1,41 @@
+/* The page other platforms open for one address. It sits in a frame or a
+   tab of somebody else's site, so it is plain and fills what it is given. */
+:root{
+  --bg:#000;--surface:#1c1c1e;--line:#2c2c2e;--ink:#fff;--ink-2:#d1d1d6;--ink-3:#8e8e93;
+  --in:#30d158;--out:#0a84ff;--accent:#0a84ff;color-scheme:dark}
+:root[data-theme=light]{
+  --bg:#fff;--surface:#f2f2f7;--line:#e5e5ea;--ink:#1c1c1e;--ink-2:#3a3a3c;--ink-3:#8e8e93;
+  --in:#34c759;--out:#007aff;--accent:#007aff;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font:14px/1.4 system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+main{display:flex;flex-direction:column;min-height:100%;padding:16px;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+header h1{margin:0;font-size:19px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600}
+header span{font-size:12.5px;color:var(--ink-3)}
+nav{margin-inline-start:auto;display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+nav button{font:inherit;font-size:13px;padding:5px 12px;border:0;background:transparent;color:var(--ink-2);cursor:pointer}
+nav button+button{border-inline-start:1px solid var(--line)}
+nav button[aria-pressed=true]{background:var(--accent);color:#fff}
+.emks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.emk{background:var(--surface);border-radius:12px;padding:12px 14px;border-top:3px solid var(--in)}
+.emk.out{border-top-color:var(--out)}
+.emk>b{font-size:13px;color:var(--ink-2)}
+.emk dl{display:flex;flex-wrap:wrap;gap:4px 22px;margin:6px 0 0}
+.emk dl div{min-width:0}
+.emk dt{font-size:11.5px;color:var(--ink-3)}
+.emk dd{margin:0;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.emch{position:relative;flex:1;min-height:240px;background:var(--surface);border-radius:12px;overflow:hidden}
+.emch svg{display:block;touch-action:none}
+.g{stroke:var(--line);stroke-width:1}
+.ya,.xa{fill:var(--ink-3);font-size:11px}
+.fi{fill:var(--in);opacity:.18}.fo{fill:var(--out);opacity:.18}
+.li{fill:none;stroke:var(--in);stroke-width:1.6}.lo{fill:none;stroke:var(--out);stroke-width:1.6}
+.cur{stroke:var(--ink-3);stroke-dasharray:3 3}
+.tip{position:absolute;top:10px;pointer-events:none;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:6px 9px;font-size:12px;display:flex;flex-direction:column;gap:2px;white-space:nowrap}
+.tip[hidden]{display:none}
+.tip .in{color:var(--in)}.tip .out{color:var(--out)}
+.emerr{padding:40px 16px;text-align:center;color:var(--ink-3)}
+footer{font-size:11px;color:var(--ink-3);text-align:end}
+@media (max-width:520px){.emks{grid-template-columns:1fr}nav{margin-inline-start:0}}
