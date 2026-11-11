@@ -311,6 +311,7 @@ func serve(args []string, demo bool) {
 	fs.Parse(args)
 	if err := f.check(); err != nil {
 		fmt.Fprintf(os.Stderr, "traffic66: %v\n", err)
+		fmt.Fprintln(os.Stderr, "traffic66: versions before 2.5.11 ignored this and started anyway; fix the option (see traffic66 -h) and start again")
 		os.Exit(2)
 	}
 
