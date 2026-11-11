@@ -183,6 +183,17 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	if in.Reset {
+		// a password is reset because the old one is no longer trusted, so
+		// the sessions it opened go with it
+		s.mu.Lock()
+		for k, se := range s.sessions {
+			if se.user == in.User {
+				delete(s.sessions, k)
+			}
+		}
+		s.mu.Unlock()
+	}
 	writeJSON(w, http.StatusOK, map[string]string{})
 }
 
