@@ -230,6 +230,11 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u := r.URL.Query().Get("user")
+	if u == "" {
+		var in struct{ User string }
+		json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in)
+		u = in.User
+	}
 	if u == userOf(r) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "self"})
 		return
