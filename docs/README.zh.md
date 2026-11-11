@@ -2,7 +2,7 @@
 
 # traffic66 — NetFlow、sFlow 和 IPFIX 采集器与流量分析器
 
-一个程序搞定 sFlow、NetFlow 和 IPFIX 流量分析：谁在占用带宽、流量去了哪里、统计结果与设备自身的接口计数器是否对得上，在 Web 界面和终端界面中展示。
+一个程序搞定 sFlow、NetFlow 和 IPFIX 流量分析（IPv4 与 IPv6）：谁在占用带宽、流量去了哪里、统计结果与设备自身的接口计数器是否对得上，在 Web 界面和终端界面中展示。
 
 ## 快速开始
 

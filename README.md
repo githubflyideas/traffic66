@@ -2,7 +2,7 @@
 
 # traffic66
 
-A single-binary NetFlow / sFlow / IPFIX collector and traffic analyzer, with a web UI and a terminal UI.
+A single-binary NetFlow / sFlow / IPFIX collector and traffic analyzer for IPv4 and IPv6, with a web UI and a terminal UI.
 
 <img src="docs/images/overview.png" alt="Overview" width="100%">
 
