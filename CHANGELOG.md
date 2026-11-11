@@ -3,6 +3,12 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.12
+
+- Users: resetting a user's password signs that user out everywhere; DELETE /api/users also takes the name in a JSON body.
+- Startup: an option error now says that older versions ignored it, so an upgrade that stops at start is easy to explain.
+- Text fixes.
+
 ## 2.5.11
 
 - Startup: out-of-range options and a bad -listen entry are reported and stop the start instead of being ignored.
