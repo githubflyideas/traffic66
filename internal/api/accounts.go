@@ -138,12 +138,17 @@ func (s *Server) listUsers(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"users": a.Users(), "admin": a.Admin(), "limit": s.userLimit()})
 }
 
-// putUser adds a user, or sets a new password for one.
+// putUser adds a user, or, with reset, sets a new password for one. Adding
+// a name that exists is refused: it would otherwise replace that person's
+// password without anyone meaning to.
 func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 	if s.admin(w, r) == nil {
 		return
 	}
-	var in struct{ User, Password string }
+	var in struct {
+		User, Password string
+		Reset          bool
+	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
 		return
@@ -155,6 +160,14 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := checkNew(in.Password); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	switch exists := s.hasUser(in.User); {
+	case exists && !in.Reset:
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "exists"})
+		return
+	case !exists && in.Reset:
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
 		return
 	}
 	// The limit is on how many people share an installation, so it applies

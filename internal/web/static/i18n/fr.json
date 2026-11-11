@@ -619,6 +619,8 @@
 "acct.err_self": "Vous ne pouvez pas vous supprimer vous-même.",
 "acct.err_fixed": "Le mot de passe de cette exécution a été fourni au démarrage et ne peut pas être changé ici.",
 "acct.err_not_admin": "Seul l'administrateur gère les utilisateurs.",
+"acct.err_exists": "Un utilisateur porte déjà ce nom. Pour changer son mot de passe, utilisez la réinitialisation sur sa ligne.",
+"acct.err_no_user": "Cet utilisateur n'existe plus.",
 "acct.fixed": "Cette exécution utilise le mot de passe fourni au démarrage (-password ou TRAFFIC66_PASSWORD) ; il ne peut pas être changé ici.",
 "acct.users": "Utilisateurs",
 "acct.users_sub": "Tous les utilisateurs voient le même trafic ; seul l'administrateur gère les utilisateurs, supprime les données enregistrées et modifie la configuration de l'installation",

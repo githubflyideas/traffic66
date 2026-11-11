@@ -294,7 +294,7 @@ func serve(args []string, demo bool) {
 	}
 	fs.StringVar(&f.listen, "listen", "sflow=:6343,netflow=:2055,ipfix=:4739", "UDP collectors as name=addr, comma separated; every port accepts every protocol; empty disables")
 	fs.StringVar(&f.user, "user", "admin", "login user")
-	fs.StringVar(&f.password, "password", "", "login password for this run instead of the stored one (or set TRAFFIC66_PASSWORD)")
+	fs.StringVar(&f.password, "password", "", "login password for this run instead of the stored ones (or set TRAFFIC66_PASSWORD); only -user can sign in and accounts cannot be managed from the web UI")
 	fs.StringVar(&f.asn, "asn", "", "ASN/country table (TSV: start end asn cc org, optionally .gz); default <data>/asn.tsv[.gz] if present")
 	fs.StringVar(&f.inventory, "inventory", "", "inventory file with network, device and host names (default <data>/inventory.txt)")
 	fs.Var(&f.threats, "threat", "threat list as name=path (repeatable); default <data>/threats/*.txt")
@@ -309,6 +309,10 @@ func serve(args []string, demo bool) {
 	fs.BoolVar(&f.noDNS, "no-dns", false, "disable reverse lookups")
 	fs.BoolVar(&f.tuiAfter, "tui", false, "also open the terminal UI in this terminal")
 	fs.Parse(args)
+	if err := f.check(); err != nil {
+		fmt.Fprintf(os.Stderr, "traffic66: %v\n", err)
+		os.Exit(2)
+	}
 
 	// Check the web address before anything else starts. A bad or busy
 	// -addr used to fail only after the collectors had logged that they were
@@ -452,8 +456,9 @@ func serve(args []string, demo bool) {
 		}
 		l, err := col.Listen(addr, name)
 		if err != nil {
-			log.Printf("collector: %v", err)
-			continue
+			// a collector that cannot listen would leave traffic66 running
+			// and showing nothing; say so and stop instead
+			fatalf("collector %s: %v; fix or remove it in -listen", name, err)
 		}
 		log.Printf("collector: %s listening on UDP %s", name, addr)
 		if _, port, err := net.SplitHostPort(addr); err == nil {
@@ -829,7 +834,23 @@ func simulate(args []string) {
 	defer stop()
 	s := sim.New(time.Now(), uint64(time.Now().UnixNano()))
 	log.Printf("sending simulated exports to %s (Ctrl+C to stop)", *to)
+	// UDP gives no word back from the collector, so what can be reported is
+	// what this side saw: how much went out, and any send that failed
+	// (no route, a local firewall), the first at once and then a summary.
+	var sent, failed int
+	var lastErr error
+	report := time.NewTicker(30 * time.Second)
+	defer report.Stop()
 	s.Live(ctx, func(b []byte, from netip.Addr) {
+		select {
+		case <-report.C:
+			if failed > 0 {
+				log.Printf("sent %d packets, %d failed (last: %v)", sent, failed, lastErr)
+			} else {
+				log.Printf("sent %d packets", sent)
+			}
+		default:
+		}
 		d := nfv
 		switch {
 		case len(b) >= 4 && b[0] == 0 && b[1] == 0 && b[2] == 0 && b[3] == 5:
@@ -837,7 +858,15 @@ func simulate(args []string) {
 		case len(b) >= 2 && b[1] == 10:
 			d = ipf
 		}
-		conn.WriteToUDP(b, d)
+		if _, err := conn.WriteToUDP(b, d); err != nil {
+			if failed == 0 {
+				log.Printf("sending to %v failed: %v", d, err)
+			}
+			failed++
+			lastErr = err
+			return
+		}
+		sent++
 	}, 90*time.Second)
 }
 
@@ -865,7 +894,7 @@ func loginChecker(dir, user, flagPw string, demo bool) *auth.FileChecker {
 		pw = os.Getenv("TRAFFIC66_PASSWORD")
 	}
 	if pw != "" {
-		log.Printf("login: user %q with the password given at start", user)
+		log.Printf("login: only user %q, with the password given at start; the password file and the user pages are not used in this run", user)
 		fixedPassword = true
 		return auth.NewFileChecker(dir, map[string]string{user: pw})
 	}
@@ -977,6 +1006,17 @@ Add -data <directory> when traffic66 runs with -data.
 		}
 		pw = a
 	}
+	es, err := auth.Load(*data)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	added := true
+	for _, e := range es {
+		if e.User == *user {
+			added = false
+		}
+	}
 	if err := auth.Set(*data, *user, pw); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -984,7 +1024,11 @@ Add -data <directory> when traffic66 runs with -data.
 	if *gen {
 		fmt.Printf("user %s, password %s\n", *user, pw)
 	}
-	fmt.Printf("saved in %s; a running traffic66 uses it from the next login\n", filepath.Join(*data, auth.FileName))
+	what := "changed the password of"
+	if added {
+		what = "added the new user"
+	}
+	fmt.Printf("%s %s in %s; a running traffic66 uses it from the next login\n", what, *user, filepath.Join(*data, auth.FileName))
 }
 
 // doubleClick is set when traffic66 was started from Explorer on Windows:
@@ -1017,4 +1061,39 @@ func setGoMemoryLimit(frac float64) {
 	}
 	debug.SetMemoryLimit(lim)
 	log.Printf("memory: database %d MB and program %d MB (soft), from -memory %.2f", lim>>20, lim>>20, frac)
+}
+
+// check refuses settings that cannot work, before anything starts.
+func (f *serveFlags) check() error {
+	switch {
+	case f.retention < 1 || f.retention > 3650:
+		return fmt.Errorf("-retention-days %d: use 1 to 3650", f.retention)
+	case !(f.mem > 0 && f.mem <= 0.8):
+		return fmt.Errorf("-memory %g: use a share of physical memory above 0 and at most 0.8", f.mem)
+	case f.l2 < 0 || f.l2 > 64:
+		return fmt.Errorf("-l2-overhead %d: use 0 to 64 bytes", f.l2)
+	case f.hold < 0 || f.hold > time.Hour:
+		return fmt.Errorf("-sampling-wait %s: use 0 to 1h", f.hold)
+	case !f.noDNS && !(f.dnsRate > 0):
+		return fmt.Errorf("-dns-rate %g: use a rate above 0, or -no-dns", f.dnsRate)
+	case f.dnsTTL < 0:
+		return fmt.Errorf("-dns-cache %s: use 0 or more", f.dnsTTL)
+	}
+	for _, part := range strings.Split(f.listen, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		name, addr, ok := strings.Cut(part, "=")
+		if !ok {
+			name, addr = "udp", part
+		}
+		if strings.TrimSpace(name) == "" {
+			return fmt.Errorf("-listen %q: the name before = is empty", part)
+		}
+		if _, port, err := net.SplitHostPort(addr); err != nil || port == "" {
+			return fmt.Errorf("-listen %q: give an address with a port, such as sflow=:6343", part)
+		}
+	}
+	return nil
 }

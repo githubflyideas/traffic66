@@ -143,10 +143,17 @@ func TestAccountLimit(t *testing.T) {
 		t.Fatalf("the refusal should say why: %s", w.Body)
 	}
 
-	// Setting a password for somebody who is already here is not adding
-	// anyone, so the limit must not touch it.
-	if w := add("ops"); w.Code != 200 {
-		t.Fatalf("changing an existing password: %d %s", w.Code, w.Body)
+	// Adding a name that is taken must not quietly replace that person's
+	// password; a reset says so, and is not adding anyone, so the limit
+	// does not touch it.
+	if w := add("ops"); w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), `"exists"`) {
+		t.Fatalf("adding an existing name: %d %s", w.Code, w.Body)
+	}
+	if w := call("POST", "/api/users", `{"user":"ops","password":"another-long-password","reset":true}`); w.Code != 200 {
+		t.Fatalf("resetting an existing password: %d %s", w.Code, w.Body)
+	}
+	if w := call("POST", "/api/users", `{"user":"nobody","password":"another-long-password","reset":true}`); w.Code != http.StatusNotFound {
+		t.Fatalf("resetting a missing user: %d %s", w.Code, w.Body)
 	}
 
 	// The limit travels with the list, so the page can say so before

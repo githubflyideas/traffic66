@@ -249,7 +249,9 @@ when traffic66 runs with it):
 
 Changes apply at once. Apart from managing users, all users have the same
 rights. For scripts and containers, `TRAFFIC66_PASSWORD=…` (or `-password`) accepts only `-user`
-with that password for that run. Five wrong passwords in a minute block the
+with that password for that run; the accounts in the password file are left
+alone but not used, and users and passwords cannot be changed from the web
+UI or `/api/users` (they answer `409 fixed`). Five wrong passwords in a minute block the
 address for a minute.
 
 ## 4. Send flows from your devices
@@ -407,7 +409,10 @@ pages, apart from the live data: `traffic66 a.pcap b.pcapng` starts on
 imported data), or upload up to 3 files of 50 MB on that page. One file is
 analysed at a time, each in a database of its own: **Analyse** on a file's
 row shows it on every page, and the bar at the top switches to another. It
-works on flows, not packet contents.
+works on flows, not packet contents. IP fragments are not reassembled: the
+fragments after the first carry no ports and show as a flow of their own.
+The time range comes from the packets' own timestamps; API callers pass
+`from` and `to` that cover it.
 
 ![Offline analysis: capture files with their packets, flows and time](images/sandbox.png)
 

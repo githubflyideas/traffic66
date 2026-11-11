@@ -1899,8 +1899,8 @@ views.account = async (el) => {
     toast(t('acct.saved'));
     if (m.must_change) { me.must_change = false; go('overview'); } else render();
   };
-  const putUser = async (user, password) => {
-    const r = await fetch('/api/users', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user, password})});
+  const putUser = async (user, password, reset = false) => {
+    const r = await fetch('/api/users', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user, password, reset})});
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { say('#userMsg', false, errText(j.error)); return false; }
     toast(t('acct.added')); render(); return true;
@@ -1908,7 +1908,7 @@ views.account = async (el) => {
   const au = $('#addUser');
   if (au) au.onsubmit = e => { e.preventDefault(); putUser(au.user.value.trim(), au.pw.value); };
   el.querySelectorAll('[data-reset]').forEach(b => b.onclick = () => { const row = el.querySelector(`[data-resetrow="${CSS.escape(b.dataset.reset)}"]`); row.hidden = !row.hidden; });
-  el.querySelectorAll('[data-resetform]').forEach(f => f.onsubmit = e => { e.preventDefault(); putUser(f.dataset.resetform, f.pw.value); });
+  el.querySelectorAll('[data-resetform]').forEach(f => f.onsubmit = e => { e.preventDefault(); putUser(f.dataset.resetform, f.pw.value, true); });
   el.querySelectorAll('[data-udel]').forEach(b => b.onclick = async () => {
     if (!confirm(t('acct.confirm_del', {u: b.dataset.udel}))) return;
     const r = await fetch('/api/users?user=' + encodeURIComponent(b.dataset.udel), {method: 'DELETE'});

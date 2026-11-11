@@ -134,6 +134,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /logo", s.logo)
 	mux.HandleFunc("GET /api/loginhint", s.loginHint)
 	mux.HandleFunc("GET /tls.crt", s.certDownload)
+	mux.HandleFunc("GET /healthz", s.healthz)
 	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
 	// adminAPI is api plus the administrator check. The permission belongs
 	// in this table rather than inside each handler: a new route's gate is
@@ -496,4 +497,16 @@ func (s *Server) sampleRates() {
 		s.rates.lastRec, s.rates.lastRow = rec, row
 		s.rates.mu.Unlock()
 	}
+}
+
+// healthz is for probes and load balancers: no sign-in, no data. 200 while
+// the database answers and nothing failed to be written, 503 otherwise.
+func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if s.Store == nil || s.Store.DB.PingContext(ctx) != nil || (s.Pipe != nil && s.Pipe.WriteErrs.Load() != 0) {
+		http.Error(w, "storage unhealthy", http.StatusServiceUnavailable)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": s.Version})
 }

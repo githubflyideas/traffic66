@@ -619,6 +619,8 @@
 "acct.err_self": "Anda tidak dapat menghapus diri sendiri.",
 "acct.err_fixed": "Kata sandi proses ini diberikan saat mulai dan tidak dapat diubah di sini.",
 "acct.err_not_admin": "Hanya administrator yang mengelola pengguna.",
+"acct.err_exists": "Pengguna dengan nama ini sudah ada. Untuk mengganti kata sandinya, gunakan Atur ulang di barisnya.",
+"acct.err_no_user": "Pengguna itu sudah tidak ada.",
 "acct.fixed": "Proses ini memakai kata sandi yang diberikan saat mulai (-password atau TRAFFIC66_PASSWORD); tidak dapat diubah di sini.",
 "acct.users": "Pengguna",
 "acct.users_sub": "Semua pengguna melihat lalu lintas yang sama; hanya administrator yang mengelola pengguna, menghapus data tersimpan, dan mengubah penyiapan instalasi",
