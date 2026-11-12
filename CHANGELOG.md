@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.14
+
+- Build with Go 1.27.4.
+
 ## 2.5.13
 
 - Security and robustness fixes for incoming data and account management.
