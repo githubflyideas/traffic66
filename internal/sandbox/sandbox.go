@@ -642,8 +642,12 @@ func (sb *Sandbox) importNext() bool {
 		}
 	}
 	sb.save()
-	log.Printf("sandbox: %s: %d packets, %d flows, %s – %s (%v)", f.Name, res.packets, res.flows,
-		res.first.Format(time.RFC3339), res.last.Format(time.RFC3339), err)
+	msg := fmt.Sprintf("sandbox: %s: %d packets, %d flows, %s – %s", f.Name, res.packets, res.flows,
+		res.first.Format(time.RFC3339), res.last.Format(time.RFC3339))
+	if err != nil {
+		msg += fmt.Sprintf(" (%v)", err)
+	}
+	log.Print(msg)
 	return true
 }
 

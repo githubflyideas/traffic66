@@ -1582,9 +1582,13 @@ function linePalName() {
 }
 function linePal() {
   const p = LINE_PAL[linePalName()];
-  // on the black theme the two darkest shades would sink into the
-  // background: lift them towards white so every level stays visible
-  return isDarkTheme() ? p.map((c, i) => i >= 3 ? `color-mix(in oklab, ${c} ${i === 3 ? 75 : 60}%, #fff)` : c) : p;
+  // On a dark background more traffic is brighter, as on the map itself:
+  // the ramp runs the other way, and its dimmest shades are lifted a little
+  // towards white so they do not sink into the background. Lightness then
+  // rises with every level.
+  if (!isDarkTheme()) return p;
+  const lift = [30, 18, 8, 0, 0];
+  return p.slice().reverse().map((c, i) => lift[i] ? `color-mix(in oklab, ${c} ${100 - lift[i]}%, #fff)` : c);
 }
 function lineLevel(v, vmin, vmax) {
   if (!(v > 0) || !(vmax > vmin)) return v > 0 ? 14 : 0;
@@ -1645,7 +1649,7 @@ views.geo = async (el) => {
   const all = (c.rows || []).filter(r => r.key !== '__internal__' && r.key), cr = all.slice(0, 66), ar = a.rows || [];
   const cm = Math.max(1, ...cr.map(r => r.wire)), am = Math.max(1, ...ar.map(r => r.wire));
   const attr = attribution(gd.sources);
-  el.innerHTML = `<div class="grid" style="margin-bottom:16px">${panel('c12', t('geo.map'), t('geo.map_sub', {n: nf(all.length)}), `<div id="wmap"></div>
+  el.innerHTML = `<div class="grid" style="margin-bottom:16px">${panel('c12', t('geo.map'), t(isDarkTheme() ? 'geo.map_sub_dark' : 'geo.map_sub', {n: nf(all.length)}), `<div id="wmap"></div>
       <p class="muted attrib">${attr ? `${t('geo.data_from')} ${attr} · ` : ''}${t('geo.map_from')} <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a></p>`)}</div>
     <div class="grid" style="margin-bottom:16px">${asCharts.map(([by, m], i) => seriesPanel('asr' + i, 'c6', `${t(by === 'asn_src' ? 'geo.as_src' : 'geo.as_dst')} · ${t(m === 'wire' ? 'ch.bps' : 'ch.pps')}`, i < 2 ? esc(t(by === 'asn_src' ? 'geo.as_src_sub' : 'geo.as_dst_sub')) : '')).join('')}</div>
     <div class="grid">

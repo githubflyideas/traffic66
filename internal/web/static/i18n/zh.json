@@ -444,6 +444,7 @@
 "geo.col_lic": "许可",
 "geo.map": "按国家/地区看外部流量",
 "geo.map_sub": "共 {n} 个国家/地区 · 颜色越深流量越大 · 点击国家/地区可筛选",
+"geo.map_sub_dark": "共 {n} 个国家/地区 · 颜色越亮流量越大 · 点击国家/地区可筛选",
 "geo.map_less": "少",
 "geo.map_more": "多",
 "geo.map_none": "无流量",

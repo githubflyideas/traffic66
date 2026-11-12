@@ -71,6 +71,8 @@ func (s *Server) postCleanup(w http.ResponseWriter, r *http.Request) {
 // answers the request when it may not. An installation with no licence
 // checker at all (the offline sandbox) is treated as unregistered: the
 // answer is never more permissive than a missing licence.
+//
+// The registered build's features call it; this build has none that do.
 func (s *Server) allowed(w http.ResponseWriter, feature string) bool {
 	if s.License != nil && s.License.State().Allowed(feature) {
 		return true

@@ -1,7 +1,7 @@
 **English** | [中文](docs/README.zh.md) | [हिन्दी](docs/README.hi.md) | [Español](docs/README.es.md) | [العربية](docs/README.ar.md) | [Français](docs/README.fr.md) | [বাংলা](docs/README.bn.md) | [Português](docs/README.pt.md) | [Русский](docs/README.ru.md) | [Bahasa Indonesia](docs/README.id.md) | [اردو](docs/README.ur.md) | [Deutsch](docs/README.de.md) | [日本語](docs/README.ja.md) | [Tiếng Việt](docs/README.vi.md) | [한국어](docs/README.ko.md)
 
 # traffic66
-<img width="1280" height="720" alt="image" src="https://github.com/user-attachments/assets/00e1407d-5dc4-4060-8ee6-dd3a78c88af4" />
+<img width="1280" height="720" alt="traffic66" src="https://github.com/user-attachments/assets/00e1407d-5dc4-4060-8ee6-dd3a78c88af4" />
 
 A single-binary NetFlow / sFlow / IPFIX collector and traffic analyzer for IPv4 and IPv6, with a web UI and a terminal UI.
 

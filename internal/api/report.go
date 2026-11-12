@@ -210,18 +210,20 @@ func (s *Server) report(w http.ResponseWriter, r *http.Request) {
 			// They are sampled, so the row says so through Source.
 			it.InAvg = float64(f.InWire) * 8 / span.Seconds()
 			it.OutAvg = float64(f.OutWire) * 8 / span.Seconds()
-			qi := q
-			if only == "" {
-				qi.Filters = append(append([]store.Filter{}, q.Filters...), store.Filter{Field: "iface", Value: k})
-			}
-			if _, _, b, err := s.totalSeries(qi); err == nil {
-				for _, v := range b {
-					it.InPeak = math.Max(it.InPeak, v)
+			// One series per direction: what came in through the
+			// interface, and what went out through it.
+			for _, d := range []struct {
+				field     string
+				peak, p95 *float64
+			}{{"iface_in", &it.InPeak, &it.In95}, {"iface_out", &it.OutPeak, &it.Out95}} {
+				qi := q
+				qi.Filters = append(append([]store.Filter{}, q.Filters...), store.Filter{Field: d.field, Value: k})
+				if _, _, b, err := s.totalSeries(qi); err == nil {
+					for _, v := range b {
+						*d.peak = math.Max(*d.peak, v)
+					}
+					*d.p95 = percentile(b, 0.95)
 				}
-				it.In95 = percentile(b, 0.95)
-				// One series per interface covers both directions; it is
-				// reported as the inbound figure with the outbound left
-				// empty rather than counted twice.
 			}
 		}
 		if it.Speed > 0 {

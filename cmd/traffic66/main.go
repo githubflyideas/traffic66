@@ -55,7 +55,7 @@ var version = ""
 // CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
 // default used to be a hardcoded 0.1.0-dev, and because nothing checked it
 // it stayed that way for two major versions.
-const devVersion = "2.5.13"
+const devVersion = "2.5.14"
 
 func init() {
 	if version == "" {
@@ -278,7 +278,11 @@ type serveExt struct {
 
 func serve(args []string, demo bool) {
 	doubleClick = startedByDoubleClick()
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	cmdName := "serve"
+	if demo {
+		cmdName = "demo"
+	}
+	fs := flag.NewFlagSet(cmdName, flag.ExitOnError)
 	var f serveFlags
 	defData := defaultDir("traffic66-data")
 	if demo {
@@ -370,7 +374,11 @@ func serve(args []string, demo bool) {
 		log.Printf("%v", err)
 	}
 	for _, src := range asn.Sources() {
-		log.Printf("geo database: %s %s (%s, built %s)", src.Kind, src.File, src.Type, src.Built.Format("2006-01-02"))
+		if src.Built.IsZero() { // a table with no build date
+			log.Printf("geo database: %s %s (%s)", src.Kind, src.File, src.Type)
+		} else {
+			log.Printf("geo database: %s %s (%s, built %s)", src.Kind, src.File, src.Type, src.Built.Format("2006-01-02"))
+		}
 	}
 	thr := enrich.NewThreats()
 	threatFiles := map[string]string{}
@@ -401,7 +409,7 @@ func serve(args []string, demo bool) {
 		log.Printf("threat list %s: %d entries", name, n)
 	}
 
-	pipe := pipeline.New(pipeline.Config{L2Overhead: f.l2}, st, inv, asn, thr)
+	pipe := pipeline.New(pipeline.Config{L2Overhead: f.l2, L2Given: true}, st, inv, asn, thr)
 	col := collector.New(pipe)
 	blocked, err := collector.NewBlocklist(f.data)
 	if err != nil {
@@ -462,8 +470,8 @@ func serve(args []string, demo bool) {
 			fatalf("collector %s: %v; fix or remove it in -listen", name, err)
 		}
 		log.Printf("collector: %s listening on UDP %s", name, addr)
-		if _, port, err := net.SplitHostPort(addr); err == nil {
-			listens = append(listens, api.ListenInfo{Name: name, Port: port})
+		if host, port, err := net.SplitHostPort(addr); err == nil {
+			listens = append(listens, api.ListenInfo{Name: name, Port: port, Host: host})
 		}
 		go col.Serve(ctx, l)
 	}
@@ -1073,6 +1081,15 @@ func setGoMemoryLimit(frac float64) {
 
 // check refuses settings that cannot work, before anything starts.
 func (f *serveFlags) check() error {
+	for _, t := range f.threats {
+		_, path, ok := strings.Cut(t, "=")
+		if !ok {
+			path = t
+		}
+		if _, err := os.Stat(path); err != nil {
+			return fmt.Errorf("-threat %q: %v; give name=path to a threat list file", t, err)
+		}
+	}
 	switch {
 	case f.retention < 1 || f.retention > 3650:
 		return fmt.Errorf("-retention-days %d: use 1 to 3650", f.retention)

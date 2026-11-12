@@ -229,9 +229,16 @@ func (c *Collector) fixTimes(recs []flow.Record, now time.Time) {
 	for i := range recs {
 		r := &recs[i]
 		if r.End.After(now.Add(2*time.Minute)) || r.End.Before(now.Add(-3*time.Hour)) {
-			d := now.Sub(r.End)
-			r.End = r.End.Add(d)
-			r.Start = r.Start.Add(d)
+			// Move the record to receive time and keep its duration. Times
+			// centuries off (microseconds in a millisecond field) cannot be
+			// shifted by a time.Duration, which saturates at 292 years, so
+			// the end is set rather than moved.
+			d := r.End.Sub(r.Start)
+			if d < 0 || d > maxFlowSpan {
+				d = 0
+			}
+			r.End = now
+			r.Start = now.Add(-d)
 			c.Skewed.Add(1)
 		}
 	}
@@ -488,3 +495,7 @@ func (c *Collector) SetSampling(unsampled map[netip.Addr]bool, manual map[netip.
 		c.sink.Submit(res.Records)
 	}
 }
+
+// maxFlowSpan is the longest duration a record keeps when its times are
+// moved to receive time.
+const maxFlowSpan = 24 * time.Hour

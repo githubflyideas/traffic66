@@ -121,7 +121,9 @@ func (q Query) where() (string, []any, error) {
 					args = append(args, lo, hi)
 				}
 			} else {
-				if a, err := netip.ParseAddr(strings.TrimSuffix(v, "/32")); err == nil {
+				if p, err := netip.ParsePrefix(v); err == nil {
+					v = p.Addr().Unmap().String() // a single address: /32 or /128
+				} else if a, err := netip.ParseAddr(v); err == nil {
 					v = a.Unmap().String()
 				}
 				for _, col := range cols {

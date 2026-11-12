@@ -10,6 +10,8 @@ import (
 type ListenInfo struct {
 	Name string `json:"name"`
 	Port string `json:"port"`
+	// Host is the address it is bound to, for the startup hint only.
+	Host string `json:"-"`
 }
 
 // LocalIPs lists this machine's IPv4 addresses that a device could send

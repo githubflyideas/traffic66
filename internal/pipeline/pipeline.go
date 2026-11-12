@@ -25,6 +25,9 @@ type Config struct {
 	// L2Overhead is added per packet to IP-layer byte counts to estimate
 	// link-layer octets (Ethernet header + FCS = 18).
 	L2Overhead int
+	// L2Given says L2Overhead was chosen, so 0 means none rather than the
+	// default of 18.
+	L2Given bool
 }
 
 // Pipeline is safe for concurrent Submit calls.
@@ -87,7 +90,7 @@ type origin struct {
 }
 
 func New(cfg Config, st *store.Store, inv *enrich.Inventory, asn *enrich.ASNDB, thr *enrich.Threats) *Pipeline {
-	if cfg.L2Overhead <= 0 {
+	if cfg.L2Overhead < 0 || (cfg.L2Overhead == 0 && !cfg.L2Given) {
 		cfg.L2Overhead = 18
 	}
 	return &Pipeline{
@@ -295,6 +298,13 @@ func (p *Pipeline) process(r *flow.Record) {
 	if !src.IsValid() || !dst.IsValid() {
 		return
 	}
+	// A time the database cannot hold, or one far in the future, would fail
+	// the whole batch with it (other exporters' rows included) and push the
+	// duplicate window ahead of real traffic.
+	if !plausibleTime(r.End) || (!r.Start.IsZero() && !plausibleTime(r.Start)) {
+		p.Implausible.Add(1)
+		return
+	}
 	mult := r.Mult
 	if mult <= 0 {
 		mult = 1
@@ -363,7 +373,11 @@ func (p *Pipeline) process(r *flow.Record) {
 	var wire, l3 float64
 	if r.L2 {
 		wire = float64(r.Bytes) * mult
-		l3 = math.Max(0, wire-pkts*18)
+		hdr := 18.0 // Ethernet header and FCS
+		if r.VLAN != 0 {
+			hdr += 4 // the 802.1Q tag is link layer too
+		}
+		l3 = math.Max(0, wire-pkts*hdr)
 	} else {
 		l3 = float64(r.Bytes) * mult
 		oh := float64(p.cfg.L2Overhead)
@@ -496,6 +510,9 @@ var dedupMaxPerMinute = 1_000_000
 // table holds about 60 MB. Two different flows in the same minute share a
 // 64-bit hash with a probability of about 1 in 10^9 per minute.
 func (p *Pipeline) isDup(t time.Time, k dkey, o origin) bool {
+	if t.After(time.Now().Add(time.Hour)) {
+		return false // far ahead of the clock: never moves the window
+	}
 	if t.After(p.newest) {
 		p.newest = t
 		for m := range p.dedup {
@@ -679,3 +696,9 @@ const (
 	maxMult        = 1 << 24
 	maxRecordBytes = 1 << 46
 )
+
+// plausibleTime reports whether t is a time a flow can have: from 1990 to
+// two days ahead of this machine's clock.
+func plausibleTime(t time.Time) bool {
+	return t.IsZero() || (t.Year() >= 1990 && t.Before(time.Now().Add(48*time.Hour)))
+}

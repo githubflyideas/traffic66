@@ -9,12 +9,20 @@ import (
 	"unicode/utf8"
 )
 
+var pipeIn *bufio.Reader
+
 // ReadSecret prints prompt and reads a line from the terminal without
 // echoing it. When stdin is not a terminal it reads a plain line.
 func ReadSecret(prompt string) (string, error) {
 	fmt.Fprint(os.Stderr, prompt)
 	if !isTerminal() {
-		line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		// One reader for every call: a reader of its own would buffer the
+		// next lines too (a password and its repetition piped in) and take
+		// them with it.
+		if pipeIn == nil {
+			pipeIn = bufio.NewReader(os.Stdin)
+		}
+		line, err := pipeIn.ReadString('\n')
 		if err != nil && line == "" {
 			return "", err
 		}

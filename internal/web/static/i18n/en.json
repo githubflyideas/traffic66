@@ -444,6 +444,7 @@
 "geo.col_lic": "Licence",
 "geo.map": "Remote traffic by country/region",
 "geo.map_sub": "{n} countries/regions · darker means more traffic · click a country/region to filter",
+"geo.map_sub_dark": "{n} countries/regions · brighter means more traffic · click a country/region to filter",
 "geo.map_less": "less",
 "geo.map_more": "more",
 "geo.map_none": "no traffic",

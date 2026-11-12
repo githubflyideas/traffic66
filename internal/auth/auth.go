@@ -188,6 +188,9 @@ func RecordAdmin(dir, user string) error {
 	return nil
 }
 
+// ErrNoUser is returned when deleting a user that does not exist.
+var ErrNoUser = errors.New("no user")
+
 // ErrLastUser is returned when deleting the only remaining user.
 var ErrLastUser = errors.New("this is the only user; add another user first")
 
@@ -207,7 +210,7 @@ func Delete(dir, user string) error {
 		}
 	}
 	if len(out) == len(entries) {
-		return fmt.Errorf("no user %q", user)
+		return fmt.Errorf("%w %q", ErrNoUser, user)
 	}
 	if len(out) == 0 {
 		return ErrLastUser

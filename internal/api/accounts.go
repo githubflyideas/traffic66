@@ -240,6 +240,10 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := auth.Delete(s.DataDir, u); err != nil {
+		if errors.Is(err, auth.ErrNoUser) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+			return
+		}
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}

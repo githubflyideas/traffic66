@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"strings"
 
 	"github.com/githubflyideas/traffic66/internal/api"
@@ -50,6 +51,15 @@ func printStartup(w io.Writer, scheme string, web net.Addr, listens []api.Listen
 		to := "this machine's address"
 		if len(ips) > 0 {
 			to = strings.Join(ips, " or ")
+		}
+		local := true // every collector bound to loopback: only this machine can send
+		for _, l := range listens {
+			if a, err := netip.ParseAddr(l.Host); err != nil || !a.IsLoopback() {
+				local = false
+			}
+		}
+		if local {
+			to = "127.0.0.1 (this machine only)"
 		}
 		fmt.Fprintf(w, "  Devices    export to %s, UDP %s (any port takes any protocol)\n", to, strings.Join(ps, ", "))
 	}
