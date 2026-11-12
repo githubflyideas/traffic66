@@ -3,6 +3,13 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.15
+
+- Stricter checks on incoming samples; refused records are logged and counted.
+- Works behind a reverse proxy that passes the host name on (see the manual).
+- Account changes from `passwd` and the web UI at the same time are all kept.
+- Smaller fixes to sign-in and user names.
+
 ## 2.5.14
 
 - Build with Go 1.27.4.
