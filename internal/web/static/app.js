@@ -2110,7 +2110,7 @@ views.ifaces = async (el) => {
   const head = v => ctr && v.kind !== 'noflow' ? t('if.dev', {v: fmtPct(v.dev)}) : '—';
   const vk = [vin, vout].some(v => v.kind === 'warn') ? 'warn' : [vin, vout].some(v => v.kind === 'noflow') ? 'noflow' : [vin, vout].every(v => v.kind === 'none') ? 'none' : '';
   $('#recon').innerHTML = `<div class="ph"><div><div class="sub">${esc(name)} · ${t('if.flow')} / ${t('if.counter')}</div>
-      <div style="font-size:20px;font-weight:650"><span style="color:${IF_IN}">${t('if.in')}</span> ${head(vin)} · <span style="color:${IF_OUT}">${t('if.out')}</span> ${head(vout)}</div></div></div>
+      <div style="font-size:20px;font-weight:650"><span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${IF_IN};margin-inline-end:6px;vertical-align:middle"></i>${t('if.in')}</span> ${head(vin)} · <span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${IF_OUT};margin-inline-end:6px;vertical-align:middle"></i>${t('if.out')}</span> ${head(vout)}</div></div></div>
     <div class="verdict ${vk}"><b>${t('if.in')}</b>: ${vin.text}<br><b>${t('if.out')}</b>: ${vout.text}</div>`;
 };
 
@@ -2179,7 +2179,7 @@ views.sources = async (el) => {
       <table><tr><th>${t('geo.col_db')}</th><th>${t('geo.col_holds')}</th><th>${t('geo.col_lic')}</th></tr>${freeRows}</table>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0">${t('geo.where')}</p>`)}
     ${panel('c12', t('logo.title'), t('logo.sub'), `<div class="logoprev"><img id="logoPrev" src="/logo?v=${Date.now()}" alt="logo">
-      <div style="display:grid;gap:8px">${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent);color:var(--on-accent);font-weight:600">${t('logo.upload')}<input type="file" id="logoFile" accept=".png,.svg,.jpg,.jpeg,.webp,.gif,image/*" hidden></label><button class="btn" id="logoReset">${t('logo.reset')}</button></div>`)}
+      <div style="display:grid;gap:8px">${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent-fill);color:var(--on-accent);font-weight:600">${t('logo.upload')}<input type="file" id="logoFile" accept=".png,.svg,.jpg,.jpeg,.webp,.gif,image/*" hidden></label><button class="btn" id="logoReset">${t('logo.reset')}</button></div>`)}
       ${admOnly(`<span class="muted" style="font-size:12.5px">${t('logo.hint')}</span>`)}<span id="logoMsg" style="font-size:13px"></span></div></div>`)}
   </div>`;
   // Installing a licence from the page. Until now the only way to register

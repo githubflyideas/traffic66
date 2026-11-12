@@ -4,13 +4,13 @@
      the page and the cards the same colour. */
   color-scheme:light;
   --bg:#ffffff; --surface:#ffffff; --surface-2:#f2f2f7; --line:#e3e3e8; --line-2:#d1d1d6;
-  --ink:#1c1c1e; --ink-2:#48484a; --ink-3:#6e6e73;
-  --accent:#007aff; --accent-soft:#e3efff; --accent-ink:#0062cc; --on-accent:#ffffff;
+  --ink:#1c1c1e; --ink-2:#48484a; --ink-3:#58585d;
+  --accent:#007aff; --accent-soft:#e3efff; --accent-ink:#0055b3; --on-accent:#ffffff; --accent-fill:#0066d6; --on-crit:#ffffff;
   --side:#e9e9ee; --side-hover:#dcdce2; --side-line:#c4c4cc;
   --c1:#007aff; --c2:#ff9500; --c3:#34c759; --c4:#e6b000; --c5:#ff2d55; --c6:#248a3d; --c7:#5856d6; --c8:#ff3b30; --other:#c7c7cc; --map-none:#e5e5ea;
   --m1:#cfe3ff; --m2:#8cbcff; --m3:#3d8eff; --m4:#0062cc; --m5:#003a7a;
   --base:#8e8e93;
-  --good:#248a3d; --warn:#ffb800; --crit:#d70015; --warn-ink:#8a5d00; --crit-soft:#ffe5e7;
+  --good:#1b7031; --warn:#ffb800; --crit:#d70015; --warn-ink:#8a5d00; --crit-soft:#ffe5e7;
   --sb-bg:#fff4e0; --sb-line:#f0c27a; --sb-ink:#8a4b00;
   --shadow:rgba(20,30,50,.16);
 }
@@ -18,8 +18,8 @@
 :root[data-theme=black]{
   color-scheme:dark;
   --bg:#000000; --surface:#1c1c1e; --surface-2:#2c2c2e; --line:#2c2c2e; --line-2:#48484a;
-  --ink:#ffffff; --ink-2:#d1d1d6; --ink-3:#8e8e93;
-  --accent:#0a84ff; --accent-soft:rgba(10,132,255,.22); --accent-ink:#6cb4ff;
+  --ink:#ffffff; --ink-2:#d1d1d6; --ink-3:#aeaeb2;
+  --accent:#0a84ff; --accent-fill:#0066d6; --on-crit:#1b2432; --accent-soft:rgba(10,132,255,.22); --accent-ink:#6cb4ff;
   --side:#121214; --side-hover:#1c1c1e; --side-line:#35353a;
   --c1:#0a84ff; --c2:#ff9f0a; --c3:#30d158; --c4:#ffd60a; --c5:#ff375f; --c6:#63e6e2; --c7:#7d7aff; --c8:#ff453a; --other:#636366; --map-none:#2c2c2e;
   --m1:#14284a; --m2:#1f5aa6; --m3:#2f85f0; --m4:#78b6ff; --m5:#cfe5ff;
@@ -31,7 +31,7 @@
 /* Teal: light, with iOS teal for the accent and a teal-tinted side menu */
 :root[data-theme=teal]{
   --bg:#eaf5f6; --surface:#eaf5f6; --surface-2:#dcedef; --line:#c6dfe2; --line-2:#aacfd3;
-  --accent:#0e8a9d; --accent-soft:#d9f0f3; --accent-ink:#0a6a79;
+  --accent:#0e8a9d; --accent-fill:#0b6f7d; --accent-soft:#d9f0f3; --accent-ink:#085b67;
   --side:#cde5e8; --side-hover:#bcdbdf; --side-line:#9bc5ca;
   --c1:#0e8a9d; --c2:#ff9500; --c3:#34c759; --c4:#e6b000; --c5:#ff2d55; --c6:#007aff; --c7:#5856d6; --c8:#ff3b30;
   --m1:#d3eef1; --m2:#8fd2db; --m3:#3fb0c0; --m4:#0e8a9d; --m5:#07505b;
@@ -39,7 +39,7 @@
 /* Orange: warm light, with iOS orange for the accent and a warm side menu */
 :root[data-theme=orange]{
   --bg:#fcf4ea; --surface:#fcf4ea; --surface-2:#f5e8d6; --line:#ead7bd; --line-2:#dcc19c;
-  --accent:#d96a00; --accent-soft:#fde9d3; --accent-ink:#a34f00;
+  --accent:#d96a00; --accent-soft:#fde9d3; --accent-ink:#874100; --accent-fill:#b35300;
   --side:#f1ddc2; --side-hover:#e9cfac; --side-line:#d4b68a;
   --c1:#e07000; --c2:#007aff; --c3:#34c759; --c4:#c9a000; --c5:#ff2d55; --c6:#248a3d; --c7:#5856d6; --c8:#c62828;
   --m1:#fde3c4; --m2:#f9b56a; --m3:#ef8a1f; --m4:#c45f00; --m5:#7a3a00;
@@ -50,8 +50,8 @@
 :root[data-theme=midnight]{
   color-scheme:dark;
   --bg:#0b1020; --surface:#161e3a; --surface-2:#141c38; --line:#1f2a4d; --line-2:#2c3a66;
-  --ink:#e8ecff; --ink-2:#b4bce0; --ink-3:#7c86b0;
-  --accent:#22d3ee; --accent-soft:rgba(34,211,238,.18); --accent-ink:#67e8f9; --on-accent:#06121f;
+  --ink:#e8ecff; --ink-2:#b4bce0; --ink-3:#a3abcf;
+  --accent:#22d3ee; --accent-soft:rgba(34,211,238,.18); --accent-ink:#67e8f9; --on-accent:#06121f; --accent-fill:var(--accent); --on-crit:#1b2432;
   --side:#0e1530; --side-hover:#18224a; --side-line:#2a3660;
   --c1:#22d3ee; --c2:#a78bfa; --c3:#34d399; --c4:#fbbf24; --c5:#f472b6; --c6:#60a5fa; --c7:#818cf8; --c8:#f87171; --other:#475080; --map-none:#1a2244;
   --m1:#1e2a55; --m2:#2b4c8c; --m3:#2f7fc0; --m4:#22b8e0; --m5:#8be9ff;
@@ -137,11 +137,11 @@ aside>.pick select{width:100%;min-width:0;color:var(--ink);border:1px solid var(
 .range{display:flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;margin-inline-start:auto}
 .range button{border:0;border-inline-start:1px solid var(--line);background:var(--surface);padding:5px 11px;cursor:pointer;color:var(--ink-2);white-space:nowrap}
 .range button:first-child{border-inline-start:0}
-.range button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.range button[aria-pressed="true"]{background:var(--accent-fill);color:var(--on-accent)}
 .refresh{font-size:12.5px;color:var(--ink-3);white-space:nowrap}
 .btn{border:1px solid var(--line-2);background:var(--surface);border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink-2);font-size:13px}
 .btn:hover{border-color:var(--accent);color:var(--accent-ink)}
-.primary{border:0;background:var(--accent);color:var(--on-accent);border-radius:7px;padding:8px 14px;cursor:pointer;font-weight:600}
+.primary{border:0;background:var(--accent-fill);color:var(--on-accent);border-radius:7px;padding:8px 14px;cursor:pointer;font-weight:600}
 .row2{display:flex;gap:8px;align-items:center;padding:0 20px 10px;min-height:34px;flex-wrap:wrap}
 .row2 .hint{color:var(--ink-3);font-size:13px}
 /* filter dropdowns */
@@ -283,7 +283,7 @@ th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
 /* naming form in the popup */
 .pop form{display:flex;gap:6px;padding:6px 6px 2px}
 .pop form input{flex:1;min-width:0;border:1px solid var(--line-2);border-radius:6px;padding:5px 8px;font:inherit}
-.pop form button{width:auto;background:var(--accent);color:var(--on-accent);justify-content:center}
+.pop form button{width:auto;background:var(--accent-fill);color:var(--on-accent);justify-content:center}
 .pop form button:hover{background:var(--accent-ink)}
 /* detail page */
 .dhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -294,9 +294,9 @@ th.sk .ar{font-size:10px;margin-inline-start:3px;opacity:.7}
 .geo li{margin:3px 0}
 
 /* findings */
-.badge.crit{background:var(--crit);color:#fff}
+.badge.crit{background:var(--crit);color:var(--on-crit)}
 .sev{display:inline-block;min-width:52px;text-align:center;font-size:12px;font-weight:650;border-radius:4px;padding:1px 6px;white-space:nowrap}
-.sev.s3{background:var(--crit);color:#fff}.sev.s2{background:var(--warn);color:#1b2432}.sev.s1{background:var(--surface-2);color:var(--ink-2)}
+.sev.s3{background:var(--crit);color:var(--on-crit)}.sev.s2{background:var(--warn);color:#1b2432}.sev.s1{background:var(--surface-2);color:var(--ink-2)}
 .fd td{vertical-align:top;padding-top:10px;padding-bottom:10px}
 .fd .what{font-size:14px;line-height:1.5}
 .fd .what .v{font-weight:600}
@@ -412,7 +412,7 @@ dialog.rkdlg h2 .mono{font-size:12.5px;font-weight:400;margin-inline-start:6px}
 .mono{font-family:"Cascadia Mono",Consolas,ui-monospace,monospace;font-size:12.5px}
 tr.on>td{background:var(--surface-2)}
 .btn.sm{padding:2px 7px;font-size:12px}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
 .btn.primary:hover{filter:brightness(1.08);color:#fff}
 /* The record editor. */
 dialog.aedit{border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--ink);
@@ -522,8 +522,8 @@ body.marked .view.on::after{
   position:fixed;right:14px;bottom:14px;z-index:41;
   font:600 12px/1 system-ui,sans-serif;letter-spacing:.04em;
   padding:7px 11px;border-radius:999px;cursor:pointer;
-  color:var(--ink-3,#8a8a8a);background:var(--bg-1,#fff);
-  border:1px solid var(--ink-3,#8a8a8a);opacity:.65}
+  color:var(--ink-2);background:var(--bg);
+  border:1px solid var(--line-2)}
 .markchip:hover,.markchip:focus-visible{opacity:1;border-color:var(--warn,#b9770e);color:var(--warn,#b9770e)}
 @media print{.markchip{display:none}}
 
