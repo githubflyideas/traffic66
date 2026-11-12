@@ -5,8 +5,8 @@ heading is the version number.
 
 ## 2.5.14
 
+- Build with Go 1.27.4.
 - Robustness fixes for flow records with unusual timestamps.
-- Built with the current Go release.
 - `-l2-overhead 0` is honoured; byte counts for VLAN-tagged samples corrected.
 - `passwd` accepts a piped password; IPv6 /128 filters; per-direction interface report.
 - Country/region wording in all languages; map line colours on dark themes; smaller fixes to messages and logs.
