@@ -619,6 +619,7 @@
 "acct.err_self": "No puede eliminarse a sí mismo.",
 "acct.err_fixed": "La contraseña de esta ejecución se indicó al iniciar y no se puede cambiar aquí.",
 "acct.err_not_admin": "Solo el administrador gestiona usuarios.",
+"acct.err_file": "No se pudo guardar; el motivo está en el registro del servidor.",
 "acct.err_exists": "Ya existe un usuario con ese nombre. Para cambiar su contraseña, use Restablecer en su fila.",
 "acct.err_no_user": "Ese usuario ya no existe.",
 "acct.fixed": "Esta ejecución usa la contraseña indicada al iniciar (-password o TRAFFIC66_PASSWORD); no se puede cambiar aquí.",

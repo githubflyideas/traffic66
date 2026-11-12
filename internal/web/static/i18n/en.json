@@ -619,6 +619,7 @@
 "acct.err_self": "You cannot delete yourself.",
 "acct.err_fixed": "This run's password was given at start and cannot be changed here.",
 "acct.err_not_admin": "Only the administrator manages users.",
+"acct.err_file": "Could not be saved; the reason is in the server log.",
 "acct.err_exists": "A user with this name already exists. Use Reset password on its row instead.",
 "acct.err_no_user": "That user no longer exists.",
 "acct.fixed": "This run uses the password given at start (-password or TRAFFIC66_PASSWORD); it cannot be changed here. Accounts in the password file are not used in this run.",

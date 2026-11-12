@@ -619,6 +619,7 @@
 "acct.err_self": "不能删除自己。",
 "acct.err_fixed": "本次运行的密码来自启动参数，不能在这里修改。",
 "acct.err_not_admin": "只有管理员能管理用户。",
+"acct.err_file": "保存失败，原因已写入服务器日志。",
 "acct.err_exists": "该用户名已存在。要改密码请在该行点“重置密码”。",
 "acct.err_no_user": "该用户已不存在。",
 "acct.fixed": "本次运行使用启动参数（-password 或 TRAFFIC66_PASSWORD）里的密码，不能在页面上修改。本次运行不使用密码文件里的其他账号。",

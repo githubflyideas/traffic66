@@ -43,7 +43,7 @@ func (s *Store) Interfaces(q Query) ([]IfaceInfo, error) {
 	rows.Close()
 	src := s.Source(q.From, q.To)
 	for _, side := range []string{"in_if", "out_if"} {
-		rows, err := s.DB.Query(fmt.Sprintf(`SELECT exporter, %s, sum(wire) FROM %s WHERE ts >= ? AND ts < ? AND %s <> 0 GROUP BY 1,2 ORDER BY 3 DESC LIMIT 200`, side, src, side), q.From.UTC(), q.To.UTC())
+		rows, err := s.DB.Query(fmt.Sprintf(`SELECT exporter, %s, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT) FROM %s WHERE ts >= ? AND ts < ? AND %s <> 0 GROUP BY 1,2 ORDER BY 3 DESC LIMIT 200`, side, src, side), q.From.UTC(), q.To.UTC())
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func (s *Store) Recon(q Query, exporter string, ifindex uint32) (*Recon, error) 
 	src := s.Source(q.From, q.To)
 	bucket := q.bucketSQL(step)
 	for side, dst := range map[string][]float64{"in_if": inF, "out_if": outF} {
-		rows, err := s.DB.Query(fmt.Sprintf(`SELECT %s, sum(wire), sum(pkts), sum(pkts / greatest(mult, 1)) FROM %s
+		rows, err := s.DB.Query(fmt.Sprintf(`SELECT %s, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT), CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT), sum(pkts / greatest(mult, 1)) FROM %s
 			WHERE ts >= ? AND ts < ? AND exporter = ? AND %s = ? GROUP BY 1`, bucket, src, side),
 			q.From.UTC(), q.To.UTC(), exporter, ifindex)
 		if err != nil {
@@ -267,7 +267,7 @@ func (s *Store) markPeers(q Query, src string, m map[string]*IfaceInfo) error {
 	known := map[string]map[uint32]bool{} // exporter → sampled interfaces
 	unk := map[string]uint64{}            // exporter → traffic with no sampled interface
 	var knownWire = map[string]uint64{}
-	rows, err := s.DB.Query(`SELECT dim, val, sum(wire) FROM r_dim WHERE ts >= ? AND ts < ? AND dim IN ('obsif', 'obsunk') GROUP BY 1,2`, from, to)
+	rows, err := s.DB.Query(`SELECT dim, val, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT) FROM r_dim WHERE ts >= ? AND ts < ? AND dim IN ('obsif', 'obsunk') GROUP BY 1,2`, from, to)
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,7 @@ func (s *Store) markPeers(q Query, src string, m map[string]*IfaceInfo) error {
 	rows.Close()
 	// device totals, for interfaces seen on nearly all of a device's traffic
 	tot := map[string]uint64{}
-	rows, err = s.DB.Query(fmt.Sprintf(`SELECT exporter, sum(wire) FROM %s WHERE ts >= ? AND ts < ? GROUP BY 1`, src), q.From.UTC(), q.To.UTC())
+	rows, err = s.DB.Query(fmt.Sprintf(`SELECT exporter, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT) FROM %s WHERE ts >= ? AND ts < ? GROUP BY 1`, src), q.From.UTC(), q.To.UTC())
 	if err != nil {
 		return err
 	}

@@ -915,6 +915,9 @@ func loginChecker(dir, user, flagPw string, demo bool) *auth.FileChecker {
 			log.Printf("first start: sign in as user %q with password %q; a new password is asked for at the first sign-in", user, auth.DefaultPassword)
 		}
 	} else {
+		if err := auth.RecordAdmin(dir, user); err != nil {
+			fatalf("%s: %v", file, err)
+		}
 		var users []string
 		for _, e := range es {
 			users = append(users, e.User)
@@ -954,6 +957,10 @@ Add -data <directory> when traffic66 runs with -data.
 		fs.PrintDefaults()
 	}
 	fs.Parse(args)
+	if *user == "" || strings.ContainsAny(*user, ": \t\r\n") || len(*user) > 64 {
+		fmt.Fprintln(os.Stderr, "a user name cannot be empty or contain spaces or colons")
+		os.Exit(2)
+	}
 	file := filepath.Join(*data, auth.FileName)
 	if *list {
 		es, err := auth.Load(*data)

@@ -58,8 +58,11 @@ type Pipeline struct {
 	slbuf []slice
 
 	Records atomic.Uint64
-	Rows    atomic.Uint64
-	DupRows atomic.Uint64
+	// Implausible counts records refused for a sampling rate or byte count
+	// no real export carries.
+	Implausible atomic.Uint64
+	Rows        atomic.Uint64
+	DupRows     atomic.Uint64
 	// DedupFull counts flows not checked for duplicates because the minute
 	// already held dedupMaxPerMinute flows.
 	DedupFull atomic.Uint64
@@ -295,6 +298,13 @@ func (p *Pipeline) process(r *flow.Record) {
 	mult := r.Mult
 	if mult <= 0 {
 		mult = 1
+	}
+	// Exports arrive over UDP from anyone who can reach the port. A
+	// sampling rate or a byte count no device produces is refused, so that
+	// one forged packet cannot add exabytes to the totals.
+	if mult > maxMult || float64(r.Bytes)*mult > maxRecordBytes || float64(r.Packets)*mult > maxRecordBytes {
+		p.Implausible.Add(1)
+		return
 	}
 	srcIsClient := enrich.Role(r)
 	client, server := src, dst
@@ -662,3 +672,10 @@ func (p *Pipeline) updateSettle(time.Time) {
 	}
 	store.SetSettle(s + time.Second)
 }
+
+// Limits on one record, far above anything a device exports: a sampling
+// rate of 1 in 16.7 million, and 64 TiB counted for a single record.
+const (
+	maxMult        = 1 << 24
+	maxRecordBytes = 1 << 46
+)

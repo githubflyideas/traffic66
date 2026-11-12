@@ -145,7 +145,7 @@ func (s *Store) SegmentCountries(q Query) ([]SegmentCountry, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.DB.Query(fmt.Sprintf(`SELECT segment, peer_cc, CAST(sum(wire) AS DOUBLE) FROM %s WHERE %s AND dir IN (1, 2) AND peer_cc <> '' GROUP BY 1,2 ORDER BY 3 DESC LIMIT 2000`,
+	rows, err := s.DB.Query(fmt.Sprintf(`SELECT segment, peer_cc, CAST(CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT) AS DOUBLE) FROM %s WHERE %s AND dir IN (1, 2) AND peer_cc <> '' GROUP BY 1,2 ORDER BY 3 DESC LIMIT 2000`,
 		s.Source(q.From, q.To), where), args...)
 	if err != nil {
 		return nil, err

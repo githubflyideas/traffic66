@@ -619,6 +619,7 @@
 "acct.err_self": "Bạn không thể xóa chính mình.",
 "acct.err_fixed": "Mật khẩu của lần chạy này được chỉ định khi khởi động và không thể đổi ở đây.",
 "acct.err_not_admin": "Chỉ quản trị viên mới quản lý người dùng.",
+"acct.err_file": "Không lưu được; lý do có trong nhật ký máy chủ.",
 "acct.err_exists": "Đã có người dùng tên này. Để đổi mật khẩu, dùng Đặt lại ở dòng của họ.",
 "acct.err_no_user": "Người dùng đó không còn nữa.",
 "acct.fixed": "Lần chạy này dùng mật khẩu chỉ định khi khởi động (-password hoặc TRAFFIC66_PASSWORD); không thể đổi ở đây.",

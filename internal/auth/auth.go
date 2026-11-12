@@ -75,46 +75,117 @@ type Entry struct{ User, Hash string }
 // Load reads the password file in dir. It returns nil and no error when
 // the file does not exist.
 func Load(dir string) ([]Entry, error) {
+	es, _, err := loadFile(dir)
+	return es, err
+}
+
+// adminMark is the comment line that names the administrator. Who manages
+// the others is recorded, not inferred from the order of the lines or from
+// somebody being called "admin": both change when passwords change or
+// users are added.
+const adminMark = "# admin: "
+
+// loadFile reads the entries and the recorded administrator, if any.
+func loadFile(dir string) ([]Entry, string, error) {
 	f, err := os.Open(filepath.Join(dir, FileName))
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return nil, "", nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer f.Close()
 	var out []Entry
+	var admin string
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
+		if strings.HasPrefix(line, adminMark) {
+			admin = strings.TrimSpace(strings.TrimPrefix(line, adminMark))
+			continue
+		}
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 		u, h, ok := strings.Cut(line, ":")
 		if !ok || u == "" {
-			return nil, fmt.Errorf("%s: malformed line", FileName)
+			return nil, "", fmt.Errorf("%s: malformed line", FileName)
 		}
 		out = append(out, Entry{u, h})
 	}
-	return out, sc.Err()
+	return out, admin, sc.Err()
 }
+
+// adminOf is the recorded administrator while that user exists. Files
+// written before the record existed keep the rule they were read with
+// then: "admin" when there is one, else the first user.
+func adminOf(es []Entry, recorded string) string {
+	for _, e := range es {
+		if recorded != "" && e.User == recorded {
+			return recorded
+		}
+	}
+	for _, e := range es {
+		if e.User == "admin" {
+			return e.User
+		}
+	}
+	if len(es) > 0 {
+		return es[0].User
+	}
+	return ""
+}
+
+// fileMu serialises changes to password files in this process, so that
+// two changes at once cannot each read the old file and the later write
+// drop the earlier change.
+var fileMu sync.Mutex
 
 // Set stores pw for user in dir, replacing any earlier password of that user.
 func Set(dir, user, pw string) error {
 	if user == "" || strings.ContainsAny(user, ":\r\n") {
 		return fmt.Errorf("invalid user name %q", user)
 	}
-	entries, err := Load(dir)
+	fileMu.Lock()
+	defer fileMu.Unlock()
+	entries, recorded, err := loadFile(dir)
 	if err != nil {
 		return err
 	}
-	var out []Entry
-	for _, e := range entries {
-		if e.User != user {
-			out = append(out, e)
+	admin := adminOf(entries, recorded)
+	if admin == "" {
+		admin = user // the first user is the administrator
+	}
+	// A new password keeps the user's place in the file.
+	found := false
+	for i, e := range entries {
+		if e.User == user {
+			entries[i].Hash, found = Hash(pw), true
 		}
 	}
-	return write(dir, append(out, Entry{user, Hash(pw)}))
+	if !found {
+		entries = append(entries, Entry{user, Hash(pw)})
+	}
+	return write(dir, entries, admin)
+}
+
+// RecordAdmin names user as the administrator of a password file that
+// does not record one yet, when that user has an account. Files written
+// before the record existed could have lost track of a "-user" other than
+// admin, so the user the service is started with settles it.
+func RecordAdmin(dir, user string) error {
+	fileMu.Lock()
+	defer fileMu.Unlock()
+	entries, recorded, err := loadFile(dir)
+	if err != nil || recorded != "" {
+		return err
+	}
+	for _, e := range entries {
+		if e.User == user {
+			return write(dir, entries, user)
+		}
+	}
+	return nil
 }
 
 // ErrLastUser is returned when deleting the only remaining user.
@@ -122,10 +193,13 @@ var ErrLastUser = errors.New("this is the only user; add another user first")
 
 // Delete removes user from the password file in dir.
 func Delete(dir, user string) error {
-	entries, err := Load(dir)
+	fileMu.Lock()
+	defer fileMu.Unlock()
+	entries, recorded, err := loadFile(dir)
 	if err != nil {
 		return err
 	}
+	admin := adminOf(entries, recorded)
 	var out []Entry
 	for _, e := range entries {
 		if e.User != user {
@@ -138,20 +212,40 @@ func Delete(dir, user string) error {
 	if len(out) == 0 {
 		return ErrLastUser
 	}
-	return write(dir, out)
+	if admin == user {
+		admin = adminOf(out, "")
+	}
+	return write(dir, out, admin)
 }
 
-func write(dir string, entries []Entry) error {
+func write(dir string, entries []Entry, admin string) error {
 	var b strings.Builder
 	b.WriteString("# traffic66 login, one user per line; change with: traffic66 passwd\n")
+	b.WriteString(adminMark + admin + "\n")
 	for _, e := range entries {
 		fmt.Fprintf(&b, "%s:%s\n", e.User, e.Hash)
 	}
-	tmp := filepath.Join(dir, FileName+".tmp")
-	if err := os.WriteFile(tmp, []byte(b.String()), 0o600); err != nil {
+	// A temporary file of its own, so that a password tool running at the
+	// same time cannot rename this one away half written.
+	f, err := os.CreateTemp(dir, FileName+".*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, filepath.Join(dir, FileName))
+	tmp := f.Name()
+	_, err = f.WriteString(b.String())
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Chmod(tmp, 0o600)
+	}
+	if err == nil {
+		err = os.Rename(tmp, filepath.Join(dir, FileName))
+	}
+	if err != nil {
+		os.Remove(tmp)
+	}
+	return err
 }
 
 // Checker verifies logins against fixed passwords or stored hashes. A
@@ -267,19 +361,18 @@ func (f *FileChecker) Users() []string {
 	return out
 }
 
-// Admin is the user who manages the others: "admin" when there is one,
-// else the first user in the file.
+// Admin is the user who manages the others: the one the password file
+// records (see adminOf).
 func (f *FileChecker) Admin() string {
-	us := f.Users()
-	for _, u := range us {
-		if u == "admin" {
-			return u
+	if f.fixed != nil {
+		us := f.Users()
+		if len(us) > 0 {
+			return us[0]
 		}
+		return ""
 	}
-	if len(us) > 0 {
-		return us[0]
-	}
-	return ""
+	es, recorded, _ := loadFile(f.dir)
+	return adminOf(es, recorded)
 }
 
 // HasDefault reports whether some user still has DefaultPassword, for the

@@ -7,12 +7,15 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"github.com/githubflyideas/traffic66/internal/snmp"
 	"github.com/githubflyideas/traffic66/internal/tlscert"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -286,6 +289,10 @@ func tooMany(w http.ResponseWriter) {
 func (s *Server) auth(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.markHeader(w)
+		if !sameOrigin(r) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
+			return
+		}
 		if tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "); tok != "" && s.LocalTok != "" &&
 			subtle.ConstantTimeCompare([]byte(tok), []byte(s.LocalTok)) == 1 {
 			next(w, r.WithContext(context.WithValue(r.Context(), localKey{}, true)))
@@ -467,6 +474,15 @@ func fail(w http.ResponseWriter, err error) {
 	case duckErr.MatchString(msg) || strings.Contains(msg, "database") || strings.Contains(msg, "driver:"):
 		kind = "storage"
 	}
+	var pe *fs.PathError
+	var le *os.LinkError
+	if kind == "" && (errors.As(err, &pe) || errors.As(err, &le)) {
+		// a file could not be read or written: the reason goes to the log,
+		// not the server's paths to the browser
+		log.Printf("api: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "file"})
+		return
+	}
 	if kind == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": msg})
 		return
@@ -509,4 +525,24 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": s.Version})
+}
+
+// sameOrigin refuses a change requested by a page from another origin: a
+// browser sends Origin and Sec-Fetch-Site with such requests, and the
+// session cookie would otherwise go with them. Reads, and programs that
+// send neither header (the terminal UI, scripts), are not affected.
+func sameOrigin(r *http.Request) bool {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+		return true
+	}
+	if site := r.Header.Get("Sec-Fetch-Site"); site == "cross-site" || site == "same-site" {
+		return false
+	}
+	if origin := r.Header.Get("Origin"); origin != "" {
+		u, err := url.Parse(origin)
+		if err != nil || u.Host != r.Host || (u.Scheme != "http" && u.Scheme != "https") {
+			return false
+		}
+	}
+	return true
 }

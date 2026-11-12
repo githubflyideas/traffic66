@@ -24,19 +24,19 @@ const peerExpr = "CASE WHEN dir = 2 THEN client ELSE server END"
 var seriesDims = map[string]seriesDim{
 	"app": {key: "app", cond: "true",
 		rollup: func(b string) string {
-			return `SELECT ` + b + `, app, sum(wire), sum(pkts) FROM {r_ts} WHERE ts >= ? AND ts < ? GROUP BY 1,2`
+			return `SELECT ` + b + `, app, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT), CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT) FROM {r_ts} WHERE ts >= ? AND ts < ? GROUP BY 1,2`
 		}},
 	"client": {key: "client", cond: "true", hourly: true,
 		rollup: func(b string) string {
-			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM {r_host} WHERE ts >= ? AND ts < ? AND role = 1 GROUP BY 1,2`
+			return `SELECT ` + b + `, ip, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT), CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT) FROM {r_host} WHERE ts >= ? AND ts < ? AND role = 1 GROUP BY 1,2`
 		}},
 	"server": {key: "server", cond: "true", hourly: true,
 		rollup: func(b string) string {
-			return `SELECT ` + b + `, ip, sum(wire), sum(pkts) FROM {r_host} WHERE ts >= ? AND ts < ? AND role = 2 GROUP BY 1,2`
+			return `SELECT ` + b + `, ip, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT), CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT) FROM {r_host} WHERE ts >= ? AND ts < ? AND role = 2 GROUP BY 1,2`
 		}},
 	"service": {key: portProtoExpr + " || chr(9) || app", cond: "svc_port <> 0", hourly: true,
 		rollup: func(b string) string {
-			return `SELECT ` + b + `, val, sum(wire), sum(pkts) FROM {r_dim} WHERE ts >= ? AND ts < ? AND dim = 'port' AND NOT starts_with(val, '0/') GROUP BY 1,2`
+			return `SELECT ` + b + `, val, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT), CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT) FROM {r_dim} WHERE ts >= ? AND ts < ? AND dim = 'port' AND NOT starts_with(val, '0/') GROUP BY 1,2`
 		}},
 	// AS of the sender and of the receiver of each packet, when that side
 	// is the external one.

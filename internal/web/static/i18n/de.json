@@ -619,6 +619,7 @@
 "acct.err_self": "Sie können sich nicht selbst löschen.",
 "acct.err_fixed": "Das Passwort dieses Laufs wurde beim Start angegeben und kann hier nicht geändert werden.",
 "acct.err_not_admin": "Nur der Administrator verwaltet Benutzer.",
+"acct.err_file": "Konnte nicht gespeichert werden; der Grund steht im Server-Log.",
 "acct.err_exists": "Ein Benutzer mit diesem Namen existiert bereits. Zum Ändern des Passworts die Zurücksetzen-Funktion in seiner Zeile verwenden.",
 "acct.err_no_user": "Diesen Benutzer gibt es nicht mehr.",
 "acct.fixed": "Dieser Lauf verwendet das beim Start angegebene Passwort (-password oder TRAFFIC66_PASSWORD); es kann hier nicht geändert werden.",
