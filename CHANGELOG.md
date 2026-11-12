@@ -3,6 +3,11 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.13
+
+- Security and robustness fixes for incoming data and account management.
+- Better contrast in all themes; text fixes.
+
 ## 2.5.12
 
 - Users: resetting a user's password signs that user out everywhere; DELETE /api/users also takes the name in a JSON body.
