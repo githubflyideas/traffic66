@@ -302,7 +302,7 @@ func (p *Pipeline) process(r *flow.Record) {
 	// the whole batch with it (other exporters' rows included) and push the
 	// duplicate window ahead of real traffic.
 	if !plausibleTime(r.End) || (!r.Start.IsZero() && !plausibleTime(r.Start)) {
-		p.Implausible.Add(1)
+		p.noteImplausible(r)
 		return
 	}
 	mult := r.Mult
@@ -313,7 +313,7 @@ func (p *Pipeline) process(r *flow.Record) {
 	// sampling rate or a byte count no device produces is refused, so that
 	// one forged packet cannot add exabytes to the totals.
 	if mult > maxMult || float64(r.Bytes)*mult > maxRecordBytes || float64(r.Packets)*mult > maxRecordBytes {
-		p.Implausible.Add(1)
+		p.noteImplausible(r)
 		return
 	}
 	srcIsClient := enrich.Role(r)
@@ -701,4 +701,12 @@ const (
 // two days ahead of this machine's clock.
 func plausibleTime(t time.Time) bool {
 	return t.IsZero() || (t.Year() >= 1990 && t.Before(time.Now().Add(48*time.Hour)))
+}
+
+// noteImplausible counts a refused record and says so in the log: the
+// first one, then every thousandth.
+func (p *Pipeline) noteImplausible(r *flow.Record) {
+	if n := p.Implausible.Add(1); n == 1 || n%1000 == 0 {
+		log.Printf("pipeline: refused %d record(s) with an impossible sampling rate, size or time; latest from %s", n, r.Exporter)
+	}
 }

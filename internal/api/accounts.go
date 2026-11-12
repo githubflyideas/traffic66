@@ -154,7 +154,7 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.User = strings.TrimSpace(in.User)
-	if in.User == "" || strings.ContainsAny(in.User, ": \t\r\n") || len(in.User) > 64 {
+	if in.User == "" || strings.ContainsAny(in.User, ": \t\r\n") || strings.HasPrefix(in.User, "#") || len(in.User) > 64 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_user"})
 		return
 	}

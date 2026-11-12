@@ -266,10 +266,18 @@ func (s *Store) AppendRows(rows []Row) error {
 type Counters struct{ Bytes, Wire, Pkts, Flows uint64 }
 
 func (c *Counters) Add(o Counters) {
-	c.Bytes += o.Bytes
-	c.Wire += o.Wire
-	c.Pkts += o.Pkts
-	c.Flows += o.Flows
+	c.Bytes = satAdd(c.Bytes, o.Bytes)
+	c.Wire = satAdd(c.Wire, o.Wire)
+	c.Pkts = satAdd(c.Pkts, o.Pkts)
+	c.Flows = satAdd(c.Flows, o.Flows)
+}
+
+// satAdd adds without wrapping around past the largest value.
+func satAdd(a, b uint64) uint64 {
+	if a+b < a {
+		return ^uint64(0)
+	}
+	return a + b
 }
 
 type TSKey struct {

@@ -131,8 +131,8 @@ func (s *Server) Handler() http.Handler {
 	}
 	go s.sampleRates()
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /api/login", s.login)
-	mux.HandleFunc("POST /api/logout", s.logout)
+	mux.Handle("POST /api/login", s.sameOriginOnly(s.login))
+	mux.Handle("POST /api/logout", s.sameOriginOnly(s.logout))
 	mux.HandleFunc("GET /auto", s.autoLogin)
 	mux.HandleFunc("GET /logo", s.logo)
 	mux.HandleFunc("GET /api/loginhint", s.loginHint)
@@ -540,9 +540,24 @@ func sameOrigin(r *http.Request) bool {
 	}
 	if origin := r.Header.Get("Origin"); origin != "" {
 		u, err := url.Parse(origin)
-		if err != nil || u.Host != r.Host || (u.Scheme != "http" && u.Scheme != "https") {
+		// A reverse proxy that rewrites Host passes the one the browser
+		// used in X-Forwarded-Host.
+		fwd := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Host"), ",")[0])
+		if err != nil || (u.Host != r.Host && (fwd == "" || u.Host != fwd)) || (u.Scheme != "http" && u.Scheme != "https") {
 			return false
 		}
 	}
 	return true
+}
+
+// sameOriginOnly applies sameOrigin to a handler that needs no session:
+// signing in or out from another site's page is refused too.
+func (s *Server) sameOriginOnly(h http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !sameOrigin(r) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
+			return
+		}
+		h(w, r)
+	})
 }

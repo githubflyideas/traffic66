@@ -530,6 +530,8 @@ and put the `license.json` you get back in the data directory. Contact:
 
 ## 11. Security, sizing, troubleshooting
 
+Behind a reverse proxy, pass the browser's host name on (nginx: `proxy_set_header Host $host;` or `X-Forwarded-Host $host;`): changes such as passwords and users are refused when the request's origin does not match the host traffic66 sees.
+
 The web UI is plain HTTP unless it is told otherwise. It can serve HTTPS
 itself, on any installation, registered or not:
 

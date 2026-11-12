@@ -143,11 +143,12 @@ var fileMu sync.Mutex
 
 // Set stores pw for user in dir, replacing any earlier password of that user.
 func Set(dir, user, pw string) error {
-	if user == "" || strings.ContainsAny(user, ":\r\n") {
+	if user == "" || strings.ContainsAny(user, ":\r\n") || strings.HasPrefix(user, "#") {
 		return fmt.Errorf("invalid user name %q", user)
 	}
 	fileMu.Lock()
 	defer fileMu.Unlock()
+	defer lockDir(dir)()
 	entries, recorded, err := loadFile(dir)
 	if err != nil {
 		return err
@@ -176,6 +177,7 @@ func Set(dir, user, pw string) error {
 func RecordAdmin(dir, user string) error {
 	fileMu.Lock()
 	defer fileMu.Unlock()
+	defer lockDir(dir)()
 	entries, recorded, err := loadFile(dir)
 	if err != nil || recorded != "" {
 		return err
@@ -198,6 +200,7 @@ var ErrLastUser = errors.New("this is the only user; add another user first")
 func Delete(dir, user string) error {
 	fileMu.Lock()
 	defer fileMu.Unlock()
+	defer lockDir(dir)()
 	entries, recorded, err := loadFile(dir)
 	if err != nil {
 		return err

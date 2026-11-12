@@ -644,7 +644,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"version": s.Version, "build": s.BuildKind, "tls": s.certInfo(), "now": time.Now().UnixMilli(), "license": s.licenseState(), "settle_s": store.Settle().Seconds(), "demo": s.Demo, "uptime": int64(time.Since(s.Started).Seconds()),
 		"records_per_sec": rec, "rows_per_sec": rows, "dropped": s.Pipe.Dropped.Load(), "dup_rows": s.Pipe.DupRows.Load(), "dedup_full": s.Pipe.DedupFull.Load(),
-		"write_errors": s.Pipe.WriteErrs.Load(), "last_error": s.Pipe.LastError(),
+		"write_errors": s.Pipe.WriteErrs.Load(), "implausible": s.Pipe.Implausible.Load(), "last_error": s.Pipe.LastError(),
 		"disk_bytes": u.DiskBytes, "disk_free": free, "disk_need": need, "retention_days": s.Store.RetentionDays(), "oldest": u.Oldest.UnixMilli(),
 		"hot_rows": u.HotRows, "segments": u.Segments, "segment_rows": u.SegmentRows,
 		"dns_upstream": s.DNS.Upstream(), "dns_queries": s.DNS.Queries, "asn_ranges": s.ASN.Size(), "threat_lists": s.Thr.Lists(),

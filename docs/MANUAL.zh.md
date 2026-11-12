@@ -418,6 +418,8 @@ Linux 需要 root 或 `setcap cap_net_raw,cap_net_admin+ep`，macOS 需要 root�
 
 ## 11. 安全、容量规划、故障排查
 
+放在反向代理后面时，请把浏览器访问用的主机名传过来（nginx：`proxy_set_header Host $host;` 或 `X-Forwarded-Host $host;`）。请求来源和 traffic66 看到的主机名不一致时，改密码、管理用户等修改操作会被拒绝。
+
 Web 界面使用明文 HTTP：在不可信的网络中，请使用 `-addr 127.0.0.1:8066` 并在前面加一层 TLS 代理（`caddy reverse-proxy --from traffic66.example.com --to 127.0.0.1:8066`），或使用 SSH 隧道。UDP 端口只对你的设备放行。SNMP community 以明文保存；请使用只读 community。
 
 在 2 核机器上以每秒 5,000 条流计：明细每天约占 12 GB 磁盘（30 天 360 GB），约六分之一个核，内存 0.6–0.8 GB。长时间范围的概览耗时不到 0.2 秒；1 小时内全部会话的 Top 66 约 9 秒。
