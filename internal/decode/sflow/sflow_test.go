@@ -46,3 +46,24 @@ func FuzzDecode(f *testing.F) {
 	f.Add(encode.SFlow(netip.MustParseAddr("10.0.0.9"), 0, 1, 1, []encode.SFlowSample{{Rate: 10, FrameLen: flen, Header: hdr}}, nil))
 	f.Fuzz(func(t *testing.T, b []byte) { Decode(b, time.Now()) })
 }
+
+// A switch's extended record names the VLAN of an untagged frame: the
+// frame's own header is still 14 bytes.
+func TestSwitchVLANIsNotATag(t *testing.T) {
+	for _, tc := range []struct {
+		tag  uint16
+		want uint8
+	}{{0, 14}, {100, 18}} {
+		hdr, flen := encode.Frame(netip.MustParseAddr("10.0.0.1"), netip.MustParseAddr("10.0.0.2"), 1, 443, 6, tc.tag, 1500, 0x10)
+		pkt := encode.SFlow(netip.MustParseAddr("10.0.0.9"), 0, 1, 1,
+			[]encode.SFlowSample{{Rate: 10, FrameLen: flen, Header: hdr[:64], SwitchVLAN: 100}}, nil)
+		d, err := Decode(pkt, time.Now())
+		if err != nil || len(d.Flows) != 1 {
+			t.Fatal(err)
+		}
+		r := d.Flows[0].Record
+		if r.VLAN != 100 || r.L2Hdr != tc.want {
+			t.Errorf("tag %d: VLAN %d L2Hdr %d, want 100 and %d", tc.tag, r.VLAN, r.L2Hdr, tc.want)
+		}
+	}
+}

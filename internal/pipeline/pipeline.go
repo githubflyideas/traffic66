@@ -251,6 +251,37 @@ func (p *Pipeline) Forget(t time.Time) {
 	}
 }
 
+// Recover rebuilds the summaries of the last hours when the previous run
+// stopped without writing them (a crash, kill -9 or power cut), and marks
+// the summaries as in use until Stop.
+func (p *Pipeline) Recover(now time.Time) {
+	if !p.st.WasClean() {
+		t0 := time.Now()
+		from, err := p.st.RebuildRecentRollups(now)
+		switch {
+		case err != nil:
+			p.fail(err)
+		case !from.IsZero():
+			log.Printf("pipeline: the last run did not stop cleanly; summaries since %s rebuilt in %s",
+				from.Local().Format("2006-01-02 15:04"), time.Since(t0).Round(time.Millisecond))
+		}
+	}
+	if err := p.st.MarkClean(false); err != nil {
+		p.fail(err)
+	}
+}
+
+// Stop writes everything held in memory and marks the summaries complete.
+func (p *Pipeline) Stop() {
+	p.FlushRows()
+	p.FlushRollups()
+	if p.WriteErrs.Load() == 0 {
+		if err := p.st.MarkClean(true); err != nil {
+			p.fail(err)
+		}
+	}
+}
+
 // FlushRollups writes accumulated rollup rows.
 func (p *Pipeline) FlushRollups() {
 	p.mu.Lock()
@@ -312,7 +343,8 @@ func (p *Pipeline) process(r *flow.Record) {
 	// Exports arrive over UDP from anyone who can reach the port. A
 	// sampling rate or a byte count no device produces is refused, so that
 	// one forged packet cannot add exabytes to the totals.
-	if mult > maxMult || float64(r.Bytes)*mult > maxRecordBytes || float64(r.Packets)*mult > maxRecordBytes {
+	if mult > maxMult || float64(r.Bytes)*mult > maxRecordBytes || float64(r.Packets)*mult > maxRecordBytes ||
+		(r.Packets > 0 && r.Bytes/r.Packets > maxPacketBytes) {
 		p.noteImplausible(r)
 		return
 	}
@@ -373,9 +405,14 @@ func (p *Pipeline) process(r *flow.Record) {
 	var wire, l3 float64
 	if r.L2 {
 		wire = float64(r.Bytes) * mult
-		hdr := 18.0 // Ethernet header and FCS
-		if r.VLAN != 0 {
-			hdr += 4 // the 802.1Q tag is link layer too
+		// the link-layer header as read from the frame (VLAN tags and MPLS
+		// labels included) plus the FCS; a VLAN reported beside the frame,
+		// as sFlow's switch record does, says nothing about the frame's tags
+		hdr := 18.0
+		if r.L2Hdr != 0 {
+			hdr = float64(r.L2Hdr) + 4
+		} else if r.VLAN != 0 {
+			hdr += 4
 		}
 		l3 = math.Max(0, wire-pkts*hdr)
 	} else {
@@ -695,6 +732,10 @@ func (p *Pipeline) updateSettle(time.Time) {
 const (
 	maxMult        = 1 << 24
 	maxRecordBytes = 1 << 46
+	// maxPacketBytes is the largest average packet accepted: far above a
+	// jumbo frame, and above the coalesced packets (GRO, BIG TCP) that a
+	// host agent can sample.
+	maxPacketBytes = 1 << 20
 )
 
 // plausibleTime reports whether t is a time a flow can have: from 1990 to

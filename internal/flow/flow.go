@@ -72,6 +72,10 @@ type Record struct {
 	Packets uint64
 	// L2 is true when Bytes already counts link-layer frames (FCS included).
 	L2 bool
+	// L2Hdr is the link-layer header length of the frame, read from the
+	// frame itself: Ethernet, every VLAN tag and MPLS label, FCS excluded.
+	// 0 when unknown.
+	L2Hdr uint8
 
 	// Sampling is the configured 1-in-N rate reported by the exporter, 0 when
 	// not yet known. Mult is the multiplier actually applied (may differ from

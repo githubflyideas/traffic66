@@ -86,13 +86,13 @@ func runOffline(args []string) {
 		files = append(files, a)
 	}
 	fs := flag.NewFlagSet("traffic66 FILE.pcap", flag.ExitOnError)
-	addr := fs.String("addr", "127.0.0.1:0", "web UI address (default: a free port on this computer only)")
+	addr := fs.String("addr", "127.0.0.1:0", "web UI address; port 0 is a free port, 127.0.0.1 this computer only")
 	noBrowser := fs.Bool("no-browser", false, "do not open the browser")
 	dns := fs.Bool("dns", false, "look up host names of the addresses (off: a capture's addresses are not sent to DNS)")
-	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: traffic66 FILE.pcap [FILE2.pcapng FILE3.pcap] [flags]\n\nAnalyse capture files (at most %d, %s in all) in the web UI.\n\n", sandbox.LocalLimits.Files, humanBytes(sandbox.LocalLimits.TotalSize))
-		fs.PrintDefaults()
-	}
+	h := helps["pcap"]
+	h.about = fmt.Sprintf("Analyse capture files (at most %d, %s in all) in the web UI, on this computer only.", sandbox.LocalLimits.Files, humanBytes(sandbox.LocalLimits.TotalSize))
+	helps["pcap"] = h
+	withHelp(fs, "pcap")
 	fs.Parse(rest)
 	files = append(files, fs.Args()...)
 	if err := checkCaptures(files, sandbox.LocalLimits); err != nil {

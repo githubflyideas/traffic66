@@ -103,6 +103,9 @@ type SFlowSample struct {
 	In, Out  uint32
 	FrameLen uint32
 	Header   []byte
+	// SwitchVLAN, when set, adds an extended switch record with this
+	// source VLAN, as switches send whatever the frame's own tags are.
+	SwitchVLAN uint32
 }
 
 type SFlowCounter struct {
@@ -138,7 +141,11 @@ func SFlow(agent netip.Addr, subAgent, seq, uptime uint32, flows []SFlowSample, 
 		s.u32(f.Drops)
 		s.u32(f.In)
 		s.u32(f.Out)
-		s.u32(1) // one record
+		if f.SwitchVLAN != 0 {
+			s.u32(2)
+		} else {
+			s.u32(1) // one record
+		}
 		rec := &buf{}
 		rec.u32(1) // ethernet
 		rec.u32(f.FrameLen)
@@ -149,6 +156,14 @@ func SFlow(agent netip.Addr, subAgent, seq, uptime uint32, flows []SFlowSample, 
 		s.u32(1) // raw packet header
 		s.u32(uint32(len(rec.b)))
 		s.raw(rec.b)
+		if f.SwitchVLAN != 0 {
+			s.u32(1001) // extended switch
+			s.u32(16)
+			s.u32(f.SwitchVLAN)
+			s.u32(0)
+			s.u32(f.SwitchVLAN)
+			s.u32(0)
+		}
 		w.u32(1)
 		w.u32(uint32(len(s.b)))
 		w.raw(s.b)

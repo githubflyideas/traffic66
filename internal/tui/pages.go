@@ -21,6 +21,18 @@ type topRow struct {
 
 var protoNames = map[string]string{"1": "ICMP", "6": "TCP", "17": "UDP", "47": "GRE", "50": "ESP", "58": "ICMPv6", "132": "SCTP"}
 
+// portLabel shows a service: "443/tcp", or for a protocol without ports
+// (stored as "0/<protocol>") the protocol's name.
+func portLabel(k string) string {
+	if p, ok := strings.CutPrefix(k, "0/"); ok {
+		if n, ok := protoNames[p]; ok {
+			return n
+		}
+		return "IP " + p
+	}
+	return k
+}
+
 func (a *app) cc(c string) string {
 	switch c {
 	case "__internal__":
@@ -209,7 +221,13 @@ func (a *app) load(v view) page {
 			case "asn":
 				cell, tg = line{{"", "AS" + r.Key + " "}, {dim, r.Extra}}, &target{"asn", r.Key, "AS" + r.Key}
 			case "port":
-				cell, tg = line{{"", r.Key + " "}, {dim, r.Extra}}, &target{"port", r.Key, r.Key}
+				lab := portLabel(r.Key)
+				if lab == r.Extra {
+					cell = txt(lab)
+				} else {
+					cell = line{{"", lab + " "}, {dim, r.Extra}}
+				}
+				tg = &target{"port", r.Key, lab}
 			default:
 				cell, tg = txt(r.Key), &target{dm, r.Key, r.Key}
 			}

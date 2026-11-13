@@ -94,6 +94,9 @@ type Options struct {
 	Threads        int
 	RawDays        int // flow detail retention
 	RollupDays     int
+	// Version is the traffic66 version opening the store, recorded in it
+	// so that an older version can tell it apart (see checkFormat).
+	Version string
 }
 
 // Store owns the DuckDB database and the Parquet directory.
@@ -197,6 +200,11 @@ func Open(opt Options) (*Store, error) {
 			return nil, fmt.Errorf("schema: %w", err)
 		}
 	}
+	if err := s.checkFormat(); err != nil {
+		s.DB.Close()
+		c.Close()
+		return nil, err
+	}
 	if err := s.openAppenders(); err != nil {
 		return nil, fmt.Errorf("cannot open the database for writing: %w", err)
 	}
@@ -251,6 +259,15 @@ func (s *Store) openAppenders() error {
 func (s *Store) AppendRows(rows []Row) error {
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
+	if len(rows) > 0 {
+		first := rows[0].TS
+		for i := range rows {
+			if rows[i].TS.Before(first) {
+				first = rows[i].TS
+			}
+		}
+		s.noteData(first.UTC())
+	}
 	for i := range rows {
 		r := &rows[i]
 		if err := s.appHot.AppendRow(r.TS.UTC(), r.Src, r.Dst, r.SPort, r.DPort, r.Proto, r.Client, r.Server, r.Cli4, r.Srv4,
@@ -499,8 +516,8 @@ func (s *Store) Source(from, to time.Time) string {
 }
 
 // DataStart is the time of the oldest stored row, raw or summarised, or
-// zero when nothing is stored. It is read again at most once a minute; it
-// only moves later (retention), so a stale value is harmless.
+// zero when nothing is stored. It is read again at most once a minute, and
+// moved back at once when older rows are written (noteData).
 func (s *Store) DataStart() time.Time {
 	s.dsMu.Lock()
 	defer s.dsMu.Unlock()
@@ -514,6 +531,17 @@ func (s *Store) DataStart() time.Time {
 		s.dsTS = t.Time.UTC()
 	}
 	return s.dsTS
+}
+
+// noteData moves the start of the data back at once when older rows are
+// written (a device sending what it held back), rather than up to a minute
+// later: until then their rates were divided by a sliver of a bucket.
+func (s *Store) noteData(t time.Time) {
+	s.dsMu.Lock()
+	if !s.dsAt.IsZero() && (s.dsTS.IsZero() || t.Before(s.dsTS)) {
+		s.dsTS = t
+	}
+	s.dsMu.Unlock()
 }
 
 // Usage reports stored rows and bytes on disk.

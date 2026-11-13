@@ -211,9 +211,6 @@ func rawHeader(b []byte, rec *flow.Record) bool {
 	r := wire.New(b)
 	proto := r.U32()
 	frameLen := r.U32()
-	if frameLen > maxFrame {
-		return false // no interface carries such a frame: a forged sample
-	}
 	stripped := r.U32()
 	hlen := r.U32()
 	hdr := r.Bytes(int(hlen))
@@ -349,7 +346,3 @@ func (d *Datagram) counterSample(b []byte, expanded bool, now time.Time) error {
 	}
 	return nil
 }
-
-// maxFrame is the largest frame_length accepted: the largest IP packet with
-// its link-layer header, far above any jumbo frame.
-const maxFrame = 65535 + 64

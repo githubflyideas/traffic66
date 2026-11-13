@@ -54,3 +54,19 @@ func TestVLANTagNotCountedAsIP(t *testing.T) {
 		t.Fatalf("untagged: bytes %d, want 4820", tot.Bytes)
 	}
 }
+
+// The header length read from the frame wins over the VLAN reported beside
+// it (sFlow's switch record) and counts every QinQ tag and MPLS label.
+func TestL2HeaderFromFrame(t *testing.T) {
+	for _, c := range []struct {
+		vlan uint16
+		hdr  uint8
+		want uint64
+	}{{100, 14, 5000 - 10*18}, {100, 18, 5000 - 10*22}, {100, 22, 5000 - 10*26}, {0, 26, 5000 - 10*30}} {
+		r := l2Record(true, c.vlan)
+		r.L2Hdr = c.hdr
+		if tot := l2Total(t, Config{}, r); tot.Bytes != c.want || tot.Wire != 5000 {
+			t.Errorf("vlan %d header %d: bytes %d wire %d, want %d and 5000", c.vlan, c.hdr, tot.Bytes, tot.Wire, c.want)
+		}
+	}
+}

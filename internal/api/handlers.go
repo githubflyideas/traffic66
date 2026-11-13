@@ -354,12 +354,12 @@ func (s *Server) records(w http.ResponseWriter, r *http.Request) {
 	}
 	out := map[string]any{"rows": rows}
 	if r.URL.Query().Get("stats") == "1" {
-		total, hist, err := s.Store.RecordCounts(q)
+		total, flows, hist, err := s.Store.RecordCounts(q)
 		if err != nil {
 			fail(w, err)
 			return
 		}
-		out["total"], out["hist"] = total, hist
+		out["total"], out["flows"], out["hist"] = total, flows, hist
 	}
 	writeJSON(w, http.StatusOK, out)
 }

@@ -32,6 +32,7 @@ type key struct {
 	proto        uint8
 	vlan         uint16
 	encap        flow.Encap
+	l2hdr        uint8
 }
 
 type entry struct {
@@ -103,7 +104,7 @@ func (c *Capture) readLoop(ctx context.Context) {
 			if !packet.Ethernet(frame, &r) {
 				return
 			}
-			k := key{r.Src, r.Dst, r.SrcPort, r.DstPort, r.Proto, r.VLAN, r.Encap}
+			k := key{r.Src, r.Dst, r.SrcPort, r.DstPort, r.Proto, r.VLAN, r.Encap, r.L2Hdr}
 			now := time.Now()
 			c.mu.Lock()
 			e := c.table[k]
@@ -158,7 +159,7 @@ func (c *Capture) flush(now time.Time, all bool) {
 	// any entry is removed below
 	for k, e := range c.table {
 		if e.opener == 0 && e.pkts > 0 {
-			if re := c.table[key{k.dst, k.src, k.dport, k.sport, k.proto, k.vlan, k.encap}]; re != nil {
+			if re := c.table[key{k.dst, k.src, k.dport, k.sport, k.proto, k.vlan, k.encap, k.l2hdr}]; re != nil {
 				e.opener = -re.opener
 			}
 		}
@@ -190,7 +191,7 @@ func (c *Capture) flush(now time.Time, all bool) {
 // record is the flow record for one table entry.
 func (c *Capture) record(k key, e *entry) flow.Record {
 	return flow.Record{Start: e.first, End: e.last, Src: k.src, Dst: k.dst, SrcPort: k.sport, DstPort: k.dport,
-		Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: true, Opener: e.opener,
+		Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: true, L2Hdr: k.l2hdr, Opener: e.opener,
 		Sampling: 1, Mult: 1, SamplingKnown: true, Exporter: Exporter, Domain: c.domain, Source: flow.SrcCapture, Direction: 255}
 }
 

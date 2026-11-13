@@ -632,7 +632,9 @@ func bucketSecs(start time.Time, i int, step time.Duration, to, dataFrom time.Ti
 	if e.After(end) {
 		e = end
 	}
-	if dataFrom.After(b) {
+	// a bucket with data in it that ends before the start of the data
+	// (rows older than the start known a moment ago) counts whole
+	if dataFrom.After(b) && dataFrom.Before(e) {
 		b = dataFrom
 	}
 	return max(1, e.Sub(b).Seconds())
@@ -993,36 +995,39 @@ func (s *Store) Sankey(q Query, mode string, n0, n2 int) ([]SankeyLink, error) {
 	return out, rows.Err()
 }
 
-// RecordCounts counts the flow records matching q, in all and per time
-// bucket (the same buckets as the charts).
-func (s *Store) RecordCounts(q Query) (total int64, se *Series, err error) {
+// RecordCounts counts the rows matching q (a flow that spans minutes has
+// a row per minute) and the flows themselves, in all and the flows per time
+// bucket (the same buckets as the charts). A flow counts in the minute it
+// ended, where its row carries flows = 1.
+func (s *Store) RecordCounts(q Query) (total, flows int64, se *Series, err error) {
 	step := StepFor(q.span())
 	q.From = q.localTrunc(q.From, step)
 	where, args, err := q.where()
 	if err != nil {
-		return 0, nil, err
+		return 0, 0, nil, err
 	}
-	rows, err := s.DB.Query(fmt.Sprintf(`SELECT %s, count(*) FROM %s WHERE %s GROUP BY 1`,
+	rows, err := s.DB.Query(fmt.Sprintf(`SELECT %s, count(*), coalesce(sum(flows), 0) FROM %s WHERE %s GROUP BY 1`,
 		q.bucketSQL(step), s.Source(q.From, q.To), where), args...)
 	if err != nil {
-		return 0, nil, err
+		return 0, 0, nil, err
 	}
 	defer rows.Close()
 	n := int(q.To.Sub(q.From)/step) + 1
-	se = &Series{Step: int64(step.Seconds()), Names: []string{"records"}, Values: [][]float64{make([]float64, n)}}
+	se = &Series{Step: int64(step.Seconds()), Names: []string{"flows"}, Values: [][]float64{make([]float64, n)}}
 	for i := 0; i < n; i++ {
 		se.Times = append(se.Times, q.From.Add(time.Duration(i)*step).UnixMilli())
 	}
 	for rows.Next() {
 		var t time.Time
-		var c int64
-		if err := rows.Scan(&t, &c); err != nil {
-			return 0, nil, err
+		var c, f int64
+		if err := rows.Scan(&t, &c, &f); err != nil {
+			return 0, 0, nil, err
 		}
 		if i := int(t.UTC().Sub(q.From) / step); i >= 0 && i < n {
-			se.Values[0][i] += float64(c)
+			se.Values[0][i] += float64(f)
 		}
 		total += c
+		flows += f
 	}
-	return total, se, rows.Err()
+	return total, flows, se, rows.Err()
 }

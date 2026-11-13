@@ -220,6 +220,9 @@ function country(cc) {
 }
 const PROTO = {1: 'ICMP', 2: 'IGMP', 4: 'IPIP', 6: 'TCP', 17: 'UDP', 41: 'IPv6', 47: 'GRE', 50: 'ESP', 51: 'AH', 58: 'ICMPv6', 89: 'OSPF', 132: 'SCTP'};
 const proto = p => PROTO[p] || String(p);
+// A service is "port/protocol"; protocols without ports (ICMP, GRE…) are
+// stored as "0/<protocol number>" and shown by the protocol's name.
+const portLab = k => { const m = /^0\/(\d+)$/.exec(k || ''); return m ? PROTO[m[1]] || 'IP ' + m[1] : k; };
 const ENCAP = ['', 'GRE', 'IPIP', '6in4', 'IPv6-in-IPv6', 'VXLAN', 'GENEVE', 'MPLS'];
 const DIRS = {1: 'outbound', 2: 'inbound', 3: 'internal', 4: 'transit'};
 // categorical colours in fixed order (validated for colour-blind readers); a
@@ -273,9 +276,39 @@ function emptyText() {
   return t('empty.nodata');
 }
 
-function toast(msg) {
+function toast(msg, ms = 1800) {
   const el = $('#toast'); el.textContent = msg; el.style.display = 'block';
-  clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = 'none', 1800);
+  clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = 'none', ms);
+}
+// A change refused because the page's origin does not match the host the
+// server sees is a set-up problem (a reverse proxy that does not pass the
+// host name on), not a wrong password or a failed action: every request
+// that meets it says so, the sign-in form in its own place.
+const fetch0 = window.fetch.bind(window);
+window.fetch = async (...a) => {
+  const res = await fetch0(...a);
+  if (res.status === 403 && !$('#app').hidden) res.clone().json().then(j => { if (j && j.error === 'cross_origin') toast(t('err.cross_origin'), 12000); }).catch(() => {});
+  return res;
+};
+// failText says why a request failed: in words for the reasons the server
+// names with a code, and the server's own sentence for the rest (those say
+// which line or field is wrong).
+function failText(res, j = {}) {
+  const c = typeof j.error === 'string' ? j.error : '';
+  if (c === 'cross_origin') return t('err.cross_origin');
+  if (c === 'not_admin') return t('err.not_admin');
+  if (c === 'bad request') return t('err.bad_request');
+  if (c === 'file') return t('acct.err_file');
+  if (res.status >= 500) return t('err.server', {e: res.status + (c ? ' ' + c : '')});
+  return c || res.statusText || String(res.status);
+}
+// loginError is what the sign-in form says for a refused sign-in.
+async function loginError(res) {
+  const j = await res.json().catch(() => ({}));
+  if (res.status === 403 && j.error === 'cross_origin') return t('err.cross_origin');
+  if (res.status === 429) return t('login.too_many');
+  if (res.status >= 500) return failText(res, j);
+  return t('login.bad');
 }
 const ICON = {
   ok: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.2 2.2 4.8-4.8" stroke="#fff" stroke-width="1.8" fill="none"/></svg>',
@@ -430,11 +463,11 @@ async function api(path, extra = {}, filters = state.f) {
   p.set('tz', String(-new Date().getTimezoneOffset()));
   if (ifScoped(path) && !filters.some(x => x.f === 'iface')) filters = [...filters, {f: 'iface', v: state.ifv, neg: false}];
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
-  const res = await fetch('/api/' + path + '?' + p);
+  const res = await fetch('/api/' + path + '?' + p).catch(() => { const e = new Error(t('err.network')); e.kind = 'network'; throw e; });
   if (res.status === 401) { showLogin(); throw new Error('login'); }
   if (res.status === 403 && me) { const j = await res.clone().json().catch(() => ({})); if (j.error === 'change_password') { me.must_change = true; go('account'); throw new Error('login'); } }
   const j = await res.json().catch(() => ({}));
-  if (!res.ok) { const e = new Error(j.error || res.statusText); e.kind = j.kind; throw e; }
+  if (!res.ok) { const e = new Error(failText(res, j)); e.kind = j.kind; throw e; }
   return j;
 }
 // the sandbox's time range: the whole capture, on whole minutes
@@ -673,7 +706,7 @@ function nameForm() {
       while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
       if (name) lines.push(`${kind} ${ip} ${name}`);
       const res = await fetch('/api/inventory', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text: lines.join('\n') + '\n'})});
-      if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || res.statusText); return; }
+      if (!res.ok) { const j = await res.json().catch(() => ({})); toast(failText(res, j)); return; }
       if (name) names.set(ip, name); else names.delete(ip);
       pop.style.display = 'none';
       toast(t('pop.named'));
@@ -782,6 +815,7 @@ function panel(cls, title, sub, body) {
 function errMsg(err) {
   if (err.kind === 'memory') return t('err.db_memory');
   if (err.kind === 'storage') return t('err.db_busy');
+  if (err.kind === 'network') return err.message;
   return t('err.load', {e: err.message});
 }
 function errorBox(err) { return `<div class="panel"><div class="empty">${esc(errMsg(err))}</div></div>`; }
@@ -877,7 +911,7 @@ function mdRender(md) {
       const code = [];
       for (i++; i < lines.length && !/^```/.test(lines[i]); i++) code.push(lines[i]);
       i++;
-      out.push(`<div class="mdcode"><button class="mdcopy" type="button">${esc(t('ob.copy'))}</button><pre><code>${esc(code.join('\n'))}</code></pre></div>`);
+      out.push(`<div class="mdcode"><button class="mdcopy" type="button">${esc(t('ob.copy'))}</button><pre tabindex="0"><code>${esc(code.join('\n'))}</code></pre></div>`);
       continue;
     }
     if ((m = /^<a id="([\w-]+)"><\/a>$/.exec(l.trim()))) { flush(); seen.add(m[1]); out.push(`<span class="mdanchor" id="h-${esc(m[1])}"></span>`); i++; continue; }
@@ -1000,7 +1034,7 @@ views.overview = async (el) => {
     ${panel('c6', t('ov.top_clients'), t('ov.top_clients_sub'), `<table><tr><th></th><th>${t('col.client')}</th><th class="num">${t('col.traffic')}</th><th style="width:34%">${t('col.share')}</th></tr>
       ${cl.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
-      ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
+      ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, portLab(r.key2))} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${fd ? findingsPanel(fd) : ''}
     ${offlineMode || inSB() ? '' : panel('c12', t('self.title'), '', '<div class="self" id="self"></div>')}
   </div>`;
@@ -1114,7 +1148,7 @@ function bindFindings(el) {
   el.querySelectorAll('[data-fd-view]').forEach(b => b.onclick = () => showDetail('ip', b.dataset.fdView));
   el.querySelectorAll('[data-fd-set]').forEach(b => b.onclick = async () => {
     const res = await fetch('/api/findings' + (inSB() ? '?ds=sb' : ''), {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ids: [+b.dataset.id], status: b.dataset.fdSet})});
-    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || res.statusText); return; }
+    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(failText(res, j)); return; }
     loadStatus(); render();
   });
 }
@@ -1168,7 +1202,7 @@ async function syslogPanel(el) {
   const post = async (path, b) => {
     const r = await fetch('/api/syslog' + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: b ? JSON.stringify(b) : undefined});
     const j = await r.json().catch(() => ({}));
-    return r.ok ? null : j.error === 'not_registered' ? t('sl.locked') : (j.error || r.statusText);
+    return r.ok ? null : j.error === 'not_registered' ? t('sl.locked') : (failText(r, j));
   };
   $('#slSave').onclick = async () => {
     const err = await post('', body());
@@ -1193,7 +1227,7 @@ const ifaceNames = new Map(); // "exporter/ifindex" -> "name · device"
 function seriesLabel(by, k) {
   if (k === '__other__') return t('other');
   if (by === 'client' || by === 'server') return names.get(k) || k;
-  if (by === 'service') { const [p, a] = k.split('\t'); return a ? p + ' ' + a : p; }
+  if (by === 'service') { const [p, a] = k.split('\t'), l = portLab(p); return a && a !== l ? l + ' ' + a : l; }
   if (by.startsWith('asn')) { const [n, o] = k.split('\t'); return n === '0' ? t('unknown') : 'AS' + n + (o ? ' ' + o : ''); }
   if (by.startsWith('if_')) return ifaceNames.get(k) || k;
   return appLabel(k);
@@ -1292,7 +1326,7 @@ function drawRings(el, d, inDim, outDim) {
     const short = (v, n) => { const a = [...v]; return a.length > n ? a.slice(0, n - 1).join('') + '…' : v; };
     const col = {}, tot = d.total;
     d.inner.forEach((r, i) => col[r.k] = r.k === '__other__' ? 'var(--other)' : color(i, r.k));
-    let s = `<svg viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" role="img">`, a = 0, labels = '';
+    let s = `<svg viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" role="img" aria-label="${esc(d.inner.slice(0, 8).map(r => (r.k === '__other__' ? t('other') : seriesLabel(inDim, r.k)) + ' ' + nf(100 * r.v / tot, 1) + '%').join(', '))}">`, a = 0, labels = '';
     const lastY = {l: -1e9, r: -1e9};
     const segs = [];
     d.inner.forEach(r => {
@@ -1390,9 +1424,9 @@ async function topTable(el, dim) {
     switch (dim) {
       case 'client': return [ipCell(r.key)];
       case 'server': return [ipCell(r.key), r.extra ? esc(country(r.extra)) : ''];
-      case 'conv': return [ipCell(r.key), ipCell(r.key2), V('port', r.key3, r.key3), esc(country(r.extra))];
+      case 'conv': return [ipCell(r.key), ipCell(r.key2), V('port', r.key3, portLab(r.key3)), esc(country(r.extra))];
       case 'app': return [V('app', r.key, r.key)];
-      case 'port': return [V('port', r.key, r.key), esc(r.extra)];
+      case 'port': return [V('port', r.key, portLab(r.key)), esc(r.extra)];
       case 'country': return [V('country', r.key, country(r.key)), `<span class="muted">${esc(r.key.startsWith('__') ? '' : r.key)}</span>`];
       case 'asn': return [V('asn', r.key, 'AS' + r.key), esc(r.extra)];
       case 'segment': return [V('segment', r.key, r.key)];
@@ -1459,7 +1493,7 @@ views.sankey = async (el) => {
   d.seg_app.forEach(l => { node(0, l.S).out += l.V; node(1, l.T).in += l.V; });
   d.app_cc.forEach(l => { node(1, l.S).out += l.V; node(2, l.T).in += l.V; });
   cols.forEach(c => c.sort((a, b) => (a.k === '__other__') - (b.k === '__other__') || Math.max(b.in, b.out) - Math.max(a.in, a.out)));
-  const label = (c, k) => k === '__other__' ? t('other') : ipCols.includes(c) ? (names.get(k) || k) : c === 2 ? country(k) : appLabel(k);
+  const label = (c, k) => k === '__other__' ? t('other') : ipCols.includes(c) ? (names.get(k) || k) : c === 2 ? country(k) : appLabel(portLab(k));
   // long host names are cut to 22 characters; the full name shows on hover
   const short = v => { const a = [...v]; return a.length > 22 ? a.slice(0, 21).join('') + '…' : v; };
   const field = {host: ['ip', 'app', 'country'], segment: ['segment', 'app', 'country'], conv: ['client', 'port', 'server']}[mode];
@@ -1580,15 +1614,17 @@ function linePalName() {
   try { v = localStorage.getItem('t66.mappal') || 'auto'; } catch (e) {}
   return LINE_PAL[v] ? v : THEME_PAL[curTheme()] || 'or';
 }
+// On a dark background more traffic is brighter, as on the map itself.
+// The same hues with their lightness set to five even steps (OKLab L 0.50
+// to 0.94), so that neighbouring shades are told apart as easily as on
+// a light background and the dimmest still stands off the background.
+const LINE_PAL_DARK = {
+  gb: ['#345fb2', '#3a87d2', '#47b4d3', '#6bdfc6', '#b7ffd0'],
+  or: ['#af2b30', '#e04433', '#fd7840', '#feb57a', '#ffe7c8'],
+  pp: ['#7946a7', '#b05bc0', '#e972cc', '#ffa8d8', '#ffe2ef']
+};
 function linePal() {
-  const p = LINE_PAL[linePalName()];
-  // On a dark background more traffic is brighter, as on the map itself:
-  // the ramp runs the other way, and its dimmest shades are lifted a little
-  // towards white so they do not sink into the background. Lightness then
-  // rises with every level.
-  if (!isDarkTheme()) return p;
-  const lift = [30, 18, 8, 0, 0];
-  return p.slice().reverse().map((c, i) => lift[i] ? `color-mix(in oklab, ${c} ${100 - lift[i]}%, #fff)` : c);
+  return (isDarkTheme() ? LINE_PAL_DARK : LINE_PAL)[linePalName()];
 }
 function lineLevel(v, vmin, vmax) {
   if (!(v > 0) || !(vmax > vmin)) return v > 0 ? 14 : 0;
@@ -1690,7 +1726,7 @@ views.cleanup = async (el) => {
     b.disabled = true;
     const res = await fetch('/api/cleanup', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({days})});
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) { const m = $('#clMsg'); m.style.color = 'var(--crit)'; m.textContent = j.error || res.statusText; b.disabled = false; return; }
+    if (!res.ok) { const m = $('#clMsg'); m.style.color = 'var(--crit)'; m.textContent = failText(res, j); b.disabled = false; return; }
     clDone = t('cl.done', {n: nf(j.rows || 0), s: fmtBytes(j.bytes || 0)});
     loadStatus(); render();
   });
@@ -1732,7 +1768,7 @@ async function embedPanel(el) {
   const send = async (method, path, body) => {
     const r = await fetch('/api/embeds' + path, {method, headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { toast(j.error === 'not_registered' ? t('emb.locked') : (j.error || r.statusText)); return null; }
+    if (!r.ok) { toast(j.error === 'not_registered' ? t('emb.locked') : (failText(r, j))); return null; }
     return j;
   };
   // the key, shown this once, as the link the platform builds
@@ -1950,7 +1986,7 @@ views.threats = async (el) => {
   el.querySelectorAll('[data-thrm]').forEach(b => b.onclick = async () => {
     if (!confirm(t('thr.confirm_rm', {x: b.dataset.thrm}))) return;
     const r = await fetch('/api/threats/lists?name=' + encodeURIComponent(b.dataset.thrm), {method: 'DELETE'});
-    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || r.statusText); return; }
+    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(failText(r, j)); return; }
     render();
   });
   const file = $('#thrFile'), go = $('#thrGo');
@@ -1967,7 +2003,7 @@ views.threats = async (el) => {
     const msg = $('#thrMsg'), text = $('#thrText').value.trim() || fromFile;
     const r = await fetch('/api/threats/lists', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: $('#thrName').value.trim(), text})});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { msg.style.color = 'var(--crit)'; msg.textContent = j.error || r.statusText; return; }
+    if (!r.ok) { msg.style.color = 'var(--crit)'; msg.textContent = failText(r, j); return; }
     toast(t('thr.imported', {n: nf(j.entries), x: j.name}));
     render();
   };
@@ -1986,12 +2022,12 @@ views.records = async (el) => {
   const per = state.rps || 50, page = state.rp || 0;
   const live = state.rl && !inSB();
   const d = await api('records', {limit: per, offset: page * per, stats: 1, ...(live ? {range: '15m'} : {})});
-  const rows = d.rows || [], on = recCols(), total = d.total || 0, pages = Math.max(1, Math.ceil(total / per));
+  const rows = d.rows || [], on = recCols(), total = d.total || 0, flows = d.flows ?? total, pages = Math.max(1, Math.ceil(total / per));
   const cols = REC_COLS.filter(c => on.has(c[0])).map(c => c[0]);
   const cell = (c, r) => ({
     time: `<span class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</span>`,
     client: ipCell(r.client), cport: `<span class="muted">${r.cport || ''}</span>`, server: ipCell(r.server),
-    port: r.port ? V('port', r.port + '/' + (r.proto === 17 ? 'udp' : 'tcp'), r.port) : '—', proto: V('proto', r.proto, proto(r.proto)), app: V('app', r.app, r.app),
+    port: r.port ? V('port', r.port + '/' + (r.proto === 6 ? 'tcp' : r.proto === 17 ? 'udp' : r.proto), r.port) : '—', proto: V('proto', r.proto, proto(r.proto)), app: V('app', r.app, r.app),
     country: r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—'),
     encap: r.encap ? V('encap', r.encap, ENCAP[r.encap]) : '<span class="muted">—</span>', traffic: fmtBytes(r.wire), packets: nf(r.pkts),
     device: ipCell(r.exporter, 'exporter'), in_if: r.in_if || '', out_if: r.out_if || '', vlan: r.vlan ? V('vlan', r.vlan, r.vlan) : '',
@@ -2002,13 +2038,13 @@ views.records = async (el) => {
   const pager = `<div class="pager"><label>${t('rec.per_page')} <select id="recPer">${[50, 100, 200].map(n => `<option ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <span>${esc(t('rec.range', {a: nf(total ? page * per + 1 : 0), b: nf(Math.min(total, page * per + rows.length)), n: nf(total)}))}</span>
       <button class="btn" id="recPrev" ${page ? '' : 'disabled'}>‹ ${t('rec.prev')}</button><button class="btn" id="recNext" ${page + 1 < pages ? '' : 'disabled'}>${t('rec.next')} ›</button></div>`;
-  el.innerHTML = `<div class="panel" style="margin-bottom:16px"><div class="rechead"><div class="kpi"><div class="lab">${t('rec.title')}</div><div class="n big">${nf(total)}</div><div class="d muted">${esc(t('rec.in', {r: live ? t('range.15m') : rangeLabel()}))}${live ? ' · ' + esc(t('rec.live')) : ''}</div>${!live && !inSB() ? `<button class="btn" id="recLive" style="margin-top:8px">${t('rec.go_live')}</button>` : ''}</div>
+  el.innerHTML = `<div class="panel" style="margin-bottom:16px"><div class="rechead"><div class="kpi"><div class="lab">${t('rec.flows')}</div><div class="n big">${nf(flows)}</div><div class="d muted">${esc(t('rec.in', {r: live ? t('range.15m') : rangeLabel()}))}${live ? ' · ' + esc(t('rec.live')) : ''}${flows !== total ? '<br>' + esc(t('rec.rows', {n: nf(total)})) : ''}</div>${!live && !inSB() ? `<button class="btn" id="recLive" style="margin-top:8px">${t('rec.go_live')}</button>` : ''}</div>
       <div class="chart" id="chRec" style="height:150px" aria-label="${esc(t('rec.title'))}"></div></div></div>
     <div class="panel"><div class="ph"><h2>${t('rec.title')}</h2><span class="sub">${esc(t('rec.sorted'))}</span>
       <div class="cols"><button class="btn" id="colBtn">${t('rec.columns')}</button><div class="menu" id="colMenu" hidden>${REC_COLS.map(c => `<label><input type="checkbox" value="${c[0]}" ${on.has(c[0]) ? 'checked' : ''}>${t('rc.' + c[0])}</label>`).join('')}</div></div></div>
     <div style="overflow-x:auto"><table><tr>${cols.map(c => `<th class="${num.has(c) ? 'num' : ''}">${t('rc.' + c)}</th>`).join('')}</tr>
     ${rows.map(r => `<tr>${cols.map(c => `<td class="${num.has(c) ? 'num' : ''}">${cell(c, r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="empty">${emptyText()}</td></tr>`}</table></div>${pager}</div>`;
-  if (d.hist) barChart($('#chRec'), d.hist.times, d.hist.values[0], v => t('rec.n', {n: nf(v)}));
+  if (d.hist) barChart($('#chRec'), d.hist.times, d.hist.values[0], v => t('rec.n_flows', {n: nf(v)}));
   $('#recPer').onchange = e => { state.rps = +e.target.value; state.rp = 0; render(); };
   if ($('#recLive')) $('#recLive').onclick = () => { state.rl = true; state.rp = 0; render(); };
   $('#recPrev').onclick = () => { state.rp = Math.max(0, page - 1); render(); };
@@ -2099,7 +2135,7 @@ views.ifaces = async (el) => {
   const saveIf = async (id, body) => {
     const [exporter, idx] = [id.slice(0, id.lastIndexOf('/')), +id.slice(id.lastIndexOf('/') + 1)];
     const res = await fetch('/api/iface', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({exporter, ifindex: idx, ...body})});
-    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || res.statusText); return; }
+    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(failText(res, j)); return; }
     ifList = null; render();
   };
   const ifOf = id => list.find(f => f.exporter + '/' + f.ifindex === id) || {};
@@ -2160,6 +2196,7 @@ views.sources = async (el) => {
     ${panel('c12', t('src.title'), t('src.sub'), `<table><tr><th>${t('col.device')}</th><th>${t('col.proto')}</th><th class="num">${t('col.rate')}</th><th>${t('col.sampling')}</th><th class="num">${t('col.lost')}</th><th>${t('col.last')}</th><th>${t('col.status')}</th>${admOnly('<th></th>')}</tr>
       ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${waitHint(firstText())}</td></tr>`}</table>
       <p style="margin:12px 0 0;font-size:12.5px"><span class="muted">${t('src.listeners')}</span> ${lis || '—'} ${caps}</p>
+      ${selfStatus ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.checked')}</span> <span${selfStatus.implausible ? ' style="color:var(--warn-ink)"' : ''}>${esc(t('src.refused', {n: nf(selfStatus.implausible || 0)}))}</span> · ${esc(t('src.skewed', {n: nf(selfStatus.skewed || 0)}))}</p>` : ''}
       ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
     ${admOnly(panel('c12', t('lic.install'), t('lic.install_sub'), `<div class="licbox">
@@ -2202,7 +2239,7 @@ views.sources = async (el) => {
       if (!text) { licMsg(false, t('lic.paste')); return; }
       const res = await fetch('/api/license', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text})});
       const j = await res.json().catch(() => ({}));
-      if (!res.ok) { licMsg(false, j.error || res.statusText); return; }
+      if (!res.ok) { licMsg(false, failText(res, j)); return; }
       licMsg(true, t('src.saved'));
       $('#licText').value = '';
       loadStatus(); // the badge, the footer and the watermark all follow from it
@@ -2214,7 +2251,7 @@ views.sources = async (el) => {
   const reblock = async (method, path, okMsg) => {
     const res = await fetch(path, {method});
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) { toast(j.error === 'no_collector' ? t('blk.no_collector') : (j.error || res.statusText)); return; }
+    if (!res.ok) { toast(j.error === 'no_collector' ? t('blk.no_collector') : (failText(res, j))); return; }
     toast(okMsg);
     render();
   };
@@ -2223,7 +2260,7 @@ views.sources = async (el) => {
     if (!confirm(t('blk.confirm', {a}))) return;
     const res = await fetch('/api/sources/block', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({exporter: a})});
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) { toast(j.error === 'no_collector' ? t('blk.no_collector') : (j.error || res.statusText)); return; }
+    if (!res.ok) { toast(j.error === 'no_collector' ? t('blk.no_collector') : (failText(res, j))); return; }
     // The honest part: this stops a known nuisance, not somebody who does
     // not want to be stopped, so the message says where the real fix is.
     toast(t('blk.done_firewall', {a}));
@@ -2236,14 +2273,14 @@ views.sources = async (el) => {
     try {
       const res = await fetch('/api/geo/dbip', {method: 'POST'});
       const j = await res.json().catch(() => ({}));
-      if (!res.ok) { geoMsg(false, t('geo.update_failed', {e: j.error || res.statusText})); e.target.disabled = false; return; }
+      if (!res.ok) { geoMsg(false, t('geo.update_failed', {e: failText(res, j)})); e.target.disabled = false; return; }
       geoMsg(true, t('geo.updated')); setTimeout(render, 1500);
     } catch (err) { geoMsg(false, String(err.message || err)); e.target.disabled = false; }
   };
   el.querySelectorAll('[data-geodel]').forEach(b => b.onclick = async () => {
     if (!confirm(t('geo.remove_confirm', {f: b.dataset.geodel}))) return;
     const res = await fetch('/api/geo?file=' + encodeURIComponent(b.dataset.geodel), {method: 'DELETE'});
-    if (!res.ok) { const j = await res.json().catch(() => ({})); geoMsg(false, j.error || res.statusText); return; }
+    if (!res.ok) { const j = await res.json().catch(() => ({})); geoMsg(false, failText(res, j)); return; }
     render();
   });
   $('#geoFile').onchange = async e => {
@@ -2252,7 +2289,7 @@ views.sources = async (el) => {
     try {
       const res = await fetch('/api/geo', {method: 'POST', body: f});
       const j = await res.json().catch(() => ({}));
-      if (!res.ok) { msg.style.color = 'var(--crit)'; msg.textContent = j.error || res.statusText; return; }
+      if (!res.ok) { msg.style.color = 'var(--crit)'; msg.textContent = failText(res, j); return; }
       msg.style.color = 'var(--good)'; msg.textContent = t('geo.installed', {f: j.installed});
       setTimeout(render, 1500);
     } catch (err) { msg.style.color = 'var(--crit)'; msg.textContent = String(err.message || err); }
@@ -2265,11 +2302,11 @@ views.sources = async (el) => {
     const f = e.target.files[0]; if (!f) return;
     const res = await fetch('/api/logo', {method: 'POST', body: f});
     const j = await res.json().catch(() => ({}));
-    logoDone(res.ok, res.ok ? t('logo.saved') : (j.error || res.statusText));
+    logoDone(res.ok, res.ok ? t('logo.saved') : (failText(res, j)));
   };
   $('#logoReset').onclick = async () => {
     const res = await fetch('/api/logo', {method: 'DELETE'});
-    logoDone(res.ok, res.ok ? t('logo.saved') : res.statusText);
+    logoDone(res.ok, res.ok ? t('logo.saved') : failText(res));
   };
   }
 };
@@ -2287,16 +2324,16 @@ const SET_VIEWS = new Set(['sources', 'names', 'account']);
 const setTabs = cur => {
   const tabs = SET_TABS.filter(([v]) => v === 'account' || !(inSB() || offlineMode));
   return `<div class="seg settabs" role="tablist">${tabs.map(([v, k]) =>
-    `<button role="tab" data-settab="${v}" aria-selected="${cur === v}" aria-pressed="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
+    `<button role="tab" data-settab="${v}" aria-selected="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
 };
 document.addEventListener('click', e => { const b = e.target.closest('[data-settab]'); if (b) go(b.dataset.settab); });
 views.names = async (el) => {
   const inv = await api('inventory').catch(() => ({text: ''}));
   el.innerHTML = `${setTabs('names')}<div class="grid">
     ${panel('c12', t('src.names'), t('src.names_sub'), `${admOnly(`<div class="nmform" id="nmForm">
-        <select id="nmK">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
-        <input id="nmA" autocomplete="off" spellcheck="false"><input id="nmI" autocomplete="off" inputmode="numeric" placeholder="${esc(t('nm.ifindex'))}" hidden>
-        <input id="nmN" autocomplete="off" spellcheck="false"><select id="nmC" hidden></select>
+        <select id="nmK" aria-label="${esc(t('nm.type'))}">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
+        <input id="nmA" aria-label="${esc(t('nm.address'))}" autocomplete="off" spellcheck="false"><input id="nmI" aria-label="${esc(t('nm.ifindex'))}" autocomplete="off" inputmode="numeric" placeholder="${esc(t('nm.ifindex'))}" hidden>
+        <input id="nmN" aria-label="${esc(t('nm.name'))}" autocomplete="off" spellcheck="false"><select id="nmC" aria-label="${esc(t('nm.community'))}" hidden></select>
         <button class="primary" id="nmAdd">${t('nm.add')}</button><button class="btn" id="nmCancel" hidden>${t('nm.cancel')}</button></div>
       <div id="nmMsg" style="font-size:13px;min-height:1.2em;margin:4px 0 6px"></div>`)}
       <table class="nmtab" id="nmTab"></table>
@@ -2311,7 +2348,7 @@ snmp   192.168.1.1     public</pre></div><textarea class="inv" id="inv" spellche
     $('#invSave').onclick = async () => {
       const res = await fetch('/api/inventory', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text: $('#inv').value})});
       const j = await res.json().catch(() => ({}));
-      $('#invMsg').textContent = res.ok ? t('src.saved') : (j.error || res.statusText);
+      $('#invMsg').textContent = res.ok ? t('src.saved') : (failText(res, j));
       $('#invMsg').style.color = res.ok ? 'var(--good)' : 'var(--crit)';
       if (res.ok) { loadStatus(); namesForm(); }
     };
@@ -2359,7 +2396,7 @@ function namesForm() {
     const text = lines.join('\n');
     const res = await fetch('/api/inventory', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text})});
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) { msg(false, j.error || res.statusText); return false; }
+    if (!res.ok) { msg(false, failText(res, j)); return false; }
     $('#inv').value = text; msg(true, t('src.saved')); loadStatus(); namesForm(); return true;
   };
   const lines = () => $('#inv').value.split('\n');
@@ -2428,12 +2465,12 @@ views.detail = async (el) => {
     <div class="panel c12"><div class="ph"><h2>${t('ov.bw_title')}</h2><span class="sub">${lines.length ? esc(baseText(d, 'sub')) : ''}</span></div>
       <div class="chart" id="chDet" style="height:220px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}</div></div>
-    ${panel('c12', t('det.conv'), '', table(cv, ['col.client', 'col.server', 'col.service', 'col.country'], r => [ipCell(r.key), ipCell(r.key2), V('port', r.key3, r.key3), esc(country(r.extra))]))}
+    ${panel('c12', t('det.conv'), '', table(cv, ['col.client', 'col.server', 'col.service', 'col.country'], r => [ipCell(r.key), ipCell(r.key2), V('port', r.key3, portLab(r.key3)), esc(country(r.extra))]))}
     ${isIP
-      ? panel('c6', t('det.services'), '', table(s1, ['col.port', 'col.app'], r => [V('port', r.key, r.key), esc(r.extra)])) + panel('c6', t('ov.country'), '', table(s2, ['col.country'], r => [V('country', r.key, country(r.key))]))
+      ? panel('c6', t('det.services'), '', table(s1, ['col.port', 'col.app'], r => [V('port', r.key, portLab(r.key)), esc(r.extra)])) + panel('c6', t('ov.country'), '', table(s2, ['col.country'], r => [V('country', r.key, country(r.key))]))
       : panel('c6', t('det.clients'), '', table(s1, ['col.client'], r => [ipCell(r.key)])) + panel('c6', t('det.servers'), '', table(s2, ['col.server', 'col.country'], r => [ipCell(r.key), r.extra ? esc(country(r.extra)) : '']))}
     ${panel('c12', t('det.flows'), esc(t('rec.latest', {n: rr.length})), `<div style="overflow-x:auto"><table><tr><th>${t('rc.time')}</th><th>${t('rc.client')}</th><th>${t('rc.server')}</th><th class="num">${t('rc.port')}</th><th>${t('rc.app')}</th><th>${t('rc.country')}</th><th class="num">${t('rc.traffic')}</th></tr>
-      ${rr.map(r => `<tr><td class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</td><td>${ipCell(r.client)}</td><td>${ipCell(r.server)}</td><td class="num">${r.port ? V('port', r.port + '/' + (r.proto === 17 ? 'udp' : 'tcp'), r.port) : '—'}</td><td>${V('app', r.app, r.app)}</td><td>${r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—')}</td><td class="num">${fmtBytes(r.wire)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">${emptyText()}</td></tr>`}</table></div>`)}
+      ${rr.map(r => `<tr><td class="muted nw">${new Intl.DateTimeFormat(LANG, {hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(r.ts))}</td><td>${ipCell(r.client)}</td><td>${ipCell(r.server)}</td><td class="num">${r.port ? V('port', r.port + '/' + (r.proto === 6 ? 'tcp' : r.proto === 17 ? 'udp' : r.proto), r.port) : '—'}</td><td>${V('app', r.app, r.app)}</td><td>${r.dir === 3 ? `<span class="muted">${t('internal')}</span>` : (r.cc ? V('country', r.cc, country(r.cc)) : '—')}</td><td class="num">${fmtBytes(r.wire)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">${emptyText()}</td></tr>`}</table></div>`)}
   </div>`;
   tsChart($('#chDet'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from});
   bindFindings(el);
@@ -2482,7 +2519,7 @@ async function sbSelect(name) {
   if (name === sbInfo.active && sbInfo.ready) return true;
   const res = await fetch('/api/sandbox/active?name=' + encodeURIComponent(name), {method: 'POST'});
   const j = await res.json().catch(() => ({}));
-  if (!res.ok) { toast(j.error || res.statusText); return false; }
+  if (!res.ok) { toast(failText(res, j)); return false; }
   sbInfo = j;
   return true;
 }
@@ -2610,8 +2647,10 @@ async function loadMe() {
 $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = new FormData(e.target);
-  const res = await fetch('/api/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user: f.get('user'), password: f.get('password')})});
-  if (!res.ok) { $('#loginErr').hidden = false; $('#loginErr').textContent = t('login.bad'); return; }
+  let res;
+  try { res = await fetch('/api/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user: f.get('user'), password: f.get('password')})}); }
+  catch (err) { $('#loginErr').hidden = false; $('#loginErr').textContent = t('err.network'); return; }
+  if (!res.ok) { $('#loginErr').hidden = false; $('#loginErr').textContent = await loginError(res); return; }
   const j = await res.json().catch(() => ({}));
   $('#login').hidden = true; $('#app').hidden = false;
   if (j.must_change) sessionStorage.setItem('t66.old', f.get('password'));

@@ -24,4 +24,19 @@ func TestPrintStartup(t *testing.T) {
 	if strings.Contains(b.String(), "Devices") || !strings.Contains(b.String(), "demo") {
 		t.Errorf("demo summary:\n%s", b.String())
 	}
+	// a demo started with -password does not print the default one
+	b.Reset()
+	fixedPassword = true
+	defer func() { fixedPassword = false }()
+	printStartup(&b, "http", web, nil, true, "admin", false)
+	if strings.Contains(b.String(), "traffic66\n") || !strings.Contains(b.String(), "password given at start") {
+		t.Errorf("demo with -password:\n%s", b.String())
+	}
+	// collectors on one loopback address: that address
+	b.Reset()
+	fixedPassword = false
+	printStartup(&b, "http", web, []api.ListenInfo{{Name: "sflow", Host: "127.0.0.2", Port: "6343"}}, false, "admin", false)
+	if !strings.Contains(b.String(), "export to 127.0.0.2 (this machine only)") {
+		t.Errorf("loopback collectors:\n%s", b.String())
+	}
 }
