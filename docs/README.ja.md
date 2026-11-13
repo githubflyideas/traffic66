@@ -19,6 +19,8 @@ Windows：`traffic66-windows-amd64.zip` を展開し `traffic66.exe` を実行�
 
 macOS：先にそのフォルダで `xattr -dr com.apple.quarantine .` を実行。
 
+ダウンロードの確認：`sha256sum -c SHA256SUMS --ignore-missing`。アップグレード、ロールバック、リバースプロキシは[マニュアル](MANUAL.ja.md#12-install-upgrade-reverse-proxy-monitoring)を参照。
+
 その後：
 
 - Web UI：`http://<サーバーIP>:8066`。すべてのネットワークインターフェースで待ち受けます。

@@ -32,6 +32,7 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 9. [オフライン pcap、ターミナル UI、ローカルキャプチャ](#9-offline-pcap-terminal-ui-local-capture)
 10. [オプションとデータ](#10-options-and-data)
 11. [セキュリティ、サイジング、トラブルシューティング](#11-security-sizing-troubleshooting)
+12. [インストール、アップグレード、リバースプロキシ、監視](#12-install-upgrade-reverse-proxy-monitoring)
 
 <a id="1-quick-start"></a>
 
@@ -374,7 +375,7 @@ snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
 ![オフライン分析：キャプチャファイルとパケット数、フロー数、時間](images/sandbox.png)
 
 **ターミナル UI**：traffic66 のマシンで `traffic66 tui`、または `traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`。
-3 つのページ：**1 トップ**（クライアント・サーバー・アプリケーション・ポート・ネットワーク (AS)・国/地域をレート順に表示、← → で切替、Enter で操作）、**2 インターフェース**（機器・インターフェースごとのレート、使用率、照合、機器のサンプリングと損失。Enter で推移と上位ホスト/アプリを展開）、**3 検索**（`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` のような条件でフローレコードを表示）。キー操作：`/` フィルター、Backspace/`c` 削除/解除、`t` 期間（5 分〜24 時間）、`u` bit/s・バイト・パケット/秒、`p` 一時停止、`+`/`-` 更新間隔、`w` 同じ表示をブラウザーで開く、`?` ヘルプ、`q` 終了。`-lang` で言語を、`NO_COLOR` で色なしを選べます。
+3 つのページ：**1 トップ**（クライアント・サーバー・アプリケーション・ポート・ネットワーク (AS)・国・地域をレート順に表示、← → で切替、Enter で操作）、**2 インターフェース**（機器・インターフェースごとのレート、使用率、照合、機器のサンプリングと損失。Enter で推移と上位ホスト/アプリを展開）、**3 検索**（`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` のような条件でフローレコードを表示）。キー操作：`/` フィルター、Backspace/`c` 削除/解除、`t` 期間（5 分〜24 時間）、`u` bit/s・バイト・パケット/秒、`p` 一時停止、`+`/`-` 更新間隔、`w` 同じ表示をブラウザーで開く、`?` ヘルプ、`q` 終了。`-lang` で言語を、`NO_COLOR` で色なしを選べます。
 
 ![ターミナル UI：トップ](images/tui-top.png)
 
@@ -388,6 +389,31 @@ traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: 
 ```
 
 Linux では root か `setcap cap_net_raw,cap_net_admin+ep`、macOS では root、Windows では [Npcap](https://npcap.com) が必要です。キャプチャしたフローは機器 `127.0.0.1` からのものとして表示されます。ローカルキャプチャには機器のインターフェースもカウンターもないため、**インターフェース照合** で比較する対象はありません。
+
+<a id="sending-findings-to-a-collector"></a>
+
+### 検出結果をコレクターへ送る
+
+登録済みのインストールでは、各検出結果を最初に見つかった時点で syslog コレクターへ送れます：
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` は `udp`、`tcp`、`tls` のいずれか、`-syslog-min-sev` は送る最低の重大度です。`-syslog-url https://traffic66.example.com` を付けると各メッセージに検出結果へのリンクが入ります。`-syslog-ascii` は ASCII 以外をすべてエスケープします。UTF-8 を壊すコレクター向けです。
+
+形式は選べます。そのまま解析できるかどうかは、すでに使っているものによるからです：
+
+| `-syslog-format` | パーサーを書かずに読めるもの |
+|---|---|
+| `cef` （既定） | ArcSight、QRadar、Splunk、Graylog、Elastic、Wazuh |
+| `leef` | QRadar（ネイティブ） |
+| `json` | Elastic と Splunk — 名前は Elastic Common Schema |
+| `text` | 人 |
+
+どの形式でも外側は RFC 5424 で、本文がプレーンテキストでも検出結果の ID、種類、サンプリングレートが入ります。
+
+このフィードが読むだけでなく数えるに値する理由は 3 つあります。イベントの種類（`scan`、`brute`、`exfil` …）は文言や翻訳で変わらない固定の語なので、それでまとめたダッシュボードは文が直されても壊れません。1 つの検出結果は ID を 1 つ持つ**1 つ**のイベントで、検出のたびではなく最初に見つかったときに送られるため、一晩のパスワード推測は 40 件ではなく 1 件の事象です。そしてサンプリングレートが各メッセージに付きます。traffic66 はサンプリングされたデータで検出するので、バイト数とパケット数は推定値です。それを知らずに合計するコレクターは、誰も説明できない数字を出します。
 
 <a id="10-options-and-data"></a>
 
@@ -408,6 +434,12 @@ Linux では root か `setcap cap_net_raw,cap_net_admin+ep`、macOS では root�
 
 データディレクトリには `raw/`（明細、1 時間ごとに 1 ファイル）、`traffic66.duckdb`（集計とカウンター）、`password`、`inventory.txt`、`license.json`、ロゴ、データベースが入っています。バックアップは traffic66 を停止してディレクトリをコピーし、アップグレードはプログラムファイルを置き換えます。**データ削除** は 7〜120 日より古いデータ、またはすべてのデータを削除します。
 
+<a id="device-locations"></a>
+
+### 機器の設置場所
+
+機器一覧ページのタブの 1 つです。フローがどこから来るかを示します：フローを送る各機器の部屋とラック、各ポートの接続先の通信事業者と回線 ID。機器とポートはフローから自動的に現れます。「編集」をクリックすると、機器の部屋とラック、各ポートの事業者と回線を 1 つのフォームで入力できます。入力は一度だけで、名前と一緒に `inventory.txt` に保存されます（`device 192.0.2.1 Core router room=Room_1 rack=A03`、`iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`。空白は `_` と書きます）。これを使って何かを照会することはありません。サインインした全員が見られ、管理者が編集します。
+
 <a id="licence"></a>
 
 ### ライセンス
@@ -417,6 +449,8 @@ Linux では root か `setcap cap_net_raw,cap_net_admin+ep`、macOS では root�
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. セキュリティ、サイジング、トラブルシューティング
+
+リバースプロキシの後ろに置く場合は[リバースプロキシ](#reverse-proxy)を参照してください。
 
 Web UI は平文の HTTP です。信頼できないネットワークでは `-addr 127.0.0.1:8066` とし、TLS プロキシ（`caddy reverse-proxy --from traffic66.example.com --to 127.0.0.1:8066`）か SSH トンネルの背後に置いてください。UDP ポートは自社の機器からのみ許可してください。SNMP コミュニティは平文で保存されるので、読み取り専用のものを使ってください。
 
@@ -433,3 +467,123 @@ Web UI は平文の HTTP です。信頼できないネットワークでは `-a
 | Windows："Windows によって PC が保護されました" | **詳細情報** → **実行** |
 
 ソースからのビルド：Go 1.26 と C コンパイラーを用意し、`CGO_ENABLED=1 go build ./cmd/traffic66` を実行します。
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. インストール、アップグレード、リバースプロキシ、監視
+
+ダウンロードの確認、データを失わないアップグレード、nginx・Caddy・Traefik の後ろへの配置、Prometheus での監視の方法です。
+
+<a id="verify-a-download"></a>
+
+### ダウンロードの確認
+
+各リリースには `SHA256SUMS` ファイル、含まれるソフトウェアの一覧（`traffic66-sbom.cdx.json`、CycloneDX 形式）、GitHub Actions によるビルド来歴の証明が付いています。証明は、アーカイブがこのリポジトリのソースからビルドされたことを示します。ダウンロードしたフォルダーで次を実行します：
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows（PowerShell）：`Get-FileHash traffic66-windows-amd64.zip` がハッシュを表示します。`SHA256SUMS` のそのファイルの行と一致する必要があります。`gh attestation verify` には GitHub CLI が必要で、任意です。
+
+<a id="upgrade-and-roll-back"></a>
+
+### アップグレードとロールバック
+
+traffic66 を停止し、データディレクトリ全体をコピーし、プログラムファイルを置き換えて再起動します。Linux のサービスの場合：
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+ロールバックするには、traffic66 を停止し、古いプログラムとコピーしたデータディレクトリを戻します。新しい形式で書かれたデータを推測で読むことはありません。書いたバージョンを示すメッセージを出して停止します。別の `-data` ディレクトリで起動するか、新しいバージョンに戻してください。データが前回別のバージョンで書かれていた場合、起動時にログに記録されます。
+
+停電や `kill -9` の後は、次の起動時にフロー明細から直近数時間の集計を作り直すため、24 時間以上の表示でもデータが欠けません。そのこともログに記録されます。
+
+<a id="reverse-proxy"></a>
+
+### リバースプロキシ
+
+ページのアドレスが traffic66 から見えるアドレスと一致しない場合、traffic66 はサインインと変更を拒否します。これにより、他のウェブサイトがあなたになりすますことはできません。リバースプロキシの後ろでは、ブラウザーが使うホスト名をプロキシから渡す（`Host`、`X-Forwarded-Host` または `Forwarded` ヘッダー）か、traffic66 に公開アドレスを指定します：
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+既定のポート（https の `:443`、http の `:80`）は書いても省いてもかまいません。traffic66 はホスト名のルートに置く必要があり、`/traffic66/` のようなパスの下には置けません。この理由で拒否された場合、サインイン画面や他のページは「パスワードが違います」ではなく、その理由を表示します。Web UI はこのマシンだけ（`-addr 127.0.0.1:8066`）にして、プロキシ経由でのみ届くようにしてください。
+
+**nginx**（既定の `proxy_set_header Host $proxy_host;` は内部アドレスを送るため、設定が必要です）：
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** はホスト名を自動で渡し、その証明書も取得します：
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** はホスト名を自動で渡します（`passHostHeader` は既定で有効）。ファイルプロバイダー用の動的設定：
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### 監視
+
+`/metrics` は traffic66 自身の状態を Prometheus 形式で提供します：受信・拒否・破棄したレコード数、収集ポートごとのデータグラム数、書き込みエラー、ディスク使用量。Web UI の他の部分と同じくサインインが必要です。Prometheus 専用のユーザー（`traffic66 passwd -user prometheus`）を作り、そのパスワードを設定してください：
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### コマンドラインのヘルプ
+
+`traffic66 help` はコマンドの一覧を、`traffic66 help <コマンド>` または `traffic66 <コマンド> -h` はそのコマンドのオプションと例を表示します。
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

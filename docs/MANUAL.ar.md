@@ -40,6 +40,7 @@ Kafka أو قاعدة بيانات منفصلة.
 9. [تحليل pcap دون اتصال، الواجهة الطرفية، الالتقاط المحلي](#9-offline-pcap-terminal-ui-local-capture)
 10. [الخيارات والبيانات](#10-options-and-data)
 11. [الأمان، تقدير الموارد، استكشاف الأخطاء](#11-security-sizing-troubleshooting)
+12. [التثبيت والترقية والوكيل العكسي والمراقبة](#12-install-upgrade-reverse-proxy-monitoring)
 
 <a id="1-quick-start"></a>
 
@@ -457,6 +458,31 @@ root، وWindows إلى [Npcap](https://npcap.com). تأتي التدفقات ا
 الجهاز `127.0.0.1`. لا واجهات ولا عدّادات جهاز للالتقاط المحلي، لذا ليس لدى
 **مطابقة الواجهات** ما تقارنه فيه.
 
+<a id="sending-findings-to-a-collector"></a>
+
+### إرسال النتائج إلى مُجمِّع
+
+يمكن للتثبيت المسجّل أن يرسل كل نتيجة إلى مُجمِّع syslog عند ظهورها أول مرة:
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` هو `udp` أو `tcp` أو `tls`؛ و`-syslog-min-sev` أدنى خطورة تستحق الإرسال؛ و`-syslog-url https://traffic66.example.com` يضع في كل رسالة رابطًا إلى النتيجة. يهرّب `-syslog-ascii` كل ما هو خارج ASCII، للمُجمِّعات التي تفسد UTF-8.
+
+الصيغة اختيار، لأن ما يُحلَّل تلقائيًا يعتمد على ما تشغّله بالفعل:
+
+| `-syslog-format` | يقرؤها دون كتابة محلّل |
+|---|---|
+| `cef` (افتراضي) | ArcSight، QRadar، Splunk، Graylog، Elastic، Wazuh |
+| `leef` | QRadar، أصليًا |
+| `json` | Elastic وSplunk — الأسماء وفق Elastic Common Schema |
+| `text` | إنسان |
+
+الغلاف RFC 5424 في كل الأحوال، ويحمل معرّف النتيجة ونوعها ومعدل أخذ العينات حتى عندما يكون المتن نصًا عاديًا.
+
+ثلاثة أمور تجعل هذه الرسائل جديرة بالعدّ لا بالقراءة فقط. نوع الحدث (`scan`، `brute`، `exfil` …) كلمة ثابتة لا تتغير بتغير الصياغة أو الترجمة، فلا تتعطل لوحة مجمّعة حسبه عند تحسين جملة. والنتيجة حدث **واحد** بمعرّف واحد، يُرسل عند ظهورها أول مرة لا مع كل جولة كشف، فليلة من تخمين كلمات المرور حادثة واحدة لا أربعون. ومعدل أخذ العينات يرافق كل رسالة: يكشف traffic66 على بيانات مأخوذة بالعينات، فأعداد البايتات والحزم تقديرات، والمُجمِّع الذي يجمعها دون أن يعلم ذلك ينتج رقمًا لا يستطيع أحد الدفاع عنه.
+
 <a id="10-options-and-data"></a>
 
 ## 10. الخيارات والبيانات
@@ -479,6 +505,12 @@ root، وWindows إلى [Npcap](https://npcap.com). تأتي التدفقات ا
 وقواعد البيانات. للنسخ الاحتياطي أوقف traffic66 وانسخه؛ وللترقية استبدل ملف
 البرنامج. يحذف **تنظيف البيانات** البيانات الأقدم من 7–120 يومًا، أو كلها.
 
+<a id="device-locations"></a>
+
+### مواقع الأجهزة
+
+تبويب في صفحة الجرد. صورة لمصدر التدفقات: لكل جهاز يرسل تدفقات، الغرفة والخزانة التي يقف فيها، ولكل منفذ من منافذه مزوّد الخدمة ومعرّف الدائرة الذي يخرج إليه. تظهر الأجهزة والمنافذ وحدها من التدفقات؛ انقر «تعديل» لكتابة غرفة الجهاز وخزانته ومزوّد كل منفذ ودائرته في نموذج واحد. يُملأ مرة واحدة ويُحفظ في `inventory.txt` بجانب الأسماء (`device 192.0.2.1 Core router room=Room_1 rack=A03`، `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`؛ تُكتب المسافة `_`). لا يُبحث فيه عن شيء. يراه كل من سجّل الدخول، ويعدّله المسؤول.
+
 <a id="licence"></a>
 
 ### الترخيص
@@ -495,6 +527,8 @@ root، وWindows إلى [Npcap](https://npcap.com). تأتي التدفقات ا
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. الأمان، تقدير الموارد، استكشاف الأخطاء
+
+خلف وكيل عكسي، انظر [الوكيل العكسي](#reverse-proxy).
 
 واجهة الويب HTTP عادي: على الشبكات غير الموثوقة استخدم `-addr 127.0.0.1:8066`
 خلف وكيل TLS (`caddy reverse-proxy --from traffic66.example.com --to
@@ -518,3 +552,123 @@ SNMP نصًا صريحًا؛ استخدم مجتمعات للقراءة فقط.
 البناء من المصدر: Go 1.26 ومترجم C، ثم `CGO_ENABLED=1 go build ./cmd/traffic66`.
 
 </div>
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. التثبيت والترقية والوكيل العكسي والمراقبة
+
+كيف تتحقق من ملف منزّل، وترقّي دون فقد بيانات، وتضع traffic66 خلف nginx أو Caddy أو Traefik، وتراقبه باستخدام Prometheus.
+
+<a id="verify-a-download"></a>
+
+### التحقق من ملف منزّل
+
+يأتي كل إصدار مع ملف `SHA256SUMS`، وقائمة بالبرمجيات المضمّنة (`traffic66-sbom.cdx.json`، بصيغة CycloneDX)، وشهادة مصدر البناء من GitHub Actions التي تثبت أن الأرشيف بُني من شيفرة هذا المستودع. في المجلد الذي فيه التنزيلات:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows (PowerShell): يطبع `Get-FileHash traffic66-windows-amd64.zip` قيمة التجزئة، ويجب أن تساوي سطر ذلك الملف في `SHA256SUMS`. يحتاج `gh attestation verify` إلى GitHub CLI وهو اختياري.
+
+<a id="upgrade-and-roll-back"></a>
+
+### الترقية والرجوع
+
+أوقف traffic66، وانسخ مجلد البيانات كله، واستبدل ملف البرنامج، ثم شغّله من جديد. كخدمة على Linux:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+للرجوع، أوقف traffic66 وأعد البرنامج القديم ونسخة مجلد البيانات. لا يخمّن أي إصدار بيانات مكتوبة بصيغة أحدث: بل يتوقف برسالة تذكر الإصدار الذي كتبها. شغّله بمجلد `-data` آخر، أو عد إلى الإصدار الأحدث. يسجّل كل تشغيل إذا كانت البيانات قد كتبها آخر مرة إصدار آخر.
+
+بعد انقطاع الكهرباء أو `kill -9`، يعيد التشغيل التالي بناء ملخصات الساعات الأخيرة من تفاصيل التدفقات، فلا ينقص شيء من عروض 24 ساعة وأطول، ويسجّل ذلك.
+
+<a id="reverse-proxy"></a>
+
+### الوكيل العكسي
+
+يرفض traffic66 تسجيل الدخول والتغييرات من صفحة لا يطابق عنوانها العنوان الذي يراه traffic66، حتى لا يتصرف موقع آخر باسمك. خلف وكيل عكسي، اجعل الوكيل يمرر اسم المضيف الذي يستخدمه المتصفح (ترويسة `Host` أو `X-Forwarded-Host` أو `Forwarded`)، أو أخبر traffic66 بعنوانه العام:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+يمكن كتابة المنفذ الافتراضي (`:443` لـ https و`:80` لـ http) أو حذفه. يجب أن يكون traffic66 في جذر اسم المضيف، لا تحت مسار مثل `/traffic66/`. عندما يُرفض طلب لهذا السبب، تقول صفحة الدخول والصفحات الأخرى ذلك بدلًا من «كلمة المرور غير صحيحة». أبقِ واجهة الويب على هذا الجهاز فقط (`-addr 127.0.0.1:8066`) كي لا يُوصل إليها إلا عبر الوكيل.
+
+**nginx** (الإعداد الافتراضي `proxy_set_header Host $proxy_host;` يرسل العنوان الداخلي، لذا اضبطه):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** يمرر اسم المضيف من تلقاء نفسه ويحصل على شهادة له:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** يمرر اسم المضيف من تلقاء نفسه (`passHostHeader` مفعّل افتراضيًا)؛ إعداد ديناميكي لمزوّد الملفات:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### المراقبة
+
+يقدّم `/metrics` حالة traffic66 نفسه بصيغة Prometheus: السجلات المستلمة والمرفوضة والمسقطة، والرزم لكل منفذ تجميع، وأخطاء الكتابة، واستخدام القرص. يتطلب تسجيل الدخول مثل بقية واجهة الويب؛ أنشئ لـ Prometheus مستخدمًا خاصًا (`traffic66 passwd -user prometheus`) وضع كلمة مروره:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### المساعدة في سطر الأوامر
+
+يعرض `traffic66 help` الأوامر؛ ويعرض `traffic66 help <الأمر>` أو `traffic66 <الأمر> -h` خيارات الأمر مع أمثلة.
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```
