@@ -537,7 +537,7 @@ function tsChart(el, {times, areas = [], lines = [], fmtY = fmtAxisBps, fmtV = f
     // all zero: a scale up to 1K reads as "nothing", 0..1 rounds to 0,0,1,1,1
     const Y = top > 0 ? niceMax(top * 1.05) : 1000, y = v => T + (H - T - B) * (1 - v / Y);
     const span = times[n - 1] - times[0];
-    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(el.getAttribute('aria-label') || '')}">`;
+    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(el.getAttribute('aria-label') || el.closest('.panel')?.querySelector('h2,h3')?.textContent || t('nav.' + state.v))}">`;
     for (let k = 0; k <= 4; k++) {
       const yy = y(Y * k / 4);
       s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="ax" x="${rtl ? W - R + 8 : L - 8}" y="${yy + 4}" text-anchor="${rtl ? 'start' : 'end'}">${fmtY(Y * k / 4)}</text>`;
@@ -877,7 +877,7 @@ function mdRender(md) {
       const code = [];
       for (i++; i < lines.length && !/^```/.test(lines[i]); i++) code.push(lines[i]);
       i++;
-      out.push(`<div class="mdcode"><button class="mdcopy" type="button">${esc(t('ob.copy'))}</button><pre><code>${esc(code.join('\n'))}</code></pre></div>`);
+      out.push(`<div class="mdcode"><button class="mdcopy" type="button">${esc(t('ob.copy'))}</button><pre tabindex="0"><code>${esc(code.join('\n'))}</code></pre></div>`);
       continue;
     }
     if ((m = /^<a id="([\w-]+)"><\/a>$/.exec(l.trim()))) { flush(); seen.add(m[1]); out.push(`<span class="mdanchor" id="h-${esc(m[1])}"></span>`); i++; continue; }
@@ -893,7 +893,7 @@ function mdRender(md) {
       flush();
       const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
       const head = cells(l);
-      let html = `<div class="mdtable"><table><tr>${head.map(c => `<th>${mdInline(c)}</th>`).join('')}</tr>`;
+      let html = `<div class="mdtable"><table><tr>${head.map(c => `<th>${c.trim() ? mdInline(c) : '<span class="vh">—</span>'}</th>`).join('')}</tr>`;
       for (i += 2; i < lines.length && /^\|.*\|\s*$/.test(lines[i]); i++) html += `<tr>${cells(lines[i]).map(c => `<td>${mdInline(c)}</td>`).join('')}</tr>`;
       out.push(html + '</table></div>');
       continue;
@@ -997,9 +997,9 @@ views.overview = async (el) => {
       <div class="legend">${areas.map((a, i) => `<span><i style="background:${a.color}"></i>${series.names[i] === '__other__' ? esc(a.name) : V('app', series.names[i], a.name)}</span>`).join('')}${lines.length ? `<span><i class="dash"></i>${esc(lines[0].name)}</span>` : ''}</div></div>
     ${panel('c6', t('ov.dir'), '', '<div class="donut" id="dDir"></div>')}
     ${panel('c6', t('ov.proto'), '', '<div class="donut" id="dProto"></div>')}
-    ${panel('c6', t('ov.top_clients'), t('ov.top_clients_sub'), `<table><tr><th></th><th>${t('col.client')}</th><th class="num">${t('col.traffic')}</th><th style="width:34%">${t('col.share')}</th></tr>
+    ${panel('c6', t('ov.top_clients'), t('ov.top_clients_sub'), `<table><tr><th><span class="vh">#</span></th><th>${t('col.client')}</th><th class="num">${t('col.traffic')}</th><th style="width:34%">${t('col.share')}</th></tr>
       ${cl.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cmax)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${emptyText()}</td></tr>`}</table>`)}
-    ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
+    ${panel('c6', t('ov.top_services'), t('ov.top_services_sub'), `<table><tr><th><span class="vh">#</span></th><th>${t('col.server')}</th><th>${t('col.service')}</th><th class="num">${t('col.traffic')}</th><th style="width:24%">${t('col.share')}</th></tr>
       ${sv.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key)}</td><td class="nw">${V('port', r.key2, r.key2)} <span class="muted">${esc(r.extra)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, smax)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}</table>`)}
     ${fd ? findingsPanel(fd) : ''}
     ${offlineMode || inSB() ? '' : panel('c12', t('self.title'), '', '<div class="self" id="self"></div>')}
@@ -1235,7 +1235,7 @@ function barChart(el, times, values, fmtV) {
     const rtl = document.documentElement.dir === 'rtl', L = rtl ? 8 : 50, R = rtl ? 50 : 8, T = 8, B = 22, n = times.length;
     const Y = niceMax(Math.max(...values) * 1.05), y = v => T + (H - T - B) * (1 - v / Y);
     const bw = (W - L - R) / n, x = i => rtl ? W - R - bw * (i + 1) : L + bw * i, span = times[n - 1] - times[0];
-    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(el.getAttribute('aria-label') || '')}">`;
+    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(el.getAttribute('aria-label') || el.closest('.panel')?.querySelector('h2,h3')?.textContent || t('nav.' + state.v))}">`;
     for (let k = 0; k <= 4; k++) { const yy = y(Y * k / 4); s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="ax" x="${rtl ? W - R + 8 : L - 8}" y="${yy + 4}" text-anchor="${rtl ? 'start' : 'end'}">${fmtAxisBps(Y * k / 4)}</text>`; }
     const ticks = W < 600 ? 4 : 7, step = Math.max(1, Math.round(n / ticks));
     for (let i = 0; i < n; i += step) s += `<text class="ax" x="${x(i) + bw / 2}" y="${H - 5}" text-anchor="middle">${fmtAxisTime(times[i], span)}</text>`;
@@ -1292,7 +1292,7 @@ function drawRings(el, d, inDim, outDim) {
     const short = (v, n) => { const a = [...v]; return a.length > n ? a.slice(0, n - 1).join('') + '…' : v; };
     const col = {}, tot = d.total;
     d.inner.forEach((r, i) => col[r.k] = r.k === '__other__' ? 'var(--other)' : color(i, r.k));
-    let s = `<svg viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" role="img">`, a = 0, labels = '';
+    let s = `<svg viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" role="img" aria-label="${esc(el.closest('.panel')?.querySelector('h2,h3')?.textContent || t('nav.' + state.v))}">`, a = 0, labels = '';
     const lastY = {l: -1e9, r: -1e9};
     const segs = [];
     d.inner.forEach(r => {
@@ -1366,7 +1366,7 @@ views.topn = el => {
 async function talkers(el) {
   const [cl, srv, ov] = await Promise.all([api('topn', {dim: 'client', limit: 33}), api('topn', {dim: 'server', limit: 33}), api('overview')]);
   const tot = ov.totals || {};
-  const table = (rows, head, f) => `<table class="talk"><tr><th></th><th>${t(head)}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.pkts')}</th><th class="num">${t('col.flows')}</th></tr>
+  const table = (rows, head, f) => `<table class="talk"><tr><th><span class="vh">#</span></th><th>${t(head)}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.pkts')}</th><th class="num">${t('col.flows')}</th></tr>
     ${(rows || []).map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}
     <tr class="sum"><td></td><td>${t('topn.all')}</td><td class="num">${fmtBytes(tot.wire)}</td><td class="num">${nf(tot.pkts)}</td><td class="num">${nf(tot.flows)}</td></tr></table>`;
   el.innerHTML = `<div class="grid">
@@ -1407,7 +1407,7 @@ async function topTable(el, dim) {
   // peer counts exist only for clients and servers over the detail data
   const showPeers = ['client', 'server'].includes(dim) && (rows.some(r => r.peers) || sk === 'peers');
   const sortTh = (k, label, cls = 'num') => {
-    if (!label) return '<th></th>';
+    if (!label) return '<th><span class="vh">#</span></th>';
     const on = sk === k, ar = on ? (asc ? '▲' : '▼') : '';
     return `<th class="${cls} sk" data-s="${k}" ${on ? `aria-sort="${asc ? 'ascending' : 'descending'}"` : ''}>${label}<span class="ar">${ar}</span></th>`;
   };
@@ -1415,7 +1415,7 @@ async function topTable(el, dim) {
   el.innerHTML = `<div class="panel">
     <div class="ph"><h2>${t('topn.title', {n: 66})}</h2><span class="sub">${esc(t('topn.hint'))}${slow}</span>
       <div class="tools" style="display:flex;gap:12px;align-items:center">${modeSeg()}<label>${t('topn.group')} <select class="dimsel" id="dimSel">${DIMS.map(k => `<option value="${k}" ${k === dim ? 'selected' : ''}>${t('dim.' + k)}</option>`).join('')}</select></label></div></div>
-    <table><tr><th></th>${heads.map((h, i) => sortTh('t' + i, h && t(h), '')).join('')}${sortTh('wire', t('col.traffic'))}<th class="num">%</th><th style="width:16%">${t('col.share')}</th>${sortTh('pkts', t('col.pkts'))}${sortTh('avg', t('col.avg'))}${showPeers ? sortTh('peers', t('col.peers')) : ''}${sortTh('flows', t('col.flows'))}</tr>
+    <table><tr><th><span class="vh">#</span></th>${heads.map((h, i) => sortTh('t' + i, h && t(h), '')).join('')}${sortTh('wire', t('col.traffic'))}<th class="num">%</th><th style="width:16%">${t('col.share')}</th>${sortTh('pkts', t('col.pkts'))}${sortTh('avg', t('col.avg'))}${showPeers ? sortTh('peers', t('col.peers')) : ''}${sortTh('flows', t('col.flows'))}</tr>
     ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(avg(r))}&nbsp;B</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${emptyText()}</td></tr>`}
     </table></div>`;
   $('#dimSel').onchange = e => { state.dim = e.target.value; state.sort = {k: 'wire', asc: false}; render(); };
@@ -1653,9 +1653,9 @@ views.geo = async (el) => {
       <p class="muted attrib">${attr ? `${t('geo.data_from')} ${attr} · ` : ''}${t('geo.map_from')} <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a></p>`)}</div>
     <div class="grid" style="margin-bottom:16px">${asCharts.map(([by, m], i) => seriesPanel('asr' + i, 'c6', `${t(by === 'asn_src' ? 'geo.as_src' : 'geo.as_dst')} · ${t(m === 'wire' ? 'ch.bps' : 'ch.pps')}`, i < 2 ? esc(t(by === 'asn_src' ? 'geo.as_src_sub' : 'geo.as_dst_sub')) : '')).join('')}</div>
     <div class="grid">
-    ${panel('c6', t('geo.countries'), t('geo.countries_sub'), `<table><tr><th></th><th>${t('col.country')}</th><th class="num">${t('col.traffic')}</th><th style="width:40%">${t('col.share')}</th></tr>
+    ${panel('c6', t('geo.countries'), t('geo.countries_sub'), `<table><tr><th><span class="vh">#</span></th><th>${t('col.country')}</th><th class="num">${t('col.traffic')}</th><th style="width:40%">${t('col.share')}</th></tr>
       ${cr.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${V('country', r.key, country(r.key))} <span class="muted">${esc(r.key)}</span></td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, cm)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
-    ${panel('c6', t('geo.as'), '', `<table><tr><th></th><th>${t('col.asn')}</th><th>${t('col.org')}</th><th class="num">${t('col.traffic')}</th><th style="width:32%">${t('col.share')}</th></tr>
+    ${panel('c6', t('geo.as'), '', `<table><tr><th><span class="vh">#</span></th><th>${t('col.asn')}</th><th>${t('col.org')}</th><th class="num">${t('col.traffic')}</th><th style="width:32%">${t('col.share')}</th></tr>
       ${ar.map((r, i) => `<tr><td class="rank">${i + 1}</td><td class="nw">${r.key === '0' ? `<span class="muted">${t('unknown')}</span>` : V('asn', r.key, 'AS' + r.key)}</td><td>${esc(r.extra)}</td><td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, am)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${t('geo.no_table')}</td></tr>`}</table>`)}
   </div>`;
   if (w) drawMap($('#wmap'), w, all, gl); else $('#wmap').innerHTML = `<div class="empty">${emptyText()}</div>`;
@@ -1681,7 +1681,7 @@ views.cleanup = async (el) => {
   el.innerHTML = `<div class="grid">${panel('c12', t('cl.title'), t('cl.sub'), `<p class="muted" style="margin:0 0 12px;font-size:13px">${esc(t('cl.what'))}</p>
     <div class="kpis" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px"><div class="kpi"><div class="lab">${t('cl.disk')}</div><div class="n">${fmtBytes(d.disk_bytes)}</div></div>
       <div class="kpi"><div class="lab">${t('cl.oldest')}</div><div class="n" style="font-size:20px">${d.oldest && !d.oldest.startsWith('0001') ? esc(new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(d.oldest))) : '—'}</div></div></div>
-    <table><tr><th></th><th class="num">${t('cl.col_rows')}</th><th class="num">${t('cl.col_size')}</th><th></th></tr>${opts.map(row).join('')}</table>
+    <table><tr><th><span class="vh">#</span></th><th class="num">${t('cl.col_rows')}</th><th class="num">${t('cl.col_size')}</th><th><span class="vh">#</span></th></tr>${opts.map(row).join('')}</table>
     <div id="clMsg" style="margin-top:10px;font-size:13px"></div>`)}</div>`;
   el.querySelectorAll('[data-cl]').forEach(b => b.onclick = async () => {
     const days = +b.dataset.cl;
@@ -1722,7 +1722,7 @@ async function embedPanel(el) {
     ${reg ? '' : `<div class="verdict warn" style="margin:0 0 12px">${esc(t('emb.locked'))}</div>`}
     ${location.protocol === 'http:' ? `<p class="embnote">${esc(t('emb.http_warn'))}</p>` : ''}
     <div id="embKey"></div>
-    ${links.length ? `<table class="embt"><tr><th>${esc(t('emb.col_name'))}</th><th>${esc(t('emb.col_ranges'))}</th><th>${esc(t('emb.col_origins'))}</th><th>${esc(t('emb.col_clients'))}</th><th>${esc(t('emb.col_key'))}</th><th>${esc(t('emb.col_used'))}</th><th></th></tr>
+    ${links.length ? `<table class="embt"><tr><th>${esc(t('emb.col_name'))}</th><th>${esc(t('emb.col_ranges'))}</th><th>${esc(t('emb.col_origins'))}</th><th>${esc(t('emb.col_clients'))}</th><th>${esc(t('emb.col_key'))}</th><th>${esc(t('emb.col_used'))}</th><th><span class="vh">#</span></th></tr>
       ${links.map((x, i) => `<tr><td><b>${esc(x.name)}</b></td><td>${list(x.ranges)}</td><td>${list(x.origins)}</td><td>${list(x.clients)}</td>
         <td class="nw"><code>${esc(x.prefix)}…</code>${x.old_until ? `<br><span class="muted" style="font-size:12px">${esc(t('emb.old_until', {t: new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'short'}).format(new Date(x.old_until))}))}</span>` : ''}</td>
         <td class="nw">${esc(when(x.last_used))}<br><span class="muted" style="font-size:12px">${esc(t('emb.hits', {n: nf(x.hits || 0)}))}</span></td>
@@ -1809,7 +1809,7 @@ views.sandbox = async (el) => {
       <td>${f.status === 'error' ? status('bad', f.error || t('sb.st_error')) : f.status === 'done' ? status('ok', t('sb.st_done')) : `<span class="muted">${t('sb.st_' + f.status)}…</span>`}</td>
       <td class="nw"><button class="${f.name === sbInfo.active ? 'primary' : 'btn'}" data-sbgo="${esc(f.name)}" ${f.status === 'done' ? '' : 'disabled'}>${t('sb.analyze')}</button> ${admOnly(`<button class="btn" data-sbdel="${esc(f.name)}">${t('sb.delete')}</button>`)}</td></tr>`).join('');
   el.innerHTML = `<div class="grid">${panel('c12', t('sb.title'), t('sb.sub'), `<p class="sbexplain">${esc(t('sb.explain'))}</p>
-    <table><tr><th>${t('sb.col_file')}</th><th class="num">${t('sb.col_size')}</th><th class="num">${t('sb.col_packets')}</th><th class="num">${t('sb.col_flows')}</th><th>${t('sb.col_span')}</th><th>${t('sb.col_status')}</th><th></th></tr>
+    <table><tr><th>${t('sb.col_file')}</th><th class="num">${t('sb.col_size')}</th><th class="num">${t('sb.col_packets')}</th><th class="num">${t('sb.col_flows')}</th><th>${t('sb.col_span')}</th><th>${t('sb.col_status')}</th><th><span class="vh">#</span></th></tr>
     ${rows || `<tr><td colspan="7" class="empty">${t('sb.empty')}</td></tr>`}</table>
     <div class="sbactions"><label class="btn ${own >= sbInfo.max_files ? 'disabled' : ''}" style="cursor:pointer">${t('sb.upload')}<input type="file" id="sbFile" accept=".pcap,.pcapng,.cap" multiple hidden ${own >= sbInfo.max_files ? 'disabled' : ''}></label>
       ${fs.length && adm() ? `<button class="btn" id="sbAll">${t('sb.delete_all')}</button>` : ''}<span id="sbMsg" style="font-size:13px"></span></div>
@@ -1938,7 +1938,7 @@ views.threats = async (el) => {
     </div></div>
     ${panel('c12', t('thr.table'), t('thr.sub'), nLists === 0 ? `<div class="empty">${t('thr.no_lists')}</div>` : `<table><tr><th>${t('col.list')}</th><th>${t('col.client')}</th><th>${t('col.server')}</th><th>${t('col.country')}</th><th>${t('col.direction')}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.flows')}</th></tr>
       ${rows.map(r => { const [cc, dir] = r.extra.split('|'); const out = dir === '1'; return `<tr><td>${status(out ? 'bad' : 'warn', r.key)}</td><td>${ipCell(r.key2)}</td><td>${ipCell(r.key3)}</td><td>${cc ? V('country', cc, country(cc)) : ''}</td><td class="${out ? 'up' : ''}">${t('dir.' + dir)}</td><td class="num ${out ? 'up' : ''}">${fmtBytes(r.wire)}</td><td class="num">${nf(r.flows)}</td></tr>`; }).join('') || `<tr><td colspan="7" class="empty">${t('thr.none')}</td></tr>`}</table>`)}
-    ${panel('c12', t('thr.manage'), t('thr.manage_sub'), `<table><tr><th>${t('thr.col_name')}</th><th class="num">${t('thr.col_entries')}</th><th></th></tr>
+    ${panel('c12', t('thr.manage'), t('thr.manage_sub'), `<table><tr><th>${t('thr.col_name')}</th><th class="num">${t('thr.col_entries')}</th><th><span class="vh">#</span></th></tr>
       ${Object.keys(lists).sort().map(n => `<tr><td>${esc(n)}</td><td class="num">${nf(lists[n])}</td><td style="text-align:end">${admOnly(`<button class="btn sm danger" data-thrm="${esc(n)}">${esc(t('thr.remove'))}</button>`)}</td></tr>`).join('') || `<tr><td colspan="3" class="empty">${esc(t('thr.no_lists'))}</td></tr>`}</table>
       ${admOnly(`<h3 class="subhead">${esc(t('thr.import'))}</h3><div class="thrimp">
         <input id="thrName" maxlength="40" placeholder="${esc(t('thr.name_ph'))}">
@@ -2157,7 +2157,7 @@ views.sources = async (el) => {
     ? '<span style="color:var(--good)">✔</span> ' + esc(t('src.snmp_ok', {n: nf(x.interfaces)}))
     : '<span style="color:var(--crit)">✖</span> ' + esc(t('src.snmp_fail'))}</span>`).join(' ');
   el.innerHTML = `${setTabs('sources')}<div class="grid">
-    ${panel('c12', t('src.title'), t('src.sub'), `<table><tr><th>${t('col.device')}</th><th>${t('col.proto')}</th><th class="num">${t('col.rate')}</th><th>${t('col.sampling')}</th><th class="num">${t('col.lost')}</th><th>${t('col.last')}</th><th>${t('col.status')}</th>${admOnly('<th></th>')}</tr>
+    ${panel('c12', t('src.title'), t('src.sub'), `<table><tr><th>${t('col.device')}</th><th>${t('col.proto')}</th><th class="num">${t('col.rate')}</th><th>${t('col.sampling')}</th><th class="num">${t('col.lost')}</th><th>${t('col.last')}</th><th>${t('col.status')}</th>${admOnly('<th><span class="vh">#</span></th>')}</tr>
       ${rows || `<tr><td colspan="${adm() ? 8 : 7}" class="empty">${waitHint(firstText())}</td></tr>`}</table>
       <p style="margin:12px 0 0;font-size:12.5px"><span class="muted">${t('src.listeners')}</span> ${lis || '—'} ${caps}</p>
       ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
@@ -2171,13 +2171,13 @@ views.sources = async (el) => {
         <button class="primary" id="licSave">${t('lic.install_btn')}</button>
         <span id="licMsg" style="font-size:13px"></span></div></div>`))}
     ${admOnly('<div class="panel c12" id="embPanel"></div>')}
-    ${admOnly(blocked.length ? panel('c12', t('blk.title'), t('blk.sub'), `<table><tr><th>${t('blk.col_addr')}</th><th>${t('blk.col_since')}</th><th class="num">${t('blk.col_dropped')}</th><th>${t('blk.col_note')}</th><th></th></tr>
+    ${admOnly(blocked.length ? panel('c12', t('blk.title'), t('blk.sub'), `<table><tr><th>${t('blk.col_addr')}</th><th>${t('blk.col_since')}</th><th class="num">${t('blk.col_dropped')}</th><th>${t('blk.col_note')}</th><th><span class="vh">#</span></th></tr>
       ${blocked.map(b => `<tr><td class="nw"><code>${esc(b.address)}</code></td>
         <td class="nw muted">${b.since ? esc(new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'short'}).format(new Date(b.since))) : ''}</td>
         <td class="num">${nf(b.dropped || 0)}</td><td>${esc(b.note || '')}</td>
         <td class="nw" style="text-align:end"><button class="btn sm" data-unblock="${esc(b.address)}">${esc(t('blk.unblock'))}</button></td></tr>`).join('')}</table>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0">${esc(t('blk.firewall'))}</p>`) : '')}
-    ${panel('c12', t('geo.title'), t('geo.sub'), `<table><tr><th>${t('geo.col_holds')}</th><th>${t('geo.col_db')}</th><th>${t('geo.col_built')}</th><th>${t('geo.col_use')}</th><th></th></tr>${geoRows}</table>
+    ${panel('c12', t('geo.title'), t('geo.sub'), `<table><tr><th>${t('geo.col_holds')}</th><th>${t('geo.col_db')}</th><th>${t('geo.col_built')}</th><th>${t('geo.col_use')}</th><th><span class="vh">#</span></th></tr>${geoRows}</table>
       ${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="primary" id="geoDbip">${t('geo.update')}</button><label class="btn" style="cursor:pointer">${t('geo.upload')}<input type="file" id="geoFile" accept=".mmdb,.tsv,.gz,.txt,.csv" hidden></label><span id="geoMsg" class="muted" style="font-size:13px"></span></div>`)}
       <h3 class="subhead">${t('geo.free')}</h3><p class="muted" style="font-size:12.5px;margin:0 0 6px">${t('geo.free_sub')}</p>
       <table><tr><th>${t('geo.col_db')}</th><th>${t('geo.col_holds')}</th><th>${t('geo.col_lic')}</th></tr>${freeRows}</table>
@@ -2287,14 +2287,14 @@ const SET_VIEWS = new Set(['sources', 'names', 'account']);
 const setTabs = cur => {
   const tabs = SET_TABS.filter(([v]) => v === 'account' || !(inSB() || offlineMode));
   return `<div class="seg settabs" role="tablist">${tabs.map(([v, k]) =>
-    `<button role="tab" data-settab="${v}" aria-selected="${cur === v}" aria-pressed="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
+    `<button role="tab" data-settab="${v}" aria-selected="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
 };
 document.addEventListener('click', e => { const b = e.target.closest('[data-settab]'); if (b) go(b.dataset.settab); });
 views.names = async (el) => {
   const inv = await api('inventory').catch(() => ({text: ''}));
   el.innerHTML = `${setTabs('names')}<div class="grid">
     ${panel('c12', t('src.names'), t('src.names_sub'), `${admOnly(`<div class="nmform" id="nmForm">
-        <select id="nmK">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
+        <select id="nmK" aria-label="${esc(t('nm.type'))}">${NM_KINDS.map(k => `<option value="${k}">${t('nm.k_' + k)}</option>`).join('')}</select>
         <input id="nmA" autocomplete="off" spellcheck="false"><input id="nmI" autocomplete="off" inputmode="numeric" placeholder="${esc(t('nm.ifindex'))}" hidden>
         <input id="nmN" autocomplete="off" spellcheck="false"><select id="nmC" hidden></select>
         <button class="primary" id="nmAdd">${t('nm.add')}</button><button class="btn" id="nmCancel" hidden>${t('nm.cancel')}</button></div>
@@ -2350,7 +2350,7 @@ function namesForm() {
     $('#nmC').innerHTML = `<option value="">${esc(t('nm.country_none'))}</option>` + Object.keys(w.c).map(cc => [cc, country(cc)]).sort((x, y) => x[1].localeCompare(y[1], LANG)).map(([cc, n]) => `<option value="${cc}">${esc(n)}</option>`).join('');
     $('#nmC').value = cur;
   }).catch(() => {});
-  tab.innerHTML = `<tr><th>${t('nm.type')}</th><th>${t('nm.address')}</th><th>${t('nm.name')}</th><th></th></tr>` + (rows.map(r => `<tr><td class="nw">${t('nm.k_' + r.k)}</td>
+  tab.innerHTML = `<tr><th>${t('nm.type')}</th><th>${t('nm.address')}</th><th>${t('nm.name')}</th><th><span class="vh">#</span></th></tr>` + (rows.map(r => `<tr><td class="nw">${t('nm.k_' + r.k)}</td>
       <td class="nw"><code>${esc(r.a)}${r.k === 'iface' ? ' #' + esc(r.x) : ''}</code></td><td>${r.c ? `<span class="tag">${esc(country(r.c))}</span> ` : ''}${r.k === 'snmp' ? `<span class="muted">${esc(t('nm.community'))}:</span> ` : ''}${esc(r.n.replace(/\s*\bspeed=\d+/, ''))}${/\bspeed=(\d+)/.test(r.n) ? ` <span class="muted">${fmtBps(+r.n.match(/\bspeed=(\d+)/)[1])}</span>` : ''}</td>
       <td class="nw" style="text-align:end">${admOnly(`<button class="btn" data-nme="${r.i}">${t('nm.edit')}</button> <button class="btn" data-nmd="${r.i}">${t('nm.delete')}</button>`)}</td></tr>`).join('') ||
     `<tr><td colspan="4" class="empty">${t('nm.empty')}</td></tr>`);
@@ -2412,7 +2412,7 @@ views.detail = async (el) => {
   const tot = d.totals, series = d.series || {times: [], names: [], values: []};
   const areas = series.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: series.values[i]}));
   const lines = d.baseline && d.basis ? [{name: baseText(d, 'line'), color: 'var(--base)', dash: true, keep: true, data: d.baseline}] : [];
-  const table = (rows, heads, cell) => { const m = Math.max(1, ...rows.map(r => r.wire)); return `<table><tr><th></th>${heads.map(h => `<th>${t(h)}</th>`).join('')}<th class="num">${t('col.traffic')}</th><th style="width:26%">${t('col.share')}</th></tr>
+  const table = (rows, heads, cell) => { const m = Math.max(1, ...rows.map(r => r.wire)); return `<table><tr><th><span class="vh">#</span></th>${heads.map(h => `<th>${t(h)}</th>`).join('')}<th class="num">${t('col.traffic')}</th><th style="width:26%">${t('col.share')}</th></tr>
     ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td>${bar(r.wire, m)}</td></tr>`).join('') || `<tr><td colspan="${heads.length + 3}" class="empty">${emptyText()}</td></tr>`}</table>`; };
   const s1 = side1.rows || [], s2 = side2.rows || [], cv = conv.rows || [], rr = rec.rows || [];
   el.innerHTML = `<div class="grid">
@@ -2523,7 +2523,7 @@ async function render(push) {
   } catch (e) {
     if (e.message !== 'login' && seq === loadSeq) el.innerHTML = errorBox(e);
   }
-  if (seq === loadSeq) { drawnAt = Date.now(); resolveNames(); }
+  if (seq === loadSeq) { drawnAt = Date.now(); resolveNames(); focusableScroll(el); }
 }
 function go(v) { state.v = v; render(true); window.scrollTo(0, 0); }
 
@@ -2698,3 +2698,14 @@ async function init() {
 }
 init();
 })();
+
+// An area that scrolls sideways must be reachable with the keyboard to be
+// scrolled at all.
+function focusableScroll(root) {
+  root.querySelectorAll('.panel, .tablewrap, .mdcode pre').forEach(p => {
+    if (p.scrollWidth > p.clientWidth + 1) {
+      p.tabIndex = 0;
+      if (!p.getAttribute('aria-label')) p.setAttribute('aria-label', p.querySelector('h2,h3')?.textContent || t('nav.' + state.v));
+    } else if (p.tabIndex === 0) p.removeAttribute('tabindex');
+  });
+}

@@ -211,7 +211,7 @@ td.rank{color:var(--ink-3);width:2.5em;text-align:end}
 .nw{white-space:nowrap}
 .sb{height:6px;border-radius:3px;background:var(--surface-2);min-width:60px;position:relative}
 .sb span{position:absolute;inset-block:0;inset-inline-start:0;border-radius:3px;background:var(--accent)}
-.v{unicode-bidi:plaintext;border:0;background:none;padding:0;cursor:pointer;color:var(--ink);text-align:start;border-bottom:1px dashed transparent;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.v{unicode-bidi:plaintext;border:0;background:none;padding:0;min-height:24px;cursor:pointer;color:var(--ink);text-align:start;border-bottom:1px dashed transparent;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .v:hover{border-bottom-color:var(--accent);color:var(--accent-ink)}
 .v .ip{unicode-bidi:isolate;color:var(--ink-3);font-size:12.5px;margin-inline-start:2px}
 .tag{display:inline-block;font-size:11.5px;border-radius:4px;padding:0 5px;background:var(--surface-2);color:var(--ink-2);margin-inline-start:4px}
@@ -597,3 +597,6 @@ dialog.embdlg{width:min(620px,96vw)}
 /* the tabs of the inventory page: the inventory and device locations */
 .settabs{display:inline-flex;margin:0 0 14px}
 
+
+.vh{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.manual li a{display:inline-block;min-height:24px}
