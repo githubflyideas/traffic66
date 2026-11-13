@@ -179,6 +179,7 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/findings", s.data((*Server).setFindings))
 	api("GET /api/cleanup", s.getCleanup)
 	adminAPI("POST /api/cleanup", s.postCleanup)
+	adminAPI("POST /api/cleanup/exporter", s.postPurgeExporter)
 	api("GET /api/sandbox", s.getSandbox)
 	api("POST /api/sandbox/files", s.putSandboxFile)
 	adminAPI("DELETE /api/sandbox/files", s.deleteSandbox)

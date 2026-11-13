@@ -3,6 +3,11 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.5.16
+
+- Data cleanup can delete one device's stored data.
+- Accessibility improvements for screen readers and keyboard use.
+
 ## 2.5.15
 
 - Stricter checks on incoming samples; refused records are logged and counted.

@@ -710,3 +710,11 @@ func (p *Pipeline) noteImplausible(r *flow.Record) {
 		log.Printf("pipeline: refused %d record(s) with an impossible sampling rate, size or time; latest from %s", n, r.Exporter)
 	}
 }
+
+// PurgeExporter deletes everything one device exported. What is still held
+// in memory is written first, so that it is deleted with the rest.
+func (p *Pipeline) PurgeExporter(exporter string) (store.PurgeSize, error) {
+	p.FlushRows()
+	p.FlushRollups()
+	return p.st.PurgeExporter(exporter)
+}

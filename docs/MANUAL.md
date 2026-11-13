@@ -503,7 +503,11 @@ The data directory holds `raw/` (detail, one file per hour),
 `traffic66.duckdb` (summaries and counters), `password`, `inventory.txt`,
 `license.json`, your logo and databases. Back up by stopping traffic66 and
 copying it; upgrade by replacing the program file. **Data cleanup** deletes
-data older than 7–120 days, or all of it.
+data older than 7–120 days, or all of it. It also lists the devices with stored traffic: deleting one removes its
+flow records and rebuilds the summaries of those hours, for a device whose
+traffic should not count (forged or broken exports, a test device). Summaries
+older than the flow records (`-retention-days`) keep its share. Block it
+first if it is still sending.
 
 ### Device locations
 

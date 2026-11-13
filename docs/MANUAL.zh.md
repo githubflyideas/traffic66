@@ -406,7 +406,7 @@ Linux 需要 root 或 `setcap cap_net_raw,cap_net_admin+ep`，macOS 需要 root�
 | `-capture` | | 本机网卡（可重复指定） |
 | `-no-dns` | | 不做反向解析 |
 
-数据目录包含 `raw/`（明细，每小时一个文件）、`traffic66.duckdb`（汇总和计数器）、`password`、`inventory.txt`、`license.json`、你的 Logo 和数据库。备份：停止 traffic66 后复制整个目录；升级：替换程序文件。**数据清理** 删除早于 7–120 天的数据，或全部数据。
+数据目录包含 `raw/`（明细，每小时一个文件）、`traffic66.duckdb`（汇总和计数器）、`password`、`inventory.txt`、`license.json`、你的 Logo 和数据库。备份：停止 traffic66 后复制整个目录；升级：替换程序文件。**数据清理** 删除早于 7–120 天的数据，或全部数据。这里也列出有已存流量的设备：删除某台设备会删掉它的流记录，并按剩余数据重建那些小时的汇总，适用于不该计入的设备（发送了伪造或错误数据、测试设备）。早于流记录保留期（`-retention-days`）的汇总无法重建，仍含它的份额。如果它还在发送，请先阻断。
 
 <a id="licence"></a>
 

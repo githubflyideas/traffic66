@@ -1682,7 +1682,19 @@ views.cleanup = async (el) => {
     <div class="kpis" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px"><div class="kpi"><div class="lab">${t('cl.disk')}</div><div class="n">${fmtBytes(d.disk_bytes)}</div></div>
       <div class="kpi"><div class="lab">${t('cl.oldest')}</div><div class="n" style="font-size:20px">${d.oldest && !d.oldest.startsWith('0001') ? esc(new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(d.oldest))) : '—'}</div></div></div>
     <table><tr><th><span class="vh">#</span></th><th class="num">${t('cl.col_rows')}</th><th class="num">${t('cl.col_size')}</th><th><span class="vh">#</span></th></tr>${opts.map(row).join('')}</table>
-    <div id="clMsg" style="margin-top:10px;font-size:13px"></div>`)}</div>`;
+    <div id="clMsg" style="margin-top:10px;font-size:13px"></div>`)}
+    ${panel('c12', t('cl.dev_title'), t('cl.dev_sub'), (d.exporters || []).length ? `<div class="tablewrap"><table><tr><th>${esc(t('field.exporter'))}</th><th class="num">${esc(t('cl.col_rows'))}</th><th class="num">${esc(t('col.traffic'))}</th><th><span class="vh">${esc(t('cl.dev_run'))}</span></th></tr>${d.exporters.map(x => `<tr><td>${esc(x.exporter)}</td><td class="num">${nf(x.rows)}</td><td class="num">${fmtBytes(x.wire)}</td><td style="text-align:end"><button class="btn danger" data-cl-dev="${esc(x.exporter)}">${esc(t('cl.dev_run'))}</button></td></tr>`).join('')}</table></div>` : `<div class="empty">${esc(t('cl.dev_none'))}</div>`)}
+    <div id="clDevMsg" style="margin-top:10px;font-size:13px"></div></div>`;
+  el.querySelectorAll('[data-cl-dev]').forEach(btn => btn.onclick = async () => {
+    const x = btn.dataset.clDev;
+    if (!confirm(t('cl.dev_confirm', {x}))) return;
+    btn.disabled = true;
+    const res = await fetch('/api/cleanup/exporter', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({exporter: x, confirm: true})});
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) { const m = $('#clDevMsg'); m.style.color = 'var(--crit)'; m.textContent = j.error || res.statusText; btn.disabled = false; return; }
+    clDone = t('cl.dev_done', {n: nf(j.rows || 0), x});
+    loadStatus(); render();
+  });
   el.querySelectorAll('[data-cl]').forEach(b => b.onclick = async () => {
     const days = +b.dataset.cl;
     if (!confirm(days ? t('cl.confirm_days', {n: days}) : t('cl.confirm_all'))) return;
