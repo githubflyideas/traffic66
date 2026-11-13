@@ -488,6 +488,9 @@ func srcKey(si collector.SourceInfo) string {
 
 // sampleSources updates per-exporter record rates; called every few seconds.
 func (s *Server) sampleSources(now time.Time) {
+	if s.Col == nil {
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	dt := now.Sub(srcRate.at).Seconds()
