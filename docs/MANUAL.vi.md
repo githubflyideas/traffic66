@@ -39,6 +39,7 @@ Elasticsearch, Kafka hay một cơ sở dữ liệu riêng.
 9. [Phân tích pcap ngoại tuyến, giao diện terminal, bắt gói tin cục bộ](#9-offline-pcap-terminal-ui-local-capture)
 10. [Tùy chọn và dữ liệu](#10-options-and-data)
 11. [Bảo mật, định cỡ, xử lý sự cố](#11-security-sizing-troubleshooting)
+12. [Cài đặt, nâng cấp, reverse proxy, giám sát](#12-install-upgrade-reverse-proxy-monitoring)
 
 <a id="1-quick-start"></a>
 
@@ -467,6 +468,31 @@ root, Windows cần [Npcap](https://npcap.com). Luồng bắt được sẽ mang
 nguồn là `127.0.0.1`. Bắt gói tin cục bộ không có giao diện hay bộ đếm của
 thiết bị, nên **Kiểm tra giao diện** không có gì để so sánh.
 
+<a id="sending-findings-to-a-collector"></a>
+
+### Gửi phát hiện tới bộ thu
+
+Bản cài đặt đã đăng ký có thể gửi mỗi phát hiện tới bộ thu syslog ngay khi nó xuất hiện lần đầu:
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` là `udp`, `tcp` hoặc `tls`; `-syslog-min-sev` là mức nghiêm trọng thấp nhất đáng gửi; `-syslog-url https://traffic66.example.com` thêm liên kết tới phát hiện vào mỗi thông điệp. `-syslog-ascii` thoát mọi ký tự ngoài ASCII, cho bộ thu làm hỏng UTF-8.
+
+Định dạng có thể chọn, vì cái gì tự phân tích được phụ thuộc vào những gì bạn đang chạy:
+
+| `-syslog-format` | đọc được mà không cần viết bộ phân tích |
+|---|---|
+| `cef` (mặc định) | ArcSight, QRadar, Splunk, Graylog, Elastic, Wazuh |
+| `leef` | QRadar, sẵn có |
+| `json` | Elastic và Splunk — tên theo Elastic Common Schema |
+| `text` | con người |
+
+Lớp bọc ngoài luôn là RFC 5424, và mang id của phát hiện, loại của nó và tỷ lệ lấy mẫu ngay cả khi phần thân là văn bản thường.
+
+Ba điều khiến luồng này đáng để đếm chứ không chỉ để đọc. Loại sự kiện (`scan`, `brute`, `exfil` …) là một từ cố định không bao giờ đổi theo cách diễn đạt hay bản dịch, nên bảng điều khiển nhóm theo nó không hỏng khi một câu được sửa. Một phát hiện là **một** sự kiện với một id, gửi khi xuất hiện lần đầu chứ không phải mỗi lượt phát hiện, nên một đêm dò mật khẩu là một sự cố chứ không phải bốn mươi. Và tỷ lệ lấy mẫu đi kèm mọi thông điệp: traffic66 phát hiện trên dữ liệu lấy mẫu, nên số byte và gói là ước tính, và bộ thu cộng chúng mà không biết điều đó sẽ cho ra con số không ai bảo vệ được.
+
 <a id="10-options-and-data"></a>
 
 ## 10. Tùy chọn và dữ liệu
@@ -490,6 +516,12 @@ Thư mục dữ liệu chứa `raw/` (dữ liệu chi tiết, mỗi giờ một 
 traffic66 rồi sao chép thư mục này; nâng cấp bằng cách thay file chương trình.
 **Dọn dữ liệu** xóa dữ liệu cũ hơn 7–120 ngày, hoặc xóa toàn bộ.
 
+<a id="device-locations"></a>
+
+### Vị trí thiết bị
+
+Một thẻ của trang danh mục thiết bị. Bức tranh về nơi các luồng đến từ đâu: với mỗi thiết bị gửi luồng, phòng và tủ rack nơi nó đặt, và với mỗi cổng của nó, nhà mạng và mã mạch mà cổng đi ra. Thiết bị và cổng tự xuất hiện từ các luồng; bấm Sửa để nhập phòng, rack của thiết bị và nhà mạng, mạch của từng cổng trong một biểu mẫu. Chỉ điền một lần và được lưu trong `inventory.txt` cạnh các tên (`device 192.0.2.1 Core router room=Room_1 rack=A03`, `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`; khoảng trắng viết là `_`). Không có gì được tra cứu trong đó. Mọi người đã đăng nhập đều xem được; quản trị viên chỉnh sửa.
+
 <a id="licence"></a>
 
 ### Giấy phép
@@ -506,6 +538,8 @@ hệ: <route66traffic66@gmail.com>.
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Bảo mật, định cỡ, xử lý sự cố
+
+Khi đặt sau reverse proxy, xem [Reverse proxy](#reverse-proxy).
 
 Giao diện web dùng HTTP thuần: trên mạng không tin cậy, hãy dùng
 `-addr 127.0.0.1:8066` phía sau một proxy TLS (`caddy reverse-proxy --from traffic66.example.com --to
@@ -529,3 +563,123 @@ bộ phiên hội thoại mất khoảng 9 giây.
 | Windows báo "Windows đã bảo vệ PC của bạn" | **Thông tin thêm** → **Vẫn chạy** |
 
 Biên dịch từ mã nguồn: Go 1.26 và một trình biên dịch C, sau đó chạy `CGO_ENABLED=1 go build ./cmd/traffic66`.
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. Cài đặt, nâng cấp, reverse proxy, giám sát
+
+Cách kiểm tra tệp tải về, nâng cấp mà không mất dữ liệu, đặt traffic66 sau nginx, Caddy hoặc Traefik, và giám sát nó bằng Prometheus.
+
+<a id="verify-a-download"></a>
+
+### Kiểm tra tệp tải về
+
+Mỗi bản phát hành có tệp `SHA256SUMS`, danh sách phần mềm bên trong (`traffic66-sbom.cdx.json`, CycloneDX) và chứng thực nguồn gốc bản dựng từ GitHub Actions, chứng minh tệp nén được dựng từ mã nguồn của kho này. Trong thư mục chứa các tệp tải về:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows (PowerShell): `Get-FileHash traffic66-windows-amd64.zip` in ra mã băm; nó phải bằng dòng của tệp đó trong `SHA256SUMS`. `gh attestation verify` cần GitHub CLI và là tùy chọn.
+
+<a id="upgrade-and-roll-back"></a>
+
+### Nâng cấp và quay lại
+
+Dừng traffic66, sao chép toàn bộ thư mục dữ liệu, thay tệp chương trình rồi khởi động lại. Khi chạy như dịch vụ Linux:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+Để quay lại, dừng traffic66 và đặt lại chương trình cũ cùng bản sao thư mục dữ liệu. Một phiên bản không bao giờ đoán dữ liệu ghi theo định dạng mới hơn: nó dừng với thông báo nêu phiên bản đã ghi. Hãy chạy nó với thư mục `-data` khác, hoặc quay về phiên bản mới hơn. Mỗi lần khởi động sẽ ghi nhật ký nếu dữ liệu lần cuối do phiên bản khác ghi.
+
+Sau khi mất điện hoặc `kill -9`, lần khởi động sau dựng lại phần tổng hợp của vài giờ gần nhất từ chi tiết luồng, nên các chế độ xem 24 giờ trở lên không thiếu gì, và ghi điều đó vào nhật ký.
+
+<a id="reverse-proxy"></a>
+
+### Reverse proxy
+
+traffic66 từ chối đăng nhập và thay đổi từ trang có địa chỉ không khớp với địa chỉ traffic66 thấy, để trang web khác không thể hành động thay bạn. Sau reverse proxy, hãy để proxy chuyển tiếp tên máy chủ mà trình duyệt dùng (header `Host`, `X-Forwarded-Host` hoặc `Forwarded`), hoặc cho traffic66 biết địa chỉ công khai của nó:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+Cổng mặc định (`:443` cho https, `:80` cho http) có thể ghi hoặc bỏ. traffic66 phải ở gốc của tên máy chủ, không nằm dưới đường dẫn như `/traffic66/`. Khi yêu cầu bị từ chối vì lý do này, trang đăng nhập và các trang khác nói rõ, thay vì "sai mật khẩu". Hãy để giao diện web chỉ trên máy này (`-addr 127.0.0.1:8066`) để chỉ truy cập được qua proxy.
+
+**nginx** (mặc định `proxy_set_header Host $proxy_host;` gửi địa chỉ nội bộ, nên hãy đặt nó):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** tự chuyển tiếp tên máy chủ và lấy chứng chỉ cho nó:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** tự chuyển tiếp tên máy chủ (`passHostHeader` bật mặc định); cấu hình động cho file provider:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### Giám sát
+
+`/metrics` cung cấp tình trạng của chính traffic66 theo định dạng Prometheus: bản ghi đã nhận, bị từ chối và bị bỏ, datagram theo từng cổng thu, lỗi ghi và dung lượng đĩa. Giống phần còn lại của giao diện web, nó cần đăng nhập; hãy tạo cho Prometheus một người dùng riêng (`traffic66 passwd -user prometheus`) và điền mật khẩu của nó:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### Trợ giúp dòng lệnh
+
+`traffic66 help` liệt kê các lệnh; `traffic66 help <lệnh>` hoặc `traffic66 <lệnh> -h` hiển thị tùy chọn của lệnh kèm ví dụ.
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

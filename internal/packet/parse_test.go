@@ -50,8 +50,35 @@ func TestMPLS(t *testing.T) {
 	frame = append(frame, 0x88, 0x47, 0x00, 0x01, 0x00, 0x40, 0x00, 0x02, 0x01, 0x40)
 	frame = append(frame, ip[14:]...)
 	var r flow.Record
-	if !Ethernet(frame, &r) || r.Encap != flow.EncapMPLS || r.DstPort != 2 {
+	if !Ethernet(frame, &r) || r.Encap != flow.EncapMPLS || r.DstPort != 2 || r.L2Hdr != 22 {
 		t.Fatalf("got %+v", r)
+	}
+}
+
+// L2Hdr is the link-layer header as found in the frame: every VLAN tag
+// and MPLS label counts.
+func TestL2HeaderLength(t *testing.T) {
+	ip, _ := encode.Frame(netip.MustParseAddr("10.0.0.1"), netip.MustParseAddr("10.0.0.2"), 1, 2, 17, 0, 100, 0)
+	mk := func(mid ...byte) []byte {
+		f := append([]byte{}, ip[:12]...)
+		f = append(f, mid...)
+		return append(f, ip[14:]...)
+	}
+	for _, c := range []struct {
+		name  string
+		frame []byte
+		want  uint8
+	}{
+		{"untagged", ip, 14},
+		{"802.1Q", mk(0x81, 0, 0, 100, 0x08, 0), 18},
+		{"QinQ", mk(0x88, 0xa8, 0, 200, 0x81, 0, 0, 100, 0x08, 0), 22},
+		{"MPLS 3 labels", mk(0x88, 0x47, 0, 1, 0, 0x40, 0, 2, 0, 0x40, 0, 3, 1, 0x40), 26},
+		{"VLAN+MPLS", mk(0x81, 0, 0, 100, 0x88, 0x47, 0, 1, 1, 0x40), 22},
+	} {
+		var r flow.Record
+		if !Ethernet(c.frame, &r) || r.L2Hdr != c.want || r.DstPort != 2 {
+			t.Errorf("%s: L2Hdr %d (want %d), record %+v", c.name, r.L2Hdr, c.want, r)
+		}
 	}
 }
 

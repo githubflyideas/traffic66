@@ -239,7 +239,7 @@ tr.has-fix td{border-bottom:0}
 .seg{display:flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;flex-wrap:wrap}
 .seg button{border:0;border-inline-start:1px solid var(--line);background:var(--surface);padding:3px 10px;cursor:pointer;font-size:12.5px;color:var(--ink-2)}
 .seg button:first-child{border-inline-start:0}
-.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.seg button[aria-pressed="true"],.seg button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
 .empty{color:var(--ink-3);padding:24px 8px;text-align:center}
 .waithint{display:inline-flex;align-items:flex-start;gap:10px;max-width:640px;margin:8px auto;padding:14px 18px;text-align:start;font-size:1.3em;font-weight:700;line-height:1.45;color:var(--accent-ink);background:var(--accent-soft);border:1px solid var(--accent);border-inline-start-width:5px;border-radius:10px;box-shadow:0 2px 8px var(--shadow)}
 .waithint-ic{font-size:1.2em;line-height:1.2}
@@ -255,7 +255,7 @@ textarea.inv{width:100%;min-height:180px;border:1px solid var(--line-2);border-r
 .pop button{display:flex;justify-content:space-between;align-items:center;gap:16px;width:100%;border:0;background:none;padding:7px 10px;border-radius:6px;cursor:pointer;text-align:start}
 .pop button:hover,.pop button:focus-visible{background:var(--surface-2)}
 .pop kbd{font:11px/1 inherit;color:var(--ink-3);border:1px solid var(--line-2);border-radius:4px;padding:2px 5px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;display:none;z-index:50}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;display:none;z-index:50;max-width:min(640px,calc(100vw - 32px));line-height:1.45}
 .sankey text{font-size:12px;fill:var(--ink);paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
 .sankey .nv{fill:var(--ink-3);font-size:11px}
 .sankey rect,.sankey path{cursor:pointer}

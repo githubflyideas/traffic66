@@ -23,6 +23,8 @@ cd traffic66-linux-amd64
 
 macOS: شغّل أولًا `xattr -dr com.apple.quarantine .` داخل المجلد.
 
+التحقق من التنزيل: `sha256sum -c SHA256SUMS --ignore-missing`؛ الترقية والرجوع والوكيل العكسي في [الدليل](MANUAL.ar.md#12-install-upgrade-reverse-proxy-monitoring).
+
 ثم:
 
 - واجهة الويب: `http://<IP الخادم>:8066`، وتستمع على كل واجهات الشبكة.

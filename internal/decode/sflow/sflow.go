@@ -212,7 +212,7 @@ func rawHeader(b []byte, rec *flow.Record) bool {
 	proto := r.U32()
 	frameLen := r.U32()
 	if frameLen > maxFrame {
-		return false // no interface carries such a frame: a forged sample
+		return false // larger than any packet a host or interface carries: a forged sample
 	}
 	stripped := r.U32()
 	hlen := r.U32()
@@ -350,6 +350,7 @@ func (d *Datagram) counterSample(b []byte, expanded bool, now time.Time) error {
 	return nil
 }
 
-// maxFrame is the largest frame_length accepted: the largest IP packet with
-// its link-layer header, far above any jumbo frame.
-const maxFrame = 65535 + 64
+// maxFrame is the largest frame_length accepted. Hosts that sample after
+// receive offload (GRO) report packets over 64 KB; Linux builds them up to
+// 512 KiB (BIG TCP). Anything larger is not a packet.
+const maxFrame = 512 << 10

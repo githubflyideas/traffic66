@@ -38,3 +38,26 @@ func TestImplausibleRecordsRefused(t *testing.T) {
 		t.Fatalf("saturating sum %d %v", got, err)
 	}
 }
+
+// A host agent samples coalesced packets far above 64 KiB; those count. A
+// packet larger than any coalesced one is refused, and counted as refused.
+func TestLargeFrames(t *testing.T) {
+	p, st := setup(t)
+	now := time.Now().UTC().Truncate(time.Minute)
+	ts := now.Add(-10 * time.Minute)
+	rec := func(bytes uint64) flow.Record {
+		return flow.Record{Start: ts, End: ts, Src: netip.MustParseAddr("10.1.1.1"), Dst: netip.MustParseAddr("198.51.100.9"),
+			SrcPort: 50000, DstPort: 443, Proto: 6, Bytes: bytes, Packets: 1, Mult: 1, SamplingKnown: true, L2: true, L2Hdr: 14,
+			Exporter: netip.MustParseAddr("10.0.0.1"), Source: flow.SrcSFlow}
+	}
+	p.Ingest([]flow.Record{rec(65600), rec(200000), rec(1<<20 + 1)})
+	p.FlushRows()
+	p.FlushRollups()
+	if n := p.Implausible.Load(); n != 1 {
+		t.Fatalf("implausible %d, want 1", n)
+	}
+	tot, err := st.Totals(store.Query{From: now.Add(-time.Hour), To: now})
+	if err != nil || tot.Wire != 265600 {
+		t.Fatalf("totals %+v %v, want wire 265600", tot, err)
+	}
+}

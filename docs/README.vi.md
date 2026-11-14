@@ -22,6 +22,8 @@ Windows: giải nén `traffic66-windows-amd64.zip` rồi chạy `traffic66.exe` 
 
 macOS: trước tiên chạy `xattr -dr com.apple.quarantine .` trong thư mục đó.
 
+Kiểm tra tệp tải về: `sha256sum -c SHA256SUMS --ignore-missing`; nâng cấp, quay lại và reverse proxy xem [hướng dẫn](MANUAL.vi.md#12-install-upgrade-reverse-proxy-monitoring).
+
 Sau đó:
 
 - Giao diện web: `http://<IP máy chủ>:8066`. Lắng nghe trên mọi card mạng.

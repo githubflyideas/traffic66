@@ -133,6 +133,16 @@ jobs:
             esac
             [[ -n "$T66_PRO" ]] && tags="${tags:+$tags,}pro"
             go build -trimpath ${tags:+-tags "$tags"} -ldflags "$ldflags" -o "$out" ./cmd/traffic66
+            if [[ "${{ matrix.target }}" == linux-amd64 ]]; then
+              # reproducible: the same source builds to the same bytes, from
+              # an empty build cache and in another directory
+              again="$(mktemp -d)"
+              GOCACHE="$again/cache" go build -trimpath ${tags:+-tags "$tags"} -ldflags "$ldflags" -o "$again/$exe" ./cmd/traffic66
+              a=$(sha256sum "$out" | cut -c1-64); b=$(sha256sum "$again/$exe" | cut -c1-64)
+              echo "build 1 $a"; echo "build 2 $b"
+              [[ "$a" == "$b" ]] || { echo "::error::two builds of the same source differ"; exit 1; }
+              rm -rf "$again"
+            fi
             cp README.md "dist/traffic66-${{ matrix.target }}/"
             cp -r docs "dist/traffic66-${{ matrix.target }}/"
             cp LICENSE.md ADDITIONAL-USE-GRANT.md THIRD_PARTY_NOTICES.md "dist/traffic66-${{ matrix.target }}/"
@@ -170,6 +180,9 @@ jobs:
           curl -sf -u admin:ci "http://127.0.0.1:18066/api/topn?dim=client&limit=66" -o "$RUNNER_TEMP/topn.json"
           head -c 300 "$RUNNER_TEMP/topn.json"
           kill %1 || true
+      - name: Smoke test (collects, /metrics, bad certificate)
+        if: ${{ !matrix.cross }}
+        run: .github/scripts/smoke.sh "dist/traffic66-${{ matrix.target }}/traffic66$([[ "${{ runner.os }}" == Windows ]] && echo .exe)"
       - name: Package
         run: |
           cd dist
@@ -216,10 +229,28 @@ jobs:
             echo "::endgroup::"
           done
 
+  proxy:
+    # sign-in through nginx, Caddy and Traefik with the manual's configurations
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
+        with:
+          name: traffic66-linux-amd64
+      - name: Sign in through reverse proxies
+        run: |
+          tar xzf traffic66-linux-amd64.tar.gz
+          .github/scripts/proxytest.sh "$PWD/traffic66-linux-amd64/traffic66"
+
   release:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
-    needs: [build, old-linux]
+    needs: [build, old-linux, proxy]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Version must be new
         if: github.event_name == 'workflow_dispatch'
@@ -240,12 +271,36 @@ jobs:
           v="${VER#v}"
           awk -v h="## $v" '$0==h{on=1;next} /^## /{if(on)exit} on' src/CHANGELOG.md > notes.md
           if [[ -s notes.md ]]; then echo "found notes for $v"; else echo "::warning::no section '## $v' in CHANGELOG.md"; fi
-          echo "" >> notes.md
-          echo "Downloads and installation: see the README." >> notes.md
+          {
+            echo ""
+            echo "Earlier changes: [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/main/CHANGELOG.md). Downloads and installation: see the README."
+            echo ""
+            echo "Verify a download: \`sha256sum -c SHA256SUMS --ignore-missing\`, or \`gh attestation verify <file> -R $GITHUB_REPOSITORY\`."
+          } >> notes.md
       - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache: false
+      - name: SBOM and checksums
+        env:
+          VER: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+        run: |
+          go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.12.0
+          tmp="$(mktemp -d)"
+          tar xzf dist/traffic66-linux-amd64.tar.gz -C "$tmp"
+          "$(go env GOPATH)/bin/cyclonedx-gomod" bin -json -version "${VER#v}" -output dist/traffic66-sbom.cdx.json "$tmp/traffic66-linux-amd64/traffic66"
+          cd dist
+          sha256sum traffic66-*.tar.gz traffic66-*.zip traffic66-sbom.cdx.json > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/traffic66-*.tar.gz
+            dist/traffic66-*.zip
       # a tag push attaches the archives to that tag's release; a manual run
       # creates the tag on the commit it built and publishes the release
       - uses: softprops/action-gh-release@v3

@@ -19,6 +19,8 @@ Windows: `traffic66-windows-amd64.zip` 을 풀고 `traffic66.exe` 실행(더블�
 
 macOS: 먼저 그 폴더에서 `xattr -dr com.apple.quarantine .` 실행.
 
+다운로드 확인: `sha256sum -c SHA256SUMS --ignore-missing`. 업그레이드, 되돌리기, 리버스 프록시는 [설명서](MANUAL.ko.md#12-install-upgrade-reverse-proxy-monitoring)를 보세요.
+
 그다음:
 
 - 웹 UI: `http://<서버 IP>:8066`. 모든 네트워크 인터페이스에서 대기합니다.

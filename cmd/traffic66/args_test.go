@@ -27,3 +27,12 @@ func TestBuildKindDefaultsToCommunity(t *testing.T) {
 		t.Fatalf("buildKind = %q; a build with no -ldflags must say community", buildKind)
 	}
 }
+
+func TestParsePublicURL(t *testing.T) {
+	for v, ok := range map[string]bool{"": true, "https://t66.example.org": true, "https://t66.example.org:8443/": true, "http://10.0.0.5:8080": true,
+		"t66.example.org": false, "ftp://x": false, "https://x/traffic66": false, "https://u:p@x": false, "https://": false} {
+		if _, err := parsePublicURL(v); (err == nil) != ok {
+			t.Errorf("parsePublicURL(%q): %v", v, err)
+		}
+	}
+}

@@ -3,10 +3,23 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 2.5.16
+## 2.6.0
 
+- Reverse proxy: default ports are ignored when matching the address, the standard `Forwarded` header is understood, and the new `-public-url` names the public address. A refused request says why instead of "wrong password".
+- Byte counts: the link-layer header is taken from the sampled frame, so switch VLAN records, QinQ and MPLS are no longer over- or under-counted; sampled frames over 64 KB are accepted.
+- After an unclean stop, summaries of the last hours are rebuilt from the flow detail at the next start.
+- Flow records show the number of flows; ICMP is shown by name instead of "0/1".
+- No false peak in the charts right after older data arrives.
+- Dark themes: flow lines have five clearly different shades.
+- Settings shows how many records were refused or had their time corrected.
+- New `/metrics` endpoint for Prometheus (sign-in required).
+- `traffic66 help <command>`; every command has `-h` with examples.
+- A data directory written by a newer data format is refused with a clear message.
+- TLS certificate errors are reported before anything else starts; the startup banner shows the address actually used.
+- Clearer error messages in all languages; accessibility fixes in the web UI.
 - Data cleanup can delete one device's stored data.
-- Accessibility improvements for screen readers and keyboard use.
+- Manual in all 15 languages: install, upgrade and roll back, reverse proxy (nginx, Caddy, Traefik), monitoring.
+- Releases include `SHA256SUMS`, an SBOM and build provenance.
 
 ## 2.5.15
 

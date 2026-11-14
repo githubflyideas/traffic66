@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -55,7 +56,7 @@ var version = ""
 // CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
 // default used to be a hardcoded 0.1.0-dev, and because nothing checked it
 // it stayed that way for two major versions.
-const devVersion = "2.5.16"
+const devVersion = "2.6.0"
 
 func init() {
 	if version == "" {
@@ -114,7 +115,7 @@ Usage:
   traffic66 interfaces          list interfaces usable for local capture
   traffic66 version
 
-Run "traffic66 <command> -h" for the flags of a command.
+Run "traffic66 help <command>" (or "traffic66 <command> -h") for a command's examples and flags.
 `
 
 // commandOf splits the command from its arguments: serve when the first
@@ -155,6 +156,10 @@ func main() {
 	case "passwd":
 		passwd(args)
 	case "interfaces":
+		if wantsHelp(args) {
+			printHelp(os.Stdout, "interfaces", nil)
+			return
+		}
 		list, err := capture.Interfaces()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -164,8 +169,25 @@ func main() {
 			fmt.Println(i)
 		}
 	case "version", "-version", "--version", "-v":
+		if wantsHelp(args) {
+			printHelp(os.Stdout, "version", nil)
+			return
+		}
 		fmt.Printf("traffic66 %s (%s build)\n", version, buildKind)
 	case "help", "-h", "-help", "--help":
+		// traffic66 help <command>: that command's help
+		if len(args) > 0 {
+			c := strings.ToLower(args[0])
+			switch c {
+			case "serve", "demo", "tui", "simulate", "passwd":
+				os.Args = []string{os.Args[0], c, "-h"}
+				main()
+				return
+			case "interfaces", "version", "pcap":
+				printHelp(os.Stdout, c, nil)
+				return
+			}
+		}
 		fmt.Printf(usage, version)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q", cmd)
@@ -248,7 +270,7 @@ func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
 
 type serveFlags struct {
 	addr, data, listen, user, password, asn, inventory string
-	tlsCert, tlsKey                                    string
+	tlsCert, tlsKey, publicURL                         string
 	tls                                                bool
 	dnsUpstream                                        string
 	dnsRate                                            float64
@@ -282,7 +304,7 @@ func serve(args []string, demo bool) {
 	if demo {
 		cmdName = "demo"
 	}
-	fs := flag.NewFlagSet(cmdName, flag.ExitOnError)
+	fs := withHelp(flag.NewFlagSet(cmdName, flag.ExitOnError), cmdName)
 	var f serveFlags
 	defData := defaultDir("traffic66-data")
 	if demo {
@@ -293,6 +315,7 @@ func serve(args []string, demo bool) {
 	fs.BoolVar(&f.tls, "tls", false, "serve the web UI over HTTPS with a certificate traffic66 keeps in the data directory")
 	fs.StringVar(&f.tlsCert, "tls-cert", "", "serve the web UI over HTTPS with this certificate")
 	fs.StringVar(&f.tlsKey, "tls-key", "", "the private key for -tls-cert")
+	fs.StringVar(&f.publicURL, "public-url", "", "the address browsers use behind a reverse proxy, e.g. https://traffic66.example.org (see the manual)")
 	for _, x := range extFlags {
 		x(fs)
 	}
@@ -315,7 +338,7 @@ func serve(args []string, demo bool) {
 	fs.Parse(args)
 	if err := f.check(); err != nil {
 		fmt.Fprintf(os.Stderr, "traffic66: %v\n", err)
-		fmt.Fprintln(os.Stderr, "traffic66: versions before 2.5.11 ignored this and started anyway; fix the option (see traffic66 -h) and start again")
+		fmt.Fprintln(os.Stderr, "traffic66: older versions may have ignored this and started anyway; fix the option (see traffic66 -h) and start again")
 		os.Exit(2)
 	}
 
@@ -332,11 +355,21 @@ func serve(args []string, demo bool) {
 	if err := os.MkdirAll(f.data, 0o755); err != nil {
 		fatalf("cannot create the data directory: %v; choose one with -data", err)
 	}
+	// a certificate that cannot be used stops the start before any port is
+	// opened or anything is written
+	var tlsCfg *tls.Config
+	var tlsInfo tlscert.Info
+	if f.tls || f.tlsCert != "" || f.tlsKey != "" {
+		var err error
+		if tlsCfg, tlsInfo, err = tlscert.Load(f.data, f.tlsCert, f.tlsKey); err != nil {
+			fatalf("web: %v", err)
+		}
+	}
 	if demo {
 		prepareDemo(f.data)
 	}
 	setGoMemoryLimit(f.mem)
-	st, err := store.Open(store.Options{Dir: f.data, MemoryFraction: f.mem, RawDays: f.retention})
+	st, err := store.Open(store.Options{Dir: f.data, MemoryFraction: f.mem, RawDays: f.retention, Version: version})
 	if err != nil {
 		fatalf("store: %v", err)
 	}
@@ -410,6 +443,7 @@ func serve(args []string, demo bool) {
 	}
 
 	pipe := pipeline.New(pipeline.Config{L2Overhead: f.l2, L2Given: true}, st, inv, asn, thr)
+	pipe.Recover(time.Now())
 	col := collector.New(pipe)
 	blocked, err := collector.NewBlocklist(f.data)
 	if err != nil {
@@ -546,6 +580,8 @@ func serve(args []string, demo bool) {
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Det: det, Static: web.FS(), Version: version, BuildKind: buildKind,
 		Demo: demo, Check: checker.Check, Exists: checker.Exists, Accounts: checker, LocalTok: tok, DataDir: f.data, Started: time.Now(), Listen: listens}
 	srv.SNMP = poller.Status
+	srv.PublicURL, _ = parsePublicURL(f.publicURL)
+	publicURL = f.publicURL
 	srv.License = lic
 	if lic != nil {
 		go lic.Loop(ctx.Done(), 4*time.Hour)
@@ -578,12 +614,9 @@ func serve(args []string, demo bool) {
 		fatalf("web: %v", err)
 	}
 	scheme := "http"
-	if f.tls || f.tlsCert != "" || f.tlsKey != "" {
-		cfg, info, err := tlscert.Load(f.data, f.tlsCert, f.tlsKey)
-		if err != nil {
-			fatalf("web: %v", err)
-		}
-		ln = tls.NewListener(ln, cfg)
+	if tlsCfg != nil {
+		info := tlsInfo
+		ln = tls.NewListener(ln, tlsCfg)
 		scheme = "https"
 		srv.Cert = &info
 		if info.SelfSigned {
@@ -628,8 +661,7 @@ func serve(args []string, demo bool) {
 	sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	hs.Shutdown(sctx)
 	cancel()
-	pipe.FlushRows()
-	pipe.FlushRollups()
+	pipe.Stop()
 	os.Remove(tokPath)
 }
 
@@ -798,7 +830,7 @@ func backfillDemo(pipe *pipeline.Pipeline, st *store.Store) {
 }
 
 func runTUI(args []string) {
-	fs := flag.NewFlagSet("tui", flag.ExitOnError)
+	fs := withHelp(flag.NewFlagSet("tui", flag.ExitOnError), "tui")
 	server := fs.String("server", "http://127.0.0.1:8066", "traffic66 web address")
 	data := fs.String("data", "", "data directory of a local traffic66 (for automatic login)")
 	user := fs.String("user", "", "login user (not needed for a local traffic66)")
@@ -824,7 +856,7 @@ func runTUI(args []string) {
 }
 
 func simulate(args []string) {
-	fs := flag.NewFlagSet("simulate", flag.ExitOnError)
+	fs := withHelp(flag.NewFlagSet("simulate", flag.ExitOnError), "simulate")
 	to := fs.String("to", "127.0.0.1", "collector host; sFlow goes to :6343, NetFlow to :2055, IPFIX to :4739")
 	fs.Parse(args)
 	conn, err := net.ListenUDP("udp", nil)
@@ -943,27 +975,12 @@ func quoteArg(s string) string {
 }
 
 func passwd(args []string) {
-	fs := flag.NewFlagSet("passwd", flag.ExitOnError)
+	fs := withHelp(flag.NewFlagSet("passwd", flag.ExitOnError), "passwd")
 	data := fs.String("data", defaultDir("traffic66-data"), "data directory")
 	user := fs.String("user", "admin", "login user")
 	gen := fs.Bool("generate", false, "generate a random password and print it")
 	list := fs.Bool("list", false, "list the users")
 	del := fs.Bool("delete", false, "delete the user given with -user")
-	fs.Usage = func() {
-		fmt.Fprint(os.Stderr, `Set, add, list or delete login users. Passwords are stored hashed in
-<data directory>/password; a running traffic66 uses changes at the next login.
-
-  traffic66 passwd                      set the password of admin
-  traffic66 passwd -user alice          add alice, or change her password
-  traffic66 passwd -user alice -delete  delete alice
-  traffic66 passwd -list                list the users
-  traffic66 passwd -generate            set a random password and print it
-
-Add -data <directory> when traffic66 runs with -data.
-
-`)
-		fs.PrintDefaults()
-	}
 	fs.Parse(args)
 	if *user == "" || strings.ContainsAny(*user, ": \t\r\n") || len(*user) > 64 {
 		fmt.Fprintln(os.Stderr, "a user name cannot be empty or contain spaces or colons")
@@ -1090,6 +1107,11 @@ func (f *serveFlags) check() error {
 			return fmt.Errorf("-threat %q: %v; give name=path to a threat list file", t, err)
 		}
 	}
+	if f.publicURL != "" {
+		if _, err := parsePublicURL(f.publicURL); err != nil {
+			return err
+		}
+	}
 	switch {
 	case f.retention < 1 || f.retention > 3650:
 		return fmt.Errorf("-retention-days %d: use 1 to 3650", f.retention)
@@ -1121,4 +1143,17 @@ func (f *serveFlags) check() error {
 		}
 	}
 	return nil
+}
+
+// parsePublicURL reads -public-url: http or https and a host, nothing more
+// than an optional port and a trailing slash. Empty gives nil.
+func parsePublicURL(v string) (*url.URL, error) {
+	if v == "" {
+		return nil, nil
+	}
+	u, err := url.Parse(v)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.User != nil {
+		return nil, fmt.Errorf("-public-url %q: give the address browsers use, such as https://traffic66.example.org or https://example.org:8443", v)
+	}
+	return u, nil
 }

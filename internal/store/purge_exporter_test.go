@@ -194,3 +194,27 @@ func TestPurgeExporterKeepsSharedFlows(t *testing.T) {
 		}
 	}
 }
+
+// The rebuild after an unclean stop gives exactly what the pipeline built.
+func TestRecoveryRebuildMatchesPipeline(t *testing.T) {
+	p, st := newPipe(t)
+	now := time.Now().UTC().Truncate(time.Hour)
+	p.Ingest(traffic(now))
+	p.FlushRows()
+	p.FlushRollups()
+	want := summaries(t, st)
+	if _, err := st.RebuildRecentRollups(time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	got := summaries(t, st)
+	for k := range want {
+		if fmt.Sprint(got[k]) != fmt.Sprint(want[k]) {
+			for i := 0; i < len(want[k]) && i < len(got[k]); i++ {
+				if want[k][i] != got[k][i] {
+					t.Fatalf("%s differs at %d:\n pipeline %s\n rebuilt  %s", k, i, want[k][i], got[k][i])
+				}
+			}
+			t.Fatalf("%s: %d rows from the pipeline, %d rebuilt", k, len(want[k]), len(got[k]))
+		}
+	}
+}

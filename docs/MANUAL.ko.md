@@ -32,6 +32,7 @@ ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 �
 9. [오프라인 pcap, 터미널 UI, 로컬 캡처](#9-offline-pcap-terminal-ui-local-capture)
 10. [옵션과 데이터](#10-options-and-data)
 11. [보안, 용량 산정, 문제 해결](#11-security-sizing-troubleshooting)
+12. [설치, 업그레이드, 리버스 프록시, 모니터링](#12-install-upgrade-reverse-proxy-monitoring)
 
 <a id="1-quick-start"></a>
 
@@ -389,6 +390,31 @@ traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: 
 
 Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windows는 [Npcap](https://npcap.com)이 필요합니다. 캡처한 플로는 장비 `127.0.0.1`에서 온 것으로 표시됩니다. 로컬 캡처에는 장비 인터페이스나 카운터가 없으므로 **인터페이스 대조**에서 비교할 것이 없습니다.
 
+<a id="sending-findings-to-a-collector"></a>
+
+### 발견 사항을 수집기로 보내기
+
+등록된 설치는 각 발견 사항이 처음 보일 때 syslog 수집기로 보낼 수 있습니다:
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport`는 `udp`, `tcp`, `tls` 중 하나이고, `-syslog-min-sev`는 보낼 최소 심각도입니다. `-syslog-url https://traffic66.example.com`을 주면 각 메시지에 발견 사항 링크가 들어갑니다. `-syslog-ascii`는 ASCII 밖의 모든 문자를 이스케이프하여 UTF-8을 망가뜨리는 수집기에 맞춥니다.
+
+형식은 고를 수 있습니다. 그대로 파싱되는지는 이미 쓰고 있는 것에 따라 다르기 때문입니다:
+
+| `-syslog-format` | 파서를 작성하지 않고 읽는 곳 |
+|---|---|
+| `cef` (기본값) | ArcSight, QRadar, Splunk, Graylog, Elastic, Wazuh |
+| `leef` | QRadar, 기본 지원 |
+| `json` | Elastic과 Splunk — 이름은 Elastic Common Schema |
+| `text` | 사람 |
+
+어느 형식이든 바깥은 RFC 5424이며, 본문이 일반 텍스트여도 발견 사항의 ID, 유형, 샘플링 비율이 들어 있습니다.
+
+이 피드를 읽기만 하지 않고 집계할 만한 이유는 세 가지입니다. 이벤트 유형(`scan`, `brute`, `exfil` …)은 문구나 번역에 따라 바뀌지 않는 고정된 단어라서, 이것으로 묶은 대시보드는 문장이 고쳐져도 깨지지 않습니다. 발견 사항 하나는 ID가 하나인 **하나의** 이벤트이며 탐지할 때마다가 아니라 처음 보일 때 보내므로, 하룻밤의 비밀번호 추측은 사건 40건이 아니라 1건입니다. 그리고 샘플링 비율이 모든 메시지에 함께 갑니다. traffic66은 샘플링된 데이터로 탐지하므로 바이트와 패킷 수는 추정치이며, 이를 모르고 합산하는 수집기는 아무도 설명할 수 없는 숫자를 만듭니다.
+
 <a id="10-options-and-data"></a>
 
 ## 10. 옵션과 데이터
@@ -408,6 +434,12 @@ Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windo
 
 데이터 디렉터리에는 `raw/`(상세, 시간당 파일 하나), `traffic66.duckdb`(요약과 카운터), `password`, `inventory.txt`, `license.json`, 로고와 데이터베이스가 있습니다. 백업은 traffic66을 중지하고 디렉터리를 복사하며, 업그레이드는 프로그램 파일을 교체합니다. **데이터 정리**는 7~120일보다 오래된 데이터 또는 모든 데이터를 삭제합니다.
 
+<a id="device-locations"></a>
+
+### 장비 위치
+
+장비 목록 페이지의 탭입니다. 플로가 어디서 오는지 보여 줍니다: 플로를 보내는 각 장비가 있는 방과 랙, 각 포트가 연결된 통신사와 회선 ID. 장비와 포트는 플로에서 자동으로 나타납니다. 편집을 누르면 장비의 방과 랙, 각 포트의 통신사와 회선을 한 양식에서 입력합니다. 한 번 입력하면 이름과 함께 `inventory.txt`에 저장됩니다(`device 192.0.2.1 Core router room=Room_1 rack=A03`, `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`; 공백은 `_`로 씁니다). 이것으로 무엇을 조회하지는 않습니다. 로그인한 모두가 볼 수 있고 관리자가 편집합니다.
+
 <a id="licence"></a>
 
 ### 라이선스
@@ -417,6 +449,8 @@ Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windo
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. 보안, 용량 산정, 문제 해결
+
+리버스 프록시 뒤에 둘 때는 [리버스 프록시](#reverse-proxy)를 보세요.
 
 웹 UI는 평문 HTTP입니다. 신뢰할 수 없는 네트워크에서는 `-addr 127.0.0.1:8066`을 쓰고 TLS 프록시(`caddy reverse-proxy --from traffic66.example.com --to 127.0.0.1:8066`)나 SSH 터널 뒤에 두십시오. UDP 포트는 자체 장비에서만 허용하십시오. SNMP 커뮤니티는 평문으로 저장되므로 읽기 전용 커뮤니티를 쓰십시오.
 
@@ -433,3 +467,123 @@ Linux는 root 또는 `setcap cap_net_raw,cap_net_admin+ep`, macOS는 root, Windo
 | Windows: "Windows의 PC 보호" | **추가 정보** → **실행** |
 
 소스에서 빌드: Go 1.26와 C 컴파일러를 준비한 뒤 `CGO_ENABLED=1 go build ./cmd/traffic66`.
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. 설치, 업그레이드, 리버스 프록시, 모니터링
+
+다운로드 확인, 데이터를 잃지 않는 업그레이드, nginx·Caddy·Traefik 뒤에 두기, Prometheus로 감시하는 방법입니다.
+
+<a id="verify-a-download"></a>
+
+### 다운로드 확인
+
+모든 릴리스에는 `SHA256SUMS` 파일, 포함된 소프트웨어 목록(`traffic66-sbom.cdx.json`, CycloneDX 형식), GitHub Actions가 만든 빌드 출처 증명이 있습니다. 이 증명은 압축 파일이 이 저장소의 소스로 빌드되었음을 보여 줍니다. 다운로드한 폴더에서 실행하세요:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows(PowerShell): `Get-FileHash traffic66-windows-amd64.zip`가 해시를 출력합니다. `SHA256SUMS`에 있는 그 파일의 줄과 같아야 합니다. `gh attestation verify`는 GitHub CLI가 필요하며 선택 사항입니다.
+
+<a id="upgrade-and-roll-back"></a>
+
+### 업그레이드와 되돌리기
+
+traffic66을 멈추고, 데이터 디렉터리 전체를 복사하고, 프로그램 파일을 바꾼 뒤 다시 시작합니다. Linux 서비스라면:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+되돌리려면 traffic66을 멈추고 이전 프로그램과 복사해 둔 데이터 디렉터리를 되돌려 놓습니다. 더 새로운 형식으로 기록된 데이터를 추측해서 읽지 않으며, 그 데이터를 기록한 버전을 알려 주고 멈춥니다. 다른 `-data` 디렉터리로 시작하거나 새 버전으로 돌아가세요. 데이터를 마지막으로 다른 버전이 기록했다면 시작할 때 로그에 남깁니다.
+
+정전이나 `kill -9` 뒤에는 다음 시작 때 플로 상세에서 최근 몇 시간의 요약을 다시 만들므로 24시간 이상 보기에서도 빠지는 데이터가 없으며, 이를 로그에 남깁니다.
+
+<a id="reverse-proxy"></a>
+
+### 리버스 프록시
+
+페이지 주소가 traffic66이 보는 주소와 다르면 traffic66은 로그인과 변경을 거부합니다. 그래서 다른 웹사이트가 사용자 대신 동작할 수 없습니다. 리버스 프록시 뒤에서는 프록시가 브라우저의 호스트 이름(`Host`, `X-Forwarded-Host` 또는 `Forwarded` 헤더)을 전달하게 하거나, traffic66에 공개 주소를 알려 주세요:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+기본 포트(https는 `:443`, http는 `:80`)는 써도 되고 생략해도 됩니다. traffic66은 호스트 이름의 루트에 있어야 하며 `/traffic66/` 같은 경로 아래에 둘 수 없습니다. 이 이유로 요청이 거부되면 로그인 화면과 다른 페이지는 "비밀번호가 틀립니다" 대신 그 이유를 알려 줍니다. 웹 UI는 이 컴퓨터에서만 열어(`-addr 127.0.0.1:8066`) 프록시를 통해서만 접속되게 하세요.
+
+**nginx**(기본값 `proxy_set_header Host $proxy_host;`는 내부 주소를 보내므로 설정해야 합니다):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy**는 호스트 이름을 스스로 전달하고 인증서도 받습니다:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik**은 호스트 이름을 스스로 전달합니다(`passHostHeader` 기본값 켜짐). 파일 프로바이더용 동적 설정:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### 모니터링
+
+`/metrics`는 traffic66 자신의 상태를 Prometheus 형식으로 제공합니다: 받은·거부한·버린 레코드 수, 수집 포트별 데이터그램 수, 쓰기 오류, 디스크 사용량. 웹 UI의 다른 부분처럼 로그인이 필요하므로 Prometheus 전용 사용자(`traffic66 passwd -user prometheus`)를 만들고 그 비밀번호를 넣으세요:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### 명령줄 도움말
+
+`traffic66 help`는 명령 목록을, `traffic66 help <명령>` 또는 `traffic66 <명령> -h`는 그 명령의 옵션과 예를 보여 줍니다.
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

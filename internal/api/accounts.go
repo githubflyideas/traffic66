@@ -13,7 +13,10 @@ import (
 // loginHint tells the sign-in page whether to show the default password:
 // always in the demo, and while some user of a new installation still has it.
 func (s *Server) loginHint(w http.ResponseWriter, r *http.Request) {
-	def := s.Demo || (s.Accounts != nil && s.Accounts.HasDefault())
+	// a demo started with a password of its own (-password) has no
+	// default password to show
+	open := s.Demo && (s.Accounts == nil || !s.Accounts.Fixed())
+	def := open || (s.Accounts != nil && s.Accounts.HasDefault())
 	out := map[string]any{"demo": s.Demo, "default": def}
 	// The demo is meant to be signed into by strangers, so it still says
 	// how. A real installation does not: this call has no session behind
@@ -26,7 +29,7 @@ func (s *Server) loginHint(w http.ResponseWriter, r *http.Request) {
 	// say that this installation is on its first password and where to
 	// read it; the flag on its own tells an attacker no more than one
 	// sign-in attempt would.
-	if s.Demo {
+	if open {
 		out["user"], out["password"] = "admin", auth.DefaultPassword
 	}
 	writeJSON(w, http.StatusOK, out)

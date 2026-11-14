@@ -1199,10 +1199,15 @@ func layout(cols []column, total int) []int {
 	fixed, flex := 0, 0
 	for i, c := range cols {
 		ws[i] = c.width
+		// a right-aligned heading that fills its column would touch the
+		// one before it ("Δ التدفقات" read as one heading): keep a gap
+		if c.width > 0 && c.right && i > 0 {
+			ws[i] = max(c.width, strWidth(c.head)+1)
+		}
 		if c.width == 0 {
 			flex++
 		}
-		fixed += c.width + 1
+		fixed += ws[i] + 1
 	}
 	rest := total - fixed
 	for i, c := range cols {

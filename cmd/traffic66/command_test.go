@@ -22,3 +22,16 @@ func TestCommandOf(t *testing.T) {
 		}
 	}
 }
+
+// Every command has help in the same form: usage, what it does, examples.
+func TestEveryCommandHasHelp(t *testing.T) {
+	for _, c := range append(commands, "pcap") {
+		if c == "help" {
+			continue
+		}
+		h, ok := helps[c]
+		if !ok || h.usage == "" || h.about == "" {
+			t.Errorf("command %q has no help", c)
+		}
+	}
+}

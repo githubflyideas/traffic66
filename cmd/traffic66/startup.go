@@ -15,6 +15,9 @@ import (
 // startup summary can say which password to sign in with.
 var firstStart bool
 
+// publicURL is -public-url, shown as the address to open.
+var publicURL string
+
 // fixedPassword is set when -password or TRAFFIC66_PASSWORD gives the password.
 var fixedPassword bool
 
@@ -27,6 +30,9 @@ func printStartup(w io.Writer, scheme string, web net.Addr, listens []api.Listen
 	wildcard := isWildcard(web)
 	ips := api.LocalIPs()
 	fmt.Fprintf(w, "\ntraffic66 %s is running%s\n", version, map[bool]string{true: " (demo: simulated devices)"}[demo])
+	if publicURL != "" {
+		fmt.Fprintf(w, "  Web UI     %s  (through the reverse proxy)\n", publicURL)
+	}
 	fmt.Fprintf(w, "  Web UI     %s://%s\n", scheme, displayAddr(web))
 	if wildcard {
 		for _, ip := range ips {
@@ -34,10 +40,10 @@ func printStartup(w io.Writer, scheme string, web net.Addr, listens []api.Listen
 		}
 	}
 	switch {
-	case demo:
-		fmt.Fprintf(w, "  Sign in    %s / %s\n", user, auth.DefaultPassword)
 	case fixedPassword:
 		fmt.Fprintf(w, "  Sign in    %s, with the password given at start\n", user)
+	case demo:
+		fmt.Fprintf(w, "  Sign in    %s / %s\n", user, auth.DefaultPassword)
 	case first:
 		fmt.Fprintf(w, "  Sign in    %s / %s  (you choose a new password at the first sign-in)\n", user, auth.DefaultPassword)
 	default:
@@ -53,13 +59,22 @@ func printStartup(w io.Writer, scheme string, web net.Addr, listens []api.Listen
 			to = strings.Join(ips, " or ")
 		}
 		local := true // every collector bound to loopback: only this machine can send
+		hosts := map[string]bool{}
 		for _, l := range listens {
 			if a, err := netip.ParseAddr(l.Host); err != nil || !a.IsLoopback() {
 				local = false
+			} else {
+				hosts[a.String()] = true
 			}
 		}
 		if local {
-			to = "127.0.0.1 (this machine only)"
+			at := "127.0.0.1"
+			if len(hosts) == 1 {
+				for h := range hosts {
+					at = h
+				}
+			}
+			to = at + " (this machine only)"
 		}
 		fmt.Fprintf(w, "  Devices    export to %s, UDP %s (any port takes any protocol)\n", to, strings.Join(ps, ", "))
 	}

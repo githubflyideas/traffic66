@@ -21,6 +21,8 @@ Windows: распакуйте `traffic66-windows-amd64.zip` и запустит�
 
 macOS: сначала выполните в папке `xattr -dr com.apple.quarantine .`.
 
+Проверка загрузки: `sha256sum -c SHA256SUMS --ignore-missing`; обновление, откат и обратный прокси — в [руководстве](MANUAL.ru.md#12-install-upgrade-reverse-proxy-monitoring).
+
 Затем:
 
 - Веб-интерфейс: `http://<IP сервера>:8066`. Слушает на всех сетевых интерфейсах.

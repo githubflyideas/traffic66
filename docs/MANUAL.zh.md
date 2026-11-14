@@ -32,6 +32,7 @@
 9. [离线 pcap、终端界面、本地抓包](#9-offline-pcap-terminal-ui-local-capture)
 10. [选项与数据](#10-options-and-data)
 11. [安全、容量规划、故障排查](#11-security-sizing-troubleshooting)
+12. [安装、升级、反向代理、监控](#12-install-upgrade-reverse-proxy-monitoring)
 
 <a id="1-quick-start"></a>
 
@@ -389,6 +390,31 @@ traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: 
 
 Linux 需要 root 或 `setcap cap_net_raw,cap_net_admin+ep`，macOS 需要 root，Windows 需要 [Npcap](https://npcap.com)。抓到的流显示为来自设备 `127.0.0.1`。本地抓包没有设备接口和计数器，因此 **接口对账** 对它没有可对比的内容。
 
+<a id="sending-findings-to-a-collector"></a>
+
+### 把发现发送到日志采集器
+
+已登记的安装可以在每个发现第一次出现时，把它发送到 syslog 采集器：
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` 可以是 `udp`、`tcp` 或 `tls`；`-syslog-min-sev` 是值得发送的最低严重程度；`-syslog-url https://traffic66.example.com` 会在每条消息里附上该发现的链接。`-syslog-ascii` 会转义所有非 ASCII 字符，适用于会弄乱 UTF-8 的采集器。
+
+格式可以选择，因为哪种格式能直接被解析，取决于你已经在用什么：
+
+| `-syslog-format` | 无需编写解析器即可读取的系统 |
+|---|---|
+| `cef` （默认） | ArcSight、QRadar、Splunk、Graylog、Elastic、Wazuh |
+| `leef` | QRadar，原生支持 |
+| `json` | Elastic 和 Splunk——字段名采用 Elastic Common Schema |
+| `text` | 人 |
+
+无论哪种格式，外层都是 RFC 5424，即使正文是纯文本，也带有发现的 ID、类型和采样率。
+
+有三点让这些消息值得统计而不只是阅读。事件类型（`scan`、`brute`、`exfil` …）是固定的词，不随措辞或翻译变化，所以按它分组的仪表盘不会因为某句话改写而失效。一个发现就是**一个**事件、一个 ID，在第一次出现时发送，而不是每轮检测发送一次，所以一夜的密码猜测是一起事件，而不是四十起。采样率随每条消息一起发送：traffic66 基于采样数据检测，字节数和包数是估算值，采集器如果不知道这一点就直接相加，得出的数字没人能说清楚。
+
 <a id="10-options-and-data"></a>
 
 ## 10. 选项与数据
@@ -408,6 +434,12 @@ Linux 需要 root 或 `setcap cap_net_raw,cap_net_admin+ep`，macOS 需要 root�
 
 数据目录包含 `raw/`（明细，每小时一个文件）、`traffic66.duckdb`（汇总和计数器）、`password`、`inventory.txt`、`license.json`、你的 Logo 和数据库。备份：停止 traffic66 后复制整个目录；升级：替换程序文件。**数据清理** 删除早于 7–120 天的数据，或全部数据。这里也列出有已存流量的设备：删除某台设备会删掉它的流记录，并按剩余数据重建那些小时的汇总，适用于不该计入的设备（发送了伪造或错误数据、测试设备）。早于流记录保留期（`-retention-days`）的汇总无法重建，仍含它的份额。如果它还在发送，请先阻断。
 
+<a id="device-locations"></a>
+
+### 设备位置
+
+设备清单页的一个标签页。它说明流来自哪里：每台发送流的设备所在的机房和机柜，以及它每个端口连到的运营商和线路编号。设备和端口会根据流自动出现；点击“编辑”，在一个表单里填写设备的机房、机柜以及每个端口的运营商和线路。只需填写一次，与名称一起保存在 `inventory.txt` 中（`device 192.0.2.1 Core router room=Room_1 rack=A03`、`iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`；空格写成 `_`）。程序不会用它查询任何东西。所有登录的用户都能看到，由管理员编辑。
+
 <a id="licence"></a>
 
 ### 许可
@@ -418,7 +450,7 @@ Linux 需要 root 或 `setcap cap_net_raw,cap_net_admin+ep`，macOS 需要 root�
 
 ## 11. 安全、容量规划、故障排查
 
-放在反向代理后面时，请把浏览器访问用的主机名传过来（nginx：`proxy_set_header Host $host;` 或 `X-Forwarded-Host $host;`）。请求来源和 traffic66 看到的主机名不一致时，改密码、管理用户等修改操作会被拒绝。
+放在反向代理后面时，见[反向代理](#reverse-proxy)。
 
 Web 界面使用明文 HTTP：在不可信的网络中，请使用 `-addr 127.0.0.1:8066` 并在前面加一层 TLS 代理（`caddy reverse-proxy --from traffic66.example.com --to 127.0.0.1:8066`），或使用 SSH 隧道。UDP 端口只对你的设备放行。SNMP community 以明文保存；请使用只读 community。
 
@@ -435,3 +467,123 @@ Web 界面使用明文 HTTP：在不可信的网络中，请使用 `-addr 127.0.
 | Windows："Windows 已保护你的电脑" | **更多信息** → **仍要运行** |
 
 从源码构建：需要 Go 1.26 和 C 编译器，然后运行 `CGO_ENABLED=1 go build ./cmd/traffic66`。
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. 安装、升级、反向代理、监控
+
+如何核对下载的文件、升级而不丢数据、把 traffic66 放在 nginx、Caddy 或 Traefik 后面，以及用 Prometheus 监控它。
+
+<a id="verify-a-download"></a>
+
+### 核对下载的文件
+
+每个版本都附带 `SHA256SUMS` 文件、软件物料清单（`traffic66-sbom.cdx.json`，CycloneDX 格式），以及 GitHub Actions 生成的构建来源证明，证明压缩包是用本仓库的源码构建的。在下载文件所在的文件夹里运行：
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows（PowerShell）：`Get-FileHash traffic66-windows-amd64.zip` 会输出哈希值，它必须与 `SHA256SUMS` 中该文件那一行相同。`gh attestation verify` 需要 GitHub CLI，可选。
+
+<a id="upgrade-and-roll-back"></a>
+
+### 升级与回退
+
+停止 traffic66，复制整个数据目录，替换程序文件，然后重新启动。作为 Linux 服务时：
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+回退时，停止 traffic66，放回旧程序和复制的数据目录。旧版本不会去猜测新数据格式写入的数据：它会停止并提示是哪个版本写入的。可以用另一个 `-data` 目录启动它，或换回新版本。每次启动时，如果数据上次是由其他版本写入的，日志会记录下来。
+
+断电或 `kill -9` 之后，下次启动会根据流明细重建最近几小时的汇总，24 小时及更长的视图不会少数据，日志里也会写明。
+
+<a id="reverse-proxy"></a>
+
+### 反向代理
+
+如果页面的地址与 traffic66 看到的地址不一致，traffic66 会拒绝登录和修改，这样其他网站就无法冒用你的身份。放在反向代理后面时，请让代理传递浏览器使用的主机名（`Host`、`X-Forwarded-Host` 或 `Forwarded` 头），或者告诉 traffic66 它的公开地址：
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+默认端口（https 的 `:443`、http 的 `:80`）写不写都可以。traffic66 必须位于主机名的根路径，不能放在 `/traffic66/` 这样的子路径下。因此被拒绝的请求，登录页和其他页面会明确说明原因，而不是显示“密码不对”。把 Web 界面限制在本机（`-addr 127.0.0.1:8066`），这样只能通过代理访问。
+
+**nginx**（默认的 `proxy_set_header Host $proxy_host;` 会发送内部地址，所以要设置）：
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** 会自动传递主机名，并为它申请证书：
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** 会自动传递主机名（`passHostHeader` 默认开启）；文件提供者的动态配置：
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### 监控
+
+`/metrics` 以 Prometheus 格式提供 traffic66 自身的运行状况：收到、拒绝和丢弃的记录数，每个采集端口的数据报数，写入错误和磁盘占用。和 Web 界面其他部分一样需要登录；给 Prometheus 建一个专用用户（`traffic66 passwd -user prometheus`）并填入它的密码：
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### 命令行帮助
+
+`traffic66 help` 列出所有命令；`traffic66 help <命令>` 或 `traffic66 <命令> -h` 显示该命令的选项和示例。
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

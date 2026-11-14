@@ -23,6 +23,8 @@ Windows: `traffic66-windows-amd64.zip` کھولیں اور `traffic66.exe` چل�
 
 macOS: پہلے اس فولڈر میں `xattr -dr com.apple.quarantine .` چلائیں۔
 
+ڈاؤن لوڈ کی جانچ: `sha256sum -c SHA256SUMS --ignore-missing`؛ اپ گریڈ، واپسی اور ریورس پراکسی کے لیے [دستی](MANUAL.ur.md#12-install-upgrade-reverse-proxy-monitoring) دیکھیں۔
+
 پھر:
 
 - ویب UI: `http://<سرور IP>:8066`۔ یہ تمام نیٹ ورک انٹرفیسز پر سنتا ہے۔

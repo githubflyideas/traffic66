@@ -57,12 +57,15 @@ type Server struct {
 	// Cert describes the certificate the web UI is served with, nil over
 	// plain HTTP. The settings page shows its fingerprint so somebody can
 	// check the one their browser warned about.
-	Cert     *tlscert.Info
-	Demo     bool
-	Users    map[string]string          // fixed passwords (tests)
-	Check    func(user, pw string) bool // login check; replaces Users when set
-	Exists   func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
-	LocalTok string                     // token for the TUI on this machine
+	Cert *tlscert.Info
+	// PublicURL is the address the browser uses (-public-url), when it is
+	// set: behind a reverse proxy, the origin of a change must be it.
+	PublicURL *url.URL
+	Demo      bool
+	Users     map[string]string          // fixed passwords (tests)
+	Check     func(user, pw string) bool // login check; replaces Users when set
+	Exists    func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
+	LocalTok  string                     // token for the TUI on this machine
 	// Accounts is the password file: changing passwords and managing users
 	// from the web UI. Nil in tests and when it does not apply.
 	Accounts *auth.FileChecker
@@ -145,6 +148,7 @@ func (s *Server) Handler() http.Handler {
 	// of one they can forget to make at all.
 	adminAPI := func(pattern string, h http.HandlerFunc) { api(pattern, s.adminOnly(h)) }
 	api("GET /api/status", s.status)
+	api("GET /metrics", s.metrics)
 	api("GET /api/manual", s.manual)
 	api("GET /api/manual/images/{name}", s.manualImage)
 	api("GET /api/me", s.me)
@@ -290,7 +294,7 @@ func tooMany(w http.ResponseWriter) {
 func (s *Server) auth(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.markHeader(w)
-		if !sameOrigin(r) {
+		if !s.sameOrigin(r) {
 			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
 			return
 		}
@@ -532,30 +536,83 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 // browser sends Origin and Sec-Fetch-Site with such requests, and the
 // session cookie would otherwise go with them. Reads, and programs that
 // send neither header (the terminal UI, scripts), are not affected.
-func sameOrigin(r *http.Request) bool {
+//
+// The origin must name the host the browser asked for: the request's Host,
+// the one a reverse proxy passes on in X-Forwarded-Host or Forwarded
+// (host=), or the address given with -public-url. A port is compared as
+// well, the scheme's default port (443, 80) being the same as none. A page
+// on another site cannot set those headers on the browser's request (that
+// needs a cross-origin preflight, which is never allowed), so accepting
+// them does not let it through.
+func (s *Server) sameOrigin(r *http.Request) bool {
 	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
 		return true
 	}
 	if site := r.Header.Get("Sec-Fetch-Site"); site == "cross-site" || site == "same-site" {
 		return false
 	}
-	if origin := r.Header.Get("Origin"); origin != "" {
-		u, err := url.Parse(origin)
-		// A reverse proxy that rewrites Host passes the one the browser
-		// used in X-Forwarded-Host.
-		fwd := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Host"), ",")[0])
-		if err != nil || (u.Host != r.Host && (fwd == "" || u.Host != fwd)) || (u.Scheme != "http" && u.Scheme != "https") {
-			return false
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return false
+	}
+	want := hostKey(u.Host, u.Scheme)
+	if p := s.PublicURL; p != nil && u.Scheme == p.Scheme && want == hostKey(p.Host, p.Scheme) {
+		return true
+	}
+	for _, h := range [...]string{r.Host, firstValue(r.Header.Get("X-Forwarded-Host")), forwardedHost(r.Header.Get("Forwarded"))} {
+		if h != "" && hostKey(h, u.Scheme) == want {
+			return true
 		}
 	}
-	return true
+	return false
+}
+
+// hostKey is host[:port] in one form: lower case, without the scheme's
+// default port, IPv6 addresses in brackets.
+func hostKey(h, scheme string) string {
+	h = strings.ToLower(strings.TrimSpace(h))
+	host, port, err := net.SplitHostPort(h)
+	if err != nil {
+		host, port = strings.Trim(h, "[]"), ""
+	}
+	if (scheme == "https" && port == "443") || (scheme == "http" && port == "80") {
+		port = ""
+	}
+	host = strings.TrimSuffix(host, ".")
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	if port != "" {
+		return host + ":" + port
+	}
+	return host
+}
+
+func firstValue(v string) string {
+	return strings.TrimSpace(strings.Split(v, ",")[0])
+}
+
+// forwardedHost reads host= from the first element of a Forwarded header
+// (RFC 7239), the one the proxy nearest the browser wrote.
+func forwardedHost(v string) string {
+	for _, pair := range strings.Split(firstValue(v), ";") {
+		k, val, ok := strings.Cut(strings.TrimSpace(pair), "=")
+		if ok && strings.EqualFold(k, "host") {
+			return strings.Trim(val, `"`)
+		}
+	}
+	return ""
 }
 
 // sameOriginOnly applies sameOrigin to a handler that needs no session:
 // signing in or out from another site's page is refused too.
 func (s *Server) sameOriginOnly(h http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !sameOrigin(r) {
+		if !s.sameOrigin(r) {
 			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
 			return
 		}

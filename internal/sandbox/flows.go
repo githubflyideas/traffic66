@@ -28,6 +28,7 @@ type fkey struct {
 	vlan         uint16
 	encap        flow.Encap
 	l2           bool
+	l2hdr        uint8
 }
 
 type fentry struct {
@@ -83,7 +84,7 @@ func (b *builder) add(p *pcapfile.Packet) {
 		b.skipped++
 		return
 	}
-	k := fkey{r.Src, r.Dst, r.SrcPort, r.DstPort, r.Proto, r.VLAN, r.Encap, l2}
+	k := fkey{r.Src, r.Dst, r.SrcPort, r.DstPort, r.Proto, r.VLAN, r.Encap, l2, r.L2Hdr}
 	e := b.table[k]
 	if e == nil {
 		if len(b.table) >= maxEntries {
@@ -122,7 +123,7 @@ func (b *builder) sweep(now time.Time, all bool) {
 	// any entry is removed below
 	for k, e := range b.table {
 		if e.opener == 0 && e.pkts > 0 {
-			if re := b.table[fkey{k.dst, k.src, k.dport, k.sport, k.proto, k.vlan, k.encap, k.l2}]; re != nil {
+			if re := b.table[fkey{k.dst, k.src, k.dport, k.sport, k.proto, k.vlan, k.encap, k.l2, k.l2hdr}]; re != nil {
 				e.opener = -re.opener
 			}
 		}
@@ -135,7 +136,7 @@ func (b *builder) sweep(now time.Time, all bool) {
 		}
 		if e.pkts > 0 {
 			out = append(out, flow.Record{Start: e.first, End: e.last, Src: k.src, Dst: k.dst, SrcPort: k.sport, DstPort: k.dport, Opener: e.opener,
-				Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: k.l2,
+				Proto: k.proto, VLAN: k.vlan, Encap: k.encap, TCPFlags: e.flags, Bytes: e.bytes, Packets: e.pkts, L2: k.l2, L2Hdr: k.l2hdr,
 				Sampling: 1, Mult: 1, SamplingKnown: true, Exporter: b.exporter, Domain: b.domain, Source: flow.SrcCapture, Direction: 255})
 		}
 		if idle || all {

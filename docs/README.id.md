@@ -22,6 +22,8 @@ Windows: ekstrak `traffic66-windows-amd64.zip` lalu jalankan `traffic66.exe` (kl
 
 macOS: jalankan dulu `xattr -dr com.apple.quarantine .` di folder itu.
 
+Periksa unduhan: `sha256sum -c SHA256SUMS --ignore-missing`; pembaruan, kembali ke versi lama dan reverse proxy ada di [manual](MANUAL.id.md#12-install-upgrade-reverse-proxy-monitoring).
+
 Lalu:
 
 - Antarmuka web: `http://<IP server>:8066`. Mendengarkan di semua antarmuka jaringan.

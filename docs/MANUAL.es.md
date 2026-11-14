@@ -40,6 +40,7 @@ datos aparte.
 9. [Análisis offline de pcap, interfaz de terminal, captura local](#9-offline-pcap-terminal-ui-local-capture)
 10. [Opciones y datos](#10-options-and-data)
 11. [Seguridad, dimensionamiento, solución de problemas](#11-security-sizing-troubleshooting)
+12. [Instalación, actualización, proxy inverso, monitorización](#12-install-upgrade-reverse-proxy-monitoring)
 
 <a id="1-quick-start"></a>
 
@@ -476,6 +477,31 @@ equipo `127.0.0.1`. La captura local no tiene interfaces ni contadores del
 equipo, así que **Verificación de interfaces** no tiene nada que comparar
 para ella.
 
+<a id="sending-findings-to-a-collector"></a>
+
+### Enviar hallazgos a un colector
+
+Una instalación registrada puede enviar cada hallazgo a un colector syslog en cuanto se ve por primera vez:
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` es `udp`, `tcp` o `tls`; `-syslog-min-sev` es la gravedad mínima que vale la pena enviar; `-syslog-url https://traffic66.example.com` pone en cada mensaje un enlace al hallazgo. `-syslog-ascii` escapa todo lo que no es ASCII, para colectores que estropean UTF-8.
+
+El formato se elige, porque lo que se analiza por sí solo depende de lo que ya usa:
+
+| `-syslog-format` | lo leen sin escribir un analizador |
+|---|---|
+| `cef` (por defecto) | ArcSight, QRadar, Splunk, Graylog, Elastic, Wazuh |
+| `leef` | QRadar, de forma nativa |
+| `json` | Elastic y Splunk — los nombres son Elastic Common Schema |
+| `text` | una persona |
+
+El sobre es RFC 5424 en todo caso, y lleva el id del hallazgo, su tipo y la tasa de muestreo aunque el cuerpo sea texto plano.
+
+Tres cosas hacen que valga la pena contar estos mensajes y no solo leerlos. El tipo de evento (`scan`, `brute`, `exfil` …) es una palabra fija que nunca cambia con la redacción ni la traducción, así que un panel agrupado por él no se rompe cuando se mejora una frase. Un hallazgo es **un** evento con un id, enviado cuando se ve por primera vez y no en cada pasada de detección, así que una noche de adivinar contraseñas es un incidente y no cuarenta. Y la tasa de muestreo viaja en cada mensaje: traffic66 detecta sobre datos muestreados, así que los bytes y paquetes son estimaciones, y un colector que los suma sin saberlo produce una cifra que nadie puede defender.
+
 <a id="10-options-and-data"></a>
 
 ## 10. Opciones y datos
@@ -500,6 +526,12 @@ seguridad, detenga traffic66 y cópielo; para actualizar, reemplace el
 archivo del programa. **Limpieza de datos** borra los datos de más de 7–120
 días, o todos.
 
+<a id="device-locations"></a>
+
+### Ubicación de los equipos
+
+Una pestaña de la página de inventario. Una imagen de dónde vienen los flujos: para cada equipo que envía flujos, la sala y el rack donde está, y para cada uno de sus puertos el operador y el ID de circuito al que sale. Los equipos y puertos aparecen solos a partir de los flujos; pulse Editar para escribir la sala y el rack del equipo y el operador y circuito de cada puerto en un solo formulario. Se rellena una vez y se guarda en `inventory.txt` junto a los nombres (`device 192.0.2.1 Core router room=Room_1 rack=A03`, `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`; un espacio se escribe `_`). No se consulta nada con ello. Todos los que inician sesión lo ven; el administrador lo edita.
+
 <a id="licence"></a>
 
 ### Licencia
@@ -517,6 +549,8 @@ Contacto: <route66traffic66@gmail.com>.
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Seguridad, dimensionamiento, solución de problemas
+
+Detrás de un proxy inverso, vea [Proxy inverso](#reverse-proxy).
 
 La interfaz web es HTTP simple: en redes no confiables use
 `-addr 127.0.0.1:8066` detrás de un proxy TLS (`caddy reverse-proxy --from traffic66.example.com --to
@@ -540,3 +574,123 @@ de todas las conversaciones, unos 9 s.
 | Windows: "Windows protegió su PC" | **Más información** → **Ejecutar de todas formas** |
 
 Compilar desde el código fuente: Go 1.26 y un compilador de C, luego `CGO_ENABLED=1 go build ./cmd/traffic66`.
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. Instalación, actualización, proxy inverso, monitorización
+
+Cómo comprobar una descarga, actualizar sin perder datos, poner traffic66 detrás de nginx, Caddy o Traefik y vigilarlo con Prometheus.
+
+<a id="verify-a-download"></a>
+
+### Comprobar una descarga
+
+Cada versión trae un archivo `SHA256SUMS`, una lista del software incluido (`traffic66-sbom.cdx.json`, CycloneDX) y una atestación de procedencia de GitHub Actions, que demuestra que el archivo se compiló a partir del código de este repositorio. En la carpeta de las descargas:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows (PowerShell): `Get-FileHash traffic66-windows-amd64.zip` muestra el hash; debe coincidir con la línea de ese archivo en `SHA256SUMS`. `gh attestation verify` necesita GitHub CLI y es opcional.
+
+<a id="upgrade-and-roll-back"></a>
+
+### Actualizar y volver atrás
+
+Detenga traffic66, copie todo el directorio de datos, sustituya el programa y vuelva a iniciarlo. Como servicio de Linux:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+Para volver atrás, detenga traffic66 y reponga el programa anterior y la copia del directorio de datos. Una versión nunca adivina datos escritos en un formato más nuevo: se detiene con un mensaje que nombra la versión que los escribió. Iníciela con otro directorio `-data` o vuelva a la versión más nueva. Cada inicio registra cuando los datos los escribió por última vez otra versión.
+
+Tras un corte de luz o `kill -9`, el siguiente inicio reconstruye los resúmenes de las últimas horas a partir del detalle de flujos, de modo que las vistas de 24 horas o más no pierden nada, y lo registra.
+
+<a id="reverse-proxy"></a>
+
+### Proxy inverso
+
+traffic66 rechaza inicios de sesión y cambios desde una página cuya dirección no coincide con la que ve traffic66, para que otro sitio web no pueda actuar en su nombre. Detrás de un proxy inverso, haga que el proxy pase el nombre de host del navegador (cabecera `Host`, `X-Forwarded-Host` o `Forwarded`), o indique a traffic66 su dirección pública:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+El puerto por defecto (`:443` para https, `:80` para http) puede escribirse u omitirse. traffic66 debe estar en la raíz de su nombre de host, no bajo una ruta como `/traffic66/`. Cuando se rechaza una solicitud por este motivo, la página de inicio de sesión y las demás lo dicen, en lugar de «contraseña incorrecta». Deje la interfaz web solo en esta máquina (`-addr 127.0.0.1:8066`) para que solo se llegue a través del proxy.
+
+**nginx** (el valor por defecto `proxy_set_header Host $proxy_host;` envía la dirección interna, así que defínalo):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** pasa el nombre de host por sí mismo y obtiene un certificado para él:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** pasa el nombre de host por sí mismo (`passHostHeader` está activado por defecto); configuración dinámica para el proveedor de archivos:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### Monitorización
+
+`/metrics` ofrece el estado del propio traffic66 en formato Prometheus: registros recibidos, rechazados y descartados, datagramas por puerto de recepción, errores de escritura y uso de disco. Como el resto de la interfaz web, requiere iniciar sesión; dé a Prometheus un usuario propio (`traffic66 passwd -user prometheus`) y su contraseña:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### Ayuda de la línea de comandos
+
+`traffic66 help` lista los comandos; `traffic66 help <comando>` o `traffic66 <comando> -h` muestra las opciones de un comando con ejemplos.
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

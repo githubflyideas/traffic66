@@ -35,6 +35,7 @@ analysis, without Elasticsearch, Kafka or a separate database.
 9. [Offline pcap, terminal UI, local capture](#9-offline-pcap-terminal-ui-local-capture)
 10. [Options and data](#10-options-and-data)
 11. [Security, sizing, troubleshooting](#11-security-sizing-troubleshooting)
+12. [Install, upgrade, reverse proxy, monitoring](#12-install-upgrade-reverse-proxy-monitoring)
 
 ## 1. Quick start
 
@@ -534,7 +535,7 @@ and put the `license.json` you get back in the data directory. Contact:
 
 ## 11. Security, sizing, troubleshooting
 
-Behind a reverse proxy, pass the browser's host name on (nginx: `proxy_set_header Host $host;` or `X-Forwarded-Host $host;`): changes such as passwords and users are refused when the request's origin does not match the host traffic66 sees.
+Behind a reverse proxy, see [Reverse proxy](#reverse-proxy).
 
 The web UI is plain HTTP unless it is told otherwise. It can serve HTTPS
 itself, on any installation, registered or not:
@@ -574,3 +575,111 @@ take under 0.2 s; a 1-hour Top 66 of all conversations about 9 s.
 | Windows "protected your PC" | **More info** → **Run anyway** |
 
 Build from source: Go 1.26 and a C compiler, then `CGO_ENABLED=1 go build ./cmd/traffic66`.
+
+## 12. Install, upgrade, reverse proxy, monitoring
+
+How to check a download, upgrade without losing data, put traffic66 behind nginx, Caddy or Traefik, and watch it with Prometheus.
+
+### Verify a download
+
+Every release has a `SHA256SUMS` file, a list of the software inside (`traffic66-sbom.cdx.json`, CycloneDX) and a build provenance attestation from GitHub Actions, which proves the archive was built from this repository's source. In the folder with the downloads:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows (PowerShell): `Get-FileHash traffic66-windows-amd64.zip` prints the hash; it must equal the line for that file in `SHA256SUMS`. `gh attestation verify` needs the GitHub CLI and is optional.
+
+### Upgrade and roll back
+
+Stop traffic66, copy the whole data directory, replace the program file and start it again. As a Linux service:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+To roll back, stop traffic66 and put back the old program and the copied data directory. A version never guesses at data written in a newer format: it stops with a message naming the version that wrote it. Start it with another `-data` directory, or go back to the newer version. Each start logs when the data was last written by another version.
+
+After a power cut or `kill -9`, the next start rebuilds the summaries of the last hours from the flow detail, so the 24-hour and longer views lose nothing, and logs that it did.
+
+### Reverse proxy
+
+traffic66 refuses sign-ins and changes from a page whose address does not match the address traffic66 sees, so another website cannot act in your name. Behind a reverse proxy, let the proxy pass the browser's host name on (the `Host`, `X-Forwarded-Host` or `Forwarded` header), or tell traffic66 its public address:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+The default port (`:443` for https, `:80` for http) may be written or left out. traffic66 must be at the root of its host name, not under a path such as `/traffic66/`. When a request is refused for this reason, the sign-in page and the other pages say so, instead of "wrong password". Keep the web UI on this machine (`-addr 127.0.0.1:8066`) so that it is reached only through the proxy.
+
+**nginx** (the default `proxy_set_header Host $proxy_host;` sends the internal address, so set it):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** passes the host name by itself and gets a certificate for it:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** passes the host name by itself (`passHostHeader` is on by default); dynamic configuration for the file provider:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+### Monitoring
+
+`/metrics` serves traffic66's own health in the Prometheus format: records received, refused and dropped, datagrams per collector port, write errors and disk use. It needs a sign-in like the rest of the web UI; give Prometheus a user of its own (`traffic66 passwd -user prometheus`) and its password:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+### Command-line help
+
+`traffic66 help` lists the commands; `traffic66 help <command>` or `traffic66 <command> -h` shows a command's options with examples.
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

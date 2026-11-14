@@ -19,6 +19,8 @@ Windows：解压 `traffic66-windows-amd64.zip`，运行 `traffic66.exe`（双击
 
 macOS：先在该目录运行 `xattr -dr com.apple.quarantine .`。
 
+核对下载的文件：`sha256sum -c SHA256SUMS --ignore-missing`；升级、回退和反向代理见[手册](MANUAL.zh.md#12-install-upgrade-reverse-proxy-monitoring)。
+
 然后：
 
 - Web 界面：`http://<服务器IP>:8066`，监听所有网卡。

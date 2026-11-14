@@ -39,6 +39,7 @@ pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 9. [Pcap offline, antarmuka terminal, capture lokal](#9-offline-pcap-terminal-ui-local-capture)
 10. [Opsi dan data](#10-options-and-data)
 11. [Keamanan, kebutuhan sumber daya, pemecahan masalah](#11-security-sizing-troubleshooting)
+12. [Instalasi, pembaruan, reverse proxy, pemantauan](#12-install-upgrade-reverse-proxy-monitoring)
 
 <a id="1-quick-start"></a>
 
@@ -472,6 +473,31 @@ dari perangkat `127.0.0.1`. Capture lokal tidak punya interface atau counter
 perangkat, jadi **Pencocokan antarmuka** tidak punya apa pun untuk
 dibandingkan.
 
+<a id="sending-findings-to-a-collector"></a>
+
+### Mengirim temuan ke kolektor
+
+Instalasi terdaftar dapat mengirim setiap temuan ke kolektor syslog begitu temuan itu pertama kali terlihat:
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` adalah `udp`, `tcp` atau `tls`; `-syslog-min-sev` adalah tingkat keparahan terendah yang layak dikirim; `-syslog-url https://traffic66.example.com` menaruh tautan ke temuan di setiap pesan. `-syslog-ascii` meng-escape semua di luar ASCII, untuk kolektor yang merusak UTF-8.
+
+Formatnya bisa dipilih, karena apa yang terurai dengan sendirinya bergantung pada apa yang sudah Anda jalankan:
+
+| `-syslog-format` | dibaca tanpa menulis parser oleh |
+|---|---|
+| `cef` (bawaan) | ArcSight, QRadar, Splunk, Graylog, Elastic, Wazuh |
+| `leef` | QRadar, secara bawaan |
+| `json` | Elastic dan Splunk — namanya mengikuti Elastic Common Schema |
+| `text` | manusia |
+
+Amplopnya selalu RFC 5424, dan membawa id temuan, jenisnya, dan laju sampling bahkan saat isinya teks biasa.
+
+Tiga hal membuat umpan ini layak dihitung, bukan sekadar dibaca. Jenis peristiwa (`scan`, `brute`, `exfil` …) adalah kata tetap yang tidak pernah berubah karena susunan kalimat atau terjemahan, sehingga dasbor yang dikelompokkan menurutnya tidak rusak saat sebuah kalimat diperbaiki. Satu temuan adalah **satu** peristiwa dengan satu id, dikirim saat pertama terlihat, bukan setiap putaran deteksi, sehingga semalam tebakan kata sandi adalah satu insiden, bukan empat puluh. Dan laju sampling ikut di setiap pesan: traffic66 mendeteksi pada data tersampel, jadi jumlah byte dan paket adalah perkiraan, dan kolektor yang menjumlahkannya tanpa tahu hal itu menghasilkan angka yang tak bisa dipertanggungjawabkan siapa pun.
+
 <a id="10-options-and-data"></a>
 
 ## 10. Opsi dan data
@@ -496,6 +522,12 @@ traffic66 lalu menyalinnya; upgrade dengan mengganti file program.
 **Pembersihan data** menghapus data yang lebih lama dari 7–120 hari, atau
 semuanya.
 
+<a id="device-locations"></a>
+
+### Lokasi perangkat
+
+Sebuah tab di halaman inventaris. Gambaran dari mana flow datang: untuk setiap perangkat yang mengirim flow, ruang dan rak tempatnya berada, dan untuk setiap port-nya operator dan ID sirkuit tujuan keluarnya. Perangkat dan port muncul sendiri dari flow; klik Edit untuk mengisi ruang dan rak perangkat serta operator dan sirkuit setiap port dalam satu formulir. Diisi sekali dan disimpan di `inventory.txt` di samping nama-nama (`device 192.0.2.1 Core router room=Room_1 rack=A03`, `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`; spasi ditulis `_`). Tidak ada yang dicari di dalamnya. Semua yang masuk dapat melihatnya; administrator mengeditnya.
+
 <a id="licence"></a>
 
 ### Lisensi
@@ -513,6 +545,8 @@ Kontak: <route66traffic66@gmail.com>.
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Keamanan, kebutuhan sumber daya, pemecahan masalah
+
+Di belakang reverse proxy, lihat [Reverse proxy](#reverse-proxy).
 
 Antarmuka web memakai HTTP biasa: di jaringan yang tidak tepercaya, gunakan
 `-addr 127.0.0.1:8066` di belakang proxy TLS (`caddy reverse-proxy --from traffic66.example.com --to
@@ -536,3 +570,123 @@ selama 1 jam sekitar 9 detik.
 | Windows: "Windows protected your PC" (Windows melindungi PC Anda) | **More info** (info selengkapnya) → **Run anyway** (tetap jalankan) |
 
 Build dari source: Go 1.26 dan compiler C, lalu `CGO_ENABLED=1 go build ./cmd/traffic66`.
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. Instalasi, pembaruan, reverse proxy, pemantauan
+
+Cara memeriksa unduhan, memperbarui tanpa kehilangan data, menaruh traffic66 di belakang nginx, Caddy atau Traefik, dan memantaunya dengan Prometheus.
+
+<a id="verify-a-download"></a>
+
+### Memeriksa unduhan
+
+Setiap rilis menyertakan berkas `SHA256SUMS`, daftar perangkat lunak di dalamnya (`traffic66-sbom.cdx.json`, CycloneDX), dan atestasi asal build dari GitHub Actions, yang membuktikan arsip dibangun dari kode sumber repositori ini. Di folder unduhan:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows (PowerShell): `Get-FileHash traffic66-windows-amd64.zip` menampilkan hash; nilainya harus sama dengan baris berkas itu di `SHA256SUMS`. `gh attestation verify` memerlukan GitHub CLI dan bersifat opsional.
+
+<a id="upgrade-and-roll-back"></a>
+
+### Memperbarui dan kembali
+
+Hentikan traffic66, salin seluruh direktori data, ganti berkas program, lalu jalankan lagi. Sebagai layanan Linux:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+Untuk kembali, hentikan traffic66 lalu kembalikan program lama dan salinan direktori data. Sebuah versi tidak pernah menebak data yang ditulis dalam format lebih baru: ia berhenti dengan pesan yang menyebut versi penulisnya. Jalankan dengan direktori `-data` lain, atau kembali ke versi yang lebih baru. Setiap kali mulai, log mencatat bila data terakhir ditulis oleh versi lain.
+
+Setelah listrik padam atau `kill -9`, saat mulai berikutnya ringkasan beberapa jam terakhir dibangun ulang dari detail flow, sehingga tampilan 24 jam dan lebih lama tidak kehilangan apa pun, dan hal itu dicatat di log.
+
+<a id="reverse-proxy"></a>
+
+### Reverse proxy
+
+traffic66 menolak masuk dan perubahan dari halaman yang alamatnya tidak cocok dengan alamat yang dilihat traffic66, agar situs lain tidak bisa bertindak atas nama Anda. Di belakang reverse proxy, biarkan proxy meneruskan nama host dari peramban (header `Host`, `X-Forwarded-Host` atau `Forwarded`), atau beri tahu traffic66 alamat publiknya:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+Port bawaan (`:443` untuk https, `:80` untuk http) boleh ditulis atau dihilangkan. traffic66 harus berada di akar nama host-nya, bukan di bawah jalur seperti `/traffic66/`. Bila permintaan ditolak karena alasan ini, halaman masuk dan halaman lain menyebutkannya, bukan "kata sandi salah". Biarkan UI web hanya di mesin ini (`-addr 127.0.0.1:8066`) agar hanya bisa dicapai lewat proxy.
+
+**nginx** (bawaan `proxy_set_header Host $proxy_host;` mengirim alamat internal, jadi aturlah):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** meneruskan nama host dengan sendirinya dan mengambil sertifikat untuknya:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** meneruskan nama host dengan sendirinya (`passHostHeader` aktif secara bawaan); konfigurasi dinamis untuk file provider:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### Pemantauan
+
+`/metrics` menyajikan kondisi traffic66 sendiri dalam format Prometheus: catatan yang diterima, ditolak dan dibuang, datagram per port kolektor, galat penulisan, dan pemakaian disk. Seperti bagian lain UI web, ini perlu masuk; beri Prometheus pengguna sendiri (`traffic66 passwd -user prometheus`) beserta kata sandinya:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### Bantuan baris perintah
+
+`traffic66 help` menampilkan daftar perintah; `traffic66 help <perintah>` atau `traffic66 <perintah> -h` menampilkan opsi suatu perintah beserta contoh.
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

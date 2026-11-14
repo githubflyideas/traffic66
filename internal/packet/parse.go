@@ -39,6 +39,7 @@ func Ethernet(b []byte, r *flow.Record) bool {
 	}
 	et := binary.BigEndian.Uint16(b[12:14])
 	b = b[14:]
+	n := 14
 	for et == etherVLAN || et == etherQinQ || et == etherQinQ2 {
 		if len(b) < 4 {
 			return false
@@ -48,6 +49,22 @@ func Ethernet(b []byte, r *flow.Record) bool {
 		}
 		et = binary.BigEndian.Uint16(b[2:4])
 		b = b[4:]
+		n += 4
+	}
+	if et == etherMPLS || et == etherMPLSMc {
+		// the label stack is link layer too: count it up to the bottom label
+		for i := 0; ; i += 4 {
+			if len(b) < i+4 {
+				return false
+			}
+			n += 4
+			if b[i+2]&0x01 != 0 {
+				break
+			}
+		}
+	}
+	if r.L2Hdr == 0 && n <= 255 {
+		r.L2Hdr = uint8(n)
 	}
 	switch et {
 	case etherIPv4:

@@ -420,19 +420,24 @@ func TestSeriesByAndRecordCounts(t *testing.T) {
 	if _, err := st.SeriesBy(q, "nope", "wire", 8); err == nil {
 		t.Fatal("unknown series accepted")
 	}
-	total, hist, err := st.RecordCounts(q)
-	if err != nil || total != 9 {
-		t.Fatalf("records %d %v", total, err)
+	// and a flow across two minutes, a row in each
+	long := recs[0]
+	long.Start, long.End, long.Src, long.Packets = now.Add(-20*time.Minute), now.Add(-18*time.Minute-30*time.Second), netip.MustParseAddr("10.9.9.9"), 1
+	p.Ingest([]flow.Record{long})
+	p.FlushRows()
+	total, flows, hist, err := st.RecordCounts(q)
+	if err != nil || total != 11 || flows != 10 {
+		t.Fatalf("rows %d flows %d %v, want 11 and 10", total, flows, err)
 	}
 	n := 0.0
 	for _, v := range hist.Values[0] {
 		n += v
 	}
-	if n != 9 {
-		t.Fatalf("histogram holds %v records", n)
+	if n != 10 {
+		t.Fatalf("histogram holds %v flows", n)
 	}
 	page, err := st.Records(q, 4, 8)
-	if err != nil || len(page) != 1 {
+	if err != nil || len(page) != 3 {
 		t.Fatalf("last page %d %v", len(page), err)
 	}
 }

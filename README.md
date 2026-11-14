@@ -30,6 +30,8 @@ nohup ./traffic66 > traffic66.log 2>&1 &
 
 Windows: unzip `traffic66-windows-amd64.zip`, install [Npcap](https://npcap.com/#download) for local capture, then in an admin `cmd` in that folder run `traffic66.exe -capture Wi-Fi` (names from `traffic66.exe interfaces`).
 
+Check the download: `sha256sum -c SHA256SUMS --ignore-missing` (upgrade, roll back and reverse proxy: [manual](docs/MANUAL.md#12-install-upgrade-reverse-proxy-monitoring)).
+
 Devices: send sFlow to UDP 6343, NetFlow v5/v9 to UDP 2055, IPFIX to UDP 4739 on this host.
 
 Needs: a ~73 MB program, nothing to install; about 0.1 GB of memory idle and 0.6–0.8 GB at 5,000 flows/s, so give it 1 GB or more. Keep the web UI on an internal network or behind a reverse proxy with HTTPS; don't expose it directly to the internet.

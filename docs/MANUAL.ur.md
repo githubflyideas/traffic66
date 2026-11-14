@@ -40,6 +40,7 @@ Elasticsearch، Kafka یا الگ database کے۔
 9. [آف لائن pcap، terminal UI، local capture](#9-offline-pcap-terminal-ui-local-capture)
 10. [آپشنز اور ڈیٹا](#10-options-and-data)
 11. [سکیورٹی، گنجائش کا اندازہ، مسائل کا حل](#11-security-sizing-troubleshooting)
+12. [انسٹال، اپ گریڈ، ریورس پراکسی، نگرانی](#12-install-upgrade-reverse-proxy-monitoring)
 
 <a id="1-quick-start"></a>
 
@@ -466,6 +467,31 @@ Windows کو [Npcap](https://npcap.com)۔ capture شدہ flows ڈیوائس `127
 آتے ہیں۔ Local capture میں ڈیوائس کے interfaces یا counters نہیں ہوتے، اس لیے
 **انٹرفیس جانچ** کے پاس اس کے لیے موازنہ کرنے کو کچھ نہیں ہے۔
 
+<a id="sending-findings-to-a-collector"></a>
+
+### نتائج کلیکٹر کو بھیجنا
+
+رجسٹرڈ انسٹالیشن ہر نتیجہ پہلی بار نظر آتے ہی syslog کلیکٹر کو بھیج سکتی ہے:
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` `udp`، `tcp` یا `tls` ہے؛ `-syslog-min-sev` بھیجنے کے لائق کم سے کم شدت ہے؛ `-syslog-url https://traffic66.example.com` ہر پیغام میں نتیجے کا لنک ڈالتا ہے۔ `-syslog-ascii` ASCII سے باہر سب کچھ ایسکیپ کرتا ہے، ان کلیکٹرز کے لیے جو UTF-8 خراب کرتے ہیں۔
+
+فارمیٹ چنا جا سکتا ہے، کیونکہ کیا خود بخود پارس ہوتا ہے یہ اس پر منحصر ہے کہ آپ پہلے سے کیا چلاتے ہیں:
+
+| `-syslog-format` | بغیر پارسر لکھے پڑھتے ہیں |
+|---|---|
+| `cef` (ڈیفالٹ) | ArcSight، QRadar، Splunk، Graylog، Elastic، Wazuh |
+| `leef` | QRadar، براہ راست |
+| `json` | Elastic اور Splunk — نام Elastic Common Schema کے ہیں |
+| `text` | ایک انسان |
+
+ہر صورت میں بیرونی لفافہ RFC 5424 ہوتا ہے، اور اس میں نتیجے کی ID، اس کی قسم اور سیمپلنگ کی شرح ہوتی ہے، چاہے متن سادہ ہو۔
+
+تین باتیں اس فیڈ کو صرف پڑھنے نہیں، گننے کے لائق بناتی ہیں۔ واقعے کی قسم (`scan`، `brute`، `exfil` …) ایک مستقل لفظ ہے جو الفاظ یا ترجمے کے ساتھ کبھی نہیں بدلتا، اس لیے اس سے گروپ کیا گیا ڈیش بورڈ کسی جملے کی بہتری پر نہیں ٹوٹتا۔ ایک نتیجہ ایک ID والا **ایک** واقعہ ہے، جو ہر جانچ پر نہیں بلکہ پہلی بار نظر آنے پر بھیجا جاتا ہے، اس لیے ایک رات کا پاس ورڈ اندازہ ایک واقعہ ہے، چالیس نہیں۔ اور سیمپلنگ کی شرح ہر پیغام کے ساتھ جاتی ہے: traffic66 سیمپل شدہ ڈیٹا پر پہچان کرتا ہے، اس لیے بائٹ اور پیکٹ کی گنتی اندازے ہیں، اور جو کلیکٹر یہ جانے بغیر انہیں جمع کرے وہ ایسا عدد بناتا ہے جس کا کوئی دفاع نہیں کر سکتا۔
+
 <a id="10-options-and-data"></a>
 
 ## 10. آپشنز اور ڈیٹا
@@ -489,6 +515,12 @@ data directory میں `raw/` (detail، ہر گھنٹے کی ایک فائل)، `
 کے لیے پروگرام فائل بدل دیں۔ **ڈیٹا کی صفائی** 7–120 دن سے پرانا ڈیٹا، یا سارا
 ڈیٹا حذف کرتی ہے۔
 
+<a id="device-locations"></a>
+
+### آلات کے مقامات
+
+انوینٹری صفحے کا ایک ٹیب۔ فلو کہاں سے آتے ہیں اس کی تصویر: فلو بھیجنے والے ہر آلے کا کمرہ اور ریک، اور اس کے ہر پورٹ کا کیریئر اور سرکٹ ID جس سے وہ باہر جاتا ہے۔ آلات اور پورٹ فلو سے خود ظاہر ہوتے ہیں؛ Edit پر کلک کر کے ایک ہی فارم میں آلے کا کمرہ اور ریک اور ہر پورٹ کا کیریئر اور سرکٹ لکھیں۔ یہ ایک بار بھرا جاتا ہے اور ناموں کے ساتھ `inventory.txt` میں رکھا جاتا ہے (`device 192.0.2.1 Core router room=Room_1 rack=A03`، `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`؛ خالی جگہ `_` لکھی جاتی ہے)۔ اس میں کچھ تلاش نہیں کیا جاتا۔ سائن اِن کرنے والے سب دیکھتے ہیں؛ منتظم اسے بدلتا ہے۔
+
 <a id="licence"></a>
 
 ### لائسنس
@@ -505,6 +537,8 @@ available (انگریزی متن لازم ہے): جانچ کے لیے اور 100
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. سکیورٹی، گنجائش کا اندازہ، مسائل کا حل
+
+ریورس پراکسی کے پیچھے، [ریورس پراکسی](#reverse-proxy) دیکھیں۔
 
 web UI سادہ HTTP ہے: غیر بھروسہ مند نیٹ ورکس پر `-addr 127.0.0.1:8066` استعمال
 کریں، کسی TLS proxy کے پیچھے (`caddy reverse-proxy --from
@@ -529,3 +563,123 @@ traffic66.example.com --to 127.0.0.1:8066`) یا SSH tunnel کے ذریعے۔ UD
 سورس سے بِلڈ: Go 1.26 اور ایک C compiler، پھر `CGO_ENABLED=1 go build ./cmd/traffic66`۔
 
 </div>
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. انسٹال، اپ گریڈ، ریورس پراکسی، نگرانی
+
+ڈاؤن لوڈ کی جانچ، ڈیٹا کھوئے بغیر اپ گریڈ، traffic66 کو nginx، Caddy یا Traefik کے پیچھے رکھنا، اور Prometheus سے اس کی نگرانی کا طریقہ۔
+
+<a id="verify-a-download"></a>
+
+### ڈاؤن لوڈ کی جانچ
+
+ہر ریلیز کے ساتھ ایک `SHA256SUMS` فائل، شامل سافٹ ویئر کی فہرست (`traffic66-sbom.cdx.json`، CycloneDX) اور GitHub Actions کا بِلڈ ماخذ ثبوت آتا ہے، جو ثابت کرتا ہے کہ آرکائیو اسی ریپوزٹری کے سورس سے بنا ہے۔ ڈاؤن لوڈ والے فولڈر میں:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows (PowerShell): `Get-FileHash traffic66-windows-amd64.zip` ہیش دکھاتا ہے؛ یہ `SHA256SUMS` میں اس فائل کی سطر کے برابر ہونا چاہیے۔ `gh attestation verify` کے لیے GitHub CLI درکار ہے اور یہ اختیاری ہے۔
+
+<a id="upgrade-and-roll-back"></a>
+
+### اپ گریڈ اور واپسی
+
+traffic66 روکیں، پوری ڈیٹا ڈائریکٹری کاپی کریں، پروگرام فائل بدلیں اور دوبارہ شروع کریں۔ Linux سروس کے طور پر:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+واپس جانے کے لیے traffic66 روکیں اور پرانا پروگرام اور کاپی کی ہوئی ڈیٹا ڈائریکٹری واپس رکھیں۔ کوئی ورژن نئے فارمیٹ میں لکھے ڈیٹا کا اندازہ نہیں لگاتا: وہ رک کر بتاتا ہے کہ کس ورژن نے اسے لکھا۔ اسے کسی اور `-data` ڈائریکٹری کے ساتھ چلائیں، یا نئے ورژن پر واپس جائیں۔ اگر ڈیٹا آخری بار کسی اور ورژن نے لکھا تھا تو ہر شروعات لاگ میں لکھتی ہے۔
+
+بجلی جانے یا `kill -9` کے بعد، اگلی شروعات فلو کی تفصیل سے پچھلے چند گھنٹوں کے خلاصے دوبارہ بناتی ہے، تاکہ 24 گھنٹے اور لمبے منظر میں کچھ کم نہ ہو، اور لاگ میں لکھتی ہے۔
+
+<a id="reverse-proxy"></a>
+
+### ریورس پراکسی
+
+اگر صفحے کا پتہ اس پتے سے نہ ملے جو traffic66 دیکھتا ہے تو traffic66 سائن اِن اور تبدیلیاں رد کر دیتا ہے، تاکہ کوئی دوسری ویب سائٹ آپ کے نام سے کام نہ کر سکے۔ ریورس پراکسی کے پیچھے، پراکسی سے براؤزر کا ہوسٹ نام آگے بھجوائیں (`Host`، `X-Forwarded-Host` یا `Forwarded` ہیڈر)، یا traffic66 کو اس کا عوامی پتہ بتائیں:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+ڈیفالٹ پورٹ (https کے لیے `:443`، http کے لیے `:80`) لکھیں یا چھوڑ دیں، دونوں چلتا ہے۔ traffic66 کو اپنے ہوسٹ نام کی جڑ پر ہونا چاہیے، `/traffic66/` جیسے پاتھ کے نیچے نہیں۔ اس وجہ سے کوئی درخواست رد ہو تو سائن اِن صفحہ اور باقی صفحات "پاس ورڈ غلط" کے بجائے یہی وجہ بتاتے ہیں۔ ویب UI کو اسی مشین تک رکھیں (`-addr 127.0.0.1:8066`)، تاکہ اس تک صرف پراکسی سے پہنچا جا سکے۔
+
+**nginx** (ڈیفالٹ `proxy_set_header Host $proxy_host;` اندرونی پتہ بھیجتا ہے، اس لیے اسے سیٹ کریں):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** ہوسٹ نام خود آگے بھیجتا ہے اور اس کے لیے سرٹیفکیٹ لیتا ہے:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** ہوسٹ نام خود آگے بھیجتا ہے (`passHostHeader` ڈیفالٹ میں آن)؛ فائل پرووائیڈر کے لیے ڈائنامک کنفیگریشن:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### نگرانی
+
+`/metrics` traffic66 کی اپنی حالت Prometheus فارمیٹ میں دیتا ہے: موصول، رد اور چھوڑے گئے ریکارڈ، ہر کلیکٹر پورٹ پر ڈیٹاگرام، لکھنے کی خرابیاں اور ڈسک کا استعمال۔ باقی ویب UI کی طرح اس کے لیے سائن اِن ضروری ہے؛ Prometheus کو الگ صارف دیں (`traffic66 passwd -user prometheus`) اور اس کا پاس ورڈ ڈالیں:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### کمانڈ لائن مدد
+
+`traffic66 help` کمانڈز کی فہرست دیتا ہے؛ `traffic66 help <کمانڈ>` یا `traffic66 <کمانڈ> -h` اس کمانڈ کے آپشن مثالوں کے ساتھ دکھاتا ہے۔
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

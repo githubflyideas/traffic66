@@ -22,6 +22,8 @@ Windows : décompressez `traffic66-windows-amd64.zip` et lancez `traffic66.exe` 
 
 macOS : lancez d'abord `xattr -dr com.apple.quarantine .` dans le dossier.
 
+Vérifier le téléchargement : `sha256sum -c SHA256SUMS --ignore-missing` ; mise à jour, retour arrière et proxy inverse dans le [manuel](MANUAL.fr.md#12-install-upgrade-reverse-proxy-monitoring).
+
 Ensuite :
 
 - Interface web : `http://<IP du serveur>:8066`. Elle écoute sur toutes les interfaces réseau.

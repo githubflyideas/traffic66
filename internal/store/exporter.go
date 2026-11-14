@@ -94,49 +94,10 @@ func (s *Store) PurgeExporter(exporter string) (PurgeSize, error) {
 	return done, nil
 }
 
-// rebuildSummaries recomputes r_ts, r_host and r_dim for [from, to) from the
-// flow records, the way the pipeline builds them (see pipeline.rollup):
-// duplicates left out, minutes for r_ts and hours for the rest. The rows
-// counted per interface (obsif, obsunk) are kept: they are keyed by device.
+// rebuildSummaries recomputes the overall summaries of [from, to); see
+// rebuildRange. s.wmu must be held.
 func (s *Store) rebuildSummaries(from, to time.Time) error {
-	src := fmt.Sprintf("(SELECT * FROM %s WHERE ts >= TIMESTAMP '%s' AND ts < TIMESTAMP '%s' AND NOT dup)", s.Source(from, to),
-		from.UTC().Format("2006-01-02 15:04:05"), to.UTC().Format("2006-01-02 15:04:05"))
-	sums := "sum(bytes)::UBIGINT, sum(wire)::UBIGINT, sum(pkts)::UBIGINT, sum(flows)::UBIGINT"
-	proto := "CASE proto WHEN 6 THEN 'tcp' WHEN 17 THEN 'udp' ELSE CAST(proto AS VARCHAR) END"
-	dims := `[
-		{'d': 'app', 'v': app, 'ok': true},
-		{'d': 'port', 'v': CAST(svc_port AS VARCHAR) || '/' || ` + proto + ` || chr(9) || app, 'ok': true},
-		{'d': 'country', 'v': CASE WHEN dir = ` + fmt.Sprint(DirInternal) + ` THEN '__internal__' ELSE coalesce(peer_cc, '') END, 'ok': true},
-		{'d': 'proto', 'v': CAST(proto AS VARCHAR), 'ok': true},
-		{'d': 'dir', 'v': CAST(dir AS VARCHAR), 'ok': true},
-		{'d': 'exporter', 'v': exporter, 'ok': true},
-		{'d': 'segment', 'v': coalesce(segment, ''), 'ok': true},
-		{'d': 'encap', 'v': CAST(encap AS VARCHAR), 'ok': true},
-		{'d': 'asn', 'v': CAST(peer_asn AS VARCHAR) || chr(9) || coalesce(peer_org, ''), 'ok': peer_asn <> 0}]`
-	win := "ts >= ? AND ts < ?"
-	stmts := []struct {
-		q    string
-		args []any
-	}{
-		{`DELETE FROM r_ts WHERE ` + win, []any{from, to}},
-		{`DELETE FROM r_host WHERE ` + win, []any{from, to}},
-		{`DELETE FROM r_dim WHERE ` + win + ` AND dim NOT IN ('obsif', 'obsunk')`, []any{from, to}},
-		{`INSERT INTO r_ts SELECT ts, app, ` + sums + ` FROM ` + src + ` GROUP BY ALL`, nil},
-		{`INSERT INTO r_host SELECT date_trunc('hour', ts), client, 1, cli_int, ` + sums + ` FROM ` + src + ` GROUP BY ALL`, nil},
-		{`INSERT INTO r_host SELECT date_trunc('hour', ts), server, 2, srv_int, ` + sums + ` FROM ` + src + ` GROUP BY ALL`, nil},
-		{`INSERT INTO r_dim SELECT date_trunc('hour', ts), x.d, x.v, ` + sums + ` FROM (SELECT *, unnest(list_filter(` + dims + `, x -> x.ok)) AS x FROM ` + src + `) GROUP BY ALL`, nil},
-	}
-	tx, err := s.DB.Begin()
-	if err != nil {
-		return err
-	}
-	for _, st := range stmts {
-		if _, err := tx.Exec(st.q, st.args...); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("rebuild summaries: %w", err)
-		}
-	}
-	return tx.Commit()
+	return s.rebuildRange(from, to)
 }
 
 // dropFromSegment rewrites one hourly file without a device's records, or
