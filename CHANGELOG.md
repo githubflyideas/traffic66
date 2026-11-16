@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.6.1
+
+- Settings: layout improvements.
+
 ## 2.6.0
 
 - Reverse proxy: default ports are ignored when matching the address, the standard `Forwarded` header is understood, and the new `-public-url` names the public address. A refused request says why instead of "wrong password".
