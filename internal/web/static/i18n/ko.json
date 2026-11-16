@@ -621,6 +621,8 @@
 "src.dir_no": "방향 필드(61) 없음: 샘플링 인터페이스를 트래픽으로 추정",
 "if.capture_only": "인터페이스 대조는 sFlow, NetFlow, IPFIX 장비의 플로와 인터페이스 카운터를 비교합니다. 이 컴퓨터 네트워크 카드의 로컬 캡처에는 장비 인터페이스와 카운터가 없어 여기서 비교할 것이 없습니다.",
 "nav.account": "계정",
+"nav.integrations": "연동",
+"integ.none": "이 에디션에서 사용할 수 있는 연동이 없습니다.",
 "acct.title_pw": "비밀번호 변경",
 "acct.old": "현재 비밀번호",
 "acct.new": "새 비밀번호",

@@ -621,6 +621,8 @@
 "src.dir_no": "sans flowDirection (61) : interface échantillonnée déduite du trafic",
 "if.capture_only": "Le contrôle des interfaces compare les flux aux compteurs d’interface des équipements sFlow, NetFlow et IPFIX. La capture locale sur la carte réseau de cette machine n’a ni interfaces ni compteurs d’équipement : il n’y a rien à comparer ici.",
 "nav.account": "Compte",
+"nav.integrations": "Intégrations",
+"integ.none": "Aucune intégration n’est disponible dans cette édition.",
 "acct.title_pw": "Changer le mot de passe",
 "acct.old": "Mot de passe actuel",
 "acct.new": "Nouveau mot de passe",

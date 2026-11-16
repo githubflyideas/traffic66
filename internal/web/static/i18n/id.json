@@ -621,6 +621,8 @@
 "src.dir_no": "tanpa flowDirection (61): antarmuka yang disampel ditebak dari trafik",
 "if.capture_only": "Pencocokan antarmuka membandingkan aliran dengan penghitung antarmuka perangkat sFlow, NetFlow, dan IPFIX. Tangkapan lokal di kartu jaringan mesin ini tidak punya antarmuka atau penghitung perangkat, jadi tidak ada yang dibandingkan di sini.",
 "nav.account": "Akun",
+"nav.integrations": "Integrasi",
+"integ.none": "Tidak ada integrasi yang tersedia di edisi ini.",
 "acct.title_pw": "Ubah kata sandi",
 "acct.old": "Kata sandi saat ini",
 "acct.new": "Kata sandi baru",

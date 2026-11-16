@@ -621,6 +621,8 @@
 "src.dir_no": "不带方向字段（61），采样接口按流量推断",
 "if.capture_only": "接口对账用来对比 sFlow、NetFlow、IPFIX 设备的流量和接口计数器。本机网卡抓包没有设备接口和计数器，所以这里没有可对比的内容。",
 "nav.account": "账户",
+"nav.integrations": "集成",
+"integ.none": "此版本暂无可用的集成。",
 "acct.title_pw": "修改密码",
 "acct.old": "当前密码",
 "acct.new": "新密码",

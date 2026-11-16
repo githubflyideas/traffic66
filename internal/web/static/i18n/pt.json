@@ -621,6 +621,8 @@
 "src.dir_no": "sem flowDirection (61): interface amostrada deduzida do tráfego",
 "if.capture_only": "A conferência de interfaces compara os fluxos com os contadores de interface de equipamentos sFlow, NetFlow e IPFIX. A captura local na placa de rede desta máquina não tem interfaces nem contadores de equipamento, então não há o que comparar aqui.",
 "nav.account": "Conta",
+"nav.integrations": "Integrações",
+"integ.none": "Não há integrações disponíveis nesta edição.",
 "acct.title_pw": "Alterar senha",
 "acct.old": "Senha atual",
 "acct.new": "Nova senha",

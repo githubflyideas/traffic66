@@ -621,6 +621,8 @@
 "src.dir_no": "without flowDirection (61): sampled interface inferred from traffic",
 "if.capture_only": "Interface check compares flows with the interface counters of sFlow, NetFlow and IPFIX devices. Local capture on this machine's network card has no device interfaces or counters, so there is nothing to compare here.",
 "nav.account": "Account",
+"nav.integrations": "Integrations",
+"integ.none": "No integrations are available in this edition.",
 "acct.title_pw": "Change password",
 "acct.old": "Current password",
 "acct.new": "New password",

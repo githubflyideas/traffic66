@@ -621,6 +621,8 @@
 "src.dir_no": "không có flowDirection (61): giao diện lấy mẫu được suy ra từ lưu lượng",
 "if.capture_only": "Kiểm tra giao diện so sánh luồng với bộ đếm giao diện của thiết bị sFlow, NetFlow và IPFIX. Bắt gói cục bộ trên card mạng của máy này không có giao diện thiết bị hay bộ đếm, nên ở đây không có gì để so sánh.",
 "nav.account": "Tài khoản",
+"nav.integrations": "Tích hợp",
+"integ.none": "Phiên bản này không có tích hợp nào.",
 "acct.title_pw": "Đổi mật khẩu",
 "acct.old": "Mật khẩu hiện tại",
 "acct.new": "Mật khẩu mới",

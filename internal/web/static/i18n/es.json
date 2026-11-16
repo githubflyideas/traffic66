@@ -621,6 +621,8 @@
 "src.dir_no": "sin flowDirection (61): interfaz muestreada deducida del tráfico",
 "if.capture_only": "La verificación de interfaces compara los flujos con los contadores de interfaz de equipos sFlow, NetFlow e IPFIX. La captura local en la tarjeta de red de este equipo no tiene interfaces ni contadores de dispositivo, así que aquí no hay nada que comparar.",
 "nav.account": "Cuenta",
+"nav.integrations": "Integraciones",
+"integ.none": "No hay integraciones disponibles en esta edición.",
 "acct.title_pw": "Cambiar contraseña",
 "acct.old": "Contraseña actual",
 "acct.new": "Nueva contraseña",

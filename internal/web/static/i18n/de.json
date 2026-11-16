@@ -621,6 +621,8 @@
 "src.dir_no": "ohne flowDirection (61): gesampelte Schnittstelle aus dem Traffic abgeleitet",
 "if.capture_only": "Die Schnittstellenprüfung vergleicht Flows mit den Schnittstellenzählern von sFlow-, NetFlow- und IPFIX-Geräten. Ein lokaler Mitschnitt auf der Netzwerkkarte dieses Rechners hat keine Geräteschnittstellen oder Zähler, daher gibt es hier nichts zu vergleichen.",
 "nav.account": "Konto",
+"nav.integrations": "Integrationen",
+"integ.none": "In dieser Edition sind keine Integrationen verfügbar.",
 "acct.title_pw": "Passwort ändern",
 "acct.old": "Aktuelles Passwort",
 "acct.new": "Neues Passwort",

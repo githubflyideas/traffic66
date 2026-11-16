@@ -348,7 +348,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['help', 'account', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'integrations', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 
 // How often a page redraws itself, by range. It follows the width of the
@@ -1163,10 +1163,9 @@ views.findings = async (el) => {
       <div class="seg" role="group"><button data-fd="open" aria-pressed="${!all}">${t('fd.open')}</button><button data-fd="all" aria-pressed="${all}">${t('fd.all')}</button></div></div></div>
     ${learning > Date.now() ? `<div class="verdict warn" style="margin:0 0 10px">${esc(t('fd.learning', {t: new Intl.DateTimeFormat(LANG, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(learning))}))}</div>` : ''}
     ${fs.length ? `<table class="fd">${findingRows(fs, true)}</table>` : `<div class="empty">${all ? t('fd.none') : status('ok', t('fd.none_open'))}</div>`}
-    <p class="fdnote">${esc(t('fd.note'))}</p></div><div class="panel c12" id="slPanel"></div></div>`;
+    <p class="fdnote">${esc(t('fd.note'))}</p></div></div>`;
   el.querySelectorAll('[data-fd]').forEach(b => b.onclick = () => { state.fd = b.dataset.fd; render(); });
   bindFindings(el);
-  await syslogPanel($('#slPanel'));
 };
 
 // The syslog feed: the findings above, sent on to the customer's SIEM as
@@ -2219,7 +2218,6 @@ views.sources = async (el) => {
         <label class="btn" style="cursor:pointer"><input type="file" id="licFile" accept=".json,application/json" hidden>${t('lic.choose')}</label>
         <button class="primary" id="licSave">${t('lic.install_btn')}</button>
         <span id="licMsg" style="font-size:13px"></span></div></div>`))}
-    ${admOnly('<div class="panel c12" id="embPanel"></div>')}
     ${admOnly(blocked.length ? panel('c12', t('blk.title'), t('blk.sub'), `<table><tr><th>${t('blk.col_addr')}</th><th>${t('blk.col_since')}</th><th class="num">${t('blk.col_dropped')}</th><th>${t('blk.col_note')}</th><th><span class="vh">#</span></th></tr>
       ${blocked.map(b => `<tr><td class="nw"><code>${esc(b.address)}</code></td>
         <td class="nw muted">${b.since ? esc(new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'short'}).format(new Date(b.since))) : ''}</td>
@@ -2257,7 +2255,6 @@ views.sources = async (el) => {
       loadStatus(); // the badge, the footer and the watermark all follow from it
     };
   }
-  if (adm()) embedPanel($('#embPanel'));
   const geoMsg = (ok, text) => { const m = $('#geoMsg'); m.style.color = ok === null ? '' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
   if (adm()) {
   const reblock = async (method, path, okMsg) => {
@@ -2331,14 +2328,23 @@ views.sources = async (el) => {
 // Settings has three tabs: the settings themselves, the inventory (the
 // names of addresses) and one's account. Capture files and offline mode
 // have only the account.
-const SET_TABS = [['sources', 'nav.sources'], ['names', 'src.names'], ['account', 'nav.account']];
-const SET_VIEWS = new Set(['sources', 'names', 'account']);
+const SET_TABS = [['sources', 'nav.sources'], ['names', 'src.names'], ['account', 'nav.account'], ['integrations', 'nav.integrations']];
+const SET_VIEWS = new Set(['sources', 'names', 'account', 'integrations']);
 const setTabs = cur => {
   const tabs = SET_TABS.filter(([v]) => v === 'account' || !(inSB() || offlineMode));
   return `<div class="seg settabs" role="tablist">${tabs.map(([v, k]) =>
     `<button role="tab" data-settab="${v}" aria-selected="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
 };
 document.addEventListener('click', e => { const b = e.target.closest('[data-settab]'); if (b) go(b.dataset.settab); });
+// Integrations: where traffic66 hands its results to other systems — the
+// findings to a SIEM over syslog, dashboards embedded in other pages.
+views.integrations = async (el) => {
+  el.innerHTML = `${setTabs('integrations')}<div class="grid"><div class="panel c12" id="slPanel"></div>${admOnly('<div class="panel c12" id="embPanel"></div>')}</div>`;
+  await syslogPanel($('#slPanel'));
+  if (adm()) await embedPanel($('#embPanel'));
+  const g = el.querySelector('.grid');
+  if (g && !g.children.length) g.innerHTML = `<div class="panel c12"><div class="empty">${t('integ.none')}</div></div>`;
+};
 views.names = async (el) => {
   const inv = await api('inventory').catch(() => ({text: ''}));
   el.innerHTML = `${setTabs('names')}<div class="grid">
