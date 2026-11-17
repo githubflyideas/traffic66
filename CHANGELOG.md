@@ -3,6 +3,11 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.6.2
+
+- Navigation and settings: layout improvements.
+- Registration status is shown under the logo.
+
 ## 2.6.1
 
 - Settings: layout improvements.
