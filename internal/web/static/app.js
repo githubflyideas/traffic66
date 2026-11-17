@@ -97,7 +97,7 @@ function showMarkNote() {
   box.innerHTML = `<div class="marknote-in">
     <h3></h3><p class="muted"></p><p class="small muted"></p>
     <div class="marknote-act"><button class="btn" data-close></button>
-    <a class="btn primary" href="#v=sources"></a></div></div>`;
+    <a class="btn primary" href="#v=license"></a></div></div>`;
   box.querySelector('h3').textContent = t('mark.note_title');
   box.querySelector('p.muted').textContent = t('mark.note_body');
   box.querySelector('p.small').textContent = markNotice;
@@ -348,7 +348,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['help', 'account', 'integrations', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'license', 'integrations', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 
 // How often a page redraws itself, by range. It follows the width of the
@@ -2210,14 +2210,6 @@ views.sources = async (el) => {
       ${selfStatus ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.checked')}</span> <span${selfStatus.implausible ? ' style="color:var(--warn-ink)"' : ''}>${esc(t('src.refused', {n: nf(selfStatus.implausible || 0)}))}</span> · ${esc(t('src.skewed', {n: nf(selfStatus.skewed || 0)}))}</p>` : ''}
       ${(d.stale || []).length ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.stale')}</span> ${d.stale.map(x => `<span class="tag">${esc(x.name || x.exporter)} / ${x.domain} · ${esc(x.proto)} · ${esc(ago(Date.parse(x.last_seen)))}</span>`).join(' ')}</p>` : ''}
       ${snmp ? `<p style="margin:6px 0 0;font-size:12.5px"><span class="muted">${t('src.snmp')}</span> ${snmp}</p>` : ''}`)}
-    ${admOnly(panel('c12', t('lic.install'), t('lic.install_sub'), `<div class="licbox">
-      ${lic?.registered ? `<p style="margin:0 0 4px"><b>${esc(t('lic.who'))}: ${esc(lic.customer || '—')}</b> <span class="tag">${esc(licenseeText(lic))}</span>${lic.tier ? ` <span class="tag">${esc(lic.tier)}</span>` : ''}</p>` : ''}
-      <p class="muted" style="margin:0 0 8px;font-size:13px">${esc(t('lic.id', {id: lic?.installation_id || '—'}))}</p>
-      <textarea class="inv" id="licText" spellcheck="false" placeholder="${esc(t('lic.paste'))}"></textarea>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
-        <label class="btn" style="cursor:pointer"><input type="file" id="licFile" accept=".json,application/json" hidden>${t('lic.choose')}</label>
-        <button class="primary" id="licSave">${t('lic.install_btn')}</button>
-        <span id="licMsg" style="font-size:13px"></span></div></div>`))}
     ${admOnly(blocked.length ? panel('c12', t('blk.title'), t('blk.sub'), `<table><tr><th>${t('blk.col_addr')}</th><th>${t('blk.col_since')}</th><th class="num">${t('blk.col_dropped')}</th><th>${t('blk.col_note')}</th><th><span class="vh">#</span></th></tr>
       ${blocked.map(b => `<tr><td class="nw"><code>${esc(b.address)}</code></td>
         <td class="nw muted">${b.since ? esc(new Intl.DateTimeFormat(LANG, {dateStyle: 'short', timeStyle: 'short'}).format(new Date(b.since))) : ''}</td>
@@ -2229,32 +2221,11 @@ views.sources = async (el) => {
       <h3 class="subhead">${t('geo.free')}</h3><p class="muted" style="font-size:12.5px;margin:0 0 6px">${t('geo.free_sub')}</p>
       <table><tr><th>${t('geo.col_db')}</th><th>${t('geo.col_holds')}</th><th>${t('geo.col_lic')}</th></tr>${freeRows}</table>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0">${t('geo.where')}</p>`)}
-    ${panel('c12', t('logo.title'), t('logo.sub'), `<div class="logoprev"><img id="logoPrev" src="/logo?v=${Date.now()}" alt="logo">
-      <div style="display:grid;gap:8px">${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent-fill);color:var(--on-accent);font-weight:600">${t('logo.upload')}<input type="file" id="logoFile" accept=".png,.svg,.jpg,.jpeg,.webp,.gif,image/*" hidden></label><button class="btn" id="logoReset">${t('logo.reset')}</button></div>`)}
-      ${admOnly(`<span class="muted" style="font-size:12.5px">${t('logo.hint')}</span>`)}<span id="logoMsg" style="font-size:13px"></span></div></div>`)}
   </div>`;
   // Installing a licence from the page. Until now the only way to register
   // was to put license.json into the data directory by hand, which means a
   // shell on the machine — a strange thing to ask of the one step that
   // turns a paying customer into a registered installation.
-  if (adm()) {
-    const licMsg = (ok, text) => { const m = $('#licMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
-    $('#licFile').onchange = async e => {
-      const f = e.target.files[0];
-      if (f) $('#licText').value = await f.text();
-      e.target.value = '';
-    };
-    $('#licSave').onclick = async () => {
-      const text = $('#licText').value.trim();
-      if (!text) { licMsg(false, t('lic.paste')); return; }
-      const res = await fetch('/api/license', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text})});
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) { licMsg(false, failText(res, j)); return; }
-      licMsg(true, t('src.saved'));
-      $('#licText').value = '';
-      loadStatus(); // the badge, the footer and the watermark all follow from it
-    };
-  }
   const geoMsg = (ok, text) => { const m = $('#geoMsg'); m.style.color = ok === null ? '' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
   if (adm()) {
   const reblock = async (method, path, okMsg) => {
@@ -2303,6 +2274,62 @@ views.sources = async (el) => {
       setTimeout(render, 1500);
     } catch (err) { msg.style.color = 'var(--crit)'; msg.textContent = String(err.message || err); }
   };
+  }
+};
+
+// Names: which addresses are what. It lives under asset management rather
+// than in the settings, because naming a host is the same kind of work as
+// recording a rack, and it is the one page there that an unregistered
+// installation keeps: a flow analyser that cannot tell you which address is
+// which is of little use, and that is not a feature to sell.
+// Settings has three tabs: the settings themselves, the inventory (the
+// names of addresses) and one's account. Capture files and offline mode
+// have only the account.
+const SET_TABS = [['sources', 'nav.sources'], ['names', 'src.names'], ['account', 'nav.account'], ['license', 'nav.license']];
+const SET_VIEWS = new Set(['sources', 'names', 'account', 'license']);
+const setTabs = cur => {
+  const tabs = SET_TABS.filter(([v]) => v === 'account' || v === 'license' || !(inSB() || offlineMode));
+  return `<div class="seg settabs" role="tablist">${tabs.map(([v, k]) =>
+    `<button role="tab" data-settab="${v}" aria-selected="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
+};
+document.addEventListener('click', e => { const b = e.target.closest('[data-settab]'); if (b) go(b.dataset.settab); });
+// Integrations: where traffic66 hands its results to other systems — the
+// findings to a SIEM over syslog, dashboards embedded in other pages.
+// Registration and purchase: installing a licence, and the logo a
+// registered installation shows.
+views.license = async (el) => {
+  el.innerHTML = `${setTabs('license')}<div class="grid">
+    ${admOnly(panel('c12', t('lic.install'), t('lic.install_sub'), `<div class="licbox">
+      ${lic?.registered ? `<p style="margin:0 0 4px"><b>${esc(t('lic.who'))}: ${esc(lic.customer || '—')}</b> <span class="tag">${esc(licenseeText(lic))}</span>${lic.tier ? ` <span class="tag">${esc(lic.tier)}</span>` : ''}</p>` : ''}
+      <p class="muted" style="margin:0 0 8px;font-size:13px">${esc(t('lic.id', {id: lic?.installation_id || '—'}))}</p>
+      <textarea class="inv" id="licText" spellcheck="false" placeholder="${esc(t('lic.paste'))}"></textarea>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <label class="btn" style="cursor:pointer"><input type="file" id="licFile" accept=".json,application/json" hidden>${t('lic.choose')}</label>
+        <button class="primary" id="licSave">${t('lic.install_btn')}</button>
+        <span id="licMsg" style="font-size:13px"></span></div></div>`))}
+    ${panel('c12', t('logo.title'), t('logo.sub'), `<div class="logoprev"><img id="logoPrev" src="/logo?v=${Date.now()}" alt="logo">
+      <div style="display:grid;gap:8px">${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="primary" style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:6px;background:var(--accent-fill);color:var(--on-accent);font-weight:600">${t('logo.upload')}<input type="file" id="logoFile" accept=".png,.svg,.jpg,.jpeg,.webp,.gif,image/*" hidden></label><button class="btn" id="logoReset">${t('logo.reset')}</button></div>`)}
+      ${admOnly(`<span class="muted" style="font-size:12.5px">${t('logo.hint')}</span>`)}<span id="logoMsg" style="font-size:13px"></span></div></div>`)}
+  </div>`;
+  if (adm()) {
+    const licMsg = (ok, text) => { const m = $('#licMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
+    $('#licFile').onchange = async e => {
+      const f = e.target.files[0];
+      if (f) $('#licText').value = await f.text();
+      e.target.value = '';
+    };
+    $('#licSave').onclick = async () => {
+      const text = $('#licText').value.trim();
+      if (!text) { licMsg(false, t('lic.paste')); return; }
+      const res = await fetch('/api/license', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text})});
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { licMsg(false, failText(res, j)); return; }
+      licMsg(true, t('src.saved'));
+      $('#licText').value = '';
+      loadStatus(); // the badge, the footer and the watermark all follow from it
+    };
+  }
+  if (adm()) {
   const logoDone = (ok, text) => {
     const m = $('#logoMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text;
     if (ok) { const v = Date.now(), dk = isDarkTheme() ? 1 : 0; $('#logoPrev').src = '/logo?v=' + v; document.querySelectorAll('img.logo').forEach(i => i.src = `/logo?dark=${dk}&v=${v}`); }
@@ -2319,27 +2346,8 @@ views.sources = async (el) => {
   };
   }
 };
-
-// Names: which addresses are what. It lives under asset management rather
-// than in the settings, because naming a host is the same kind of work as
-// recording a rack, and it is the one page there that an unregistered
-// installation keeps: a flow analyser that cannot tell you which address is
-// which is of little use, and that is not a feature to sell.
-// Settings has three tabs: the settings themselves, the inventory (the
-// names of addresses) and one's account. Capture files and offline mode
-// have only the account.
-const SET_TABS = [['sources', 'nav.sources'], ['names', 'src.names'], ['account', 'nav.account'], ['integrations', 'nav.integrations']];
-const SET_VIEWS = new Set(['sources', 'names', 'account', 'integrations']);
-const setTabs = cur => {
-  const tabs = SET_TABS.filter(([v]) => v === 'account' || !(inSB() || offlineMode));
-  return `<div class="seg settabs" role="tablist">${tabs.map(([v, k]) =>
-    `<button role="tab" data-settab="${v}" aria-selected="${cur === v}">${esc(t(k))}</button>`).join('')}</div>`;
-};
-document.addEventListener('click', e => { const b = e.target.closest('[data-settab]'); if (b) go(b.dataset.settab); });
-// Integrations: where traffic66 hands its results to other systems — the
-// findings to a SIEM over syslog, dashboards embedded in other pages.
 views.integrations = async (el) => {
-  el.innerHTML = `${setTabs('integrations')}<div class="grid"><div class="panel c12" id="slPanel"></div>${admOnly('<div class="panel c12" id="embPanel"></div>')}</div>`;
+  el.innerHTML = `<div class="grid"><div class="panel c12" id="slPanel"></div>${admOnly('<div class="panel c12" id="embPanel"></div>')}</div>`;
   await syslogPanel($('#slPanel'));
   if (adm()) await embedPanel($('#embPanel'));
   const g = el.querySelector('.grid');
@@ -2497,7 +2505,7 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'names']);
+const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'names', 'license', 'integrations']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
@@ -2616,6 +2624,8 @@ async function loadStatus() {
       markNotice = L.notice || '';
       applyMark();
     }
+    { const m = $('#brandMeta'), st = !L ? '' : L.registered ? 'reg' : L.kind === 'expired' ? 'exp' : 'unreg';
+      m.innerHTML = `<span>v${esc(s.version)}</span>${st ? `<span class="bm-${st}">${esc(t('lic.short_' + st))}</span>` : ''}`; }
     $('#verNo').textContent = 'v' + s.version + (s.build && s.build !== 'official' ? ' · ' + s.build : '');
     if (s.now) clockSkew = s.now - Date.now();
     selfStatus = s;

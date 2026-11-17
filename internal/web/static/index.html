@@ -12,7 +12,7 @@
 <body>
 <div class="app" id="app" hidden>
 <aside>
-  <div class="brand"><img class="logo" src="/logo" alt="traffic66"></div>
+  <div class="brand"><div class="brandmeta" id="brandMeta"></div><img class="logo" src="/logo" alt="traffic66"></div>
   <div class="pick"><select id="lang" aria-label="Language"></select><button type="button" id="theme"><i></i><span></span></button></div>
   <nav class="dash" id="nav" aria-label="Dashboards">
     <button data-v="overview"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span data-i="nav.overview"></span></button>
@@ -25,6 +25,7 @@
     <button data-v="findings"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg><span data-i="nav.findings"></span><span class="badge crit" id="findBadge" hidden></span></button>
     <button data-v="threats"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg><span data-i="nav.threats"></span></button>
     <button data-v="geo"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg><span data-i="nav.geo"></span></button>
+    <button data-v="integrations"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0z"/><path d="M12 16v5"/></svg><span data-i="nav.integrations"></span></button>
     <hr>
     <button data-v="sources"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span data-i="nav.sources"></span><span class="badge" id="srcBadge" hidden></span></button>
     <button data-v="sandbox"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg><span data-i="nav.sandbox"></span></button>
@@ -67,6 +68,7 @@
     <section class="view" id="v-cleanup"></section>
     <section class="view" id="v-account"></section>
     <section class="view" id="v-integrations"></section>
+<section class="view" id="v-license"></section>
     <section class="view" id="v-help"></section>
     <section class="view" id="v-sandbox"></section>
     <section class="view" id="v-ifaces"></section>
