@@ -67,7 +67,7 @@ type sfKey struct {
 type sfState struct {
 	lastPool, lastSeq, lastDrops uint32
 	init                         bool
-	winPool, winRecv             float64
+	winMiss, winRecv             float64
 	evalAt                       time.Time
 	eff                          float64
 	rate                         uint32
@@ -307,52 +307,47 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 	return true
 }
 
-// update tracks the effective sampling rate: packets offered for sampling
-// (sample_pool) per sample actually received. Lost datagrams and samples
-// dropped by the agent both raise it, compensating for the missing data.
+// update tracks the effective sampling rate: the configured rate, raised
+// by the samples that never arrived, lost on the way (gaps in the sequence
+// numbers) or dropped by the agent itself (its drop counter). The agent's
+// sample_pool is not used: vendors count it differently (H3C among them),
+// and a rate derived from it scaled a 1:10240 port by about 1:12200,
+// a fifth more traffic than the interface carried.
 func (st *sfState) update(s *sflow.FlowSample, now time.Time) bool {
 	// the same sample delivered again adds nothing
 	if st.init && s.Seq == st.lastSeq && s.Pool == st.lastPool {
 		return false
 	}
 	if st.init && s.Rate != st.rate {
-		// The agent's configured rate changed. Everything measured so far
-		// was measured against the old one, and the effective rate is only
-		// recomputed every 30 seconds and after 30 more samples, so
-		// carrying it over scaled the new samples by the old rate for up to
-		// half a minute — ten times the traffic when 1 in 1000 became 1 in
-		// 100, and a tenth of it the other way. Dropping it falls straight
-		// back to the rate the agent now declares, which the decoder has
-		// already put on the record, until there is enough to measure
-		// again.
+		// The agent's configured rate changed: what was measured against
+		// the old one is dropped, so the new samples are not scaled by it,
+		// and the declared rate applies until there is enough to measure.
 		st.eff = 0
-		st.winPool, st.winRecv = 0, 0
+		st.winMiss, st.winRecv = 0, 0
 		st.evalAt = now
 	}
 	st.rate = s.Rate
 	if st.init {
-		dp := s.Pool - st.lastPool
-		if dp < 1<<31 {
-			st.winPool += float64(dp)
-			st.winRecv++
-		}
+		st.winRecv++
 		if gap := s.Seq - st.lastSeq - 1; gap > 0 && gap < 1<<20 {
 			st.lost += uint64(gap)
+			st.winMiss += float64(gap)
 		}
 		if dd := s.Drops - st.lastDrops; dd < 1<<31 {
 			st.drops += uint64(dd)
+			st.winMiss += float64(dd)
 		}
 	}
 	st.init = true
 	st.lastPool, st.lastSeq, st.lastDrops = s.Pool, s.Seq, s.Drops
 	if now.Sub(st.evalAt) >= 30*time.Second && st.winRecv >= 30 {
-		e := st.winPool / st.winRecv
 		cfg := float64(s.Rate)
-		if cfg > 0 && (e < cfg*0.5 || e > cfg*4) {
-			e = cfg // implausible: agent resets or pool semantics differ
+		e := cfg * (st.winRecv + st.winMiss) / st.winRecv
+		if e > cfg*4 {
+			e = cfg // implausible: a counter reset, not three quarters lost
 		}
 		st.eff = e
-		st.winPool, st.winRecv = 0, 0
+		st.winMiss, st.winRecv = 0, 0
 		st.evalAt = now
 	}
 	return true
