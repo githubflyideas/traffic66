@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.6.5
+
+- sFlow: traffic is scaled by the rate the switch declares, raised only by samples that were lost; some switches were counted about a fifth too high.
+
 ## 2.6.4
 
 - Interfaces and data sources: clearer lists, fewer false warnings.
