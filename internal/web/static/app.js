@@ -1292,13 +1292,13 @@ views.traffic = async (el) => {
   const [da, db] = await Promise.all([api('rings', {inner: ra[0], outer: ra[1]}), api('rings', {inner: 'service', outer: 'server'})]);
   await lookupNames([...da.inner, ...da.outer, ...db.inner, ...db.outer].map(r => r.k).filter(k => /^[0-9a-f.:]+$/i.test(k)));
   const swap = (id, cur, opts) => `<div class="seg" role="group">${opts.map(([v, lab]) => `<button data-${id}="${v}" aria-pressed="${cur === v}">${esc(lab)}</button>`).join('')}</div>`;
-  // registered: the top clients and servers over time, above the rings
+  // registered: the top clients and servers over time, below the rings
   const tops = lic?.registered ? await Promise.all(['client', 'server'].map(by => seriesData(by, 'wire').catch(() => null))) : null;
-  el.innerHTML = `${tops ? `<div class="grid" style="margin-bottom:16px">${seriesPanel('tsCl', 'c12', `${t('ov.top_clients')} · ${t('ch.bps')}`)}${seriesPanel('tsSv', 'c12', `${t('topn.top_servers')} · ${t('ch.bps')}`)}</div>` : ''}<div class="grid">
+  el.innerHTML = `<div class="grid">
     <div class="panel c6"><div class="ph"><h2>${t('rg.hosts')}</h2><div class="tools" style="margin-inline-start:auto">${swap('ra', ra[0], [['server', t('rg.in_server')], ['client', t('rg.in_client')]])}</div></div>
       <div class="sub" style="margin:-4px 0 6px">${esc(t(ra[0] === 'server' ? 'rg.hosts_sub_s' : 'rg.hosts_sub_c'))}</div><div class="rings" id="rgA"></div></div>
     <div class="panel c6"><div class="ph"><h2>${t('rg.svc_title')}</h2></div>
-      <div class="sub" style="margin:-4px 0 6px">${esc(t('rg.svc_one'))}</div><div class="rings" id="rgB"></div></div></div>`;
+      <div class="sub" style="margin:-4px 0 6px">${esc(t('rg.svc_one'))}</div><div class="rings" id="rgB"></div></div></div>${tops ? `<div class="grid" style="margin-top:16px">${seriesPanel('tsCl', 'c12', `${t('ov.top_clients')} · ${t('ch.bps')}`)}${seriesPanel('tsSv', 'c12', `${t('topn.top_servers')} · ${t('ch.bps')}`)}</div>` : ''}`;
   el.querySelectorAll('[data-ra]').forEach(b => b.onclick = () => { state.ra = b.dataset.ra; render(); });
   if (tops) { fillSeries('tsCl', tops[0], 'client', 'wire', true); fillSeries('tsSv', tops[1], 'server', 'wire', true); }
   drawRings($('#rgA'), da, ra[0], ra[1]);
