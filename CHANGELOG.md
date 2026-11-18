@@ -3,6 +3,12 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.6.4
+
+- Interfaces and data sources: clearer lists, fewer false warnings.
+- Interface reconciliation shows total bandwidth on top.
+- Header: version and registration on two lines.
+
 ## 2.6.3
 
 - Top 66 and traffic details: new views for registered installations.
