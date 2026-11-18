@@ -520,7 +520,20 @@ func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
 			active[si.Exporter] = true
 		}
 	}
+	// a device exporting under several observation domains (one per line
+	// card) can have domains that never carry a flow record: their
+	// sequence numbers then read as total loss. While another domain of
+	// the device carries records, those rows say nothing true and are left out.
+	carries := map[string]bool{}
 	for _, si := range srcs {
+		if si.Records > 0 {
+			carries[si.Exporter+"|"+si.Proto] = true
+		}
+	}
+	for _, si := range srcs {
+		if si.Records == 0 && carries[si.Exporter+"|"+si.Proto] {
+			continue
+		}
 		o := sourceOut{SourceInfo: si, Status: "ok"}
 		o.RecPS = srcRate.ps[srcKey(si)]
 		if a, err := netip.ParseAddr(si.Exporter); err == nil {

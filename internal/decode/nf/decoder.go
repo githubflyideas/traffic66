@@ -253,7 +253,9 @@ func (d *Decoder) Stats() []Stats {
 		switch {
 		case st.Manual:
 			st.SamplingState = "manual"
-		case s.assumed:
+		case s.assumed && len(st.Rates) == 0 && d.byAddr[s.stats.Exporter] == 0:
+			// counted 1:1 at first, but a rate has been declared since:
+			// what arrives now is counted with it
 			st.SamplingState = "assumed1"
 		case len(s.pending) > 0:
 			st.SamplingState = "waiting"

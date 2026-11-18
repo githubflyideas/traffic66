@@ -2100,7 +2100,11 @@ function ifVerdict(r, rc, dirIn) {
 views.ifaces = async (el) => {
   const d = await api('ifaces');
   (d.ifaces || []).forEach(f => ifaceNames.set(f.exporter + '/' + f.ifindex, ifName(f) + ' · ' + (f.device || f.exporter)));
-  const list = (d.ifaces || []).slice().sort((a, b) => (!!a.peer - !!b.peer) || (!!b.has_counters - !!a.has_counters) || ((devKind(b) === 'warn') - (devKind(a) === 'warn')));
+  // only the interfaces flows were sampled on: the other ends of those
+  // flows hold no more than what passed the sampled ones, and listing them
+  // reads as interfaces that were not configured
+  const sampled = (d.ifaces || []).filter(f => !f.peer);
+  const list = (sampled.length ? sampled : d.ifaces || []).slice().sort((a, b) => (!!a.peer - !!b.peer) || (!!b.has_counters - !!a.has_counters) || ((devKind(b) === 'warn') - (devKind(a) === 'warn')));
   if (!list.length) {
     // local capture has no device interfaces or counters to compare with
     const src = await api('sources').catch(() => ({}));

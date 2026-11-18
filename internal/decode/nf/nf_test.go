@@ -172,3 +172,27 @@ func FuzzDecode(f *testing.F) {
 		d.Decode(b, exp, base)
 	})
 }
+
+// A device that declares its rate only after the first records were
+// counted 1:1 is not reported as unsampled from then on.
+func TestAssumedClearsOnceRateDeclared(t *testing.T) {
+	d := NewDecoder()
+	m := encode.NewV9()
+	m.AddTemplate(v9Data)
+	m.AddData(256, []encode.Values{v9Rec(700)})
+	d.Decode(m.V9(60000, uint32(base.Unix()), 1, 0), exp, base)
+	d.Flush(base.Add(10 * time.Minute))
+	m = encode.NewV9()
+	m.AddTemplate(v9Opt)
+	m.AddData(257, []encode.Values{{encode.U(0, 4), encode.U(1, 1), encode.U(1000, 4)}})
+	d.Decode(m.V9(61000, uint32(base.Unix())+600, 2, 0), exp, base.Add(10*time.Minute))
+	m = encode.NewV9()
+	m.AddData(256, []encode.Values{v9Rec(700)})
+	res, _ := d.Decode(m.V9(62000, uint32(base.Unix())+601, 3, 0), exp, base.Add(10*time.Minute))
+	if len(res.Records) != 1 || res.Records[0].Mult != 1000 {
+		t.Fatalf("got %+v", res.Records)
+	}
+	if st := d.Stats()[0]; st.SamplingState != "known" {
+		t.Fatalf("state %s", st.SamplingState)
+	}
+}
