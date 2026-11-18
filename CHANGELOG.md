@@ -3,6 +3,11 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.6.3
+
+- Top 66 and traffic details: new views for registered installations.
+- Overview: simplified.
+
 ## 2.6.2
 
 - Navigation and settings: layout improvements.
