@@ -2114,11 +2114,18 @@ views.ifaces = async (el) => {
   const fil = [...state.f, {f: 'iface', v: key, neg: false}];
   const [ri, ro, pi, po, rc] = await Promise.all([['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']].map(([by, measure]) => api('series', {by, measure, top: 20, dup: 1}, fil))
     .concat([api('recon', {exporter: state.ifc.exporter, ifindex: state.ifc.ifindex})]));
+  // the overview's bandwidth (in + out) chart, on top of the page
+  const ov = await api('overview').catch(() => null), os = ov?.series || {times: [], names: [], values: []};
+  const oAreas = os.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: os.values[i]}));
+  const oLines = ov?.baseline && ov.basis ? [{name: baseText(ov, 'line'), color: 'var(--base)', dash: true, keep: true, data: ov.baseline}] : [];
   const pick = s => { const i = (s.names || []).indexOf(key); return i < 0 ? (s.times || []).map(() => 0) : s.values[i]; };
   const name = `${ifName(sel)} · ${sel.device || sel.exporter}`;
   const r = rc.recon || {}, ctr = !!r.has_counters;
   const leg = withCtr => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span>${withCtr ? `<span><i class="line dash" style="border-top:2px dashed var(--ink-2);background:none"></i>${t('if.counter')}</span>` : ''}</div>`;
-  el.innerHTML = `<div class="grid" style="margin-bottom:16px">
+  el.innerHTML = `<div class="grid" style="margin-bottom:16px"><div class="panel c12"><div class="ph"><h2>${t('ov.bw_all')}</h2><span class="sub">${oLines.length ? esc(baseText(ov, 'sub')) : ''}</span></div>
+      <div class="chart" id="ifTot" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
+      <div class="legend">${oAreas.map((a, i) => `<span><i style="background:${a.color}"></i>${os.names[i] === '__other__' ? esc(a.name) : V('app', os.names[i], a.name)}</span>`).join('')}${oLines.length ? `<span><i class="dash"></i>${esc(oLines[0].name)}</span>` : ''}</div></div></div>
+    <div class="grid" style="margin-bottom:16px">
     ${panel('c12', `${esc(name)} · ${t('ch.bps')}`, sel.peer ? esc(t('if.peer_note')) : '', `<div class="chart" id="ifB" style="height:270px" aria-label="${esc(t('ch.bps'))}"></div>${leg(ctr)}`)}
     ${panel('c12', `${esc(name)} · ${t('ch.pps')}`, '', `<div class="chart" id="ifP" style="height:270px" aria-label="${esc(t('ch.pps'))}"></div>${leg(false)}`)}</div>
     <div class="grid">
@@ -2136,6 +2143,7 @@ views.ifaces = async (el) => {
   const lb = [{name: t('if.in'), color: IF_IN, data: pick(ri), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(ro), fill: true}];
   if (ctr && r.times && r.times.length) lb.push({name: t('if.in') + ' · ' + t('if.counter'), color: IF_IN, dash: true, keep: true, data: onTimes(ri.times, r.in_counter)},
     {name: t('if.out') + ' · ' + t('if.counter'), color: IF_OUT, dash: true, keep: true, data: onTimes(ri.times, r.out_counter)});
+  tsChart($('#ifTot'), {times: os.times, areas: oAreas, lines: oLines, settledTo: os.settled_to, dataFrom: os.data_from});
   tsChart($('#ifB'), {times: ri.times, settledTo: ri.settled_to, dataFrom: ri.data_from, lines: lb});
   tsChart($('#ifP'), {times: pi.times, settledTo: pi.settled_to, dataFrom: pi.data_from, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
   el.querySelectorAll('.iflist button[data-e]').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
@@ -2622,7 +2630,8 @@ async function loadStatus() {
       applyMark();
     }
     { const m = $('#brandMeta'), st = !L ? '' : L.registered ? 'reg' : L.kind === 'expired' ? 'exp' : 'unreg';
-      m.innerHTML = `<span>v${esc(s.version)}</span>${st ? `<span class="bm-${st}">${esc(t('lic.short_' + st))}</span>` : ''}`; }
+      const who = L?.registered && L.customer ? ' · ' + L.customer : '';
+      m.innerHTML = `<div class="bm-ver">v${esc(s.version)}</div>${st ? `<div class="bm-st bm-${st}" title="${esc(t('lic.short_' + st) + who)}">${esc(t('lic.short_' + st) + who)}</div>` : ''}`; }
     $('#verNo').textContent = 'v' + s.version + (s.build && s.build !== 'official' ? ' · ' + s.build : '');
     if (s.now) clockSkew = s.now - Date.now();
     selfStatus = s;
