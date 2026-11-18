@@ -985,8 +985,7 @@ views.overview = async (el) => {
   const ifk = state.ifv && state.ifv !== 'all' ? state.ifv : (ifs?.default || ((ifl.find(f => !f.peer) || ifl[0]) ? ikey(ifl.find(f => !f.peer) || ifl[0]) : ''));
   const ifSel = ifl.find(f => ikey(f) === ifk);
   const viaIf = ifk && !inSB();
-  const [iIn, iOut, dirSeries] = await Promise.all([
-    ...(viaIf ? ['if_in', 'if_out'].map(by => api('series', {by, measure: 'wire', top: 20, dup: 1}, [...state.f, {f: 'iface', v: ifk, neg: false}]).catch(() => null)) : [null, null]),
+  const [dirSeries] = await Promise.all([
     od ? api('series', {by: 'app', measure: 'wire', top: 8, dup: 1}, [...state.f, viaIf ? {f: od === 'inbound' ? 'iface_in' : 'iface_out', v: ifk, neg: false} : {f: 'bytes', v: od === 'inbound' ? 'in' : 'out', neg: false}]).catch(() => null) : null]);
   const tot = d.totals, base = d.base_totals, basis = d.basis;
   // a baseline that was nearly idle gives figures like +57,695%: more than
@@ -1022,9 +1021,6 @@ views.overview = async (el) => {
       <div class="kpi"><div class="lab">${t('kpi.peers')}</div><div class="n">${nf(tot.peers)}</div><div class="d muted">${esc(t('kpi.countries', {n: nf(tot.countries)}))}</div></div>
       <div class="kpi"><div class="lab">${t('kpi.accuracy')}</div><div class="n">${acc.n}</div><div class="d">${acc.kind ? status(acc.kind, acc.d) : `<span class="muted">${esc(acc.d)}</span>`}</div></div>
     </div></div>
-    ${iIn ? `<div class="panel c12"><div class="ph"><h2>${t('if.bw')} · ${esc(ifSel ? ifName(ifSel) : ifk)}${ifSel?.tag ? `<span class="iftag">${esc(ifSel.tag)}</span>` : ''}</h2><span class="sub">${esc(t('ov.if_sub'))}</span></div>
-      <div class="chart" id="chIf" style="height:220px" aria-label="${esc(t('if.bw'))}"></div>
-      <div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span></div></div>` : ''}
     <div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[od])}</h2><span class="sub">${od && viaIf ? esc(ifSel ? ifName(ifSel) : ifk) : lines.length ? esc(baseText(d, 'sub')) : ''}</span>
       <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'if.in'], ['outbound', 'if.out']].map(([k, l]) => `<button data-od="${k}" aria-pressed="${od === k}">${t(l)}</button>`).join('')}</div></div>
       <div class="chart" id="chStack" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
@@ -1042,10 +1038,6 @@ views.overview = async (el) => {
   const dirWord = od && t(od === 'inbound' ? 'if.in' : 'if.out');
   tsChart($('#chStack'), {times: series.times, areas, lines, settledTo: series.settled_to, dataFrom: series.data_from,
     empty: od && viaIf ? esc(t('ov.dir_empty', {if: ifSel ? ifName(ifSel) : ifk, d: /^[a-z]/i.test(dirWord) ? dirWord.toLocaleLowerCase(LANG) : dirWord})) : ''});
-  if (iIn) {
-    const pk = s => { const i = (s?.names || []).indexOf(ifk); return i < 0 ? (s?.times || []).map(() => 0) : s.values[i]; };
-    tsChart($('#chIf'), {times: iIn.times, settledTo: iIn.settled_to, dataFrom: iIn.data_from, lines: [{name: t('if.in'), color: IF_IN, data: pk(iIn), fill: true}, {name: t('if.out'), color: IF_OUT, data: pk(iOut), fill: true}]});
-  }
   el.querySelectorAll('[data-od]').forEach(b => b.onclick = () => { state.od = b.dataset.od; render(); });
   bindFindings(el);
   donut($('#dDir'), dirParts, 'dir');
@@ -1240,7 +1232,7 @@ function seriesValue(by, k) {
 }
 const seriesPanel = (id, cls, title, sub = '') => `<div class="panel ${cls}" id="${id}"><div class="ph"><h2>${title}</h2><span class="sub">${sub}</span></div>
   <div class="chart" style="height:200px" aria-label="${esc(title)}"></div><div class="legend"></div></div>`;
-function fillSeries(id, d, by, measure) {
+function fillSeries(id, d, by, measure, noTotals) {
   const el = document.getElementById(id); if (!el || !d) return;
   const pk = measure === 'pkts';
   if (!d.names.length) { el.querySelector('.chart').innerHTML = `<div class="empty">${emptyText()}</div>`; return; }
@@ -1251,8 +1243,8 @@ function fillSeries(id, d, by, measure) {
   const areas = all.filter(a => !(hideOther && a.n === '__other__'));
   tsChart(el.querySelector('.chart'), {times: d.times, areas, settledTo: d.settled_to, dataFrom: d.data_from, fmtV: pk ? fmtPps : fmtBps});
   el.querySelector('.legend').innerHTML = all.map(a => {
-    const [f, v] = seriesValue(by, a.n), tot = a.tot == null ? '' : pk ? nf(a.tot) : fmtBytes(a.tot);
-    if (a.n === '__other__') return `<span>${hideOther ? '' : `<i style="background:${a.color}"></i>`}${esc(hideOther ? t('ch.rest') : a.name)}<span class="muted">${tot}</span></span>`;
+    const [f, v] = seriesValue(by, a.n), tot = a.tot == null || noTotals ? '' : pk ? nf(a.tot) : fmtBytes(a.tot);
+    if (a.n === '__other__') return noTotals && hideOther ? '' : `<span>${hideOther ? '' : `<i style="background:${a.color}"></i>`}${esc(hideOther ? t('ch.rest') : a.name)}<span class="muted">${tot}</span></span>`;
     return `<span><i style="background:${a.color}"></i>${V(f, v, a.name)}<span class="muted">${tot}</span></span>`;
   }).join('');
 }
@@ -1300,12 +1292,15 @@ views.traffic = async (el) => {
   const [da, db] = await Promise.all([api('rings', {inner: ra[0], outer: ra[1]}), api('rings', {inner: 'service', outer: 'server'})]);
   await lookupNames([...da.inner, ...da.outer, ...db.inner, ...db.outer].map(r => r.k).filter(k => /^[0-9a-f.:]+$/i.test(k)));
   const swap = (id, cur, opts) => `<div class="seg" role="group">${opts.map(([v, lab]) => `<button data-${id}="${v}" aria-pressed="${cur === v}">${esc(lab)}</button>`).join('')}</div>`;
-  el.innerHTML = `<div class="grid">
+  // registered: the top clients and servers over time, above the rings
+  const tops = lic?.registered ? await Promise.all(['client', 'server'].map(by => seriesData(by, 'wire').catch(() => null))) : null;
+  el.innerHTML = `${tops ? `<div class="grid" style="margin-bottom:16px">${seriesPanel('tsCl', 'c12', `${t('ov.top_clients')} · ${t('ch.bps')}`)}${seriesPanel('tsSv', 'c12', `${t('topn.top_servers')} · ${t('ch.bps')}`)}</div>` : ''}<div class="grid">
     <div class="panel c6"><div class="ph"><h2>${t('rg.hosts')}</h2><div class="tools" style="margin-inline-start:auto">${swap('ra', ra[0], [['server', t('rg.in_server')], ['client', t('rg.in_client')]])}</div></div>
       <div class="sub" style="margin:-4px 0 6px">${esc(t(ra[0] === 'server' ? 'rg.hosts_sub_s' : 'rg.hosts_sub_c'))}</div><div class="rings" id="rgA"></div></div>
     <div class="panel c6"><div class="ph"><h2>${t('rg.svc_title')}</h2></div>
       <div class="sub" style="margin:-4px 0 6px">${esc(t('rg.svc_one'))}</div><div class="rings" id="rgB"></div></div></div>`;
   el.querySelectorAll('[data-ra]').forEach(b => b.onclick = () => { state.ra = b.dataset.ra; render(); });
+  if (tops) { fillSeries('tsCl', tops[0], 'client', 'wire', true); fillSeries('tsSv', tops[1], 'server', 'wire', true); }
   drawRings($('#rgA'), da, ra[0], ra[1]);
   drawRings($('#rgB'), db, 'service', null);  // one ring: the services
 };
@@ -1399,8 +1394,10 @@ views.topn = el => {
 async function talkers(el) {
   const [cl, srv, ov] = await Promise.all([api('topn', {dim: 'client', limit: 33}), api('topn', {dim: 'server', limit: 33}), api('overview')]);
   const tot = ov.totals || {};
+  // registered: each row is shaded by its share of all traffic
+  const shade = !!lic?.registered && tot.wire > 0;
   const table = (rows, head, f) => `<table class="talk"><tr><th><span class="vh">#</span></th><th>${t(head)}</th><th class="num">${t('col.traffic')}</th><th class="num">${t('col.pkts')}</th><th class="num">${t('col.flows')}</th></tr>
-    ${(rows || []).map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}
+    ${(rows || []).map((r, i) => `<tr${shade ? ` class="shade" style="--sh:${(100 * r.wire / tot.wire).toFixed(2)}%"` : ''}><td class="rank">${i + 1}</td><td>${ipCell(r.key, f)}</td><td class="num">${fmtBytes(r.wire)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="5" class="empty">${emptyText()}</td></tr>`}
     <tr class="sum"><td></td><td>${t('topn.all')}</td><td class="num">${fmtBytes(tot.wire)}</td><td class="num">${nf(tot.pkts)}</td><td class="num">${nf(tot.flows)}</td></tr></table>`;
   el.innerHTML = `<div class="grid">
     <div class="c12"><div style="display:inline-block">${modeSeg()}</div></div>

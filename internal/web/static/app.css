@@ -603,3 +603,7 @@ dialog.embdlg{width:min(620px,96vw)}
 
 .vh{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .manual li a{display:inline-block;min-height:24px}
+
+/* share of all traffic behind a row (registered) */
+table.talk tr.shade{background:linear-gradient(to right,color-mix(in srgb,var(--accent) 22%,transparent) var(--sh),transparent var(--sh))}
+[dir=rtl] table.talk tr.shade{background:linear-gradient(to left,color-mix(in srgb,var(--accent) 22%,transparent) var(--sh),transparent var(--sh))}
