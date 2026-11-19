@@ -353,9 +353,11 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 // while the gaps say most samples went missing, the pool is believed.
 func (st *sfState) update(s *sflow.FlowSample, now time.Time) bool {
 	if !st.init {
+		// The first sample opens the window but is not part of it: the
+		// samples lost before it are unknown, and counting it without them
+		// would read the loss rate one gap too low.
 		st.init, st.rate = true, s.Rate
 		st.restart(s)
-		st.winRecv++
 		return true
 	}
 	if s.Rate != st.rate {
@@ -409,9 +411,13 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) bool {
 		st.mark(s)
 	}
 	st.winRecv++
-	if now.Sub(st.evalAt) >= 30*time.Second && st.winRecv >= 30 {
-		cfg := float64(st.rate)
-		e := cfg * (st.winRecv + st.winMiss) / st.winRecv
+	if now.Sub(st.evalAt) < 30*time.Second {
+		return true
+	}
+	cfg := float64(st.rate)
+	e := cfg * (st.winRecv + st.winMiss) / st.winRecv
+	switch {
+	case st.winRecv >= 30:
 		shared := false
 		if st.winPoolN >= 30 && cfg > 0 {
 			p := st.winPool / st.winPoolN
@@ -428,10 +434,17 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) bool {
 			st.lost += st.winGap
 		}
 		st.shared = shared
-		st.eff = min(e, cfg*sfMaxComp)
-		st.winMiss, st.winRecv, st.winPool, st.winPoolN, st.winGap = 0, 0, 0, 0, 0
-		st.evalAt = now
+	case st.winRecv >= 8 && st.winPoolN >= 8:
+		// A quiet interface: too few samples in half a minute to tell lost
+		// samples from a shared sequence. Where the pool shows the same
+		// loss, it is believed; where it does not, the gaps are not.
+		e = min(e, math.Max(cfg, st.winPool/st.winPoolN))
+	default:
+		return true // keep collecting
 	}
+	st.eff = min(e, cfg*sfMaxComp)
+	st.winMiss, st.winRecv, st.winPool, st.winPoolN, st.winGap = 0, 0, 0, 0, 0
+	st.evalAt = now
 	return true
 }
 

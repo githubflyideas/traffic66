@@ -212,3 +212,36 @@ func TestRestartAndOutage(t *testing.T) {
 		t.Errorf("rate %v, want 1000", st.eff)
 	}
 }
+
+// An interface that sees a sample every two seconds never fills a window
+// of 30 samples in half a minute; its losses are still made up for where
+// the pool shows them, and a shared sequence's gaps are still not.
+func TestQuietInterface(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		shared bool
+		want   float64
+	}{{"lossy", false, 1280}, {"shared sequence", true, 1024}} {
+		st := &sfState{}
+		now := time.Unix(1e9, 0)
+		var pool, seq uint32
+		for i := 0; i < 60; i++ {
+			seq++
+			if tc.shared {
+				seq += 2 // two other interfaces' samples in between
+				pool += 1024
+			} else {
+				pool += 1024
+				if i%5 == 4 {
+					continue // lost on the way
+				}
+			}
+			st.update(&sflow.FlowSample{Rate: 1024, Pool: pool, Seq: seq}, now)
+			now = now.Add(2 * time.Second)
+		}
+		// a window holds some 15 samples: one loss more or less is 2%
+		if st.eff < tc.want*0.97 || st.eff > tc.want*1.03 {
+			t.Errorf("%s: %v, want %v", tc.name, st.eff, tc.want)
+		}
+	}
+}
