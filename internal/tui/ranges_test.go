@@ -28,3 +28,13 @@ func TestRangesAndTheirLengths(t *testing.T) {
 		}
 	}
 }
+
+// The header shows each range by a short label, the same in every language.
+func TestRangeShortLabels(t *testing.T) {
+	want := map[string]string{"5m": "5M", "15m": "15M", "30m": "30M", "1h": "1H", "6h": "6H", "12h": "12H", "24h": "1D"}
+	for _, r := range ranges {
+		if got := rangeShort(r); got != want[r] {
+			t.Errorf("%s: %q, want %q", r, got, want[r])
+		}
+	}
+}

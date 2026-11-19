@@ -395,15 +395,16 @@ Todo valor de toda página é clicável: **Mostrar só isto** / **Excluir isto**
 Acima das páginas: **Interface** (todas, ou uma interface amostrada; as
 páginas de tráfego então mostram só o tráfego que passa por ela), o intervalo
 de tempo (15 ou 30 minutos, 1, 6, 12 ou 24 horas, 7 ou 30 dias, ou
-personalizado), a atualização automática (a cada 20 segundos a 5 minutos,
-conforme o intervalo) e **Copiar link** para exatamente a visão atual. O
-idioma e o tema de cores (Claro, Preto, Verde-azulado, Laranja, Meia-noite; o
-botão passa ao seguinte) ficam no alto do menu, sob o logotipo, junto com a
-versão e o estado do registro. Os gráficos terminam onde os dados estão
-completos: com NetFlow/IPFIX, tão tarde quanto os equipamentos exportam (no
-máximo 2 minutos). Intervalos maiores que 6 horas começam em uma hora cheia;
-uma interface em 7 ou 30 dias lê o detalhe dos fluxos, então demora mais e
-alcança até onde o detalhe é mantido.
+personalizado; os botões mostram 15M, 30M, 1H, 6H, 12H, 1D, 1W, 30D: M
+minutos, H horas, D dias, W semanas), a atualização automática (a cada 20
+segundos a 5 minutos, conforme o intervalo) e **Copiar link** para exatamente
+a visão atual. O idioma e o tema de cores (Claro, Preto, Verde-azulado,
+Laranja, Meia-noite; o botão passa ao seguinte) ficam no alto do menu, sob o
+logotipo, junto com a versão e o estado do registro. Os gráficos terminam onde
+os dados estão completos: com NetFlow/IPFIX, tão tarde quanto os equipamentos
+exportam (no máximo 2 minutos). Intervalos maiores que 6 horas começam em uma
+hora cheia; uma interface em 7 ou 30 dias lê o detalhe dos fluxos, então
+demora mais e alcança até onde o detalhe é mantido.
 
 ![TOP: as 66 maiores conversas, ordenáveis por qualquer coluna](images/topn.png)
 

@@ -186,6 +186,16 @@ type page struct {
 
 var pageKeys = []string{"top", "ifaces", "search"}
 var ranges = []string{"5m", "15m", "30m", "1h", "6h", "12h", "24h"}
+
+// rangeShort is a range's label in the header, the same in every
+// language: M minutes, H hours, D days, W weeks.
+func rangeShort(r string) string {
+	if r == "24h" {
+		return "1D"
+	}
+	return strings.ToUpper(r)
+}
+
 var rangeDur = []time.Duration{5 * time.Minute, 15 * time.Minute, 30 * time.Minute, time.Hour, 6 * time.Hour, 12 * time.Hour, 24 * time.Hour}
 var dims = []string{"client", "server", "app", "port", "asn", "country"}
 var units = []string{"bps", "bytes", "pps"}
@@ -956,7 +966,7 @@ func (a *app) frame() []string {
 			hdr = append(hdr, seg{dim, lab})
 		}
 	}
-	hdr = append(hdr, seg{"", "  " + a.t("range."+ranges[a.rng]) + " · " + a.t("tui.unit."+units[a.unit]) + " · " + a.t("tui.every", "s", fmt.Sprint(intervals[a.ival].Seconds()))})
+	hdr = append(hdr, seg{"", "  " + rangeShort(ranges[a.rng]) + " · " + a.t("tui.unit."+units[a.unit]) + " · " + a.t("tui.every", "s", fmt.Sprint(intervals[a.ival].Seconds()))})
 	if a.paused {
 		hdr = append(hdr, seg{bold + yellow, "  ‖ " + a.t("tui.paused")})
 	} else if a.loading {

@@ -351,6 +351,9 @@ async function resolveNames() {
 // ------------------------------------------------------------ state & API
 const VIEWS = ['help', 'account', 'license', 'integrations', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
 const RANGES = ['15m', '30m', '1h', '6h', '12h', '24h', '7d', '30d'];
+// The selector's short labels, the same in every language (M minutes,
+// H hours, D days, W weeks); the full name is the button's tooltip.
+const rangeShort = r => ({'24h': '1D', '7d': '1W'})[r] || r.toUpperCase();
 
 // How often a page redraws itself, by range. It follows the width of the
 // buckets the range is drawn in: a 15-minute or 1-hour range is drawn per
@@ -507,7 +510,7 @@ function openRangePop(btn) {
   };
 }
 function renderRange() {
-  $('#range').innerHTML = RANGES.map(r => `<button data-r="${r}">${t('range.' + r)}</button>`).join('') +
+  $('#range').innerHTML = RANGES.map(r => `<button data-r="${r}" title="${esc(t('range.' + r))}" aria-label="${esc(t('range.' + r))}">${rangeShort(r)}</button>`).join('') +
     `<button data-r="custom" class="custom">${state.r === 'custom' ? esc(customLabel()) : t('range.custom')}</button>`;
   $('#range').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.r === state.r));
 }

@@ -53,7 +53,7 @@
 
   function head() {
     return `<header><div><h1>${esc(ip)}</h1><span>${esc(t('em.sub'))}</span></div>
-      <nav>${RANGES.map(r => `<button data-r="${r}" aria-pressed="${r === range}">${esc(t('range.' + r))}</button>`).join('')}</nav></header>`;
+      <nav>${RANGES.map(r => `<button data-r="${r}" aria-pressed="${r === range}" title="${esc(t('range.' + r))}" aria-label="${esc(t('range.' + r))}">${({'24h': '1D', '7d': '1W'})[r] || r.toUpperCase()}</button>`).join('')}</nav></header>`;
   }
   function bind() {
     root.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { range = b.dataset.r; load(); });

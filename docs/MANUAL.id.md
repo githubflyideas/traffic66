@@ -394,16 +394,17 @@ flow-nya**, **Lihat detail** (halaman tentang satu host atau layanan),
 
 Di atas halaman: **Antarmuka** (semua, atau satu interface yang disampel;
 halaman trafik lalu hanya menampilkan trafik yang melewatinya), rentang waktu
-(15 atau 30 menit, 1, 6, 12 atau 24 jam, 7 atau 30 hari, atau kustom), refresh
-otomatis (setiap 20 detik sampai 5 menit, sesuai rentang), dan **Salin
-tautan** untuk tampilan yang persis sama. Bahasa dan tema warna (Terang,
-Hitam, Hijau toska, Jingga, Tengah Malam; tombolnya berganti ke tema
-berikutnya) ada di bagian atas menu, di bawah logo, bersama versi dan status
-pendaftaran. Grafik berakhir di titik data sudah lengkap: dengan
-NetFlow/IPFIX, selambat perangkat mengekspor (paling lama 2 menit). Rentang
-lebih dari 6 jam dimulai pada jam penuh; satu interface selama 7 atau 30 hari
-membaca detail flow, sehingga lebih lambat dan hanya menjangkau sejauh detail
-disimpan.
+(15 atau 30 menit, 1, 6, 12 atau 24 jam, 7 atau 30 hari, atau kustom;
+tombolnya bertuliskan 15M, 30M, 1H, 6H, 12H, 1D, 1W, 30D: M menit, H jam, D
+hari, W minggu), refresh otomatis (setiap 20 detik sampai 5 menit, sesuai
+rentang), dan **Salin tautan** untuk tampilan yang persis sama. Bahasa dan
+tema warna (Terang, Hitam, Hijau toska, Jingga, Tengah Malam; tombolnya
+berganti ke tema berikutnya) ada di bagian atas menu, di bawah logo, bersama
+versi dan status pendaftaran. Grafik berakhir di titik data sudah lengkap:
+dengan NetFlow/IPFIX, selambat perangkat mengekspor (paling lama 2 menit).
+Rentang lebih dari 6 jam dimulai pada jam penuh; satu interface selama 7 atau
+30 hari membaca detail flow, sehingga lebih lambat dan hanya menjangkau sejauh
+detail disimpan.
 
 ![TOP: 66 percakapan teratas, bisa diurutkan menurut kolom mana pun](images/topn.png)
 

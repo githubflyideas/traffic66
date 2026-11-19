@@ -391,7 +391,8 @@ trực tuyến**, **Sao chép**.
 Phía trên các trang: **Giao diện** (tất cả, hoặc một giao diện được lấy mẫu;
 khi đó các trang lưu lượng chỉ hiển thị lưu lượng đi qua giao diện đó), khoảng
 thời gian (15 hoặc 30 phút, 1, 6, 12 hoặc 24 giờ, 7 hoặc 30 ngày, hoặc tùy
-chọn), tự động làm mới (mỗi 20 giây đến 5 phút, tùy khoảng thời gian) và **Sao
+chọn; nút ghi 15M, 30M, 1H, 6H, 12H, 1D, 1W, 30D: M phút, H giờ, D ngày, W
+tuần), tự động làm mới (mỗi 20 giây đến 5 phút, tùy khoảng thời gian) và **Sao
 chép liên kết** để lưu đúng khung nhìn hiện tại. Ngôn ngữ và giao diện màu
 (Sáng, Đen, Xanh mòng két, Cam, Nửa đêm; nút bấm chuyển sang giao diện kế
 tiếp) nằm ở đầu menu, dưới logo, cùng phiên bản và trạng thái đăng ký. Biểu đồ

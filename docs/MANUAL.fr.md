@@ -405,15 +405,17 @@ hôte ou à un service), **Nommer…**, **Rechercher en ligne**, **Copier**.
 Au-dessus des pages : **Interface** (toutes, ou une interface échantillonnée ;
 les pages de trafic ne montrent alors que le trafic qui la traverse), la plage
 de temps (15 ou 30 minutes, 1, 6, 12 ou 24 heures, 7 ou 30 jours, ou
-personnalisée), le rafraîchissement automatique (toutes les 20 secondes à 5
-minutes selon la plage) et **Copier le lien** pour la vue exacte. La langue et
-le thème de couleurs (Clair, Noir, Sarcelle, Orange, Minuit ; le bouton passe
-au suivant) se trouvent en haut du menu, sous le logo, avec la version et
-l'état de l'enregistrement. Les graphiques s'arrêtent là où les données sont
-complètes : avec NetFlow/IPFIX, aussi tard que les équipements exportent (2
-minutes au plus). Les plages de plus de 6 heures commencent à une heure pile ;
-une interface sur 7 ou 30 jours lit le détail des flux, c'est donc plus lent
-et cela ne remonte que jusqu'où le détail est conservé.
+personnalisée; les boutons affichent 15M, 30M, 1H, 6H, 12H, 1D, 1W, 30D : M
+minutes, H heures, D jours, W semaines), le rafraîchissement automatique
+(toutes les 20 secondes à 5 minutes selon la plage) et **Copier le lien** pour
+la vue exacte. La langue et le thème de couleurs (Clair, Noir, Sarcelle,
+Orange, Minuit ; le bouton passe au suivant) se trouvent en haut du menu, sous
+le logo, avec la version et l'état de l'enregistrement. Les graphiques
+s'arrêtent là où les données sont complètes : avec NetFlow/IPFIX, aussi tard
+que les équipements exportent (2 minutes au plus). Les plages de plus de 6
+heures commencent à une heure pile ; une interface sur 7 ou 30 jours lit le
+détail des flux, c'est donc plus lent et cela ne remonte que jusqu'où le
+détail est conservé.
 
 ![TOP : les 66 premières conversations, triables par n'importe quelle colonne](images/topn.png)
 

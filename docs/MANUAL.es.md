@@ -399,15 +399,16 @@ o servicio), **Ponerle nombre…**, **Buscarlo en línea**, **Copiar**.
 Encima de las páginas: **Interfaz** (todas, o una interfaz muestreada; las
 páginas de tráfico muestran entonces solo el tráfico que pasa por ella), el
 rango de tiempo (15 o 30 minutos, 1, 6, 12 o 24 horas, 7 o 30 días, o
-personalizado), la actualización automática (cada 20 segundos a 5 minutos,
-según el rango) y **Copiar enlace** para la vista exacta. El idioma y el tema
-de color (Claro, Negro, Turquesa, Naranja, Medianoche; el botón pasa al
-siguiente) están arriba del menú, bajo el logotipo, junto con la versión y el
-estado del registro. Los gráficos terminan donde los datos están completos:
-con NetFlow/IPFIX, tan tarde como exporten los equipos (como mucho 2 minutos).
-Los rangos de más de 6 horas empiezan en una hora en punto; una interfaz
-durante 7 o 30 días lee el detalle de flujos, así que es más lento y llega
-solo hasta donde se conserva el detalle.
+personalizado; los botones muestran 15M, 30M, 1H, 6H, 12H, 1D, 1W, 30D: M
+minutos, H horas, D días, W semanas), la actualización automática (cada 20
+segundos a 5 minutos, según el rango) y **Copiar enlace** para la vista
+exacta. El idioma y el tema de color (Claro, Negro, Turquesa, Naranja,
+Medianoche; el botón pasa al siguiente) están arriba del menú, bajo el
+logotipo, junto con la versión y el estado del registro. Los gráficos terminan
+donde los datos están completos: con NetFlow/IPFIX, tan tarde como exporten
+los equipos (como mucho 2 minutos). Los rangos de más de 6 horas empiezan en
+una hora en punto; una interfaz durante 7 o 30 días lee el detalle de flujos,
+así que es más lento y llega solo hasta donde se conserva el detalle.
 
 ![TOP: las 66 primeras conversaciones, ordenables por cualquier columna](images/topn.png)
 

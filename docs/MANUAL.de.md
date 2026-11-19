@@ -400,15 +400,17 @@ anzeigen**, **Details anzeigen** (eine Seite zu einem Host oder Dienst),
 Über den Seiten: **Schnittstelle** (alle oder eine gesampelte Schnittstelle;
 die Verkehrsseiten zeigen dann nur den Verkehr über diese), der Zeitraum (15
 oder 30 Minuten, 1, 6, 12 oder 24 Stunden, 7 oder 30 Tage oder
-benutzerdefiniert), die automatische Aktualisierung (je nach Zeitraum alle 20
-Sekunden bis 5 Minuten) und **Link kopieren** für genau diese Ansicht. Sprache
-und Farbschema (Hell, Schwarz, Petrol, Orange, Mitternacht; die Schaltfläche
-wechselt zum nächsten) finden Sie oben im Menü unter dem Logo, zusammen mit
-Version und Registrierungsstatus. Diagramme enden dort, wo die Daten
-vollständig sind: bei NetFlow/IPFIX so spät, wie die Geräte exportieren
-(höchstens 2 Minuten). Zeiträume über 6 Stunden beginnen zur vollen Stunde;
-eine Schnittstelle über 7 oder 30 Tage liest die Flow-Details, ist daher
-langsamer und reicht nur so weit zurück, wie Details aufbewahrt werden.
+benutzerdefiniert; die Schaltflächen zeigen 15M, 30M, 1H, 6H, 12H, 1D, 1W,
+30D: M Minuten, H Stunden, D Tage, W Wochen), die automatische Aktualisierung
+(je nach Zeitraum alle 20 Sekunden bis 5 Minuten) und **Link kopieren** für
+genau diese Ansicht. Sprache und Farbschema (Hell, Schwarz, Petrol, Orange,
+Mitternacht; die Schaltfläche wechselt zum nächsten) finden Sie oben im Menü
+unter dem Logo, zusammen mit Version und Registrierungsstatus. Diagramme enden
+dort, wo die Daten vollständig sind: bei NetFlow/IPFIX so spät, wie die Geräte
+exportieren (höchstens 2 Minuten). Zeiträume über 6 Stunden beginnen zur
+vollen Stunde; eine Schnittstelle über 7 oder 30 Tage liest die Flow-Details,
+ist daher langsamer und reicht nur so weit zurück, wie Details aufbewahrt
+werden.
 
 ![TOP: die 66 größten Verbindungen, nach jeder Spalte sortierbar](images/topn.png)
 

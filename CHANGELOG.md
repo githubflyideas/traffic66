@@ -7,6 +7,7 @@ heading is the version number.
 
 - Top 66 is now called TOP; it still shows 33 servers and 33 clients.
 - New time ranges: 30 minutes and 12 hours, in the web UI, the terminal UI and the API.
+- Shorter range buttons, the same in every language: 15M, 30M, 1H, 6H, 12H, 1D, 1W, 30D (M minutes, H hours, D days, W weeks); the full name shows as a tooltip and is read by screen readers.
 - sFlow: switches that share one sample sequence across interfaces are no longer counted several times too high; reordered or repeated datagrams are not taken as loss; a sampling-rate change is followed at once; heavy loss is compensated up to 20×, also on quiet interfaces, and agent restarts do not cause spikes.
 - sFlow samples over 512 KB are refused, counted and logged.
 - Settings: an observation domain that is waiting for its template is no longer hidden.

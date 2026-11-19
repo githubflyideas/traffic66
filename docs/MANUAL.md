@@ -364,14 +364,16 @@ online**, **Copy**.
 
 Above the pages: **Interface** (all, or one sampled interface; the traffic
 pages then show only traffic through it), the time range (15 or 30 minutes, 1,
-6, 12 or 24 hours, 7 or 30 days, or custom), an automatic refresh (every 20
-seconds to 5 minutes, by range) and **Copy link** for the exact view. The
-language and the colour theme (Light, Black, Teal, Orange, Midnight; the
-button switches to the next) are at the top of the menu, under the logo, with
-the version and registration status. Charts end where the data is complete:
-with NetFlow/IPFIX as late as the devices export (at most 2 minutes). Ranges
-over 6 hours start on a whole hour; one interface over 7 or 30 days reads the
-flow detail, so it is slower and reaches back as far as detail is kept.
+6, 12 or 24 hours, 7 or 30 days, or custom; the buttons read 15M, 30M, 1H, 6H,
+12H, 1D, 1W, 30D: M minutes, H hours, D days, W weeks), an automatic refresh
+(every 20 seconds to 5 minutes, by range) and **Copy link** for the exact
+view. The language and the colour theme (Light, Black, Teal, Orange, Midnight;
+the button switches to the next) are at the top of the menu, under the logo,
+with the version and registration status. Charts end where the data is
+complete: with NetFlow/IPFIX as late as the devices export (at most 2
+minutes). Ranges over 6 hours start on a whole hour; one interface over 7 or
+30 days reads the flow detail, so it is slower and reaches back as far as
+detail is kept.
 
 ![TOP: the top 66 conversations, sorted by any column](images/topn.png)
 
