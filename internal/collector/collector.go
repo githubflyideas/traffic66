@@ -437,8 +437,13 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) bool {
 	case st.winRecv >= 8 && st.winPoolN >= 8:
 		// A quiet interface: too few samples in half a minute to tell lost
 		// samples from a shared sequence. Where the pool shows the same
-		// loss, it is believed; where it does not, the gaps are not.
+		// loss, it is believed; where it does not, the gaps are not. The
+		// window stays open until it holds enough samples, so each estimate,
+		// every half minute, rests on all of them rather than on a dozen.
 		e = min(e, math.Max(cfg, st.winPool/st.winPoolN))
+		st.eff = min(e, cfg*sfMaxComp)
+		st.evalAt = now
+		return true
 	default:
 		return true // keep collecting
 	}
