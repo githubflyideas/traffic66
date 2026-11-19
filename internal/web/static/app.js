@@ -2777,8 +2777,6 @@ async function init() {
   render();
   startTimers();
 }
-init();
-})();
 
 // An area that scrolls sideways must be reachable with the keyboard to be
 // scrolled at all.
@@ -2790,3 +2788,6 @@ function focusableScroll(root) {
     } else if (p.tabIndex === 0) p.removeAttribute('tabindex');
   });
 }
+
+init();
+})();

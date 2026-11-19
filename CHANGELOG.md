@@ -12,6 +12,7 @@ heading is the version number.
 - sFlow samples over 512 KB are refused, counted and logged.
 - Settings: an observation domain that is waiting for its template is no longer hidden.
 - Licence install errors are shown in your language.
+- A page with a panel that scrolls sideways (for example the overview in Japanese) no longer ends in a script error.
 - Right-to-left languages: the evaluation badge no longer covers Sign out.
 - Manual in all 15 languages updated for the current pages, themes and ranges; release packages no longer contain Go source in docs/.
 
