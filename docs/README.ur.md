@@ -76,7 +76,7 @@ macOS: پہلے اس فولڈر میں `xattr -dr com.apple.quarantine .` چلا
 
 ## اسکرین شاٹس
 
-<img src="images/overview.png" alt="جائزہ" width="49%"> <img src="images/topn.png" alt="ٹاپ 66" width="49%">
+<img src="images/overview.png" alt="جائزہ" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="مقامات اور نیٹ ورک" width="49%"> <img src="images/interfaces.png" alt="انٹرفیس جانچ" width="49%">
 

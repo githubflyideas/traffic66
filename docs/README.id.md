@@ -75,7 +75,7 @@ Lalu:
 
 ## Tangkapan layar
 
-<img src="images/overview.png" alt="Ringkasan" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+<img src="images/overview.png" alt="Ringkasan" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="Geografi & jaringan" width="49%"> <img src="images/interfaces.png" alt="Pencocokan antarmuka" width="49%">
 

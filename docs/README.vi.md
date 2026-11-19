@@ -75,7 +75,7 @@ Sau đó:
 
 ## Ảnh chụp màn hình
 
-<img src="images/overview.png" alt="Tổng quan" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+<img src="images/overview.png" alt="Tổng quan" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="Địa lý & mạng" width="49%"> <img src="images/interfaces.png" alt="Kiểm tra giao diện" width="49%">
 

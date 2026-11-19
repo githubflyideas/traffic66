@@ -380,28 +380,32 @@ Todo valor de toda página é clicável: **Mostrar só isto** / **Excluir isto**
 
 | Página | O que mostra |
 |---|---|
-| Visão geral | A banda da interface escolhida; tráfego por aplicação (total, entrada ou saída) em comparação com ontem ou a semana passada; detecções abertas; principais clientes e serviços |
-| Top 66 | As 66 maiores conversas, ordenáveis por qualquer coluna, ou agrupadas por aplicação, rede, segmento, equipamento, encapsulamento, VLAN; os 33 maiores interlocutores |
+| Visão geral | Largura de banda atual, tráfego no intervalo, hosts internos e remotos ativos e quanto os fluxos batem com os contadores dos equipamentos; largura de banda por aplicação (total, entrada ou saída) comparada com ontem ou a semana passada; direção do tráfego e protocolos; principais clientes e serviços; detecções; estado da coleta |
+| TOP | As 66 maiores conversas, ordenáveis por qualquer coluna, ou agrupadas por aplicação, rede, segmento, equipamento, encapsulamento, VLAN; os 33 maiores interlocutores |
 | Detalhes do tráfego | Gráficos de anéis: servidores e seus clientes (ou o inverso), e serviços |
 | Caminhos do tráfego | Host → aplicação → país, ou cliente → serviço → servidor, ou por rede |
 | Conferência de interfaces | Cada interface ao longo do tempo em comparação com seus contadores; nomes, rótulos, a padrão |
 | Registros de fluxo | Os fluxos individuais, ao vivo a cada 5 segundos ou para qualquer intervalo de tempo |
 | Detecções, Ameaças | O que precisa de atenção ([abaixo](#findings)); tráfego com endereços listados |
 | Geografia e redes | Um mapa-múndi por país, redes (AS) ao longo do tempo |
-| Configurações | Equipamentos, amostragem, perdas, SNMP, bancos de dados, logotipo, nomes |
+| Integrações | Envio de detecções a um coletor syslog ([abaixo](#sending-findings-to-a-collector)) e links para outras plataformas; para instalações registradas |
+| Configurações | Abas: **Configurações** (equipamentos, amostragem, perdas, SNMP, bancos de dados), **Inventário** (nomes), **Conta**, **Registro e compra** (número da instalação, licença, logotipo) |
 | Análise offline de pcap, Limpeza de dados | Arquivos de captura ([abaixo](#9-offline-pcap-terminal-ui-local-capture)); apagar dados antigos |
 
 Acima das páginas: **Interface** (todas, ou uma interface amostrada; as
-páginas de tráfego então mostram só o tráfego que passa por ela), o
-intervalo de tempo (de 15 minutos a 30 dias, ou personalizado), atualização
-a cada 30 s e **Copiar link** para exatamente a visão atual. O idioma e
-cinco temas de cores ficam no fim do menu. Os gráficos terminam onde os
-dados estão completos: com NetFlow/IPFIX, tão tarde quanto os equipamentos
-exportam (no máximo 2 minutos). Intervalos maiores que 6 horas começam em
-uma hora cheia; uma interface em 7 ou 30 dias lê o detalhe dos fluxos, então
-demora mais e alcança até onde o detalhe é mantido.
+páginas de tráfego então mostram só o tráfego que passa por ela), o intervalo
+de tempo (15 ou 30 minutos, 1, 6, 12 ou 24 horas, 7 ou 30 dias, ou
+personalizado), a atualização automática (a cada 20 segundos a 5 minutos,
+conforme o intervalo) e **Copiar link** para exatamente a visão atual. O
+idioma e o tema de cores (Claro, Preto, Verde-azulado, Laranja, Meia-noite; o
+botão passa ao seguinte) ficam no alto do menu, sob o logotipo, junto com a
+versão e o estado do registro. Os gráficos terminam onde os dados estão
+completos: com NetFlow/IPFIX, tão tarde quanto os equipamentos exportam (no
+máximo 2 minutos). Intervalos maiores que 6 horas começam em uma hora cheia;
+uma interface em 7 ou 30 dias lê o detalhe dos fluxos, então demora mais e
+alcança até onde o detalhe é mantido.
 
-![Top 66: as 66 maiores conversas, ordenáveis por qualquer coluna](images/topn.png)
+![TOP: as 66 maiores conversas, ordenáveis por qualquer coluna](images/topn.png)
 
 ![Detalhes do tráfego: servidores com seus clientes, e serviços com seus servidores, em gráficos de anéis](images/traffic.png)
 
@@ -541,6 +545,11 @@ mostra o número de instalação de 8 dígitos; envie-o ao autor e coloque o
 `license.json` que receber de volta no diretório de dados. Contato:
 <route66traffic66@gmail.com>.
 
+Um administrador também pode instalá-la pela página: **Configurações →
+Registro e compra**, cole o conteúdo de `license.json` ou escolha o arquivo e
+clique em **Instalar**. Ela é verificada antes de qualquer gravação; uma
+licença recusada diz o motivo.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Segurança, dimensionamento, solução de problemas
@@ -555,7 +564,7 @@ communities somente leitura.
 
 A 5.000 fluxos/s em 2 núcleos: cerca de 12 GB de disco por dia de detalhe
 (360 GB para 30 dias), um sexto de um núcleo, 0,6–0,8 GB de memória. Visões
-gerais de intervalos longos levam menos de 0,2 s; um Top 66 de 1 hora de
+gerais de intervalos longos levam menos de 0,2 s; um TOP de 1 hora de
 todas as conversas, cerca de 9 s.
 
 | Sintoma | Solução |

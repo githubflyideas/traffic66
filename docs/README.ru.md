@@ -74,7 +74,7 @@ macOS: сначала выполните в папке `xattr -dr com.apple.quar
 
 ## Скриншоты
 
-<img src="images/overview.png" alt="Обзор" width="49%"> <img src="images/topn.png" alt="Топ 66" width="49%">
+<img src="images/overview.png" alt="Обзор" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="География и сети" width="49%"> <img src="images/interfaces.png" alt="Сверка интерфейсов" width="49%">
 

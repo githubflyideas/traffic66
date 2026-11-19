@@ -76,7 +76,7 @@ macOS: شغّل أولًا `xattr -dr com.apple.quarantine .` داخل المج�
 
 ## لقطات الشاشة
 
-<img src="images/overview.png" alt="نظرة عامة" width="49%"> <img src="images/topn.png" alt="أعلى 66" width="49%">
+<img src="images/overview.png" alt="نظرة عامة" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="الجغرافيا والشبكات" width="49%"> <img src="images/interfaces.png" alt="مطابقة الواجهات" width="49%">
 

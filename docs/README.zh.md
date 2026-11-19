@@ -72,7 +72,7 @@ macOS：先在该目录运行 `xattr -dr com.apple.quarantine .`。
 
 ## 截图
 
-<img src="images/overview.png" alt="概览" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+<img src="images/overview.png" alt="概览" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="地理与运营商" width="49%"> <img src="images/interfaces.png" alt="接口对账" width="49%">
 

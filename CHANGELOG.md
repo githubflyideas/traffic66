@@ -3,6 +3,17 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.6.6
+
+- Top 66 is now called TOP; it still shows 33 servers and 33 clients.
+- New time ranges: 30 minutes and 12 hours, in the web UI, the terminal UI and the API.
+- sFlow: switches that share one sample sequence across interfaces are no longer counted several times too high; reordered or repeated datagrams are not taken as loss; a sampling-rate change is followed at once; heavy loss is compensated up to 20×, and agent restarts do not cause spikes.
+- sFlow samples over 512 KB are refused, counted and logged.
+- Settings: an observation domain that is waiting for its template is no longer hidden.
+- Licence install errors are shown in your language.
+- Right-to-left languages: the evaluation badge no longer covers Sign out.
+- Manual in all 15 languages updated for the current pages, themes and ranges; release packages no longer contain Go source in docs/.
+
 ## 2.6.5
 
 - sFlow: traffic is scaled by the rate the switch declares, raised only by samples that were lost; some switches were counted about a fifth too high.

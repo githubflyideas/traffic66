@@ -75,7 +75,7 @@ Ensuite :
 
 ## Captures d'écran
 
-<img src="images/overview.png" alt="Vue d'ensemble" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+<img src="images/overview.png" alt="Vue d'ensemble" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="Géographie et réseaux" width="49%"> <img src="images/interfaces.png" alt="Contrôle des interfaces" width="49%">
 

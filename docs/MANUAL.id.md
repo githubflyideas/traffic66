@@ -380,28 +380,32 @@ flow-nya**, **Lihat detail** (halaman tentang satu host atau layanan),
 
 | Halaman | Yang ditampilkan |
 |---|---|
-| Ringkasan | Bandwidth interface yang dipilih; trafik per aplikasi (total, masuk, atau keluar) dibanding kemarin atau minggu lalu; temuan terbuka; klien dan layanan teratas |
-| Top 66 | 66 percakapan teratas, bisa diurutkan menurut kolom mana pun, atau dikelompokkan per aplikasi, jaringan, segmen, perangkat, enkapsulasi, VLAN; 33 pihak teratas |
+| Ringkasan | Bandwidth saat ini, trafik dalam rentang, host internal dan remote yang aktif, serta kecocokan flow dengan counter perangkat; bandwidth per aplikasi (total, masuk, atau keluar) dibandingkan kemarin atau minggu lalu; arah trafik dan protokol; client dan layanan teratas; temuan; status pengumpulan |
+| TOP | 66 percakapan teratas, bisa diurutkan menurut kolom mana pun, atau dikelompokkan per aplikasi, jaringan, segmen, perangkat, enkapsulasi, VLAN; 33 pihak teratas |
 | Detail trafik | Diagram cincin: server dan kliennya (atau sebaliknya), serta layanan |
 | Jalur trafik | Host → aplikasi → negara, atau klien → layanan → server, atau per jaringan |
 | Pencocokan antarmuka | Setiap interface dari waktu ke waktu dibanding counter-nya; nama, label, bawaan |
 | Catatan flow | Flow individual, live setiap 5 detik atau untuk rentang waktu mana pun |
 | Temuan, Intel ancaman | Apa yang perlu diperhatikan ([di bawah](#findings)); trafik dengan alamat yang terdaftar |
 | Geografi & jaringan | Peta dunia per negara, jaringan (AS) dari waktu ke waktu |
-| Pengaturan | Perangkat, sampling, loss, SNMP, basis data, logo, nama |
+| Integrasi | Mengirim temuan ke kolektor syslog ([di bawah](#sending-findings-to-a-collector)) dan tautan untuk platform lain; untuk instalasi terdaftar |
+| Pengaturan | Tab: **Pengaturan** (perangkat, sampling, loss, SNMP, basis data), **Inventaris** (nama), **Akun**, **Pendaftaran & pembelian** (nomor instalasi, lisensi, logo) |
 | Analisis pcap offline, Pembersihan data | File tangkapan ([di bawah](#9-offline-pcap-terminal-ui-local-capture)); menghapus data lama |
 
 Di atas halaman: **Antarmuka** (semua, atau satu interface yang disampel;
-halaman trafik lalu hanya menampilkan trafik yang melewatinya), rentang
-waktu (15 menit sampai 30 hari, atau kustom), refresh setiap 30 detik, dan
-**Salin tautan** untuk tampilan yang persis sama. Bahasa dan lima tema warna
-ada di bagian bawah menu. Grafik berakhir di titik data sudah lengkap: dengan
+halaman trafik lalu hanya menampilkan trafik yang melewatinya), rentang waktu
+(15 atau 30 menit, 1, 6, 12 atau 24 jam, 7 atau 30 hari, atau kustom), refresh
+otomatis (setiap 20 detik sampai 5 menit, sesuai rentang), dan **Salin
+tautan** untuk tampilan yang persis sama. Bahasa dan tema warna (Terang,
+Hitam, Hijau toska, Jingga, Tengah Malam; tombolnya berganti ke tema
+berikutnya) ada di bagian atas menu, di bawah logo, bersama versi dan status
+pendaftaran. Grafik berakhir di titik data sudah lengkap: dengan
 NetFlow/IPFIX, selambat perangkat mengekspor (paling lama 2 menit). Rentang
 lebih dari 6 jam dimulai pada jam penuh; satu interface selama 7 atau 30 hari
 membaca detail flow, sehingga lebih lambat dan hanya menjangkau sejauh detail
 disimpan.
 
-![Top 66: 66 percakapan teratas, bisa diurutkan menurut kolom mana pun](images/topn.png)
+![TOP: 66 percakapan teratas, bisa diurutkan menurut kolom mana pun](images/topn.png)
 
 ![Detail trafik: server dengan kliennya, dan layanan dengan servernya, sebagai diagram cincin](images/traffic.png)
 
@@ -542,6 +546,11 @@ setiap halaman menampilkan nomor instalasi 8 digit; kirim nomor itu kepada
 pembuatnya, lalu letakkan `license.json` yang Anda terima di direktori data.
 Kontak: <route66traffic66@gmail.com>.
 
+Administrator juga dapat memasangnya dari halaman: **Pengaturan → Pendaftaran
+& pembelian**, tempel isi `license.json` atau pilih filenya, lalu **Pasang**.
+Lisensi diperiksa sebelum apa pun ditulis; lisensi yang ditolak menyebutkan
+alasannya.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Keamanan, kebutuhan sumber daya, pemecahan masalah
@@ -556,7 +565,7 @@ read-only.
 
 Pada 5.000 flow/detik di 2 core: sekitar 12 GB disk per hari detail
 (360 GB untuk 30 hari), seperenam satu core, memori 0,6–0,8 GB. Ringkasan
-rentang waktu panjang butuh di bawah 0,2 detik; Top 66 semua percakapan
+rentang waktu panjang butuh di bawah 0,2 detik; TOP semua percakapan
 selama 1 jam sekitar 9 detik.
 
 | Gejala | Solusi |

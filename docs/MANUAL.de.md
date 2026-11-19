@@ -385,29 +385,32 @@ anzeigen**, **Details anzeigen** (eine Seite zu einem Host oder Dienst),
 
 | Seite | Was sie zeigt |
 |---|---|
-| Übersicht | Die Bandbreite der gewählten Schnittstelle; Verkehr nach Anwendung (gesamt, eingehend oder ausgehend) im Vergleich zu gestern oder letzter Woche; offene Befunde; wichtigste Clients und Dienste |
-| Top 66 | Die 66 größten Verbindungen, nach jeder Spalte sortierbar oder gruppiert nach Anwendung, Netz, Segment, Gerät, Kapselung, VLAN; die 33 größten Talker |
+| Übersicht | Aktuelle Bandbreite, Verkehr im Zeitraum, aktive interne und externe Hosts und wie gut die Flows zu den Gerätezählern passen; Bandbreite nach Anwendung (gesamt, eingehend oder ausgehend) im Vergleich zu gestern oder letzter Woche; Verkehrsrichtung und Protokolle; wichtigste Clients und Dienste; Befunde; Stand der Erfassung |
+| TOP | Die 66 größten Verbindungen, nach jeder Spalte sortierbar oder gruppiert nach Anwendung, Netz, Segment, Gerät, Kapselung, VLAN; die 33 größten Talker |
 | Traffic-Details | Ringdiagramme: Server und ihre Clients (oder umgekehrt) sowie Dienste |
 | Flow-Pfade | Host → Anwendung → Land, oder Client → Dienst → Server, oder nach Netz |
 | Schnittstellenprüfung | Jede Schnittstelle im Zeitverlauf gegen ihre Zähler; Namen, Tags, Standard |
 | Flow-Datensätze | Die einzelnen Flows, live alle 5 Sekunden oder für einen beliebigen Zeitraum |
 | Befunde, Threat Intel | Was Aufmerksamkeit erfordert ([unten](#findings)); Verkehr mit gelisteten Adressen |
 | Geo & Netze | Eine Weltkarte nach Ländern, Netzwerke (AS) im Zeitverlauf |
-| Einstellungen | Geräte, Sampling, Verluste, SNMP, Datenbanken, Logo, Namen |
+| Integrationen | Befunde an einen Syslog-Collector senden ([unten](#sending-findings-to-a-collector)) und Links für andere Plattformen; für registrierte Installationen |
+| Einstellungen | Reiter: **Einstellungen** (Geräte, Sampling, Verluste, SNMP, Datenbanken), **Inventar** (Namen), **Konto**, **Registrierung & Kauf** (Installationsnummer, Lizenz, Logo) |
 | Offline-pcap-Analyse, Datenbereinigung | Mitschnittdateien ([unten](#9-offline-pcap-terminal-ui-local-capture)); Löschen alter Daten |
 
-Über den Seiten: **Schnittstelle** (alle oder eine gesampelte
-Schnittstelle; die Verkehrsseiten zeigen dann nur den Verkehr über diese),
-der Zeitraum (15 Minuten bis 30 Tage oder benutzerdefiniert), Aktualisierung
-alle 30 s und **Link kopieren** für genau diese Ansicht. Sprache und fünf
-Farbschemata finden Sie am Fuß des Menüs. Diagramme enden dort, wo die
-Daten vollständig sind: bei NetFlow/IPFIX so spät, wie die Geräte
-exportieren (höchstens 2 Minuten). Zeiträume über 6 Stunden beginnen zur
-vollen Stunde; eine Schnittstelle über 7 oder 30 Tage liest die
-Flow-Details, ist daher langsamer und reicht nur so weit zurück, wie Details
-aufbewahrt werden.
+Über den Seiten: **Schnittstelle** (alle oder eine gesampelte Schnittstelle;
+die Verkehrsseiten zeigen dann nur den Verkehr über diese), der Zeitraum (15
+oder 30 Minuten, 1, 6, 12 oder 24 Stunden, 7 oder 30 Tage oder
+benutzerdefiniert), die automatische Aktualisierung (je nach Zeitraum alle 20
+Sekunden bis 5 Minuten) und **Link kopieren** für genau diese Ansicht. Sprache
+und Farbschema (Hell, Schwarz, Petrol, Orange, Mitternacht; die Schaltfläche
+wechselt zum nächsten) finden Sie oben im Menü unter dem Logo, zusammen mit
+Version und Registrierungsstatus. Diagramme enden dort, wo die Daten
+vollständig sind: bei NetFlow/IPFIX so spät, wie die Geräte exportieren
+(höchstens 2 Minuten). Zeiträume über 6 Stunden beginnen zur vollen Stunde;
+eine Schnittstelle über 7 oder 30 Tage liest die Flow-Details, ist daher
+langsamer und reicht nur so weit zurück, wie Details aufbewahrt werden.
 
-![Top 66: die 66 größten Verbindungen, nach jeder Spalte sortierbar](images/topn.png)
+![TOP: die 66 größten Verbindungen, nach jeder Spalte sortierbar](images/topn.png)
 
 ![Traffic-Details: Server mit ihren Clients und Dienste mit ihren Servern als Ringdiagramme](images/traffic.png)
 
@@ -550,6 +553,11 @@ Installationsnummer; senden Sie sie an den Autor und legen Sie die
 zurückgeschickte `license.json` in das Datenverzeichnis. Kontakt:
 <route66traffic66@gmail.com>.
 
+Ein Administrator kann sie auch in der Oberfläche einspielen: **Einstellungen
+→ Registrierung & Kauf**, den Inhalt von `license.json` einfügen oder die
+Datei wählen, dann **Einspielen**. Sie wird geprüft, bevor etwas geschrieben
+wird; eine abgelehnte Lizenz nennt den Grund.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Sicherheit, Dimensionierung, Fehlerbehebung
@@ -564,7 +572,7 @@ Sie nur lesende.
 
 Bei 5.000 Flows/s auf 2 Kernen: etwa 12 GB Festplatte pro Tag Details
 (360 GB für 30 Tage), ein Sechstel eines Kerns, 0,6–0,8 GB Arbeitsspeicher.
-Übersichten über lange Zeiträume dauern unter 0,2 s; ein Top 66 aller
+Übersichten über lange Zeiträume dauern unter 0,2 s; ein TOP aller
 Verbindungen über 1 Stunde etwa 9 s.
 
 | Symptom | Abhilfe |

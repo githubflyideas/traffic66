@@ -384,28 +384,32 @@ o servicio), **Ponerle nombre…**, **Buscarlo en línea**, **Copiar**.
 
 | Página | Qué muestra |
 |---|---|
-| Resumen | El ancho de banda de la interfaz elegida; tráfico por aplicación (total, entrante o saliente) frente a ayer o la semana pasada; hallazgos abiertos; principales clientes y servicios |
-| Top 66 | Las 66 primeras conversaciones, ordenables por cualquier columna, o agrupadas por aplicación, red, segmento, equipo, encapsulación, VLAN; los 33 interlocutores principales |
+| Resumen | Ancho de banda actual, tráfico en el rango, hosts internos y remotos activos, y cuánto coinciden los flujos con los contadores de los equipos; ancho de banda por aplicación (total, entrante o saliente) frente a ayer o la semana pasada; dirección del tráfico y protocolos; principales clientes y servicios; hallazgos; estado de la recogida |
+| TOP | Las 66 primeras conversaciones, ordenables por cualquier columna, o agrupadas por aplicación, red, segmento, equipo, encapsulación, VLAN; los 33 interlocutores principales |
 | Detalles del tráfico | Gráficos de anillos: servidores y sus clientes (o al revés), y servicios |
 | Rutas de tráfico | Host → aplicación → país, o cliente → servicio → servidor, o por red |
 | Verificación de interfaces | Cada interfaz en el tiempo frente a sus contadores; nombres, etiquetas, la predeterminada |
 | Registros de flujo | Los flujos individuales, en vivo cada 5 segundos o para cualquier rango de tiempo |
 | Hallazgos, Inteligencia de amenazas | Qué requiere atención ([más abajo](#findings)); tráfico con direcciones listadas |
 | Geografía y redes | Un mapa del mundo por país, redes (AS) en el tiempo |
-| Configuración | Equipos, muestreo, pérdidas, SNMP, bases de datos, logotipo, nombres |
+| Integraciones | Envío de hallazgos a un colector syslog ([más abajo](#sending-findings-to-a-collector)) y enlaces para otras plataformas; para instalaciones registradas |
+| Configuración | Pestañas: **Configuración** (equipos, muestreo, pérdidas, SNMP, bases de datos), **Inventario** (nombres), **Cuenta**, **Registro y compra** (número de instalación, licencia, logotipo) |
 | Análisis offline de pcap, Limpieza de datos | Archivos de captura ([más abajo](#9-offline-pcap-terminal-ui-local-capture)); borrado de datos antiguos |
 
 Encima de las páginas: **Interfaz** (todas, o una interfaz muestreada; las
 páginas de tráfico muestran entonces solo el tráfico que pasa por ella), el
-rango de tiempo (de 15 minutos a 30 días, o personalizado), actualización
-cada 30 s y **Copiar enlace** para la vista exacta. El idioma y cinco temas
-de color están al pie del menú. Los gráficos terminan donde los datos están
-completos: con NetFlow/IPFIX, tan tarde como exporten los equipos (como
-mucho 2 minutos). Los rangos de más de 6 horas empiezan en una hora en
-punto; una interfaz durante 7 o 30 días lee el detalle de flujos, así que es
-más lento y llega solo hasta donde se conserva el detalle.
+rango de tiempo (15 o 30 minutos, 1, 6, 12 o 24 horas, 7 o 30 días, o
+personalizado), la actualización automática (cada 20 segundos a 5 minutos,
+según el rango) y **Copiar enlace** para la vista exacta. El idioma y el tema
+de color (Claro, Negro, Turquesa, Naranja, Medianoche; el botón pasa al
+siguiente) están arriba del menú, bajo el logotipo, junto con la versión y el
+estado del registro. Los gráficos terminan donde los datos están completos:
+con NetFlow/IPFIX, tan tarde como exporten los equipos (como mucho 2 minutos).
+Los rangos de más de 6 horas empiezan en una hora en punto; una interfaz
+durante 7 o 30 días lee el detalle de flujos, así que es más lento y llega
+solo hasta donde se conserva el detalle.
 
-![Top 66: las 66 primeras conversaciones, ordenables por cualquier columna](images/topn.png)
+![TOP: las 66 primeras conversaciones, ordenables por cualquier columna](images/topn.png)
 
 ![Detalles del tráfico: servidores con sus clientes, y servicios con sus servidores, en gráficos de anillos](images/traffic.png)
 
@@ -546,6 +550,11 @@ pie de cada página muestra el número de instalación de 8 dígitos; envíelo
 al autor y ponga el `license.json` que reciba en el directorio de datos.
 Contacto: <route66traffic66@gmail.com>.
 
+Un administrador también puede instalarla desde la página: **Configuración →
+Registro y compra**, pega el contenido de `license.json` o elige el archivo y
+pulsa **Instalar**. Se comprueba antes de escribir nada; si se rechaza, se
+indica el motivo.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Seguridad, dimensionamiento, solución de problemas
@@ -560,7 +569,7 @@ solo lectura.
 
 A 5.000 flujos/s en 2 núcleos: unos 12 GB de disco por día de detalle
 (360 GB para 30 días), una sexta parte de un núcleo, 0,6–0,8 GB de memoria.
-Los resúmenes de rangos largos tardan menos de 0,2 s; un Top 66 de una hora
+Los resúmenes de rangos largos tardan menos de 0,2 s; un TOP de una hora
 de todas las conversaciones, unos 9 s.
 
 | Síntoma | Solución |

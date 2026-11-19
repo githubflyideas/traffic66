@@ -145,6 +145,7 @@ jobs:
             fi
             cp README.md "dist/traffic66-${{ matrix.target }}/"
             cp -r docs "dist/traffic66-${{ matrix.target }}/"
+            rm -f "dist/traffic66-${{ matrix.target }}/docs/"*.go  # the docs package embeds the manuals; its source is not a document
             cp LICENSE.md ADDITIONAL-USE-GRANT.md THIRD_PARTY_NOTICES.md "dist/traffic66-${{ matrix.target }}/"
             cp inventory.txt.example "dist/traffic66-${{ matrix.target }}/"
             [[ -n "${{ matrix.cross }}" ]] || "dist/traffic66-${{ matrix.target }}/$exe" version

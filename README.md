@@ -38,7 +38,7 @@ Needs: a ~73 MB program, nothing to install; about 0.1 GB of memory idle and 0.6
 
 ## Screenshots
 
-<img src="docs/images/topn.png" alt="Top 66" width="49%">
+<img src="docs/images/topn.png" alt="TOP" width="49%">
 
 <img src="docs/images/geo.png" alt="Geo & networks" width="49%"> <img src="docs/images/interfaces.png" alt="Interface check" width="49%">
 

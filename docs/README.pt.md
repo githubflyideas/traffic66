@@ -75,7 +75,7 @@ Depois:
 
 ## Capturas de tela
 
-<img src="images/overview.png" alt="Visão geral" width="49%"> <img src="images/topn.png" alt="Top 66" width="49%">
+<img src="images/overview.png" alt="Visão geral" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="Geografia e redes" width="49%"> <img src="images/interfaces.png" alt="Conferência de interfaces" width="49%">
 

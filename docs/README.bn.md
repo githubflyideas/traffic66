@@ -74,7 +74,7 @@ macOS: আগে ফোল্ডারে `xattr -dr com.apple.quarantine .` চ
 
 ## স্ক্রিনশট
 
-<img src="images/overview.png" alt="সারসংক্ষেপ" width="49%"> <img src="images/topn.png" alt="শীর্ষ 66" width="49%">
+<img src="images/overview.png" alt="সারসংক্ষেপ" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="ভূগোল ও নেটওয়ার্ক" width="49%"> <img src="images/interfaces.png" alt="ইন্টারফেস মিলানো" width="49%">
 

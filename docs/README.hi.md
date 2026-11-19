@@ -74,7 +74,7 @@ macOS: पहले उस फ़ोल्डर में `xattr -dr com.apple.
 
 ## स्क्रीनशॉट
 
-<img src="images/overview.png" alt="सारांश" width="49%"> <img src="images/topn.png" alt="शीर्ष 66" width="49%">
+<img src="images/overview.png" alt="सारांश" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="भूगोल और नेटवर्क" width="49%"> <img src="images/interfaces.png" alt="इंटरफ़ेस मिलान" width="49%">
 

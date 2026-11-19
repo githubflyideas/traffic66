@@ -376,28 +376,31 @@ trực tuyến**, **Sao chép**.
 
 | Trang | Nội dung |
 |---|---|
-| Tổng quan | Băng thông của giao diện đang chọn; lưu lượng theo ứng dụng (tổng, chiều vào hoặc chiều ra) so với hôm qua hoặc tuần trước; các phát hiện đang mở; các client và dịch vụ hàng đầu |
-| Top 66 | 66 phiên hội thoại lớn nhất, sắp xếp theo cột bất kỳ, hoặc nhóm theo ứng dụng, mạng, phân đoạn, thiết bị, kiểu đóng gói (encapsulation), VLAN; 33 máy dùng nhiều nhất |
+| Tổng quan | Băng thông hiện tại, lưu lượng trong khoảng thời gian, máy nội bộ và máy bên ngoài đang hoạt động, và mức khớp giữa luồng với bộ đếm của thiết bị; băng thông theo ứng dụng (tổng, chiều vào hoặc chiều ra) so với hôm qua hoặc tuần trước; hướng lưu lượng và giao thức; client và dịch vụ hàng đầu; phát hiện; trạng thái thu thập |
+| TOP | 66 phiên hội thoại lớn nhất, sắp xếp theo cột bất kỳ, hoặc nhóm theo ứng dụng, mạng, phân đoạn, thiết bị, kiểu đóng gói (encapsulation), VLAN; 33 máy dùng nhiều nhất |
 | Chi tiết lưu lượng | Biểu đồ vòng: máy chủ và các client của chúng (hoặc ngược lại), và dịch vụ |
 | Đường đi luồng | Máy → ứng dụng → quốc gia, hoặc client → dịch vụ → máy chủ, hoặc theo mạng |
 | Kiểm tra giao diện | Từng giao diện theo thời gian so với bộ đếm của nó; tên, nhãn, giao diện mặc định |
 | Bản ghi luồng | Từng luồng riêng lẻ, cập nhật trực tiếp mỗi 5 giây hoặc cho khoảng thời gian bất kỳ |
 | Phát hiện, Tình báo mối đe dọa | Những gì cần chú ý ([bên dưới](#findings)); lưu lượng với các địa chỉ trong danh sách |
 | Địa lý & mạng | Bản đồ thế giới theo quốc gia, các mạng (AS) theo thời gian |
-| Cài đặt | Thiết bị, lấy mẫu, tỷ lệ mất, SNMP, cơ sở dữ liệu, logo, tên |
+| Tích hợp | Gửi phát hiện tới bộ thu syslog ([bên dưới](#sending-findings-to-a-collector)) và liên kết cho các nền tảng khác; dành cho bản cài đặt đã đăng ký |
+| Cài đặt | Các thẻ: **Cài đặt** (thiết bị, lấy mẫu, tỷ lệ mất, SNMP, cơ sở dữ liệu), **Sổ quản lý** (tên), **Tài khoản**, **Đăng ký & mua** (số cài đặt, giấy phép, logo) |
 | Phân tích pcap offline, Dọn dữ liệu | File bắt gói tin ([bên dưới](#9-offline-pcap-terminal-ui-local-capture)); xóa dữ liệu cũ |
 
 Phía trên các trang: **Giao diện** (tất cả, hoặc một giao diện được lấy mẫu;
 khi đó các trang lưu lượng chỉ hiển thị lưu lượng đi qua giao diện đó), khoảng
-thời gian (từ 15 phút đến 30 ngày, hoặc tùy chọn), làm mới mỗi 30 giây và
-**Sao chép liên kết** để lưu đúng khung nhìn hiện tại. Ngôn ngữ và năm giao
-diện màu nằm ở cuối menu. Biểu đồ dừng ở thời điểm dữ liệu còn đầy đủ: với
-NetFlow/IPFIX là trễ bằng thời gian thiết bị xuất dữ liệu (tối đa 2 phút).
-Khoảng thời gian trên 6 giờ bắt đầu từ đầu giờ chẵn; một giao diện trong 7
-hoặc 30 ngày phải đọc dữ liệu luồng chi tiết, nên chậm hơn và chỉ lùi về được
-đến mức dữ liệu chi tiết còn được lưu.
+thời gian (15 hoặc 30 phút, 1, 6, 12 hoặc 24 giờ, 7 hoặc 30 ngày, hoặc tùy
+chọn), tự động làm mới (mỗi 20 giây đến 5 phút, tùy khoảng thời gian) và **Sao
+chép liên kết** để lưu đúng khung nhìn hiện tại. Ngôn ngữ và giao diện màu
+(Sáng, Đen, Xanh mòng két, Cam, Nửa đêm; nút bấm chuyển sang giao diện kế
+tiếp) nằm ở đầu menu, dưới logo, cùng phiên bản và trạng thái đăng ký. Biểu đồ
+dừng ở thời điểm dữ liệu còn đầy đủ: với NetFlow/IPFIX là trễ bằng thời gian
+thiết bị xuất dữ liệu (tối đa 2 phút). Khoảng thời gian trên 6 giờ bắt đầu từ
+đầu giờ chẵn; một giao diện trong 7 hoặc 30 ngày phải đọc dữ liệu luồng chi
+tiết, nên chậm hơn và chỉ lùi về được đến mức dữ liệu chi tiết còn được lưu.
 
-![Top 66: 66 phiên hội thoại lớn nhất, sắp xếp theo cột bất kỳ](images/topn.png)
+![TOP: 66 phiên hội thoại lớn nhất, sắp xếp theo cột bất kỳ](images/topn.png)
 
 ![Chi tiết lưu lượng: máy chủ cùng các client, và dịch vụ cùng các máy chủ, dưới dạng biểu đồ vòng](images/traffic.png)
 
@@ -535,6 +538,10 @@ có tính năng nào bị khóa. Cuối mỗi trang hiển thị mã cài đặt
 này cho tác giả và đặt file `license.json` nhận được vào thư mục dữ liệu. Liên
 hệ: <route66traffic66@gmail.com>.
 
+Quản trị viên cũng có thể cài trên trang: **Cài đặt → Đăng ký & mua**, dán nội
+dung `license.json` hoặc chọn tệp, rồi bấm **Cài**. Giấy phép được kiểm tra
+trước khi ghi; nếu bị từ chối sẽ có lý do.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Bảo mật, định cỡ, xử lý sự cố
@@ -549,7 +556,7 @@ của bạn. Community SNMP được lưu dạng văn bản thuần; hãy dùng 
 
 Ở mức 5.000 luồng/s trên 2 nhân: khoảng 12 GB ổ đĩa cho mỗi ngày dữ liệu chi
 tiết (360 GB cho 30 ngày), một phần sáu nhân CPU, 0,6–0,8 GB bộ nhớ. Trang tổng
-quan cho khoảng thời gian dài mất dưới 0,2 giây; Top 66 trong 1 giờ trên toàn
+quan cho khoảng thời gian dài mất dưới 0,2 giây; TOP trong 1 giờ trên toàn
 bộ phiên hội thoại mất khoảng 9 giây.
 
 | Triệu chứng | Cách xử lý |

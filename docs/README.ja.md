@@ -72,7 +72,7 @@ macOS：先にそのフォルダで `xattr -dr com.apple.quarantine .` を実行
 
 ## スクリーンショット
 
-<img src="images/overview.png" alt="概要" width="49%"> <img src="images/topn.png" alt="上位 66" width="49%">
+<img src="images/overview.png" alt="概要" width="49%"> <img src="images/topn.png" alt="TOP" width="49%">
 
 <img src="images/geo.png" alt="地域とネットワーク" width="49%"> <img src="images/interfaces.png" alt="インターフェース照合" width="49%">
 

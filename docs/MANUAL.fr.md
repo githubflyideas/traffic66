@@ -390,29 +390,32 @@ hôte ou à un service), **Nommer…**, **Rechercher en ligne**, **Copier**.
 
 | Page | Ce qu'elle montre |
 |---|---|
-| Vue d'ensemble | La bande passante de l'interface choisie ; le trafic par application (total, entrant ou sortant) par rapport à hier ou à la semaine dernière ; les détections ouvertes ; principaux clients et services |
-| Top 66 | Les 66 premières conversations, triables par n'importe quelle colonne, ou regroupées par application, réseau, segment, équipement, encapsulation, VLAN ; les 33 interlocuteurs principaux |
+| Vue d'ensemble | Bande passante actuelle, trafic sur la plage, hôtes internes et distants actifs, et concordance des flux avec les compteurs des équipements ; bande passante par application (total, entrant ou sortant) par rapport à hier ou à la semaine dernière ; sens du trafic et protocoles ; principaux clients et services ; détections ; état de la collecte |
+| TOP | Les 66 premières conversations, triables par n'importe quelle colonne, ou regroupées par application, réseau, segment, équipement, encapsulation, VLAN ; les 33 interlocuteurs principaux |
 | Détails du trafic | Graphiques en anneaux : serveurs et leurs clients (ou l'inverse), et services |
 | Chemins du trafic | Hôte → application → pays, ou client → service → serveur, ou par réseau |
 | Contrôle des interfaces | Chaque interface dans le temps face à ses compteurs ; noms, étiquettes, interface par défaut |
 | Enregistrements de flux | Les flux individuels, en direct toutes les 5 secondes ou sur n'importe quelle plage de temps |
 | Détections, Menaces | Ce qui demande votre attention ([ci-dessous](#findings)) ; trafic avec des adresses listées |
 | Géographie et réseaux | Une carte du monde par pays, les réseaux (AS) dans le temps |
-| Paramètres | Équipements, échantillonnage, pertes, SNMP, bases de données, logo, noms |
+| Intégrations | Envoi des détections vers un collecteur syslog ([plus bas](#sending-findings-to-a-collector)) et liens pour d'autres plateformes ; pour les installations enregistrées |
+| Paramètres | Onglets : **Paramètres** (équipements, échantillonnage, pertes, SNMP, bases de données), **Inventaire** (noms), **Compte**, **Enregistrement et achat** (numéro d'installation, licence, logo) |
 | Analyse hors ligne de pcap, Nettoyage des données | Fichiers de capture ([ci-dessous](#9-offline-pcap-terminal-ui-local-capture)) ; suppression des anciennes données |
 
-Au-dessus des pages : **Interface** (toutes, ou une interface
-échantillonnée ; les pages de trafic ne montrent alors que le trafic qui la
-traverse), la plage de temps (de 15 minutes à 30 jours, ou personnalisée),
-le rafraîchissement toutes les 30 s et **Copier le lien** pour la vue
-exacte. La langue et cinq thèmes de couleurs se trouvent en bas du menu.
-Les graphiques s'arrêtent là où les données sont complètes : avec
-NetFlow/IPFIX, aussi tard que les équipements exportent (2 minutes au
-plus). Les plages de plus de 6 heures commencent à une heure pile ; une
-interface sur 7 ou 30 jours lit le détail des flux, c'est donc plus lent et
-cela ne remonte que jusqu'où le détail est conservé.
+Au-dessus des pages : **Interface** (toutes, ou une interface échantillonnée ;
+les pages de trafic ne montrent alors que le trafic qui la traverse), la plage
+de temps (15 ou 30 minutes, 1, 6, 12 ou 24 heures, 7 ou 30 jours, ou
+personnalisée), le rafraîchissement automatique (toutes les 20 secondes à 5
+minutes selon la plage) et **Copier le lien** pour la vue exacte. La langue et
+le thème de couleurs (Clair, Noir, Sarcelle, Orange, Minuit ; le bouton passe
+au suivant) se trouvent en haut du menu, sous le logo, avec la version et
+l'état de l'enregistrement. Les graphiques s'arrêtent là où les données sont
+complètes : avec NetFlow/IPFIX, aussi tard que les équipements exportent (2
+minutes au plus). Les plages de plus de 6 heures commencent à une heure pile ;
+une interface sur 7 ou 30 jours lit le détail des flux, c'est donc plus lent
+et cela ne remonte que jusqu'où le détail est conservé.
 
-![Top 66 : les 66 premières conversations, triables par n'importe quelle colonne](images/topn.png)
+![TOP : les 66 premières conversations, triables par n'importe quelle colonne](images/topn.png)
 
 ![Détails du trafic : les serveurs avec leurs clients, et les services avec leurs serveurs, en graphiques en anneaux](images/traffic.png)
 
@@ -556,6 +559,11 @@ d'installation à 8 chiffres ; envoyez-le à l'auteur et placez le
 `license.json` reçu en retour dans le répertoire de données. Contact :
 <route66traffic66@gmail.com>.
 
+Un administrateur peut aussi l'installer depuis la page : **Paramètres →
+Enregistrement et achat**, collez le contenu de `license.json` ou choisissez
+le fichier, puis **Installer**. Elle est vérifiée avant toute écriture ; une
+licence refusée indique pourquoi.
+
 <a id="11-security-sizing-troubleshooting"></a>
 
 ## 11. Sécurité, dimensionnement, dépannage
@@ -570,7 +578,7 @@ communautés en lecture seule.
 
 À 5 000 flux/s sur 2 cœurs : environ 12 Go de disque par jour de détail
 (360 Go pour 30 jours), un sixième de cœur, 0,6 à 0,8 Go de mémoire. Les
-vues d'ensemble sur de longues plages prennent moins de 0,2 s ; un Top 66
+vues d'ensemble sur de longues plages prennent moins de 0,2 s ; un TOP
 d'une heure de toutes les conversations, environ 9 s.
 
 | Symptôme | Solution |
