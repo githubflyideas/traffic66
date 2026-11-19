@@ -521,9 +521,10 @@ body.marked .view.on::after{
    taking them from the page under it, so this sits in the corner of a
    marked view and is the thing somebody presses to find out why the page
    is marked. Quiet by default: it is on screen all day while somebody
-   evaluates. */
+   evaluates. It sits at the inline end, away from the sidebar, so in a
+   right-to-left language it does not cover Sign out. */
 .markchip{
-  position:fixed;right:14px;bottom:14px;z-index:41;
+  position:fixed;inset-inline-end:14px;bottom:14px;z-index:41;
   font:600 12px/1 system-ui,sans-serif;letter-spacing:.04em;
   padding:7px 11px;border-radius:999px;cursor:pointer;
   color:var(--ink-2);background:var(--bg);

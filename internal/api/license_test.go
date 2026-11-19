@@ -95,19 +95,23 @@ func TestLicenseRefusedIsNotWritten(t *testing.T) {
 	past := "2020-01-01"
 	elsewhere := "ZZZZZZZZ"
 	for _, tc := range []struct{ name, text, want string }{
-		{"not json", "{nonsense", "license"},
-		{"unsigned", `{"customer":"X","product":"traffic66"}`, "license"},
-		{"another key", sign(wrongKey, license.File{Customer: "X", Product: "traffic66"}), ""},
-		{"expired", sign(priv, license.File{Customer: "X", Product: "traffic66", Expires: &past}), "expired"},
-		{"another installation", sign(priv, license.File{Customer: "X", Product: "traffic66", InstallationID: elsewhere}), "another installation"},
+		{"not json", "{nonsense", "lic_unreadable"},
+		{"unsigned", `{"customer":"X","product":"traffic66"}`, "lic_unsigned"},
+		{"another key", sign(wrongKey, license.File{Customer: "X", Product: "traffic66"}), "lic_"},
+		{"expired", sign(priv, license.File{Customer: "X", Product: "traffic66", Expires: &past}), "lic_expired"},
+		{"another installation", sign(priv, license.File{Customer: "X", Product: "traffic66", InstallationID: elsewhere}), "lic_other_install"},
 	} {
 		w := install(t, s, tc.text)
 		if w.Code == 200 {
 			t.Errorf("%s: accepted", tc.name)
 			continue
 		}
-		if tc.want != "" && !strings.Contains(w.Body.String(), tc.want) {
-			t.Errorf("%s: %s, want a reason mentioning %q", tc.name, strings.TrimSpace(w.Body.String()), tc.want)
+		// a code the page says in the reader's language, and the
+		// checker's sentence for support
+		var j struct{ Error, Detail string }
+		json.Unmarshal(w.Body.Bytes(), &j)
+		if !strings.HasPrefix(j.Error, tc.want) || j.Error == "lic_invalid" || j.Detail == "" {
+			t.Errorf("%s: %s, want code %q and a detail", tc.name, strings.TrimSpace(w.Body.String()), tc.want)
 		}
 		if c.State().Registered() {
 			t.Fatalf("%s: the installation became registered", tc.name)

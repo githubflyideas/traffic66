@@ -299,6 +299,7 @@ function failText(res, j = {}) {
   if (c === 'not_admin') return t('err.not_admin');
   if (c === 'bad request') return t('err.bad_request');
   if (c === 'file') return t('acct.err_file');
+  if (c.startsWith('lic_')) return t('lic.err.' + c.slice(4), {d: ((j.detail || '').match(/\d{4}-\d{2}-\d{2}/) || [''])[0], e: j.detail || c});
   if (res.status >= 500) return t('err.server', {e: res.status + (c ? ' ' + c : '')});
   return c || res.statusText || String(res.status);
 }

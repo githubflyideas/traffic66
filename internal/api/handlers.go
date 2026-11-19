@@ -523,7 +523,9 @@ func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
 	// a device exporting under several observation domains (one per line
 	// card) can have domains that never carry a flow record: their
 	// sequence numbers then read as total loss. While another domain of
-	// the device carries records, those rows say nothing true and are left out.
+	// the device carries records, those rows say nothing true and are left
+	// out — unless something is wrong with them: a domain whose data waits
+	// for a template that never comes, or does not decode, loses all of it.
 	carries := map[string]bool{}
 	for _, si := range srcs {
 		if si.Records > 0 {
@@ -531,7 +533,7 @@ func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for _, si := range srcs {
-		if si.Records == 0 && carries[si.Exporter+"|"+si.Proto] {
+		if si.Records == 0 && carries[si.Exporter+"|"+si.Proto] && si.NoTemplate == 0 && si.Pending == 0 && si.DecodeErrors == 0 {
 			continue
 		}
 		o := sourceOut{SourceInfo: si, Status: "ok"}

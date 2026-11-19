@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/githubflyideas/traffic66/internal/license"
@@ -22,7 +23,7 @@ import (
 // to be useless at the next reload.
 func (s *Server) putLicense(w http.ResponseWriter, r *http.Request) {
 	if s.License == nil {
-		fail(w, errors.New("no licence state on this installation"))
+		refuse(w, "lic_unavailable", "no licence state on this installation")
 		return
 	}
 	var in struct {
@@ -34,12 +35,12 @@ func (s *Server) putLicense(w http.ResponseWriter, r *http.Request) {
 	}
 	f, err := license.Parse([]byte(in.Text))
 	if err != nil {
-		fail(w, err)
+		refuse(w, "lic_unreadable", err.Error())
 		return
 	}
 	now := time.Now()
 	if st := license.Check(s.License.Ring, f, s.License.Install, now); st.Kind != license.KindLicensed {
-		fail(w, errors.New(st.Reason))
+		refuse(w, refusal(st), st.Reason)
 		return
 	}
 	if err := license.Save(s.License.Path, f); err != nil {
@@ -49,4 +50,39 @@ func (s *Server) putLicense(w http.ResponseWriter, r *http.Request) {
 	// Take effect now rather than at the next few-hourly check: somebody is
 	// watching the page they just installed it on.
 	writeJSON(w, http.StatusOK, map[string]any{"license": s.License.Check(now).Public()})
+}
+
+// refuse answers a licence that cannot be installed with a code the page
+// says in the reader's language, and the checker's own sentence beside it
+// for support.
+func refuse(w http.ResponseWriter, code, detail string) {
+	writeJSON(w, http.StatusBadRequest, map[string]string{"error": code, "detail": detail})
+}
+
+// refusal names why the checker turned a licence down.
+func refusal(st license.State) string {
+	if st.Kind == license.KindExpired {
+		return "lic_expired"
+	}
+	for _, c := range []struct {
+		err  error
+		code string
+	}{
+		{license.ErrNoSignature, "lic_unsigned"},
+		{license.ErrSignature, "lic_bad_signature"},
+		{license.ErrBadKey, "lic_bad_signature"},
+		{license.ErrBadField, "lic_bad_signature"},
+		{license.ErrUnknownKey, "lic_unknown_key"},
+		{license.ErrKeyDisabled, "lic_key_disabled"},
+		{license.ErrNotAllowed, "lic_not_issued"},
+		{license.ErrNoKeys, "lic_no_keys"},
+	} {
+		if strings.HasPrefix(st.Reason, c.err.Error()) {
+			return c.code
+		}
+	}
+	if strings.Contains(st.Reason, "another installation") {
+		return "lic_other_install"
+	}
+	return "lic_invalid"
 }
