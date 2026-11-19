@@ -48,8 +48,10 @@ docker run -d --name t66-nginx --network host -v "$tmp/nginx.conf:/etc/nginx/con
 docker run -d --name t66-caddy --network host caddy:2 caddy reverse-proxy --from :18082 --to 127.0.0.1:18066 >/dev/null
 docker run -d --name t66-traefik --network host -v "$tmp/traefik.yml:/dyn.yml:ro" traefik:v3 --entrypoints.web.address=:18083 --providers.file.filename=/dyn.yml >/dev/null
 
+# wait for a 200 through each: a proxy answers 404 or 502 until it has read
+# its routes and reached traffic66
 for p in 18066 18067 18081 18082 18083 18084 18085; do
-  for i in $(seq 1 60); do curl -s -o /dev/null "http://localhost:$p/healthz" && break; sleep 1; done
+  for i in $(seq 1 60); do curl -sf -o /dev/null "http://localhost:$p/healthz" && break; sleep 1; done
 done
 
 # login PORT ORIGIN: prints the HTTP status and the error code, if any
