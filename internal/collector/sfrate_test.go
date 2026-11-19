@@ -19,61 +19,21 @@ func feed(st *sfState, rate uint32, n int, pool *uint32, seq *uint32, at time.Ti
 	}
 }
 
-// After the measurement window has settled, the effective rate is the
-// measured one; when the agent's configured rate then changes, the measured
-// rate from the old setting must not be carried over.
-func TestEffectiveRateDroppedWhenConfiguredRateChanges(t *testing.T) {
+// When the configured rate changes, the measured compensation carries over
+// to the new rate: nothing lost, so 1:1000 becomes exactly 1:100, not 1:1000
+// (ten times too much) and not a pause in measuring.
+func TestEffectiveRateFollowsAConfiguredRateChange(t *testing.T) {
 	now := time.Now()
 	st := &sfState{evalAt: now}
 	var pool, seq uint32
-	// 40 samples at 1:1000, more than a 30-second window needs
 	feed(st, 1000, 40, &pool, &seq, now)
 	st.update(&sflow.FlowSample{Rate: 1000, Pool: pool + 1000, Seq: seq + 1}, now.Add(31*time.Second))
-	if st.eff == 0 {
-		t.Fatal("no effective rate was measured at 1:1000")
+	if st.eff != 1000 {
+		t.Fatalf("measured %v at 1:1000, want 1000", st.eff)
 	}
-	measured := st.eff
-	if measured < 500 || measured > 2000 {
-		t.Fatalf("measured %v, want about 1000", measured)
-	}
-	// the operator changes the agent to 1 in 100
 	st.update(&sflow.FlowSample{Rate: 100, Pool: pool + 1100, Seq: seq + 2}, now.Add(32*time.Second))
-	if st.eff != 0 {
-		t.Errorf("effective rate is still %v after the configured rate changed to 100; "+
-			"records would be scaled by the old rate (%.0fx too much)", st.eff, measured/100)
-	}
-	if st.rate != 100 {
-		t.Errorf("configured rate %d, want 100", st.rate)
-	}
-}
-
-// The window restarts on a change, so the next measurement is not a blend
-// of the two settings.
-func TestMeasurementWindowRestartsOnRateChange(t *testing.T) {
-	now := time.Now()
-	st := &sfState{evalAt: now}
-	var pool, seq uint32
-	feed(st, 1000, 20, &pool, &seq, now)
-	if st.winRecv == 0 {
-		t.Fatal("nothing accumulated")
-	}
-	st.update(&sflow.FlowSample{Rate: 100, Pool: pool + 100, Seq: seq + 1}, now.Add(time.Second))
-	// only the sample that carried the new rate is in the window; the 20
-	// measured against 1:1000 are gone
-	if st.winRecv != 1 {
-		t.Errorf("window holds %v samples, want only the one that carried the new rate", st.winRecv)
-	}
-	if st.winMiss != 0 {
-		t.Errorf("window holds %v missing samples from the old rate", st.winMiss)
-	}
-	// measuring again at the new rate gives the new rate, not a blend
-	pool += 100
-	seq++
-	at := now.Add(2 * time.Second)
-	feed(st, 100, 40, &pool, &seq, at)
-	st.update(&sflow.FlowSample{Rate: 100, Pool: pool + 100, Seq: seq + 1}, at.Add(31*time.Second))
-	if st.eff < 50 || st.eff > 200 {
-		t.Errorf("measured %v after the change, want about 100", st.eff)
+	if st.eff != 100 || st.rate != 100 {
+		t.Errorf("after the change to 1:100: rate %v (declared %d), want 100", st.eff, st.rate)
 	}
 }
 
@@ -146,19 +106,109 @@ func TestRateCountsLostSamples(t *testing.T) {
 }
 
 // Changing the rate on the switch (1:1024 to 1:65535) is followed at once,
-// and nothing measured against the old rate is carried over.
-func TestRateFollowsAChangeOnTheSwitch(t *testing.T) {
+// with the share of lost samples kept: a fifth lost before the change is a
+// fifth lost after it, not a pause of 30 seconds counted too low.
+func TestRateChangeKeepsTheLossShare(t *testing.T) {
 	st := &sfState{evalAt: time.Now()}
 	var pool, seq uint32
-	if got := run(st, 1024, 1024, 1, 40, &pool, &seq, time.Now()); got != 1024 {
-		t.Fatalf("before the change: %v", got)
+	now := time.Now()
+	send := func(rate uint32, n int) {
+		for i := 0; i < n; i++ {
+			pool += rate
+			seq++
+			if seq%5 == 0 {
+				continue // lost on the way
+			}
+			st.update(&sflow.FlowSample{Rate: rate, Pool: pool, Seq: seq}, now)
+			now = now.Add(time.Second / 2)
+		}
 	}
-	seq++
-	st.update(&sflow.FlowSample{Rate: 65535, Pool: pool, Seq: seq}, time.Now())
-	if st.eff != 0 || st.rate != 65535 {
-		t.Errorf("after the change: measured rate %v kept, declared %d", st.eff, st.rate)
+	send(1024, 100)
+	before := st.eff
+	if before < 1280*0.99 || before > 1280*1.01 {
+		t.Fatalf("before the change: %v, want about 1280", before)
 	}
-	if got := run(st, 65535, 65535, 1, 40, &pool, &seq, time.Now()); got != 65535 {
-		t.Errorf("measured again after the change: %v, want 65535", got)
+	send(65535, 1)
+	if want := before / 1024 * 65535; st.eff != want {
+		t.Errorf("right after the change: %v, want %v", st.eff, want)
+	}
+}
+
+// A sample that arrives after a later one, or twice, is neither a loss nor
+// more traffic.
+func TestReorderedAndRepeatedSamples(t *testing.T) {
+	st := &sfState{evalAt: time.Now()}
+	now := time.Now()
+	var counted int
+	order := []uint32{}
+	for base := uint32(1); base < 400; base += 10 {
+		// 1..10 with 3 and 4 swapped, and 6 delivered again after 7
+		order = append(order, base, base+1, base+3, base+2, base+4, base+5, base+6, base+5, base+7, base+8, base+9)
+	}
+	for _, q := range order {
+		if st.update(&sflow.FlowSample{Rate: 100, Pool: q * 100, Seq: q}, now) {
+			counted++
+		}
+		now = now.Add(time.Second / 4)
+	}
+	if counted != 400 || st.lost != 0 || st.eff != 100 {
+		t.Errorf("counted %d of 400, lost %d, rate %v; want 400, 0, 100", counted, st.lost, st.eff)
+	}
+}
+
+// An agent numbering the samples of all its interfaces in one sequence:
+// each interface sees two of three numbers missing, while its pool grows by
+// the declared rate per sample. Nothing is lost, and nothing is tripled.
+func TestSequenceSharedByInterfaces(t *testing.T) {
+	st := &sfState{evalAt: time.Now()}
+	now := time.Now()
+	for i := uint32(1); i <= 200; i++ {
+		st.update(&sflow.FlowSample{Rate: 1024, Pool: i * 1024, Seq: i * 3}, now)
+		now = now.Add(time.Second / 4)
+	}
+	if st.eff != 1024 {
+		t.Errorf("rate %v, want 1024", st.eff)
+	}
+	if st.lost > 0 {
+		t.Errorf("%d samples reported lost", st.lost)
+	}
+}
+
+// Four of five samples lost, with the pool agreeing: each received one
+// stands for five, rather than compensation being switched off.
+func TestHeavyLoss(t *testing.T) {
+	st := &sfState{evalAt: time.Now()}
+	now := time.Now()
+	for i := uint32(1); i <= 1000; i++ {
+		if i%5 == 0 {
+			st.update(&sflow.FlowSample{Rate: 512, Pool: i * 512, Seq: i}, now)
+		}
+		now = now.Add(time.Second / 8)
+	}
+	if st.eff != 512*5 {
+		t.Errorf("rate %v, want %d", st.eff, 512*5)
+	}
+}
+
+// A restarted agent (numbers, drops and pool from zero) and an outage of
+// minutes are not a loss rate for the samples that follow.
+func TestRestartAndOutage(t *testing.T) {
+	st := &sfState{evalAt: time.Now()}
+	now := time.Now()
+	seq := uint32(900000)
+	step := func(n int) {
+		for i := 0; i < n; i++ {
+			seq++
+			st.update(&sflow.FlowSample{Rate: 1000, Pool: seq * 1000, Seq: seq}, now)
+			now = now.Add(time.Second / 4)
+		}
+	}
+	step(150)
+	seq = 0 // restart
+	step(150)
+	seq += 5000 // outage
+	step(150)
+	if st.eff != 1000 {
+		t.Errorf("rate %v, want 1000", st.eff)
 	}
 }

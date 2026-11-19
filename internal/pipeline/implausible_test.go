@@ -50,14 +50,14 @@ func TestLargeFrames(t *testing.T) {
 			SrcPort: 50000, DstPort: 443, Proto: 6, Bytes: bytes, Packets: 1, Mult: 1, SamplingKnown: true, L2: true, L2Hdr: 14,
 			Exporter: netip.MustParseAddr("10.0.0.1"), Source: flow.SrcSFlow}
 	}
-	p.Ingest([]flow.Record{rec(65600), rec(200000), rec(1<<20 + 1)})
+	p.Ingest([]flow.Record{rec(65600), rec(200000), rec(512 << 10), rec(512<<10 + 1), rec(4 << 20)})
 	p.FlushRows()
 	p.FlushRollups()
-	if n := p.Implausible.Load(); n != 1 {
-		t.Fatalf("implausible %d, want 1", n)
+	if n := p.Implausible.Load(); n != 2 {
+		t.Fatalf("implausible %d, want 2", n)
 	}
 	tot, err := st.Totals(store.Query{From: now.Add(-time.Hour), To: now})
-	if err != nil || tot.Wire != 265600 {
-		t.Fatalf("totals %+v %v, want wire 265600", tot, err)
+	if err != nil || tot.Wire != 789888 {
+		t.Fatalf("totals %+v %v, want wire 789888", tot, err)
 	}
 }

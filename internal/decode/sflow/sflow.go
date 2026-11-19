@@ -211,9 +211,6 @@ func rawHeader(b []byte, rec *flow.Record) bool {
 	r := wire.New(b)
 	proto := r.U32()
 	frameLen := r.U32()
-	if frameLen > maxFrame {
-		return false // larger than any packet a host or interface carries: a forged sample
-	}
 	stripped := r.U32()
 	hlen := r.U32()
 	hdr := r.Bytes(int(hlen))
@@ -349,8 +346,3 @@ func (d *Datagram) counterSample(b []byte, expanded bool, now time.Time) error {
 	}
 	return nil
 }
-
-// maxFrame is the largest frame_length accepted. Hosts that sample after
-// receive offload (GRO) report packets over 64 KB; Linux builds them up to
-// 512 KiB (BIG TCP). Anything larger is not a packet.
-const maxFrame = 512 << 10

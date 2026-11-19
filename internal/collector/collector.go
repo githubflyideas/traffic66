@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"net/netip"
 	"runtime/debug"
@@ -65,14 +66,38 @@ type sfKey struct {
 }
 
 type sfState struct {
+	// of the newest sample: the highest sequence number seen
 	lastPool, lastSeq, lastDrops uint32
 	init                         bool
-	winMiss, winRecv             float64
-	evalAt                       time.Time
-	eff                          float64
-	rate                         uint32
-	lost, drops                  uint64
+	// the last sfWin sequence numbers and their pools, to tell a sample
+	// that arrives late or twice from one that was lost
+	seen     [sfWin]sfSeen
+	seenMask uint64
+	// since evalAt: samples received and missing, and the pool's growth
+	// over winPoolN received samples
+	winMiss, winRecv  float64
+	winPool, winPoolN float64
+	winGap            uint64 // samples missing from sequence gaps
+	shared            bool   // the gaps are not losses: see update
+	evalAt            time.Time
+	eff               float64
+	rate              uint32
+	lost, drops       uint64
 }
+
+type sfSeen struct{ seq, pool uint32 }
+
+const (
+	// sfWin is how far back a sample may arrive late (or again) and still
+	// be recognised; UDP reorders over a few datagrams, not dozens.
+	sfWin = 64
+	// sfOutage is the largest gap that counts towards the loss rate: a
+	// longer one is an outage, whose traffic is gone, not a loss rate that
+	// the next samples should make up for.
+	sfOutage = 256
+	// sfMaxComp caps the compensation: 95% of the samples lost.
+	sfMaxComp = 20
+)
 
 type sfAgent struct {
 	addr      netip.Addr
@@ -272,12 +297,19 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 		ag.decodeErr++
 	}
 	ag.datagrams++
-	if last, ok := ag.lastSeq[d.SubAgent]; ok {
-		if gap := d.Seq - last - 1; gap > 0 && gap < 1<<20 {
-			ag.lostDgram += uint64(gap)
+	if last, ok := ag.lastSeq[d.SubAgent]; !ok {
+		ag.lastSeq[d.SubAgent] = d.Seq
+	} else if n := int32(d.Seq - last); n > 0 && n < 1<<20 {
+		ag.lostDgram += uint64(n - 1)
+		ag.lastSeq[d.SubAgent] = d.Seq
+	} else if n < 0 && n > -sfWin {
+		// a datagram overtaken by a later one, already counted as lost
+		if ag.lostDgram > 0 {
+			ag.lostDgram--
 		}
+	} else if n != 0 {
+		ag.lastSeq[d.SubAgent] = d.Seq // the agent started over
 	}
-	ag.lastSeq[d.SubAgent] = d.Seq
 
 	recs := make([]flow.Record, 0, len(d.Flows))
 	for i := range d.Flows {
@@ -309,48 +341,116 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 
 // update tracks the effective sampling rate: the configured rate, raised
 // by the samples that never arrived, lost on the way (gaps in the sequence
-// numbers) or dropped by the agent itself (its drop counter). The agent's
-// sample_pool is not used: vendors count it differently (H3C among them),
-// and a rate derived from it scaled a 1:10240 port by about 1:12200,
-// a fifth more traffic than the interface carried.
+// numbers) or dropped by the agent itself (its drop counter). It reports
+// whether the sample is to be counted: one delivered twice is not.
+//
+// The agent's sample_pool is not the measure: vendors count it differently
+// (H3C among them), and a rate derived from it scaled a 1:10240 port by
+// about 1:12200, a fifth more traffic than the interface carried. It is the
+// check on the sequence numbers instead: some agents number the samples of
+// all their interfaces in one sequence, so that each interface sees gaps
+// that are not losses; where the pool grew no faster than the declared rate
+// while the gaps say most samples went missing, the pool is believed.
 func (st *sfState) update(s *sflow.FlowSample, now time.Time) bool {
-	// the same sample delivered again adds nothing
-	if st.init && s.Seq == st.lastSeq && s.Pool == st.lastPool {
-		return false
-	}
-	if st.init && s.Rate != st.rate {
-		// The agent's configured rate changed: what was measured against
-		// the old one is dropped, so the new samples are not scaled by it,
-		// and the declared rate applies until there is enough to measure.
-		st.eff = 0
-		st.winMiss, st.winRecv = 0, 0
-		st.evalAt = now
-	}
-	st.rate = s.Rate
-	if st.init {
+	if !st.init {
+		st.init, st.rate = true, s.Rate
+		st.restart(s)
 		st.winRecv++
-		if gap := s.Seq - st.lastSeq - 1; gap > 0 && gap < 1<<20 {
+		return true
+	}
+	if s.Rate != st.rate {
+		// The configured rate changed. The share of samples lost does not
+		// depend on it, so the measured compensation carries over to the
+		// new rate; only the pool, which grew at the old rate, starts over.
+		if st.eff > 0 && st.rate > 0 {
+			st.eff = st.eff / float64(st.rate) * float64(s.Rate)
+		}
+		st.rate = s.Rate
+		st.winPool, st.winPoolN = 0, 0
+	}
+	d := int32(s.Seq - st.lastSeq)
+	switch {
+	case d <= 0 && d > -sfWin && st.saw(s.Seq):
+		if st.seen[s.Seq%sfWin].pool == s.Pool {
+			return false // the same sample delivered again
+		}
+		st.restart(s) // the same number for another sample: the agent started over
+	case d < 0 && d > -sfWin:
+		// arrived after a later one, which counted it as lost
+		st.mark(s)
+		if st.winGap > 0 {
+			st.winGap--
+			st.winMiss--
+			if !st.shared && st.lost > 0 {
+				st.lost--
+			}
+		}
+		st.winPoolN++
+	case d <= 0 || d >= 1<<20:
+		st.restart(s) // the sequence started over: a restarted agent
+	default:
+		gap := uint32(d) - 1
+		if !st.shared {
 			st.lost += uint64(gap)
-			st.winMiss += float64(gap)
 		}
 		if dd := s.Drops - st.lastDrops; dd < 1<<31 {
 			st.drops += uint64(dd)
 			st.winMiss += float64(dd)
 		}
-	}
-	st.init = true
-	st.lastPool, st.lastSeq, st.lastDrops = s.Pool, s.Seq, s.Drops
-	if now.Sub(st.evalAt) >= 30*time.Second && st.winRecv >= 30 {
-		cfg := float64(s.Rate)
-		e := cfg * (st.winRecv + st.winMiss) / st.winRecv
-		if e > cfg*4 {
-			e = cfg // implausible: a counter reset, not three quarters lost
+		if gap <= sfOutage {
+			st.winGap += uint64(gap)
+			st.winMiss += float64(gap)
+			if dp := s.Pool - st.lastPool; dp < 1<<31 {
+				st.winPool += float64(dp)
+				st.winPoolN++
+			}
 		}
-		st.eff = e
-		st.winMiss, st.winRecv = 0, 0
+		st.lastPool, st.lastSeq, st.lastDrops = s.Pool, s.Seq, s.Drops
+		st.mark(s)
+	}
+	st.winRecv++
+	if now.Sub(st.evalAt) >= 30*time.Second && st.winRecv >= 30 {
+		cfg := float64(st.rate)
+		e := cfg * (st.winRecv + st.winMiss) / st.winRecv
+		shared := false
+		if st.winPoolN >= 30 && cfg > 0 {
+			p := st.winPool / st.winPoolN
+			// the margin leaves room for the pool's own spread over few samples
+			if p >= cfg/2 && e > p*(1.5+2/math.Sqrt(st.winPoolN)) {
+				e, shared = math.Max(cfg, p), true
+			}
+		}
+		// the gaps of this window were counted as lost, or not, on the
+		// last verdict; this one decides
+		if shared && !st.shared {
+			st.lost -= min(st.lost, st.winGap)
+		} else if !shared && st.shared {
+			st.lost += st.winGap
+		}
+		st.shared = shared
+		st.eff = min(e, cfg*sfMaxComp)
+		st.winMiss, st.winRecv, st.winPool, st.winPoolN, st.winGap = 0, 0, 0, 0, 0
 		st.evalAt = now
 	}
 	return true
+}
+
+// restart takes s as the first sample of a new sequence.
+func (st *sfState) restart(s *sflow.FlowSample) {
+	st.lastPool, st.lastSeq, st.lastDrops = s.Pool, s.Seq, s.Drops
+	st.seenMask = 0
+	st.mark(s)
+}
+
+func (st *sfState) mark(s *sflow.FlowSample) {
+	i := s.Seq % sfWin
+	st.seen[i] = sfSeen{s.Seq, s.Pool}
+	st.seenMask |= 1 << i
+}
+
+func (st *sfState) saw(seq uint32) bool {
+	i := seq % sfWin
+	return st.seenMask&(1<<i) != 0 && st.seen[i].seq == seq
 }
 
 // SourceInfo summarises one exporter for the UI.

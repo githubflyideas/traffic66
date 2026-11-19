@@ -733,9 +733,10 @@ const (
 	maxMult        = 1 << 24
 	maxRecordBytes = 1 << 46
 	// maxPacketBytes is the largest average packet accepted: far above a
-	// jumbo frame, and above the coalesced packets (GRO, BIG TCP) that a
-	// host agent can sample.
-	maxPacketBytes = 1 << 20
+	// jumbo frame, and as large as the coalesced packets (GRO, BIG TCP) that
+	// a host agent can sample, which Linux builds up to 512 KiB. A larger
+	// one is refused here, where it is counted and logged.
+	maxPacketBytes = 512 << 10
 )
 
 // plausibleTime reports whether t is a time a flow can have: from 1990 to
