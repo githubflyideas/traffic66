@@ -134,16 +134,15 @@ func TestRateChangeKeepsTheLossShare(t *testing.T) {
 	}
 }
 
-// A sample that arrives after a later one, or twice, is neither a loss nor
-// more traffic.
-func TestReorderedAndRepeatedSamples(t *testing.T) {
+// A sample that arrives after a later one is not a loss.
+func TestReorderedSamples(t *testing.T) {
 	st := &sfState{evalAt: time.Now()}
 	now := time.Now()
 	var counted int
 	order := []uint32{}
 	for base := uint32(1); base < 400; base += 10 {
-		// 1..10 with 3 and 4 swapped, and 6 delivered again after 7
-		order = append(order, base, base+1, base+3, base+2, base+4, base+5, base+6, base+5, base+7, base+8, base+9)
+		// 1..10 with 3 and 4 swapped
+		order = append(order, base, base+1, base+3, base+2, base+4, base+5, base+6, base+7, base+8, base+9)
 	}
 	for _, q := range order {
 		if st.update(&sflow.FlowSample{Rate: 100, Pool: q * 100, Seq: q}, now) {

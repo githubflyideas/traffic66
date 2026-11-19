@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"math"
 	"net"
@@ -87,6 +88,25 @@ type sfState struct {
 
 type sfSeen struct{ seq, pool uint32 }
 
+// dgSeen remembers the last sfWin datagrams of a sub-agent (number and a
+// hash of the bytes), so a datagram the network delivered twice is
+// recognised, while one an agent sends after starting over is not.
+type dgSeen struct {
+	seq  [sfWin]uint32
+	sum  [sfWin]uint64
+	mask uint64
+}
+
+func (g *dgSeen) has(q uint32, sum uint64) bool {
+	i := q % sfWin
+	return g.mask&(1<<i) != 0 && g.seq[i] == q && g.sum[i] == sum
+}
+
+func (g *dgSeen) add(q uint32, sum uint64) {
+	i := q % sfWin
+	g.seq[i], g.sum[i], g.mask = q, sum, g.mask|1<<i
+}
+
 const (
 	// sfWin is how far back a sample may arrive late (or again) and still
 	// be recognised; UDP reorders over a few datagrams, not dozens.
@@ -106,6 +126,7 @@ type sfAgent struct {
 	counters  uint64
 	lostDgram uint64
 	lastSeq   map[uint32]uint32
+	recent    map[uint32]*dgSeen // per sub-agent: the last datagram numbers
 	lastSeen  time.Time
 	firstSeen time.Time // the agent's first datagram
 	decodeErr uint64
@@ -282,7 +303,7 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 		if len(c.sfAgents) >= maxAgents {
 			return false // too many agents (spoofed sources?); counted as undecoded
 		}
-		ag = &sfAgent{addr: agentAddr, lastSeq: map[uint32]uint32{}}
+		ag = &sfAgent{addr: agentAddr, lastSeq: map[uint32]uint32{}, recent: map[uint32]*dgSeen{}}
 		c.sfAgents[agentAddr] = ag
 	}
 	ag.lastSeen = now
@@ -296,6 +317,20 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 	if err != nil {
 		ag.decodeErr++
 	}
+	g := ag.recent[d.SubAgent]
+	if g == nil {
+		g = &dgSeen{}
+		ag.recent[d.SubAgent] = g
+	}
+	h := fnv.New64a()
+	h.Write(b)
+	sum := h.Sum64()
+	if last, ok := ag.lastSeq[d.SubAgent]; ok {
+		if n := int32(d.Seq - last); n <= 0 && n > -sfWin && g.has(d.Seq, sum) {
+			return true // the same datagram delivered again: nothing new in it
+		}
+	}
+	g.add(d.Seq, sum)
 	ag.datagrams++
 	if last, ok := ag.lastSeq[d.SubAgent]; !ok {
 		ag.lastSeq[d.SubAgent] = d.Seq
@@ -342,7 +377,7 @@ func (c *Collector) handleSFlow(b []byte, from netip.Addr, now time.Time) bool {
 // update tracks the effective sampling rate: the configured rate, raised
 // by the samples that never arrived, lost on the way (gaps in the sequence
 // numbers) or dropped by the agent itself (its drop counter). It reports
-// whether the sample is to be counted: one delivered twice is not.
+// whether the sample is to be counted.
 //
 // The agent's sample_pool is not the measure: vendors count it differently
 // (H3C among them), and a rate derived from it scaled a 1:10240 port by
@@ -373,10 +408,9 @@ func (st *sfState) update(s *sflow.FlowSample, now time.Time) bool {
 	d := int32(s.Seq - st.lastSeq)
 	switch {
 	case d <= 0 && d > -sfWin && st.saw(s.Seq):
-		if st.seen[s.Seq%sfWin].pool == s.Pool {
-			return false // the same sample delivered again
-		}
-		st.restart(s) // the same number for another sample: the agent started over
+		// a number already seen, in a datagram not seen before (a datagram
+		// delivered twice is dropped whole): the agent started over
+		st.restart(s)
 	case d < 0 && d > -sfWin:
 		// arrived after a later one, which counted it as lost
 		st.mark(s)
