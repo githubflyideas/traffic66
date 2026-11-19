@@ -185,8 +185,8 @@ type page struct {
 }
 
 var pageKeys = []string{"top", "ifaces", "search"}
-var ranges = []string{"5m", "15m", "1h", "6h", "24h"}
-var rangeDur = []time.Duration{5 * time.Minute, 15 * time.Minute, time.Hour, 6 * time.Hour, 24 * time.Hour}
+var ranges = []string{"5m", "15m", "30m", "1h", "6h", "12h", "24h"}
+var rangeDur = []time.Duration{5 * time.Minute, 15 * time.Minute, 30 * time.Minute, time.Hour, 6 * time.Hour, 12 * time.Hour, 24 * time.Hour}
 var dims = []string{"client", "server", "app", "port", "asn", "country"}
 var units = []string{"bps", "bytes", "pps"}
 var intervals = []time.Duration{2 * time.Second, 5 * time.Second, 10 * time.Second, 30 * time.Second}

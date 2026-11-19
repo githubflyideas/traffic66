@@ -350,7 +350,7 @@ async function resolveNames() {
 
 // ------------------------------------------------------------ state & API
 const VIEWS = ['help', 'account', 'license', 'integrations', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
-const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
+const RANGES = ['15m', '30m', '1h', '6h', '12h', '24h', '7d', '30d'];
 
 // How often a page redraws itself, by range. It follows the width of the
 // buckets the range is drawn in: a 15-minute or 1-hour range is drawn per
@@ -358,7 +358,7 @@ const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'];
 // 30-day range is drawn in three-hour buckets and a redraw every five
 // minutes is already generous. A range the user typed ends in the past and
 // never changes, so it has no beat at all.
-const REFRESH_MS = {'15m': 20000, '1h': 30000, '6h': 60000, '24h': 60000, '7d': 300000, '30d': 300000};
+const REFRESH_MS = {'15m': 20000, '30m': 30000, '1h': 30000, '6h': 60000, '12h': 60000, '24h': 60000, '7d': 300000, '30d': 300000};
 
 // The pages that show incoming data. The others (help, the account, the
 // asset and name pages, data cleanup, the sandbox, the bill) change when
@@ -476,7 +476,7 @@ function sbRange() {
   const a = Math.floor(Date.parse(sbInfo.first) / 6e4) * 6e4, b = Math.ceil((Date.parse(sbInfo.last) + 1) / 6e4) * 6e4;
   return {from: a, to: Math.max(b, a + 6e4)};
 }
-const spanMs = () => { if (inSB()) { const r = sbRange(); return r.to - r.from; } if (state.r === 'custom') return state.ct - state.cf; return ({'15m': 9e5, '1h': 36e5, '6h': 216e5, '24h': 864e5, '7d': 6048e5, '30d': 2592e6})[state.r]; };
+const spanMs = () => { if (inSB()) { const r = sbRange(); return r.to - r.from; } if (state.r === 'custom') return state.ct - state.cf; return ({'15m': 9e5, '30m': 18e5, '1h': 36e5, '6h': 216e5, '12h': 432e5, '24h': 864e5, '7d': 6048e5, '30d': 2592e6})[state.r]; };
 const rangeLabel = () => inSB() ? t('sb.range') : state.r === 'custom' ? customLabel() : t('range.' + state.r);
 // "10/05 08:00 – 10/06 08:00": a custom range in the reader's time
 function customLabel() {
@@ -1444,7 +1444,7 @@ async function topTable(el, dim) {
   };
   const slow = dim === 'conv' && spanMs() > 216e5 ? ` · ${esc(t('conv.slow'))}` : '';
   el.innerHTML = `<div class="panel">
-    <div class="ph"><h2>${t('topn.title', {n: 66})}</h2><span class="sub">${esc(t('topn.hint'))}${slow}</span>
+    <div class="ph"><h2>${t('topn.title')}</h2><span class="sub">${esc(t('topn.hint'))}${slow}</span>
       <div class="tools" style="display:flex;gap:12px;align-items:center">${modeSeg()}<label>${t('topn.group')} <select class="dimsel" id="dimSel">${DIMS.map(k => `<option value="${k}" ${k === dim ? 'selected' : ''}>${t('dim.' + k)}</option>`).join('')}</select></label></div></div>
     <table><tr><th><span class="vh">#</span></th>${heads.map((h, i) => sortTh('t' + i, h && t(h), '')).join('')}${sortTh('wire', t('col.traffic'))}<th class="num">%</th><th style="width:16%">${t('col.share')}</th>${sortTh('pkts', t('col.pkts'))}${sortTh('avg', t('col.avg'))}${showPeers ? sortTh('peers', t('col.peers')) : ''}${sortTh('flows', t('col.flows'))}</tr>
     ${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r).map(c => `<td>${c}</td>`).join('')}<td class="num">${fmtBytes(r.wire)}</td><td class="num muted">${nf(r.wire / Math.max(1, total) * 100, 1)}</td><td>${bar(r.wire, max)}</td><td class="num">${nf(r.pkts)}</td><td class="num">${nf(avg(r))}&nbsp;B</td>${showPeers ? `<td class="num">${nf(r.peers)}</td>` : ''}<td class="num">${nf(r.flows)}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${emptyText()}</td></tr>`}
