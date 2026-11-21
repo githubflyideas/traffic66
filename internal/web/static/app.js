@@ -297,11 +297,11 @@ function failText(res, j = {}) {
   const c = typeof j.error === 'string' ? j.error : '';
   if (c === 'cross_origin') return t('err.cross_origin');
   if (c === 'not_admin') return t('err.not_admin');
-  if (c === 'bad request') return t('err.bad_request');
+  if (c === 'bad_request' || c === 'bad request') return t('err.bad_request');
   if (c === 'file') return t('acct.err_file');
   if (c.startsWith('lic_')) return t('lic.err.' + c.slice(4), {d: ((j.detail || '').match(/\d{4}-\d{2}-\d{2}/) || [''])[0], e: j.detail || c});
   if (res.status >= 500) return t('err.server', {e: res.status + (c ? ' ' + c : '')});
-  return c || res.statusText || String(res.status);
+  return j.message || c || res.statusText || String(res.status);
 }
 // loginError is what the sign-in form says for a refused sign-in.
 async function loginError(res) {
@@ -349,7 +349,7 @@ async function resolveNames() {
 }
 
 // ------------------------------------------------------------ state & API
-const VIEWS = ['help', 'account', 'license', 'integrations', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'detail'];
+const VIEWS = ['help', 'account', 'license', 'integrations', 'overview', 'findings', 'topn', 'traffic', 'sankey', 'geo', 'threats', 'records', 'cleanup', 'sandbox', 'ifaces', 'names', 'sources', 'geodb', 'detail'];
 const RANGES = ['15m', '30m', '1h', '6h', '12h', '24h', '7d', '30d'];
 // The selector's short labels, the same in every language (M minutes,
 // H hours, D days, W weeks); the full name is the button's tooltip.
@@ -361,14 +361,14 @@ const rangeShort = r => ({'24h': '1D', '7d': '1W'})[r] || r.toUpperCase();
 // 30-day range is drawn in three-hour buckets and a redraw every five
 // minutes is already generous. A range the user typed ends in the past and
 // never changes, so it has no beat at all.
-const REFRESH_MS = {'15m': 20000, '30m': 30000, '1h': 30000, '6h': 60000, '12h': 60000, '24h': 60000, '7d': 300000, '30d': 300000};
+const REFRESH_MS = {'15m': 20000, '30m': 30000, '1h': 30000, '6h': 60000, '12h': 60000, '24h': 60000, '7d': 30000, '30d': 30000};
 
 // The pages that show incoming data. The others (help, the account, the
 // asset and name pages, data cleanup, the sandbox, the bill) change when
 // somebody changes them, not on their own.
 const LIVE_VIEWS = new Set(['overview', 'findings', 'topn', 'traffic', 'detail', 'sankey', 'geo', 'threats', 'records', 'ifaces', 'sources']);
 
-const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'both', sort: {k: 'wire', asc: false}, det: null};
+const state = {v: 'overview', r: '24h', f: [], dim: 'conv', ifc: null, ifdir: 'both', ifod: '', sort: {k: 'wire', asc: false}, det: null};
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
   if (VIEWS.includes(p.get('v'))) state.v = p.get('v');
@@ -1924,6 +1924,11 @@ views.account = async (el) => {
     const r = await fetch('/api/users');
     if (r.ok) users = await r.json();
   }
+  let toks = null;
+  if (users) {
+    const r = await fetch('/api/tokens');
+    if (r.ok) toks = (await r.json()).tokens || [];
+  }
   const userRows = users ? users.users.map(u => `<tr><td><b>${esc(u)}</b>${u === users.admin ? ` <span class="tag">${t('acct.admin_tag')}</span>` : ''}</td>
       <td class="nw"><button class="btn" data-reset="${esc(u)}">${t('acct.reset')}</button>${u === users.admin ? '' : ` <button class="btn" data-udel="${esc(u)}">${t('acct.delete')}</button>`}</td></tr>
       <tr data-resetrow="${esc(u)}" hidden><td colspan="2"><form class="acctinline" data-resetform="${esc(u)}"><input type="password" name="pw" placeholder="${esc(t('acct.new'))}" autocomplete="new-password" required> <button class="primary" type="submit">${t('acct.save')}</button></form></td></tr>`).join('') : '';
@@ -1936,6 +1941,9 @@ views.account = async (el) => {
     ${users ? panel('c12', t('acct.ldap'), t('acct.dev'), `<p class="muted" style="margin-top:0">${esc(t('acct.ldap_dev'))}</p>
       <div class="acctform ldap" aria-disabled="true"><label><span>${t('acct.ldap_server')}</span><input disabled placeholder="ldaps://dc.example.com:636"></label>
       <label><span>${t('acct.ldap_base')}</span><input disabled placeholder="DC=example,DC=com"></label></div>`) : ''}
+    ${toks ? panel('c12', t('acct.tok_title'), t('acct.tok_sub'), `<div id="tokList"></div>
+      <form class="acctinline" id="tokForm" autocomplete="off" style="margin-top:10px"><input id="tokName" placeholder="${esc(t('acct.tok_name'))}" aria-label="${esc(t('acct.tok_name'))}" maxlength="64" required> <select id="tokUser" aria-label="${esc(t('acct.user'))}">${users.users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('')}</select> <select id="tokScope" aria-label="${esc(t('acct.tok_scope'))}"><option value="read">${t('acct.tok_read')}</option><option value="write">${t('acct.tok_write')}</option></select> <button class="primary" type="submit">${t('acct.tok_make')}</button></form>
+      <p id="tokMsg" style="font-size:13px;margin:8px 0 0"></p><div id="tokOnce"></div>`) : ''}
   </div>`;
   const errText = c => t('acct.err_' + c) !== 'acct.err_' + c ? t('acct.err_' + c) : c;
   const say = (id, ok, text) => { const n = $(id); if (n) { n.style.color = ok ? 'var(--good)' : 'var(--crit)'; n.textContent = text; } };
@@ -1968,6 +1976,36 @@ views.account = async (el) => {
     if (!r.ok) return say('#userMsg', false, errText(j.error));
     render();
   });
+  const paintToks = list => {
+    const n = $('#tokList');
+    if (!n) return;
+    n.innerHTML = list && list.length ? `<table class="accttable">${list.map(x => `<tr><td><b>${esc(x.name)}</b><br><span class="muted" style="font-size:12.5px">${esc(x.user)} · ${t(x.scope === 'write' ? 'acct.tok_write' : 'acct.tok_read')} · ${esc(t('acct.tok_created'))} ${esc(x.created)}${x.last_used ? ' · ' + esc(t('acct.tok_last')) + ' ' + esc(x.last_used) : ' · ' + esc(t('acct.tok_never'))}</span></td><td class="nw"><button class="btn" data-tokrev="${esc(x.id)}">${t('acct.tok_revoke')}</button></td></tr>`).join('')}</table>` : `<p class="muted" style="margin:0">${t('acct.tok_none')}</p>`;
+    n.querySelectorAll('[data-tokrev]').forEach(b => b.onclick = async () => {
+      const r = await fetch('/api/tokens?id=' + encodeURIComponent(b.dataset.tokrev), {method: 'DELETE'});
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) return say('#tokMsg', false, errText(j.error));
+      say('#tokMsg', true, t('acct.tok_revoked'));
+      const r2 = await fetch('/api/tokens');
+      if (r2.ok) paintToks((await r2.json()).tokens || []);
+    });
+  };
+  const tf = $('#tokForm');
+  if (tf) {
+    paintToks(toks);
+    tf.onsubmit = async e => {
+      e.preventDefault();
+      const r = await fetch('/api/tokens', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: $('#tokName').value.trim(), user: $('#tokUser').value, scope: $('#tokScope').value})});
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) return say('#tokMsg', false, errText(j.error));
+      say('#tokMsg', true, t('acct.tok_made'));
+      $('#tokOnce').innerHTML = `<p style="font-size:13px;margin:8px 0 4px">${esc(t('acct.tok_once'))}</p><input readonly value="${esc(j.token)}" size="52" aria-label="${esc(t('acct.tok_once'))}">`;
+      const ti = $('#tokOnce input');
+      if (ti) ti.onclick = () => ti.select();
+      $('#tokName').value = '';
+      const r2 = await fetch('/api/tokens');
+      if (r2.ok) paintToks((await r2.json()).tokens || []);
+    };
+  }
 };
 
 views.threats = async (el) => {
@@ -2122,17 +2160,25 @@ views.ifaces = async (el) => {
   const fil = [...state.f, {f: 'iface', v: key, neg: false}];
   const [ri, ro, pi, po, rc] = await Promise.all([['if_in', 'wire'], ['if_out', 'wire'], ['if_in', 'pkts'], ['if_out', 'pkts']].map(([by, measure]) => api('series', {by, measure, top: 20, dup: 1}, fil))
     .concat([api('recon', {exporter: state.ifc.exporter, ifindex: state.ifc.ifindex})]));
-  // the overview's bandwidth (in + out) chart, on top of the page
-  const ov = await api('overview').catch(() => null), os = ov?.series || {times: [], names: [], values: []};
+  // the overview's bandwidth chart, on top of the page, with the same
+  // total / inbound / outbound switch the overview itself has
+  const ov = await api('overview').catch(() => null);
+  const ifod = ['inbound', 'outbound'].includes(state.ifod) ? state.ifod : '';
+  let os = ov?.series || {times: [], names: [], values: []};
+  if (ifod) {
+    const ds = await api('series', {by: 'app', measure: 'wire', top: 8, dup: 1}, [...state.f, {f: 'bytes', v: ifod === 'inbound' ? 'in' : 'out', neg: false}]).catch(() => null);
+    if (ds) os = ds;
+  }
   const oAreas = os.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: os.values[i]}));
-  const oLines = ov?.baseline && ov.basis ? [{name: baseText(ov, 'line'), color: 'var(--base)', dash: true, keep: true, data: ov.baseline}] : [];
+  const oLines = !ifod && ov?.baseline && ov.basis ? [{name: baseText(ov, 'line'), color: 'var(--base)', dash: true, keep: true, data: ov.baseline}] : [];
   const pick = s => { const i = (s.names || []).indexOf(key); return i < 0 ? (s.times || []).map(() => 0) : s.values[i]; };
   const name = `${ifName(sel)} · ${sel.device || sel.exporter}`;
   const r = rc.recon || {}, ctr = !!r.has_counters;
   const leg = withCtr => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span>${withCtr ? `<span><i class="line dash" style="border-top:2px dashed var(--ink-2);background:none"></i>${t('if.counter')}</span>` : ''}</div>`;
-  el.innerHTML = `<div class="grid" style="margin-bottom:16px"><div class="panel c12"><div class="ph"><h2>${t('ov.bw_all')}</h2><span class="sub">${oLines.length ? esc(baseText(ov, 'sub')) : ''}</span></div>
+  el.innerHTML = `<div class="grid" style="margin-bottom:16px"><div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[ifod])}</h2><span class="sub">${oLines.length ? esc(baseText(ov, 'sub')) : ''}</span>
+      <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'if.in'], ['outbound', 'if.out']].map(([k, l]) => `<button data-ifod="${k}" aria-pressed="${ifod === k}">${t(l)}</button>`).join('')}</div></div>
       <div class="chart" id="ifTot" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
-      <div class="legend">${oAreas.map((a, i) => `<span><i style="background:${a.color}"></i>${os.names[i] === '__other__' ? esc(a.name) : V('app', os.names[i], a.name)}</span>`).join('')}${oLines.length ? `<span><i class="dash"></i>${esc(oLines[0].name)}</span>` : ''}</div></div></div>
+      <div class="legend">${oAreas.map((a, i) => `<span><i style="background:${a.color}"></i>${os.names[i] === '__other__' ? esc(a.name) : V('app', os.names[i], a.name)}</span>`).join('')}</div></div></div>
     <div class="grid" style="margin-bottom:16px">
     ${panel('c12', `${esc(name)} · ${t('ch.bps')}`, sel.peer ? esc(t('if.peer_note')) : '', `<div class="chart" id="ifB" style="height:270px" aria-label="${esc(t('ch.bps'))}"></div>${leg(ctr)}`)}
     ${panel('c12', `${esc(name)} · ${t('ch.pps')}`, '', `<div class="chart" id="ifP" style="height:270px" aria-label="${esc(t('ch.pps'))}"></div>${leg(false)}`)}</div>
@@ -2154,6 +2200,7 @@ views.ifaces = async (el) => {
   tsChart($('#ifTot'), {times: os.times, areas: oAreas, lines: oLines, settledTo: os.settled_to, dataFrom: os.data_from});
   tsChart($('#ifB'), {times: ri.times, settledTo: ri.settled_to, dataFrom: ri.data_from, lines: lb});
   tsChart($('#ifP'), {times: pi.times, settledTo: pi.settled_to, dataFrom: pi.data_from, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
+  el.querySelectorAll('[data-ifod]').forEach(b => b.onclick = () => { state.ifod = b.dataset.ifod; render(); });
   el.querySelectorAll('.iflist button[data-e]').forEach(b => b.onclick = () => { state.ifc = {exporter: b.dataset.e, ifindex: +b.dataset.i}; render(); });
   // name, tag and default: written to the names (iface line) at once
   const saveIf = async (id, body) => {
@@ -2180,20 +2227,8 @@ views.ifaces = async (el) => {
 
 // ------------------------------------------------------ 95th percentile
 views.sources = async (el) => {
-  const [d, gd] = await Promise.all([api('sources'), api('geo').catch(() => ({sources: []}))]);
+  const d = await api('sources');
   const blocked = d.blocked || [];
-  const dfmt = d => d && !d.startsWith('0001') ? new Intl.DateTimeFormat(LANG, {dateStyle: 'medium'}).format(new Date(d)) : '';
-  const VENDOR = {dbip: 'DB-IP Lite', maxmind: 'MaxMind GeoLite2', ipinfo: 'IPinfo Lite', iptoasn: 'IPtoASN'};
-  const geoRows = (gd.sources || []).map(g => `<tr><td>${status('ok', t('geo.kind_' + g.kind))}</td>
-      <td>${esc(VENDOR[g.vendor] || g.type)} <span class="muted">${esc(g.file === 'built-in' ? t('geo.builtin') : g.file)}${g.entries ? ' · ' + esc(t('geo.entries', {n: nf(g.entries)})) : ''}</span></td>
-      <td class="nw">${esc(dfmt(g.built))}</td><td class="muted">${t(g.fallback ? 'geo.role_fallback' : 'geo.role_main')}</td>
-      <td>${adm() && g.file !== 'built-in' ? `<button class="btn" data-geodel="${esc(g.file)}">${t('geo.remove')}</button>` : ''}</td></tr>`).join('');
-  const FREE = [
-    ['DB-IP Lite', 'geo.f_dbip', 'CC BY 4.0', 'https://db-ip.com/db/lite.php'],
-    ['MaxMind GeoLite2', 'geo.f_maxmind', 'GeoLite2 EULA', 'https://www.maxmind.com/en/geolite2/signup'],
-    ['IPinfo Lite', 'geo.f_ipinfo', 'CC BY-SA 4.0', 'https://ipinfo.io/lite'],
-    ['IPtoASN', 'geo.f_iptoasn', 'PDDL 1.0', 'https://iptoasn.com']];
-  const freeRows = FREE.map(([n, k, lic, url]) => `<tr><td class="nw"><a href="${url}" target="_blank" rel="noopener">${n}</a></td><td>${esc(t(k))}</td><td class="nw muted">${lic}</td></tr>`).join('');
   const srcs = d.sources || [];
   const ifd = await loadIfaces().catch(() => ({})), sampledIf = new Map();
   (ifd.ifaces || []).filter(f => !f.peer && (f.in_wire || f.out_wire)).forEach(f => { if (!sampledIf.has(f.exporter)) sampledIf.set(f.exporter, []); sampledIf.get(f.exporter).push(ifName(f)); });
@@ -2229,17 +2264,7 @@ views.sources = async (el) => {
         <td class="num">${nf(b.dropped || 0)}</td><td>${esc(b.note || '')}</td>
         <td class="nw" style="text-align:end"><button class="btn sm" data-unblock="${esc(b.address)}">${esc(t('blk.unblock'))}</button></td></tr>`).join('')}</table>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0">${esc(t('blk.firewall'))}</p>`) : '')}
-    ${panel('c12', t('geo.title'), t('geo.sub'), `<table><tr><th>${t('geo.col_holds')}</th><th>${t('geo.col_db')}</th><th>${t('geo.col_built')}</th><th>${t('geo.col_use')}</th><th><span class="vh">#</span></th></tr>${geoRows}</table>
-      ${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="primary" id="geoDbip">${t('geo.update')}</button><label class="btn" style="cursor:pointer">${t('geo.upload')}<input type="file" id="geoFile" accept=".mmdb,.tsv,.gz,.txt,.csv" hidden></label><span id="geoMsg" class="muted" style="font-size:13px"></span></div>`)}
-      <h3 class="subhead">${t('geo.free')}</h3><p class="muted" style="font-size:12.5px;margin:0 0 6px">${t('geo.free_sub')}</p>
-      <table><tr><th>${t('geo.col_db')}</th><th>${t('geo.col_holds')}</th><th>${t('geo.col_lic')}</th></tr>${freeRows}</table>
-      <p class="muted" style="font-size:12.5px;margin:10px 0 0">${t('geo.where')}</p>`)}
   </div>`;
-  // Installing a licence from the page. Until now the only way to register
-  // was to put license.json into the data directory by hand, which means a
-  // shell on the machine — a strange thing to ask of the one step that
-  // turns a paying customer into a registered installation.
-  const geoMsg = (ok, text) => { const m = $('#geoMsg'); m.style.color = ok === null ? '' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
   if (adm()) {
   const reblock = async (method, path, okMsg) => {
     const res = await fetch(path, {method});
@@ -2261,6 +2286,36 @@ views.sources = async (el) => {
   });
   el.querySelectorAll('[data-unblock]').forEach(b => b.onclick = () =>
     reblock('DELETE', '/api/sources/block?exporter=' + encodeURIComponent(b.dataset.unblock), t('blk.unblocked', {a: b.dataset.unblock})));
+  }
+};
+
+// The IP databases (country/region and operator) have their own settings
+// tab, before registration: they decide what the geo page can say about
+// every address, which is a subject of its own rather than a corner of
+// the data-source list.
+views.geodb = async (el) => {
+  const gd = await api('geo').catch(() => ({sources: []}));
+  const dfmt = d => d && !d.startsWith('0001') ? new Intl.DateTimeFormat(LANG, {dateStyle: 'medium'}).format(new Date(d)) : '';
+  const VENDOR = {dbip: 'DB-IP Lite', maxmind: 'MaxMind GeoLite2', ipinfo: 'IPinfo Lite', iptoasn: 'IPtoASN'};
+  const geoRows = (gd.sources || []).map(g => `<tr><td>${status('ok', t('geo.kind_' + g.kind))}</td>
+      <td>${esc(VENDOR[g.vendor] || g.type)} <span class="muted">${esc(g.file === 'built-in' ? t('geo.builtin') : g.file)}${g.entries ? ' · ' + esc(t('geo.entries', {n: nf(g.entries)})) : ''}</span></td>
+      <td class="nw">${esc(dfmt(g.built))}</td><td class="muted">${t(g.fallback ? 'geo.role_fallback' : 'geo.role_main')}</td>
+      <td>${adm() && g.file !== 'built-in' ? `<button class="btn" data-geodel="${esc(g.file)}">${t('geo.remove')}</button>` : ''}</td></tr>`).join('');
+  const FREE = [
+    ['DB-IP Lite', 'geo.f_dbip', 'CC BY 4.0', 'https://db-ip.com/db/lite.php'],
+    ['MaxMind GeoLite2', 'geo.f_maxmind', 'GeoLite2 EULA', 'https://www.maxmind.com/en/geolite2/signup'],
+    ['IPinfo Lite', 'geo.f_ipinfo', 'CC BY-SA 4.0', 'https://ipinfo.io/lite'],
+    ['IPtoASN', 'geo.f_iptoasn', 'PDDL 1.0', 'https://iptoasn.com']];
+  const freeRows = FREE.map(([n, k, lic, url]) => `<tr><td class="nw"><a href="${url}" target="_blank" rel="noopener">${n}</a></td><td>${esc(t(k))}</td><td class="nw muted">${lic}</td></tr>`).join('');
+  el.innerHTML = `${setTabs('geodb')}<div class="grid">
+    ${panel('c12', t('geo.title'), t('geo.sub'), `<table><tr><th>${t('geo.col_holds')}</th><th>${t('geo.col_db')}</th><th>${t('geo.col_built')}</th><th>${t('geo.col_use')}</th><th><span class="vh">#</span></th></tr>${geoRows}</table>
+      ${admOnly(`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="primary" id="geoDbip">${t('geo.update')}</button><label class="btn" style="cursor:pointer">${t('geo.upload')}<input type="file" id="geoFile" accept=".mmdb,.tsv,.gz,.txt,.csv" hidden></label><span id="geoMsg" class="muted" style="font-size:13px"></span></div>`)}
+      <h3 class="subhead">${t('geo.free')}</h3><p class="muted" style="font-size:12.5px;margin:0 0 6px">${t('geo.free_sub')}</p>
+      <table><tr><th>${t('geo.col_db')}</th><th>${t('geo.col_holds')}</th><th>${t('geo.col_lic')}</th></tr>${freeRows}</table>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0">${t('geo.where')}</p>`)}
+  </div>`;
+  const geoMsg = (ok, text) => { const m = $('#geoMsg'); if (m) { m.style.color = ok === null ? '' : ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; } };
+  if (adm()) {
   $('#geoDbip').onclick = async e => {
     e.target.disabled = true; geoMsg(null, t('geo.updating'));
     try {
@@ -2298,8 +2353,8 @@ views.sources = async (el) => {
 // Settings has three tabs: the settings themselves, the inventory (the
 // names of addresses) and one's account. Capture files and offline mode
 // have only the account.
-const SET_TABS = [['sources', 'nav.sources'], ['names', 'src.names'], ['account', 'nav.account'], ['license', 'nav.license']];
-const SET_VIEWS = new Set(['sources', 'names', 'account', 'license']);
+const SET_TABS = [['sources', 'nav.sources'], ['names', 'src.names'], ['account', 'nav.account'], ['geodb', 'nav.geodb'], ['license', 'nav.license']];
+const SET_VIEWS = new Set(['sources', 'names', 'account', 'geodb', 'license']);
 const setTabs = cur => {
   const tabs = SET_TABS.filter(([v]) => v === 'account' || v === 'license' || !(inSB() || offlineMode));
   return `<div class="seg settabs" role="tablist">${tabs.map(([v, k]) =>
@@ -2518,13 +2573,14 @@ views.detail = async (el) => {
 // ------------------------------------------------------------ shell
 // Settings, data cleanup, offline analysis and live flow records have no use
 // for the time range, refresh and copy link.
-const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'names', 'license', 'integrations']);
+const NOBAR_VIEWS = new Set(['help', 'sources', 'cleanup', 'sandbox', 'account', 'names', 'geodb', 'license', 'integrations']);
 function renderBar() {
   const off = NOBAR_VIEWS.has(state.v) || (state.v === 'records' && state.rl);
   if (off) $('#range').hidden = true;
   $('#refresh').hidden = off || $('#range').hidden || !REFRESH_MS[state.r];
   refreshLabel();
   $('#share').hidden = off;
+  $('#expCsv').hidden = off || inSB();
 }
 // The label says the beat this range actually redraws on, rather than one
 // number for every range; a range that ends in the past has no beat and
@@ -2765,6 +2821,14 @@ async function init() {
     go(b.dataset.v);
   };
   $('#share').onclick = () => { navigator.clipboard?.writeText(location.href).then(() => toast(t('top.copied')), () => toast(location.href)); };
+  // the hourly counters of the window on show, as a spreadsheet file
+  $('#expCsv').onclick = () => {
+    const p = new URLSearchParams(state.r === 'custom' ? {from: state.cf, to: state.ct} : {range: state.r});
+    p.set('tz', String(-new Date().getTimezoneOffset()));
+    const a = document.createElement('a');
+    a.href = '/api/export/rollups?' + p;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
   document.addEventListener('click', e => { if (!e.target.closest('.cols')) { const m = $('#colMenu'); if (m) m.hidden = true; } });
   readHash();
   window.addEventListener('hashchange', () => { const before = location.hash; readHash(); if (before) render(); });

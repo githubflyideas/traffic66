@@ -88,11 +88,10 @@ aside{background:var(--side);border-inline-end:2px solid var(--side-line);displa
 /* the logo fills the sidebar's width (236px less the brand padding = 208px)
    and keeps its aspect ratio; 72px tall at most. Recommended upload:
    416 x 144 px (2x for sharp high-DPI screens). */
-.brand .logo{display:block;flex:1 1 100%;width:100%;max-width:208px;height:auto;max-height:72px;object-fit:contain;object-position:left center}
-[dir=rtl] .brand .logo{object-position:right center}
+.brand .logo{display:block;flex:1 1 100%;width:100%;max-width:208px;height:auto;max-height:72px;object-fit:contain;object-position:center}
 .brand b{color:var(--accent)}
-.brandmeta{flex:1 1 100%;min-width:0;display:grid;gap:2px;font-size:13px;font-weight:500;letter-spacing:0;line-height:1.35;color:var(--ink-2);font-variant-numeric:tabular-nums}
-.brandmeta>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brandmeta{flex:1 1 100%;min-width:0;display:grid;gap:2px;font-size:13px;font-weight:500;letter-spacing:0;line-height:1.35;color:var(--ink-2);font-variant-numeric:tabular-nums;text-align:center;justify-items:center}
+.brandmeta>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .brandmeta .bm-reg{color:var(--good)}
 .brandmeta .bm-unreg,.brandmeta .bm-exp{color:var(--warn-ink,var(--crit))}
 nav.dash .demo{display:inline-block;margin:6px 12px 0;font-size:11px;font-weight:600;background:var(--warn);color:#1b2432;border-radius:4px;padding:1px 6px;letter-spacing:0;opacity:.85}
