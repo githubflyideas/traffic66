@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -80,6 +81,14 @@ type Server struct {
 	sessions map[string]session
 	fails    failLimiter
 	rates    rates
+	// acctMu serialises changes to the account file, so the user limit
+	// is checked against the same file the write then lands in.
+	acctMu sync.Mutex
+	// the API tokens (tokens.json), re-read when the file changes
+	tokMu     sync.Mutex
+	toks      []auth.Token
+	tokStamp  string
+	tokLoaded bool
 }
 
 type session struct {
@@ -91,6 +100,14 @@ type session struct {
 }
 
 type ctxKey struct{}
+
+// audit records a security event in the server log: sign-ins, sign-outs
+// and everything that happens to accounts. It is the record an operator
+// answers "who did that?" from, so it names the user and, for sign-ins,
+// the address — never a password or a token.
+func (s *Server) audit(format string, args ...any) {
+	log.Printf("audit: "+format, args...)
+}
 
 // userOf returns the signed-in user of a request ("" for the TUI token).
 func userOf(r *http.Request) string {
@@ -126,6 +143,14 @@ type CaptureInfo struct {
 
 const cookieName = "t66s"
 
+// apiVersion is the version of the HTTP API — the family's "API rules
+// v1", the same rules fogping, pingping, vrf-ping and vyos-sflow follow:
+// every /api answer carries it in the Api-Version header, the current
+// version also answers under /api/v1/, errors are one JSON shape with a
+// stable code, a wrong method is a 405 that says what is allowed, and
+// programs authenticate with scoped tokens, not a browser session.
+const apiVersion = "1"
+
 // Handler returns the HTTP handler.
 func (s *Server) Handler() http.Handler {
 	s.sessions = map[string]session{}
@@ -156,6 +181,10 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/users", s.listUsers)
 	api("POST /api/users", s.putUser)
 	api("DELETE /api/users", s.deleteUser)
+	adminAPI("GET /api/tokens", s.listTokens)
+	adminAPI("POST /api/tokens", s.createToken)
+	adminAPI("DELETE /api/tokens", s.deleteToken)
+	api("GET /api/openapi.json", s.openapi)
 	api("GET /api/overview", s.data((*Server).overview))
 	api("GET /api/topn", s.data((*Server).topn))
 	api("GET /api/sankey", s.data((*Server).sankey))
@@ -165,6 +194,7 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/rings", s.data((*Server).rings))
 	api("GET /api/geolines", s.data((*Server).geoLines))
 	api("GET /api/report", s.data((*Server).report))
+	api("GET /api/export/rollups", s.exportRollups)
 	api("GET /api/ifaces", s.ifaces)
 	api("GET /api/recon", s.recon)
 	api("GET /api/sources", s.sources)
@@ -198,6 +228,11 @@ func (s *Server) Handler() http.Handler {
 	for _, f := range extRoutes {
 		f(s, mux, api, adminAPI)
 	}
+	// What the mux would otherwise send to the static files: an API path
+	// with the wrong method, or one that does not exist. Both are API
+	// answers, in the API's shape.
+	mux.HandleFunc("/api/", s.apiFallback)
+	mux.HandleFunc("/metrics", s.apiFallback)
 	static := http.FileServer(http.FS(s.Static))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -209,7 +244,93 @@ func (s *Server) Handler() http.Handler {
 		w.Header().Set("Cache-Control", "no-cache")
 		static.ServeHTTP(w, r)
 	})
-	return mux
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Served over TLS, the address is worth pinning to TLS: a browser
+		// that has seen the certificate once is told to never come back
+		// over plain HTTP. (Through a proxy the forwarded scheme counts,
+		// the same signal the session cookie's Secure flag follows.)
+		if secureCookie(r) {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/metrics" {
+			w.Header().Set("Api-Version", apiVersion)
+			// /api/v1/… names the version in the address; it is the same
+			// API, so the prefix is rewritten away and the table above
+			// answers. The unprefixed address stays the current version.
+			if strings.HasPrefix(r.URL.Path, "/api/v1/") {
+				r = r.Clone(r.Context())
+				r.URL.Path = "/api/" + strings.TrimPrefix(r.URL.Path, "/api/v1/")
+			}
+		}
+		mux.ServeHTTP(w, r)
+	})
+}
+
+// apiRouteTable is the route table once more, as path templates, for the
+// one job the mux cannot do itself: telling a caller who used the wrong
+// method on a real path apart from one who asked for a path that does
+// not exist. Keep it in step with Handler().
+var apiRouteTable = []struct{ method, pat string }{
+	{"POST", "/api/login"}, {"POST", "/api/logout"}, {"GET", "/api/loginhint"},
+	{"GET", "/api/status"}, {"GET", "/metrics"}, {"GET", "/api/manual"},
+	{"GET", "/api/manual/images/{name}"}, {"GET", "/api/me"}, {"POST", "/api/password"},
+	{"GET", "/api/users"}, {"POST", "/api/users"}, {"DELETE", "/api/users"},
+	{"GET", "/api/tokens"}, {"POST", "/api/tokens"}, {"DELETE", "/api/tokens"},
+	{"GET", "/api/openapi.json"},
+	{"GET", "/api/overview"}, {"GET", "/api/topn"}, {"GET", "/api/sankey"},
+	{"GET", "/api/series"}, {"GET", "/api/records"}, {"GET", "/api/threats"},
+	{"GET", "/api/rings"}, {"GET", "/api/geolines"}, {"GET", "/api/report"},
+	{"GET", "/api/export/rollups"}, {"GET", "/api/ifaces"}, {"GET", "/api/recon"},
+	{"GET", "/api/sources"}, {"POST", "/api/sources/block"}, {"DELETE", "/api/sources/block"},
+	{"POST", "/api/resolve"}, {"GET", "/api/inventory"}, {"POST", "/api/inventory"},
+	{"POST", "/api/iface"}, {"GET", "/api/racks"}, {"POST", "/api/threats/lists"},
+	{"DELETE", "/api/threats/lists"}, {"POST", "/api/racks/device"}, {"POST", "/api/racks/iface"},
+	{"GET", "/api/findings"}, {"POST", "/api/findings"}, {"GET", "/api/cleanup"},
+	{"POST", "/api/cleanup"}, {"POST", "/api/cleanup/exporter"}, {"GET", "/api/sandbox"},
+	{"POST", "/api/sandbox/files"}, {"DELETE", "/api/sandbox/files"}, {"POST", "/api/sandbox/active"},
+	{"POST", "/api/license"}, {"POST", "/api/logo"}, {"DELETE", "/api/logo"},
+	{"GET", "/api/geo"}, {"POST", "/api/geo"}, {"DELETE", "/api/geo"}, {"POST", "/api/geo/dbip"},
+}
+
+// matchTemplate reports whether path fits a route template; a {name}
+// segment stands for any one segment.
+func matchTemplate(pat, path string) bool {
+	p, q := strings.Split(pat, "/"), strings.Split(path, "/")
+	if len(p) != len(q) {
+		return false
+	}
+	for i := range p {
+		if strings.HasPrefix(p[i], "{") {
+			if q[i] == "" {
+				return false
+			}
+			continue
+		}
+		if p[i] != q[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// apiFallback answers the API requests no route took: a real path with
+// the wrong method (405, naming what is allowed) or a path that does not
+// exist (404) — both as JSON with a stable code, never the static
+// server's plain-text page.
+func (s *Server) apiFallback(w http.ResponseWriter, r *http.Request) {
+	var allow []string
+	for _, rt := range apiRouteTable {
+		if rt.method != r.Method && !(r.Method == http.MethodHead && rt.method == http.MethodGet) &&
+			matchTemplate(rt.pat, r.URL.Path) && !slices.Contains(allow, rt.method) {
+			allow = append(allow, rt.method)
+		}
+	}
+	if len(allow) > 0 {
+		w.Header().Set("Allow", strings.Join(allow, ", "))
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
+		return
+	}
+	writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
 }
 
 // failLimiter locks out a client address after repeated failed logins.
@@ -288,7 +409,7 @@ func (f *failLimiter) ok(ip string) {
 
 func tooMany(w http.ResponseWriter) {
 	w.Header().Set("Retry-After", "60")
-	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too many failed logins; try again in a minute"})
+	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too_many_logins"})
 }
 
 func (s *Server) auth(next http.HandlerFunc) http.Handler {
@@ -298,9 +419,26 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
 			return
 		}
-		if tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "); tok != "" && s.LocalTok != "" &&
-			subtle.ConstantTimeCompare([]byte(tok), []byte(s.LocalTok)) == 1 {
+		bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if bearer != "" && s.LocalTok != "" &&
+			subtle.ConstantTimeCompare([]byte(bearer), []byte(s.LocalTok)) == 1 {
 			next(w, r.WithContext(context.WithValue(r.Context(), localKey{}, true)))
+			return
+		}
+		// An API token stands in for its user, within its scope: a read
+		// token may only look. It is how programs use the API — the
+		// browser session below is for people.
+		if strings.HasPrefix(bearer, "t66_") {
+			ent, ok := s.tokenAuth(bearer)
+			if !ok {
+				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "token_invalid"})
+				return
+			}
+			if ent.Scope != "write" && r.Method != http.MethodGet && r.Method != http.MethodHead {
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "token_scope"})
+				return
+			}
+			next(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, ent.User)))
 			return
 		}
 		if u, p, ok := r.BasicAuth(); ok {
@@ -371,21 +509,24 @@ func (s *Server) checkPassword(u, p string) bool {
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	var in struct{ User, Password string }
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
 		return
 	}
 	ip := clientIP(r)
 	if s.fails.blocked(ip) {
+		s.audit("login refused (locked out) user=%s from=%s", in.User, ip)
 		tooMany(w)
 		return
 	}
 	if !s.checkPassword(in.User, in.Password) {
 		s.fails.fail(ip)
+		s.audit("login failed user=%s from=%s", in.User, ip)
 		time.Sleep(500 * time.Millisecond)
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "wrong user or password"})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "bad_credentials"})
 		return
 	}
 	s.fails.ok(ip)
+	s.audit("login user=%s from=%s", in.User, ip)
 	b := make([]byte, 24)
 	rand.Read(b)
 	tok := hex.EncodeToString(b)
@@ -444,6 +585,9 @@ func secureCookie(r *http.Request) bool {
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(cookieName); err == nil {
 		s.mu.Lock()
+		if se, ok := s.sessions[c.Value]; ok {
+			s.audit("logout user=%s", se.user)
+		}
 		delete(s.sessions, c.Value)
 		s.mu.Unlock()
 	}
@@ -466,11 +610,17 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 // duckErr matches DuckDB's error format ("Out of Memory Error: …").
 var duckErr = regexp.MustCompile(`\b[A-Z][A-Za-z]* Error: `)
 
-// fail answers a failed request. Mistakes in the request (a bad filter)
-// are returned as they are. Database failures are logged in full and the
-// browser gets only their kind, so pages can say "the database is at its
-// memory limit" instead of showing SQL.
+// fail answers a failed request. The error is always a stable code —
+// programs switch on it, pages translate it — and where the detail is
+// the point (which filter, which field) it rides along as a message.
+// Database failures are logged in full and the browser gets only their
+// kind, so pages can say "the database is at its memory limit" instead
+// of showing SQL.
 func fail(w http.ResponseWriter, err error) {
+	if errors.Is(err, errBadRange) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_range"})
+		return
+	}
 	msg := err.Error()
 	kind := ""
 	switch {
@@ -489,12 +639,12 @@ func fail(w http.ResponseWriter, err error) {
 		return
 	}
 	if kind == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": msg})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "message": msg})
 		return
 	}
 	log.Printf("api: database (%s): %v", kind, err)
 	w.Header().Set("Retry-After", "30")
-	writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database " + kind, "kind": kind})
+	writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database", "kind": kind})
 }
 
 // rates samples pipeline counters once per second.

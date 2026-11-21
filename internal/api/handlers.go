@@ -31,6 +31,12 @@ var ranges = map[string]time.Duration{
 // hours plus the current one.
 const longRange = 6 * time.Hour
 
+// errBadRange is a range parameter that names no range there is. An
+// absent range still means the default day; a wrong one is the caller's
+// mistake, and silently showing a different window than was asked for
+// is how a report ends up about the wrong hours.
+var errBadRange = errors.New("bad_range")
+
 func parseQuery(r *http.Request) (store.Query, error) {
 	v := r.URL.Query()
 	now := time.Now().UTC()
@@ -51,6 +57,9 @@ func parseQuery(r *http.Request) (store.Query, error) {
 	} else {
 		d, ok := ranges[v.Get("range")]
 		if !ok {
+			if v.Get("range") != "" {
+				return q, errBadRange
+			}
 			d = 24 * time.Hour
 		}
 		q.From = now.Add(-d)

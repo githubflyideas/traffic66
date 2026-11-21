@@ -42,6 +42,12 @@ var helps = map[string]cmdHelp{
 		"traffic66 passwd -generate                        # set a random password and print it",
 		"printf 'pw\\npw\\n' | traffic66 passwd -user bob   # from a script",
 	}},
+	"gen-token": {"traffic66 gen-token [flags]", "Make an API token for a program: it signs in as its user, within its\nscope (read: only look; write: everything the user may do), with the header\nAuthorization: Bearer <token>. Only the token's hash is stored, in\n<data directory>/tokens.json; the secret is printed once.", []string{
+		"traffic66 gen-token -name zabbix                  # a read token for admin",
+		"traffic66 gen-token -name backup -user alice -scope write",
+		"traffic66 gen-token -list                         # list the tokens",
+		"traffic66 gen-token -revoke <id>                  # revoke one",
+	}},
 	"interfaces": {"traffic66 interfaces", "List the network interfaces usable for local capture (-capture).", []string{
 		"traffic66 interfaces",
 	}},

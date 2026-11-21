@@ -80,11 +80,12 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	var in struct{ Old, New string }
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
 		return
 	}
 	u := userOf(r)
 	if u == "" || !s.checkPassword(u, in.Old) {
+		s.audit("password change failed user=%s from=%s", u, clientIP(r))
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "wrong_old"})
 		return
 	}
@@ -92,10 +93,14 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	if err := auth.Set(s.DataDir, u, in.New); err != nil {
+	s.acctMu.Lock()
+	err := auth.Set(s.DataDir, u, in.New)
+	s.acctMu.Unlock()
+	if err != nil {
 		fail(w, err)
 		return
 	}
+	s.audit("password changed user=%s", u)
 	// A password is changed because the old one is no longer trusted, so
 	// the sessions it opened go with it. The one making the change stays:
 	// logging somebody out of the tab they are working in, as a reward for
@@ -153,7 +158,7 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 		Reset          bool
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
 		return
 	}
 	in.User = strings.TrimSpace(in.User)
@@ -165,11 +170,18 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
+	// The check and the write happen under one lock: side by side,
+	// twenty administrators adding people at once each saw room for one
+	// more, and the installation ended up with more accounts than its
+	// limit — every one of them complete, none of them refused.
+	s.acctMu.Lock()
 	switch exists := s.hasUser(in.User); {
 	case exists && !in.Reset:
+		s.acctMu.Unlock()
 		writeJSON(w, http.StatusConflict, map[string]string{"error": "exists"})
 		return
 	case !exists && in.Reset:
+		s.acctMu.Unlock()
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
 		return
 	}
@@ -179,12 +191,20 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 	// installation that somehow holds more accounts than its licence
 	// covers keeps all of them and simply cannot add another.
 	if limit := s.userLimit(); limit > 0 && !s.hasUser(in.User) && len(s.Accounts.Users()) >= limit {
+		s.acctMu.Unlock()
 		writeJSON(w, http.StatusForbidden, map[string]any{"error": "user_limit", "limit": limit})
 		return
 	}
-	if err := auth.Set(s.DataDir, in.User, in.Password); err != nil {
+	err := auth.Set(s.DataDir, in.User, in.Password)
+	s.acctMu.Unlock()
+	if err != nil {
 		fail(w, err)
 		return
+	}
+	if in.Reset {
+		s.audit("password reset user=%s by=%s", in.User, userOf(r))
+	} else {
+		s.audit("user created user=%s by=%s", in.User, userOf(r))
 	}
 	if in.Reset {
 		// a password is reset because the old one is no longer trusted, so
@@ -242,7 +262,10 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "self"})
 		return
 	}
-	if err := auth.Delete(s.DataDir, u); err != nil {
+	s.acctMu.Lock()
+	err := auth.Delete(s.DataDir, u)
+	s.acctMu.Unlock()
+	if err != nil {
 		if errors.Is(err, auth.ErrNoUser) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
 			return
@@ -250,5 +273,6 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
+	s.audit("user deleted user=%s by=%s", u, userOf(r))
 	writeJSON(w, http.StatusOK, map[string]string{})
 }

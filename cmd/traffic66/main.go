@@ -56,7 +56,7 @@ var version = ""
 // CHANGELOG.md. TestDevVersionMatchesChangelog keeps the two in step: the
 // default used to be a hardcoded 0.1.0-dev, and because nothing checked it
 // it stayed that way for two major versions.
-const devVersion = "2.6.6"
+const devVersion = "2.7.0"
 
 func init() {
 	if version == "" {
@@ -112,6 +112,7 @@ Usage:
   traffic66 tui [flags]         terminal UI (connects to a running traffic66)
   traffic66 simulate -to HOST   send simulated exports to another collector
   traffic66 passwd [flags]      set the login password
+  traffic66 gen-token [flags]   make an API token for a program
   traffic66 interfaces          list interfaces usable for local capture
   traffic66 version
 
@@ -155,6 +156,8 @@ func main() {
 		simulate(args)
 	case "passwd":
 		passwd(args)
+	case "gen-token":
+		genToken(args)
 	case "interfaces":
 		if wantsHelp(args) {
 			printHelp(os.Stdout, "interfaces", nil)
@@ -179,7 +182,7 @@ func main() {
 		if len(args) > 0 {
 			c := strings.ToLower(args[0])
 			switch c {
-			case "serve", "demo", "tui", "simulate", "passwd":
+			case "serve", "demo", "tui", "simulate", "passwd", "gen-token":
 				os.Args = []string{os.Args[0], c, "-h"}
 				main()
 				return
@@ -200,7 +203,7 @@ func main() {
 	}
 }
 
-var commands = []string{"serve", "demo", "tui", "simulate", "passwd", "interfaces", "version", "help"}
+var commands = []string{"serve", "demo", "tui", "simulate", "passwd", "gen-token", "interfaces", "version", "help"}
 
 // cleanArgs undoes what copying a command from a web page or chat often adds:
 // full-width or non-breaking spaces, quotes around a word, full-width dashes
@@ -972,6 +975,87 @@ func quoteArg(s string) string {
 		return `"` + s + `"`
 	}
 	return s
+}
+
+// genToken makes an API token for a program: it signs in as its user,
+// within its scope (read: only look; write: everything the user may do),
+// with "Authorization: Bearer <token>". The secret is printed once —
+// the data directory keeps only its hash. A running traffic66 picks the
+// token up from the file; revoke it on the account page, with the API,
+// or by taking its line out of tokens.json.
+func genToken(args []string) {
+	fs := withHelp(flag.NewFlagSet("gen-token", flag.ExitOnError), "gen-token")
+	data := fs.String("data", defaultDir("traffic66-data"), "data directory")
+	user := fs.String("user", "admin", "the user the token signs in as")
+	name := fs.String("name", "", "what the token is for, e.g. zabbix")
+	scope := fs.String("scope", "read", "read (only look) or write (everything the user may do)")
+	list := fs.Bool("list", false, "list the tokens (names and scopes, never the secrets)")
+	revoke := fs.String("revoke", "", "revoke the token with this id")
+	fs.Parse(args)
+	toks, err := auth.LoadTokens(*data)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if *list {
+		if len(toks) == 0 {
+			fmt.Printf("no tokens in %s\n", filepath.Join(*data, auth.TokensFileName))
+			return
+		}
+		for _, t := range toks {
+			fmt.Printf("%s  %-20s  user %-16s  %s\n", t.ID, t.Name, t.User, t.Scope)
+		}
+		return
+	}
+	if *revoke != "" {
+		kept, found := toks[:0], false
+		for _, t := range toks {
+			if t.ID == *revoke {
+				found = true
+				continue
+			}
+			kept = append(kept, t)
+		}
+		if !found {
+			fmt.Fprintf(os.Stderr, "no token with id %s\n", *revoke)
+			os.Exit(1)
+		}
+		if err := auth.SaveTokens(*data, kept); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Printf("revoked %s\n", *revoke)
+		return
+	}
+	if *name == "" {
+		fmt.Fprintln(os.Stderr, "give the token a name with -name, so it can be told apart and revoked later")
+		os.Exit(2)
+	}
+	es, err := auth.Load(*data)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	found := false
+	for _, e := range es {
+		if e.User == *user {
+			found = true
+		}
+	}
+	if !found {
+		fmt.Fprintf(os.Stderr, "no user %q in %s\n", *user, filepath.Join(*data, auth.FileName))
+		os.Exit(1)
+	}
+	tok, secret, err := auth.NewToken(*user, *name, *scope)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+	if err := auth.SaveTokens(*data, append(toks, tok)); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	fmt.Printf("token %s for user %s (%s), shown once — copy it now:\n%s\n", tok.ID, *user, *scope, secret)
 }
 
 func passwd(args []string) {

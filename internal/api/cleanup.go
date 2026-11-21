@@ -93,7 +93,7 @@ func (s *Server) allowed(w http.ResponseWriter, feature string) bool {
 func (s *Server) postPurgeExporter(w http.ResponseWriter, r *http.Request) {
 	typ, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if typ != "application/json" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application/json required"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "message": "application/json required"})
 		return
 	}
 	var in struct {
@@ -101,7 +101,7 @@ func (s *Server) postPurgeExporter(w http.ResponseWriter, r *http.Request) {
 		Confirm  bool   `json:"confirm"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1024)).Decode(&in); err != nil || !in.Confirm {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "exporter and confirm=true required"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "message": "exporter and confirm=true required"})
 		return
 	}
 	a, err := netip.ParseAddr(strings.TrimSpace(in.Exporter))
