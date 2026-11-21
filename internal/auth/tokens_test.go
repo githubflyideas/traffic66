@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -28,7 +29,9 @@ func TestTokenRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode().Perm() != 0o600 {
+	// Windows does not carry Unix permission bits (a plain file reports
+	// 0666 there); the 0600 the save asked for is a Unix property.
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("tokens file mode %v, want 0600", fi.Mode().Perm())
 	}
 	b, _ := os.ReadFile(filepath.Join(dir, TokensFileName))
