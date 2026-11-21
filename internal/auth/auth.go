@@ -31,7 +31,12 @@ const DefaultPassword = "traffic66"
 // MinLength is the shortest password accepted from the web UI.
 const MinLength = 8
 
-const iterations = 210000
+// iterations is the PBKDF2 count new hashes are made with: OWASP's
+// recommendation for PBKDF2-HMAC-SHA256. The count travels inside the
+// hash string, so raising it never strands an older hash — Verify uses
+// the count the hash was made with, and FileChecker remakes a weaker
+// hash at the next successful sign-in (see Check).
+const iterations = 600000
 
 var b64 = base64.RawStdEncoding
 
@@ -60,6 +65,20 @@ func Verify(hash, pw string) bool {
 	}
 	got, err := pbkdf2.Key(sha256.New, pw, salt, iter, len(want))
 	return err == nil && subtle.ConstantTimeCompare(got, want) == 1
+}
+
+// Iterations is the PBKDF2 count a stored hash was made with, or 0 when
+// the string is not one of ours.
+func Iterations(hash string) int {
+	parts := strings.Split(hash, "$")
+	if len(parts) != 4 || parts[0] != "pbkdf2-sha256" {
+		return 0
+	}
+	n, err := strconv.Atoi(parts[1])
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
 }
 
 // Generate returns a random password.
@@ -343,7 +362,18 @@ func (f *FileChecker) Check(user, pw string) bool {
 	}
 	c := f.c
 	f.mu.Unlock()
-	return c.Check(user, pw)
+	if !c.Check(user, pw) {
+		return false
+	}
+	// A hash made at a lower iteration count is remade at the current
+	// one. The password is at hand only here, at a successful sign-in,
+	// so this is the one moment the upgrade can happen without asking
+	// for it again. Best effort: a failure is simply retried at the
+	// next sign-in.
+	if h := c.hashes[user]; Iterations(h) < iterations {
+		Set(f.dir, user, pw)
+	}
+	return true
 }
 
 // Fixed reports whether the passwords were given at start (-password or

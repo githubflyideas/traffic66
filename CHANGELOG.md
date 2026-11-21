@@ -3,6 +3,19 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.7.0
+
+- Settings: the IP databases (country/region and operator) have a tab of their own, before registration and purchase.
+- The version and registration under the logo in the sidebar are centred.
+- Interface check: the bandwidth chart at the top has the same total / inbound / outbound switch as the overview, and the note about the dashed line (yesterday at the same time) sits next to the chart title.
+- Pages on a 7-day or 30-day range refresh every 30 seconds (before, up to 5 minutes).
+- Export CSV: the hourly device counters of the range on show as a spreadsheet file — one row per hour, device and interface, with average bit rates. The counters are kept for the whole rollup retention (400 days), long after the flow detail is gone.
+- API version 1: every answer carries an Api-Version header, /api/v1/ works next to /api/, the machine-readable description is at /api/openapi.json, errors are JSON with stable codes, and a wrong method is answered 405 with the methods that are allowed.
+- API tokens: a program can be given its own token, read-only or read-write, on the account page or with `traffic66 gen-token` — no browser session needed.
+- Security: sign-ins and sign-outs, account changes and token changes are written to the log; password hashing is strengthened (a stored password is re-hashed at its next sign-in); account limits are hardened; HTTPS answers carry HSTS.
+- API: an invalid time range is answered with an error (bad_range) instead of silently using the default window.
+- SECURITY.md added. Release checksums and the SBOM are covered by the build attestation, like the packages themselves.
+
 ## 2.6.6
 
 - Top 66 is now called TOP; it still shows 33 servers and 33 clients.

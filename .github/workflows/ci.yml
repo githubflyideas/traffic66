@@ -76,6 +76,11 @@ jobs:
         run: go mod tidy
       - name: Vet
         run: go vet ./...
+      - name: Vulnerability scan
+        if: ${{ matrix.target == 'linux-amd64' }}
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...
       - name: Test
         run: |
           set -o pipefail
@@ -302,6 +307,8 @@ jobs:
           subject-path: |
             dist/traffic66-*.tar.gz
             dist/traffic66-*.zip
+            dist/traffic66-sbom.cdx.json
+            dist/SHA256SUMS
       # a tag push attaches the archives to that tag's release; a manual run
       # creates the tag on the commit it built and publishes the release
       - uses: softprops/action-gh-release@v3
