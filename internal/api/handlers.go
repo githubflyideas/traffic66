@@ -62,7 +62,11 @@ func parseQuerySpan(r *http.Request, max time.Duration) (store.Query, error) {
 		if err1 != nil || err2 != nil || tm <= fm {
 			return q, errors.New("bad from/to")
 		}
-		if max > 0 && time.Duration(tm-fm)*time.Millisecond > max {
+		// The span is compared in milliseconds, as it was given: turned
+		// into a Duration first, a span of a few centuries overflowed
+		// into a negative number and slipped past the limit. A span
+		// that overflows even as milliseconds comes out negative here.
+		if d := tm - fm; d <= 0 || (max > 0 && d > max.Milliseconds()) {
 			return q, errBadRange
 		}
 		q.From, q.To = time.UnixMilli(fm).UTC(), time.UnixMilli(tm).UTC()

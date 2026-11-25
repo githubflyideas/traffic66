@@ -18,8 +18,13 @@ import (
 // are kept for the whole rollup retention, so this reaches back far past
 // the flow detail. UTF-8 with a BOM, or Excel shows the interface names
 // as mojibake.
+// summarySpan is the widest window a query over the summaries may cover:
+// the 180 days they are kept, and a few days over so a half-year export
+// that starts on the first of a month is not refused.
+const summarySpan = 186 * 24 * time.Hour
+
 func (s *Server) exportRollups(w http.ResponseWriter, r *http.Request) {
-	q, err := parseQuerySpan(r, 0)
+	q, err := parseQuerySpan(r, summarySpan)
 	if err != nil {
 		fail(w, err)
 		return

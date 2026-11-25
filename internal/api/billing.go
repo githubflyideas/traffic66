@@ -164,7 +164,7 @@ func billingRange(r *http.Request) (store.Query, error) {
 	}
 	fm, err1 := strconv.ParseInt(f, 10, 64)
 	tm, err2 := strconv.ParseInt(t, 10, 64)
-	if err1 != nil || err2 != nil || tm <= fm {
+	if d := tm - fm; err1 != nil || err2 != nil || d <= 0 || d > summarySpan.Milliseconds() {
 		return store.Query{}, errBadRange
 	}
 	return store.Query{From: time.UnixMilli(fm).UTC(), To: time.UnixMilli(tm).UTC(),
