@@ -57,12 +57,20 @@ func billingWindow(ts time.Time) string {
 
 func TestBillingGateAndFigures(t *testing.T) {
 	s, ts := billingServer(t)
-	// an unregistered installation is refused, with the stable code
+	// an unregistered installation bills a line of two: the merged
+	// limit is three, adjudicated on the resolved addresses
 	u := &Server{Store: s.Store, Inv: s.Inv}
 	w := httptest.NewRecorder()
 	u.billing(w, httptest.NewRequest("GET", "/api/billing?product=Shop&"+billingWindow(ts), nil))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"bytes":17000`) {
+		t.Fatalf("unregistered small line: %d %s", w.Code, w.Body)
+	}
+	// a subnet is a registered feature outright, refused with the
+	// stable code
+	w = httptest.NewRecorder()
+	u.billing(w, httptest.NewRequest("GET", "/api/billing?subnet=203.0.113.0/24&"+billingWindow(ts), nil))
 	if w.Code != 403 || !strings.Contains(w.Body.String(), `"not_registered"`) {
-		t.Fatalf("unregistered: %d %s", w.Code, w.Body)
+		t.Fatalf("unregistered subnet: %d %s", w.Code, w.Body)
 	}
 	// the product line's figures, counted once
 	w = httptest.NewRecorder()
