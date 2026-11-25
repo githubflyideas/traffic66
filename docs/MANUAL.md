@@ -410,7 +410,7 @@ sampling.
 
 ### Traffic statistics and read-only accounts
 
-On a registered installation, **Traffic statistics** shows the traffic of one VIP or of a product line: the VIPs billed together, written in the inventory as `product <name> vip=<address>,…` (one address belongs to one line only; `vip=` is the last field). Inbound and outbound are added together as the headline figure, with the split underneath, and the CSV export gives the same figures. Traffic between two VIPs of the same line is counted once. The figures come from the sampled flow records; their hourly summaries are kept for 180 days, and one query covers at most 186 days.
+**Traffic statistics** shows the traffic of one VIP or of a product line: the VIPs billed together, written in the inventory as `product <name> vip=<address>,…` (one address belongs to one line only; `vip=` is the last field). Inbound and outbound are added together as the headline figure, with the split underneath, and the CSV export gives the same figures. Traffic between two VIPs of the same line is counted once. The figures come from the sampled flow records; their hourly summaries are kept for 180 days, and one query covers at most 186 days. An unregistered installation can query one VIP or a line of at most three VIPs at a time; a registered one has no such limit and can also bill a whole subnet (`10.0.0.0/24`).
 
 Under **Integrations** the administrator can give a business a read-only account bound to one VIP or product line. It signs in like any other account and counts toward the account limit, but sees only that object's traffic statistics: a window of at most 14 days, at most 60 queries a minute, no other page and no changes. It cannot change its own password; the administrator resets it.
 
