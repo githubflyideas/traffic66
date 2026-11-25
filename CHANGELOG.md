@@ -3,7 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## Unreleased
+## 2.10.1
 
 - Licence: the Additional Use Grant is now version 1.1. Production use is free for organizations of fewer than 50 people (before, 100); larger organizations register after 30 days of production use, as before.
 - API: a from/to span of centuries no longer slips past the thirty-day limit (it overflowed when converted and came out negative). The rollup export and the traffic statistics, which had no limit, take at most 186 days.
