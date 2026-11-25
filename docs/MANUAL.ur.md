@@ -347,6 +347,7 @@ iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
 snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+product Shop vip=203.0.113.10,203.0.113.11  # ایک ساتھ بل ہونے والی لائن (رجسٹرڈ)
 ```
 
 private ranges ہمیشہ آپ کی ہوتی ہیں۔ تبدیلیاں **محفوظ کریں** پر لاگو ہوتی ہیں،
@@ -437,6 +438,12 @@ detail پڑھتا ہے، اس لیے سست ہوتا ہے اور صرف اتنا
 ![مشتبہ سرگرمی: ایک حملے کا ہر مرحلہ، 1:4096 sFlow sampling کے باوجود پکڑا گیا](images/findings.png)
 
 <a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+### ٹریفک کے اعداد و شمار اور صرف پڑھنے والے اکاؤنٹ
+
+رجسٹرڈ installation پر **ٹریفک کے اعداد و شمار** ایک VIP یا ایک product line کا ٹریفک دکھاتا ہے: وہ VIP جن کا بل ایک ساتھ بنتا ہے، جو رجسٹر میں `product <نام> vip=<پتا>,…` لکھے جاتے ہیں (ایک پتا صرف ایک line کا ہوتا ہے؛ `vip=` آخری field ہے)۔ inbound اور outbound جمع ہو کر مرکزی عدد بنتے ہیں، نیچے تقسیم دکھتی ہے، اور CSV export میں یہی اعداد ہوتے ہیں۔ ایک ہی line کے دو VIP کے درمیان ٹریفک ایک بار گنا جاتا ہے۔ اعداد sampled flow records سے آتے ہیں؛ ان کے گھنٹہ وار summaries 180 دن رکھے جاتے ہیں، اور ایک query زیادہ سے زیادہ 186 دن کی ہوتی ہے۔
+
+**انٹیگریشنز** میں administrator کسی business ٹیم کو ایک VIP یا product line سے بندھا صرف پڑھنے والا اکاؤنٹ دے سکتا ہے۔ یہ کسی بھی اکاؤنٹ کی طرح sign in کرتا ہے اور اکاؤنٹس کی حد میں گنا جاتا ہے، لیکن صرف اسی object کے ٹریفک کے اعداد و شمار دیکھتا ہے: زیادہ سے زیادہ 14 دن، ایک منٹ میں زیادہ سے زیادہ 60 queries، کوئی اور صفحہ نہیں اور کوئی تبدیلی نہیں۔ یہ اپنا password خود نہیں بدل سکتا؛ administrator اسے reset کرتا ہے۔
 
 ## 9. آف لائن pcap، terminal UI، local capture
 

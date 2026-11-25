@@ -353,6 +353,7 @@ iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
 snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+product Shop vip=203.0.113.10,203.0.113.11  # facturadas juntas (registrado)
 ```
 
 Los rangos privados siempre son suyos. Los cambios se aplican con
@@ -445,6 +446,12 @@ los escaneos muy pequeños pueden ocultarse tras el muestreo.
 ![Hallazgos: cada paso de un ataque, encontrado a través de un muestreo sFlow 1:4096](images/findings.png)
 
 <a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+### Estadísticas de tráfico y cuentas de solo lectura
+
+En una instalación registrada, **Estadísticas de tráfico** muestra el tráfico de una VIP o de una línea de producto: las VIP que se facturan juntas, escritas en el inventario como `product <nombre> vip=<dirección>,…` (una dirección pertenece a una sola línea; `vip=` es el último campo). Entrada y salida se suman en la cifra principal, con el desglose debajo, y la exportación CSV da las mismas cifras. El tráfico entre dos VIP de la misma línea se cuenta una vez. Las cifras salen de los registros de flujo muestreados; sus resúmenes por hora se guardan 180 días y una consulta abarca como máximo 186 días.
+
+En **Integraciones**, el administrador puede dar a un área de negocio una cuenta de solo lectura ligada a una VIP o línea de producto. Inicia sesión como cualquier cuenta y cuenta para el límite de cuentas, pero solo ve las estadísticas de tráfico de ese objeto: una ventana de 14 días como máximo, 60 consultas por minuto como máximo, ninguna otra página y ningún cambio. No puede cambiar su propia contraseña; la restablece el administrador.
 
 ## 9. Análisis offline de pcap, interfaz de terminal, captura local
 

@@ -350,6 +350,7 @@ iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
 snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+product Shop vip=203.0.113.10,203.0.113.11  # ditagih bersama (terdaftar)
 ```
 
 Rentang privat selalu dianggap milik Anda. Perubahan berlaku saat
@@ -441,6 +442,12 @@ kecil bisa tersembunyi di balik sampling.
 ![Temuan: setiap langkah serangan, ditemukan melalui sampling sFlow 1:4096](images/findings.png)
 
 <a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+### Statistik lalu lintas dan akun hanya-baca
+
+Pada instalasi terdaftar, **Statistik lalu lintas** menampilkan lalu lintas satu VIP atau satu lini produk: VIP yang ditagih bersama, ditulis di inventaris sebagai `product <nama> vip=<alamat>,…` (satu alamat hanya milik satu lini; `vip=` adalah kolom terakhir). Masuk dan keluar dijumlahkan sebagai angka utama, dengan rinciannya di bawah, dan ekspor CSV memberi angka yang sama. Lalu lintas antara dua VIP dalam lini yang sama dihitung sekali. Angka berasal dari rekaman flow yang disampel; ringkasan per jamnya disimpan 180 hari, dan satu kueri paling lama 186 hari.
+
+Di **Integrasi**, administrator dapat memberi unit bisnis akun hanya-baca yang terikat pada satu VIP atau lini produk. Akun ini masuk seperti akun lain dan dihitung dalam batas akun, tetapi hanya melihat statistik lalu lintas objek tersebut: jendela paling lama 14 hari, paling banyak 60 kueri per menit, tanpa halaman lain dan tanpa perubahan. Akun ini tidak dapat mengganti kata sandinya sendiri; administrator yang mengaturnya ulang.
 
 ## 9. Pcap offline, antarmuka terminal, capture lokal
 

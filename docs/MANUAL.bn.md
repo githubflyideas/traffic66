@@ -345,6 +345,7 @@ iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
 snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+product Shop vip=203.0.113.10,203.0.113.11  # একসাথে বিল হয় (registered)
 ```
 
 private range সবসময় আপনার ধরা হয়। **সংরক্ষণ**-এ পরিবর্তন কার্যকর হয়, restart
@@ -435,6 +436,12 @@ detail রাখা হয়।
 ![সন্দেহজনক কার্যকলাপ: একটি আক্রমণের প্রতিটি ধাপ, 1:4096 sFlow sampling-এর মধ্য দিয়েও ধরা পড়েছে](images/findings.png)
 
 <a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+### ট্রাফিক পরিসংখ্যান ও read-only অ্যাকাউন্ট
+
+registered installation-এ **ট্রাফিক পরিসংখ্যান** পেজ একটি VIP বা একটি product line-এর ট্রাফিক দেখায়: যে VIP-গুলোর বিল একসাথে হয়, inventory-তে `product <নাম> vip=<ঠিকানা>,…` হিসেবে লেখা (একটি ঠিকানা কেবল একটি line-এর; `vip=` শেষ field)। inbound ও outbound যোগ করে মূল সংখ্যা, নিচে ভাগ দেখানো হয়, আর CSV export-এ একই সংখ্যা থাকে। একই line-এর দুই VIP-এর মধ্যকার ট্রাফিক একবারই গোনা হয়। সংখ্যাগুলো sampled flow record থেকে আসে; সেগুলোর ঘণ্টাভিত্তিক summary 180 দিন রাখা হয়, আর একটি query সর্বোচ্চ 186 দিনের।
+
+**ইন্টিগ্রেশন**-এ administrator কোনো business টিমকে একটি VIP বা product line-এ বাঁধা read-only অ্যাকাউন্ট দিতে পারেন। এটি অন্য যেকোনো অ্যাকাউন্টের মতো sign in করে এবং অ্যাকাউন্টের সীমায় গোনা হয়, কিন্তু কেবল সেই object-এর ট্রাফিক পরিসংখ্যান দেখে: সর্বোচ্চ 14 দিনের window, মিনিটে সর্বোচ্চ 60টি query, অন্য কোনো পেজ নেই এবং কোনো পরিবর্তন নয়। এটি নিজের password বদলাতে পারে না; administrator reset করেন।
 
 ## 9. অফলাইন pcap, terminal UI, local capture
 

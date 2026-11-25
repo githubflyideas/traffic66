@@ -355,6 +355,7 @@ iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
 snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+product Shop vip=203.0.113.10,203.0.113.11  # gemeinsam abgerechnet (registriert)
 ```
 
 Private Adressbereiche gelten immer als Ihre eigenen. Änderungen werden mit
@@ -447,6 +448,12 @@ kleine Scans können sich hinter dem Sampling verbergen.
 ![Befunde: jeder Schritt eines Angriffs, erkannt durch 1:4096-sFlow-Sampling](images/findings.png)
 
 <a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+### Verkehrsstatistik und Nur-Lese-Konten
+
+Auf einer registrierten Installation zeigt **Verkehrsstatistik** den Verkehr einer VIP oder einer Produktlinie: der VIPs, die gemeinsam abgerechnet werden, im Inventar als `product <Name> vip=<Adresse>,…` (eine Adresse gehört nur zu einer Linie; `vip=` ist das letzte Feld). Ein- und ausgehend werden zur Hauptzahl addiert, die Aufteilung steht darunter, und der CSV-Export liefert dieselben Zahlen. Verkehr zwischen zwei VIPs derselben Linie zählt einmal. Die Zahlen stammen aus den gesampelten Flow-Datensätzen; ihre stündlichen Zusammenfassungen werden 180 Tage aufbewahrt, und eine Abfrage umfasst höchstens 186 Tage.
+
+Unter **Integrationen** kann der Administrator einem Fachbereich ein Nur-Lese-Konto geben, das an eine VIP oder Produktlinie gebunden ist. Es meldet sich wie jedes Konto an und zählt zur Kontogrenze, sieht aber nur die Verkehrsstatistik dieses Objekts: höchstens 14 Tage, höchstens 60 Abfragen pro Minute, keine andere Seite und keine Änderungen. Sein Passwort kann es nicht selbst ändern; der Administrator setzt es zurück.
 
 ## 9. Offline-pcap, Terminaloberfläche, lokale Erfassung
 

@@ -6,6 +6,10 @@ heading is the version number.
 ## Unreleased
 
 - Licence: the Additional Use Grant is now version 1.1. Production use is free for organizations of fewer than 50 people (before, 100); larger organizations register after 30 days of production use, as before.
+- API: a from/to span of centuries no longer slips past the thirty-day limit (it overflowed when converted and came out negative). The rollup export and the traffic statistics, which had no limit, take at most 186 days.
+- Export CSV: an interface name that starts like a spreadsheet formula (=, +, -, @) is written as text.
+- Inventory: `speed=` takes 100M, 10G and the like; a speed that cannot be read is refused instead of quietly read as 0, which dropped the interface's utilisation.
+- Manual: traffic statistics, product lines and read-only accounts are described in all 15 languages; the example inventory has a product line.
 
 ## 2.10.0
 

@@ -323,6 +323,7 @@ iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
 snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+product Shop vip=203.0.113.10,203.0.113.11  # billed together (registered)
 ```
 
 Private ranges are always yours. Changes apply on **Save**, no restart.
@@ -406,6 +407,12 @@ demo's attack is found completely; very small scans can hide behind
 sampling.
 
 ![Findings: every step of an attack, found through 1:4096 sFlow sampling](images/findings.png)
+
+### Traffic statistics and read-only accounts
+
+On a registered installation, **Traffic statistics** shows the traffic of one VIP or of a product line: the VIPs billed together, written in the inventory as `product <name> vip=<address>,…` (one address belongs to one line only; `vip=` is the last field). Inbound and outbound are added together as the headline figure, with the split underneath, and the CSV export gives the same figures. Traffic between two VIPs of the same line is counted once. The figures come from the sampled flow records; their hourly summaries are kept for 180 days, and one query covers at most 186 days.
+
+Under **Integrations** the administrator can give a business a read-only account bound to one VIP or product line. It signs in like any other account and counts toward the account limit, but sees only that object's traffic statistics: a window of at most 14 days, at most 60 queries a minute, no other page and no changes. It cannot change its own password; the administrator resets it.
 
 ## 9. Offline pcap, terminal UI, local capture
 

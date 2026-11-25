@@ -346,6 +346,7 @@ iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
 snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+product Shop vip=203.0.113.10,203.0.113.11  # tính cước chung (bản đã đăng ký)
 ```
 
 Các dải địa chỉ private luôn được coi là của bạn. Thay đổi có hiệu lực khi
@@ -436,6 +437,12 @@ bị lọt qua do lấy mẫu.
 ![Phát hiện: từng bước của một cuộc tấn công, được phát hiện qua lấy mẫu sFlow 1:4096](images/findings.png)
 
 <a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+### Thống kê lưu lượng và tài khoản chỉ đọc
+
+Trên bản đã đăng ký, trang **Thống kê lưu lượng** hiển thị lưu lượng của một VIP hoặc một dòng sản phẩm: các VIP được tính cước chung, ghi trong sổ quản lý dạng `product <tên> vip=<địa chỉ>,…` (mỗi địa chỉ chỉ thuộc một dòng; `vip=` là trường cuối). Chiều vào và chiều ra được cộng lại thành con số chính, phần tách nằm bên dưới, và bản xuất CSV cho cùng các con số. Lưu lượng giữa hai VIP cùng dòng chỉ tính một lần. Số liệu lấy từ các bản ghi luồng được lấy mẫu; bản tổng hợp theo giờ được giữ 180 ngày, mỗi truy vấn tối đa 186 ngày.
+
+Trong **Tích hợp**, quản trị viên có thể cấp cho bộ phận nghiệp vụ một tài khoản chỉ đọc gắn với một VIP hoặc dòng sản phẩm. Tài khoản này đăng nhập như mọi tài khoản và được tính vào giới hạn số tài khoản, nhưng chỉ xem được thống kê lưu lượng của đối tượng đó: khoảng thời gian tối đa 14 ngày, tối đa 60 truy vấn mỗi phút, không có trang nào khác và không được thay đổi gì. Tài khoản không tự đổi được mật khẩu; quản trị viên sẽ đặt lại.
 
 ## 9. Phân tích pcap ngoại tuyến, giao diện terminal, bắt gói tin cục bộ
 

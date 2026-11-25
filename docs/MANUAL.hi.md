@@ -345,6 +345,7 @@ iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
 snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+product Shop vip=203.0.113.10,203.0.113.11  # एक साथ बिल होने वाली लाइन (registered)
 ```
 
 Private ranges हमेशा आपके माने जाते हैं। बदलाव **सहेजें** पर लागू होते हैं,
@@ -435,6 +436,12 @@ ranges पूरे घंटे से शुरू होती हैं; 7 �
 ![संदिग्ध गतिविधि: एक हमले का हर चरण, 1:4096 sFlow sampling के बावजूद पकड़ा गया](images/findings.png)
 
 <a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+### ट्रैफ़िक आँकड़े और read-only खाते
+
+registered installation पर **ट्रैफ़िक आँकड़े** पेज एक VIP या एक product line का ट्रैफ़िक दिखाता है: वे VIP जिनका बिल एक साथ बनता है, जिन्हें inventory में `product <नाम> vip=<पता>,…` लिखा जाता है (एक पता सिर्फ़ एक line का होता है; `vip=` आख़िरी field है)। inbound और outbound जोड़कर मुख्य आँकड़ा बनता है, नीचे बँटवारा दिखता है, और CSV export में वही आँकड़े होते हैं। एक ही line के दो VIP के बीच का ट्रैफ़िक एक बार गिना जाता है। आँकड़े sampled flow records से आते हैं; उनके घंटेवार summaries 180 दिन रखे जाते हैं, और एक query ज़्यादा से ज़्यादा 186 दिन की होती है।
+
+**इंटीग्रेशन** में administrator किसी business टीम को एक VIP या product line से बँधा read-only खाता दे सकता है। यह किसी भी खाते की तरह sign in करता है और खातों की सीमा में गिना जाता है, पर सिर्फ़ उसी object के ट्रैफ़िक आँकड़े देखता है: ज़्यादा से ज़्यादा 14 दिन की window, एक मिनट में ज़्यादा से ज़्यादा 60 queries, कोई और पेज नहीं और कोई बदलाव नहीं। यह अपना password ख़ुद नहीं बदल सकता; administrator उसे reset करता है।
 
 ## 9. ऑफ़लाइन pcap, terminal UI, local capture
 
