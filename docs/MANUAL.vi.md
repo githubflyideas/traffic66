@@ -542,7 +542,7 @@ và [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (bản tiếng 
 có giá trị pháp lý): miễn phí để dùng thử và cho tổ chức dưới 50 người; tổ
 chức lớn hơn đăng ký sau 30 ngày sử dụng thực tế; bán lại, cung cấp dịch vụ
 lưu trữ cho bên khác hoặc sản phẩm cạnh tranh cần giấy phép thương mại. Không
-có tính năng nào bị khóa. Cuối mỗi trang hiển thị mã cài đặt 8 chữ số; gửi mã
+có tính năng nào bị khóa. Cuối mỗi trang hiển thị mã cài đặt; gửi mã
 này cho tác giả và đặt file `license.json` nhận được vào thư mục dữ liệu. Liên
 hệ: <route66traffic66@gmail.com>.
 

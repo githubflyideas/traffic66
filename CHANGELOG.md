@@ -8,6 +8,9 @@ heading is the version number.
 - Traffic statistics: a subnet (`10.0.0.0/24`) can be billed as a whole, beside one VIP and a product line; traffic inside the subnet is counted once (registered installations).
 - Traffic statistics on an unregistered installation: one VIP, or a product line of at most three VIPs, per query; a larger line is answered with the limit.
 
+- Licences are signed with ECDSA P-521 (message v4); Ed25519 licences are no longer accepted. A licence issued before this release must be issued again; the installation number does not change.
+- A new installation gets a 128-bit random installation number instead of 8 digits; an existing installation keeps its number.
+
 ## 2.10.1
 
 - Licence: the Additional Use Grant is now version 1.1. Production use is free for organizations of fewer than 50 people (before, 100); larger organizations register after 30 days of production use, as before.
