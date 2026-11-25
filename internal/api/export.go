@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/netip"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -47,11 +48,23 @@ func (s *Server) exportRollups(w http.ResponseWriter, r *http.Request) {
 		start := row.Start.In(zone)
 		cw.Write([]string{
 			start.Format(time.RFC3339), start.Add(time.Hour).Format(time.RFC3339),
-			row.Exporter, iface,
+			csvCell(row.Exporter), csvCell(iface),
 			strconv.FormatUint(row.InOct, 10), strconv.FormatUint(row.OutOct, 10),
 			strconv.FormatUint(row.InPkts, 10), strconv.FormatUint(row.OutPkts, 10),
 			avg(row.InOct), avg(row.OutOct),
 		})
 	}
 	cw.Flush()
+}
+
+// csvCell keeps a text field from being read as a formula when the file
+// is opened in a spreadsheet: interface names come from the devices
+// (SNMP ifName) and the inventory, and a name such as "=HYPERLINK(...)"
+// would otherwise run as one. Such a cell is written with a leading
+// apostrophe, which spreadsheets show as plain text.
+func csvCell(v string) string {
+	if v != "" && strings.ContainsRune("=+-@\t\r", rune(v[0])) {
+		return "'" + v
+	}
+	return v
 }
