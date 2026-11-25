@@ -1,7 +1,11 @@
 package license
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/sha512"
+	"encoding/asn1"
+	"math/big"
 	"sort"
 )
 
@@ -10,7 +14,7 @@ import (
 // looking like a corrupt file.
 type Key struct {
 	ID       string
-	Pub      ed25519.PublicKey
+	Pub      *ecdsa.PublicKey
 	Disabled bool
 	Note     string // why it was disabled, for the licence page
 }
@@ -55,6 +59,28 @@ func (r Keyring) Allows(f File) bool {
 	return i < len(r.Allow) && r.Allow[i] == fp
 }
 
+// ecdsaSig is the ASN.1 form of a signature, as it sits in license.json
+// under base64: a sequence of the two integers the algorithm produces.
+// DER signatures vary in length — 138 or 139 bytes for P-521 — so there
+// is no fixed size to check against; parsing the DER and finding both
+// integers inside the curve's order is the check.
+type ecdsaSig struct {
+	R, S *big.Int
+}
+
+func parseSignature(b []byte) (r, s *big.Int, ok bool) {
+	var sig ecdsaSig
+	rest, err := asn1.Unmarshal(b, &sig)
+	if err != nil || len(rest) != 0 || sig.R == nil || sig.S == nil {
+		return nil, nil, false
+	}
+	n := elliptic.P521().Params().N
+	if sig.R.Sign() <= 0 || sig.S.Sign() <= 0 || sig.R.Cmp(n) >= 0 || sig.S.Cmp(n) >= 0 {
+		return nil, nil, false
+	}
+	return sig.R, sig.S, true
+}
+
 // Verify checks f against the ring and returns the key that signed it and
 // the message version that matched.
 //
@@ -73,7 +99,11 @@ func (r Keyring) Verify(f File) (Key, int, error) {
 		return Key{}, 0, err
 	}
 	sig, err := b64.DecodeString(f.Signature)
-	if err != nil || len(sig) != ed25519.SignatureSize {
+	if err != nil {
+		return Key{}, 0, ErrSignature
+	}
+	sigR, sigS, ok := parseSignature(sig)
+	if !ok {
 		return Key{}, 0, ErrSignature
 	}
 	if !r.Allows(f) {
@@ -91,24 +121,16 @@ func (r Keyring) Verify(f File) (Key, int, error) {
 		}
 		keys = []Key{k}
 	}
+	digest := sha512.Sum512(Message(f))
 	for _, k := range keys {
 		if k.Disabled {
 			continue
 		}
-		if len(k.Pub) != ed25519.PublicKeySize {
+		if !isP521(k.Pub) {
 			continue
 		}
-		if ed25519.Verify(k.Pub, Message(f), sig) {
-			return k, 3, nil
-		}
-		// A v2 licence does not say who it is made out to.
-		if !namesLicensee(f) && ed25519.Verify(k.Pub, MessageV2(f), sig) {
-			return k, 2, nil
-		}
-		// A v1 licence carries no key id, no quotas and no features; it
-		// registers an installation and nothing more.
-		if !namesLicensee(f) && !grants(f) && ed25519.Verify(k.Pub, MessageV1(f), sig) {
-			return k, 1, nil
+		if ecdsa.Verify(k.Pub, digest[:], sigR, sigS) {
+			return k, 4, nil
 		}
 	}
 	return Key{}, 0, ErrSignature
@@ -124,6 +146,6 @@ func (r Keyring) find(id string) (Key, bool) {
 }
 
 // SingleKey is the ring of one key, for issuing and for tests.
-func SingleKey(pub ed25519.PublicKey) Keyring {
+func SingleKey(pub *ecdsa.PublicKey) Keyring {
 	return Keyring{Keys: []Key{{ID: KeyID(pub), Pub: pub}}}
 }

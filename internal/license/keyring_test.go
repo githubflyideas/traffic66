@@ -1,38 +1,64 @@
 package license
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha512"
+	"crypto/x509"
 	"testing"
 )
 
-func pair(t *testing.T) (ed25519.PrivateKey, Key) {
+func pair(t *testing.T) (*ecdsa.PrivateKey, Key) {
 	t.Helper()
-	pub, priv, err := ed25519.GenerateKey(nil)
+	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
+	pub := &priv.PublicKey
 	return priv, Key{ID: KeyID(pub), Pub: pub}
+}
+
+// signMsg signs a message the way the issuing tool signs a licence:
+// SHA-512 digest, ECDSA, ASN.1 DER.
+func signMsg(t *testing.T, priv *ecdsa.PrivateKey, msg []byte) string {
+	t.Helper()
+	digest := sha512.Sum512(msg)
+	sig, err := ecdsa.SignASN1(rand.Reader, priv, digest[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b64.EncodeToString(sig)
 }
 
 // signWith signs as the issuing tool does: the key's own id goes into the
 // licence before it is signed.
-func signWith(priv ed25519.PrivateKey, f File) File {
-	f.KeyID = KeyID(priv.Public().(ed25519.PublicKey))
-	f.Signature = b64.EncodeToString(ed25519.Sign(priv, Message(f)))
+func signWith(t *testing.T, priv *ecdsa.PrivateKey, f File) File {
+	f.KeyID = KeyID(&priv.PublicKey)
+	f.Signature = signMsg(t, priv, Message(f))
 	return f
+}
+
+func pubB64(t *testing.T, pub *ecdsa.PublicKey) string {
+	t.Helper()
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b64.EncodeToString(der)
 }
 
 func TestRingPicksTheNamedKey(t *testing.T) {
 	privA, keyA := pair(t)
 	_, keyB := pair(t)
 	ring := Keyring{Keys: []Key{keyA, keyB}}
-	f := signWith(privA, paid("2027-10-31"))
+	f := signWith(t, privA, paid("2027-10-31"))
 	got, ver, err := ring.Verify(f)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.ID != keyA.ID || ver != 3 {
-		t.Fatalf("got key %s v%d, want %s v3", got.ID, ver, keyA.ID)
+	if got.ID != keyA.ID || ver != 4 {
+		t.Fatalf("got key %s v%d, want %s v4", got.ID, ver, keyA.ID)
 	}
 }
 
@@ -46,7 +72,7 @@ func TestCannotSignAsAnotherKey(t *testing.T) {
 	// A licence claiming key B, signed with key A's private half.
 	f := paid("2027-10-31")
 	f.KeyID = keyB.ID
-	f.Signature = b64.EncodeToString(ed25519.Sign(privA, Message(f)))
+	f.Signature = signMsg(t, privA, Message(f))
 	if _, _, err := ring.Verify(f); err == nil {
 		t.Fatal("one key signed as another")
 	}
@@ -63,7 +89,7 @@ func TestUnknownKey(t *testing.T) {
 	privA, _ := pair(t)
 	_, keyB := pair(t)
 	ring := Keyring{Keys: []Key{keyB}}
-	f := signWith(privA, paid("2027-10-31"))
+	f := signWith(t, privA, paid("2027-10-31"))
 	if _, _, err := ring.Verify(f); err != ErrUnknownKey {
 		t.Fatalf("got %v, want ErrUnknownKey", err)
 	}
@@ -75,7 +101,7 @@ func TestDisabledKey(t *testing.T) {
 	privA, keyA := pair(t)
 	keyA.Disabled, keyA.Note = true, "replaced on 2026-11-01"
 	ring := Keyring{Keys: []Key{keyA}}
-	f := signWith(privA, paid("2027-10-31"))
+	f := signWith(t, privA, paid("2027-10-31"))
 	if _, _, err := ring.Verify(f); err != ErrKeyDisabled {
 		t.Fatalf("got %v, want ErrKeyDisabled", err)
 	}
@@ -105,8 +131,8 @@ func contains(hay, needle string) bool {
 // real customer keeps working and nothing the thief signs does.
 func TestAllowList(t *testing.T) {
 	priv, key := pair(t)
-	mine := signWith(priv, paid("2027-10-31"))
-	theirs := signWith(priv, File{
+	mine := signWith(t, priv, paid("2027-10-31"))
+	theirs := signWith(t, priv, File{
 		Customer: "Whoever", Product: "traffic66", License: TypePerpetual,
 		Tier: TierEnterprise, Features: Features,
 	})
@@ -116,7 +142,7 @@ func TestAllowList(t *testing.T) {
 		t.Fatalf("with no allow list everything this key signed is fine: %v", err)
 	}
 
-	ring, err := NewKeyring([]string{b64.EncodeToString(key.Pub)}, []string{Fingerprint(mine)})
+	ring, err := NewKeyring([]string{pubB64(t, key.Pub)}, []string{Fingerprint(mine)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,34 +158,35 @@ func TestAllowList(t *testing.T) {
 	}
 }
 
-// A licence from before key ids existed names no key, so it is tried
-// against every key still accepted.
-func TestLegacyHasNoKeyID(t *testing.T) {
+// A licence naming no key is tried against every key still accepted: the
+// message's empty key id line is what was signed, so it cannot be pointed
+// at one key after the fact either.
+func TestNoKeyIDTriedAgainstEveryKey(t *testing.T) {
 	priv, key := pair(t)
 	_, other := pair(t)
-	f := File{InstallationID: "7f3a1c9e", Customer: "Legacy Co", Product: "traffic66",
-		License: "registration", Expires: str("2027-01-31")}
-	f.Signature = b64.EncodeToString(ed25519.Sign(priv, MessageV1(f)))
+	f := File{InstallationID: "7f3a1c9e5b2d4a6f8091a2b3c4d5e6f7", Customer: "Legacy Co", Product: "traffic66",
+		License: TypePerpetual, Tier: TierStandard}
+	f.Signature = signMsg(t, priv, Message(f))
 
 	ring := Keyring{Keys: []Key{other, key}}
 	got, ver, err := ring.Verify(f)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ver != 1 || got.ID != key.ID {
+	if ver != 4 || got.ID != key.ID {
 		t.Fatalf("got key %s v%d", got.ID, ver)
 	}
 
-	// Withdraw that key and the old licence stops too.
+	// Withdraw that key and the licence stops too.
 	ring.Keys = []Key{other, {ID: key.ID, Pub: key.Pub, Disabled: true}}
 	if _, _, err := ring.Verify(f); err == nil {
-		t.Fatal("a withdrawn key still accepted a v1 licence")
+		t.Fatal("a withdrawn key still accepted a licence")
 	}
 }
 
 func TestEmptyRing(t *testing.T) {
 	priv, _ := pair(t)
-	f := signWith(priv, paid("2027-10-31"))
+	f := signWith(t, priv, paid("2027-10-31"))
 	if _, _, err := (Keyring{}).Verify(f); err != ErrNoKeys {
 		t.Fatalf("got %v, want ErrNoKeys", err)
 	}

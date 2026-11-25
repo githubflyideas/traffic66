@@ -1,14 +1,17 @@
 package license
 
 import (
-	"crypto/ed25519"
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"testing"
 	"time"
 )
 
-func sign(t *testing.T, priv ed25519.PrivateKey, f File) File {
+func sign(t *testing.T, priv *ecdsa.PrivateKey, f File) File {
 	t.Helper()
-	f.Signature = b64.EncodeToString(ed25519.Sign(priv, Message(f)))
+	f.Signature = signMsg(t, priv, Message(f))
 	return f
 }
 
@@ -32,6 +35,7 @@ func TestTamper(t *testing.T) {
 		edit func(*File)
 	}{
 		{"customer", func(f *File) { f.Customer = "Someone Else" }},
+		{"licensee", func(f *File) { f.Licensee = LicenseeOrganization }},
 		{"tier", func(f *File) { f.Tier = TierEnterprise }},
 		{"users", func(f *File) { f.MaxUsers = 1000 }},
 		{"sites", func(f *File) { f.MaxSites = 99 }},
@@ -64,31 +68,16 @@ func TestNoteNotSigned(t *testing.T) {
 	}
 }
 
-// The important one: an old v1 signature must not be replayable onto a file
-// that claims quotas or features.
-func TestV1CannotGrant(t *testing.T) {
+// The retired message versions stay retired: a signature over the same
+// fields under a v3 head — the Ed25519-era format — must not verify, so
+// nothing signed for the old algorithm can be replayed into this build.
+func TestRetiredMessageVersionRefused(t *testing.T) {
 	priv, pub := testKey(t)
-	v1 := File{InstallationID: "7f3a1c9e", Customer: "Legacy Co", Product: "traffic66",
-		License: "registration", Expires: str("2027-01-31")}
-	v1.Signature = b64.EncodeToString(ed25519.Sign(priv, MessageV1(v1)))
-	if _, err := Verify(pub, v1); err != nil {
-		t.Fatal(err)
-	}
-	for _, c := range []struct {
-		what string
-		edit func(*File)
-	}{
-		{"a tier", func(f *File) { f.Tier = TierEnterprise }},
-		{"users", func(f *File) { f.MaxUsers = 1000 }},
-		{"devices", func(f *File) { f.MaxDevices = 1000 }},
-		{"features", func(f *File) { f.Features = []string{FeatDCIM, FeatSyslog} }},
-		{"an update window", func(f *File) { f.UpdatesUntil = str("2099-01-01") }},
-	} {
-		bad := v1
-		c.edit(&bad)
-		if _, err := Verify(pub, bad); err == nil {
-			t.Errorf("a v1 signature granted %s", c.what)
-		}
+	f := paid("2027-10-31")
+	old := bytes.Replace(Message(f), []byte("traffic66-license-v4"), []byte("traffic66-license-v3"), 1)
+	f.Signature = signMsg(t, priv, old)
+	if _, err := Verify(pub, f); err == nil {
+		t.Fatal("a signature over a retired message version verified")
 	}
 }
 
@@ -96,7 +85,7 @@ func TestNewlineRejected(t *testing.T) {
 	priv, pub := testKey(t)
 	f := paid("2027-10-31")
 	f.Customer = "Example KK\ntier"
-	f.Signature = b64.EncodeToString(ed25519.Sign(priv, Message(f)))
+	f.Signature = signMsg(t, priv, Message(f))
 	if _, err := Verify(pub, f); err != ErrBadField {
 		t.Fatalf("got %v, want ErrBadField", err)
 	}
@@ -104,19 +93,23 @@ func TestNewlineRejected(t *testing.T) {
 
 func TestWrongKey(t *testing.T) {
 	priv, _ := testKey(t)
-	other, _, err := ed25519.GenerateKey(nil)
+	_, otherKey := pair(t)
+	f := sign(t, priv, paid("2027-10-31"))
+	if _, err := Verify(otherKey.Pub, f); err == nil {
+		t.Fatal("another key verified the licence")
+	}
+	p256, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := sign(t, priv, paid("2027-10-31"))
-	if _, err := Verify(other, f); err == nil {
-		t.Fatal("another key verified the licence")
+	if _, err := Verify(&p256.PublicKey, f); err != ErrBadKey {
+		t.Fatalf("got %v, want ErrBadKey", err)
 	}
-	if _, err := Verify(ed25519.PublicKey("short"), f); err != ErrBadKey {
+	if _, err := Verify(nil, f); err != ErrBadKey {
 		t.Fatalf("got %v, want ErrBadKey", err)
 	}
 	f.Signature = ""
-	if _, err := Verify(other, f); err != ErrNoSignature {
+	if _, err := Verify(otherKey.Pub, f); err != ErrNoSignature {
 		t.Fatalf("got %v, want ErrNoSignature", err)
 	}
 }

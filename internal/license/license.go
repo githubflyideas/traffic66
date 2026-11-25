@@ -2,25 +2,21 @@
 // licence says and what an installation is therefore allowed to do.
 //
 // A licence is license.json in the data directory: the customer, the tier,
-// the quotas, the features and an Ed25519 signature over all of them. The
-// private key stays with the author; the public key is compiled into
+// the quotas, the features and an ECDSA P-521 signature over all of them.
+// The private key stays with the author; the public key is compiled into
 // traffic66. Nothing is ever switched off by this package: an installation
 // without a licence keeps collecting, keeps its data and keeps every page
 // of flow analysis. What it loses is the registered-only features and the
 // clean, unwatermarked reports.
 //
-// Three versions of the signed message exist. v1 is what traffic66 shipped
-// first (installation, customer, product, licence type, expiry). v2 adds
-// the signing key's id, the tier, the update window, the quotas and the
-// feature list. v3 adds who the licence is made out to — a person or an
-// organisation — so the page can say "licensed to" rather than only
-// "registered", and so a licence bought by one person cannot be passed off
-// as a company's.
-//
-// An older signature can only ever authorise what its own version covers:
-// a file carrying quotas or features is checked against v2 or later, and
-// one naming a licensee against v3 alone, so an old signature cannot be
-// replayed to grant something it never said.
+// The signed message is v4: the key id, the installation, the customer,
+// who the licence is made out to — a person or an organisation — the
+// product, the licence type, the tier, the expiry, the update window, the
+// quotas and the feature list, one field per line under a
+// "traffic66-license-v4" head. The signature is ECDSA over the SHA-512
+// digest of that message, ASN.1 DER encoded. v1 to v3 were signed with
+// Ed25519 keys; those keys and message versions were retired with the
+// move to P-521, and no licence in the field depends on them.
 //
 // Verification goes against a Keyring rather than one key, because an
 // offline licence cannot be withdrawn over the network: if an issuing key
@@ -35,12 +31,15 @@
 package license
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 	"strings"
 	"time"
@@ -157,16 +156,21 @@ func Fingerprint(f File) string {
 }
 
 // KeyID names an issuing key by its public half, so the issuer cannot
-// mislabel it and two keys cannot claim the same id.
-func KeyID(pub ed25519.PublicKey) string {
-	sum := sha256.Sum256(pub)
+// mislabel it and two keys cannot claim the same id. The id is taken from
+// the key's canonical encoding, the PKIX form the key is embedded in.
+func KeyID(pub *ecdsa.PublicKey) string {
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(der)
 	return hex.EncodeToString(sum[:4])
 }
 
 // errors returned when a licence cannot be trusted.
 var (
 	ErrNoSignature = errors.New("license: no signature")
-	ErrBadKey      = errors.New("license: public key is not an Ed25519 key")
+	ErrBadKey      = errors.New("license: public key is not an ECDSA P-521 key")
 	ErrBadField    = errors.New("license: a field contains a newline")
 	ErrSignature   = errors.New("license: signature does not match")
 	ErrNoKeys      = errors.New("license: no public key to check against")
@@ -220,23 +224,20 @@ func orNull(p *string) string {
 	return *p
 }
 
-// Message is what the current signature covers, and what the issuing tool
-// signs. It is v3: v2's fields with the licensee after the customer.
-func Message(f File) []byte { return message("traffic66-license-v3", f, true) }
-
-// MessageV2 is what traffic66 signed before a licence said who it was made
-// out to. It is kept so licences issued then keep working.
-func MessageV2(f File) []byte { return message("traffic66-license-v2", f, false) }
-
-func message(head string, f File, licensee bool) []byte {
+// Message is what the signature covers, and what the issuing tool signs.
+// It is v4, the only message version this build verifies: a
+// "traffic66-license-v4" head, then one field per line — key id,
+// installation id, customer, licensee, product, licence type, tier,
+// expiry, updates until, the four quotas in decimal, and the canonical
+// feature list — every line newline-terminated, dates spelled "null" when
+// absent. The field layout is v3's, unchanged; v4 is the move from
+// Ed25519 to ECDSA P-521, and the new head is what keeps a signature made
+// for one algorithm from ever being read as the other's.
+func Message(f File) []byte {
 	var b strings.Builder
-	b.WriteString(head)
+	b.WriteString("traffic66-license-v4")
 	b.WriteByte('\n')
-	parts := []string{f.KeyID, f.InstallationID, f.Customer}
-	if licensee {
-		parts = append(parts, f.Licensee)
-	}
-	parts = append(parts, f.Product, f.License, f.Tier)
+	parts := []string{f.KeyID, f.InstallationID, f.Customer, f.Licensee, f.Product, f.License, f.Tier}
 	for _, s := range parts {
 		b.WriteString(s)
 		b.WriteByte('\n')
@@ -251,47 +252,57 @@ func message(head string, f File, licensee bool) []byte {
 	return []byte(b.String())
 }
 
-// MessageV1 is what the first released version of traffic66 signed. It is
-// kept so licences issued before v2 keep working.
-func MessageV1(f File) []byte {
-	return []byte(fmt.Sprintf("traffic66-license-v1\n%s\n%s\n%s\n%s\n%s\n",
-		f.InstallationID, f.Customer, f.Product, f.License, orNull(f.Expires)))
-}
-
-// grants reports whether the file carries anything only a v2 message or
-// later covers. Such a file is never accepted on a v1 signature.
-func grants(f File) bool {
-	return f.KeyID != "" || f.Tier != "" || f.UpdatesUntil != nil || len(f.Features) > 0 ||
-		f.MaxUsers != 0 || f.MaxSites != 0 || f.MaxRacks != 0 || f.MaxDevices != 0
-}
-
-// namesLicensee reports whether the file says who it is made out to. Only
-// a v3 signature covers that, so such a file is never accepted on an older
-// one: otherwise a licence issued to a person could have "organization"
-// written into it afterwards and still verify.
-func namesLicensee(f File) bool { return f.Licensee != "" }
-
 // Verify checks f against one key and returns the message version that
 // matched. Keyring.Verify is what traffic66 uses; this is the single-key
 // form, for issuing and for tests.
-func Verify(pub ed25519.PublicKey, f File) (int, error) {
-	if len(pub) != ed25519.PublicKeySize {
+func Verify(pub *ecdsa.PublicKey, f File) (int, error) {
+	if !isP521(pub) {
 		return 0, ErrBadKey
 	}
 	_, ver, err := SingleKey(pub).Verify(f)
 	return ver, err
 }
 
-// ParsePublicKey reads a base64 Ed25519 public key.
-func ParsePublicKey(s string) (ed25519.PublicKey, error) {
+// isP521 reports whether pub is a usable ECDSA P-521 public key: the
+// right curve, coordinates in range, and the point on the curve
+// (y² = x³ − 3x + b). The check is spelled out because the standard
+// library's point helpers are deprecated without a public replacement
+// that takes coordinates.
+func isP521(pub *ecdsa.PublicKey) bool {
+	if pub == nil || pub.Curve != elliptic.P521() || pub.X == nil || pub.Y == nil {
+		return false
+	}
+	p := elliptic.P521().Params()
+	if pub.X.Sign() < 0 || pub.Y.Sign() < 0 || pub.X.Cmp(p.P) >= 0 || pub.Y.Cmp(p.P) >= 0 {
+		return false
+	}
+	lhs := new(big.Int).Mul(pub.Y, pub.Y)
+	lhs.Mod(lhs, p.P)
+	rhs := new(big.Int).Mul(pub.X, pub.X)
+	rhs.Mul(rhs, pub.X)
+	rhs.Sub(rhs, new(big.Int).Lsh(pub.X, 1))
+	rhs.Sub(rhs, pub.X) // x³ − 3x
+	rhs.Add(rhs, p.B)
+	rhs.Mod(rhs, p.P)
+	return lhs.Cmp(rhs) == 0
+}
+
+// ParsePublicKey reads a base64 ECDSA P-521 public key in its PKIX form —
+// the same bytes as the PEM public key files the issuer keeps.
+func ParsePublicKey(s string) (*ecdsa.PublicKey, error) {
 	b, err := b64.DecodeString(strings.TrimSpace(s))
 	if err != nil {
 		return nil, fmt.Errorf("license: public key: %w", err)
 	}
-	if len(b) != ed25519.PublicKeySize {
+	k, err := x509.ParsePKIXPublicKey(b)
+	if err != nil {
 		return nil, ErrBadKey
 	}
-	return ed25519.PublicKey(b), nil
+	pub, ok := k.(*ecdsa.PublicKey)
+	if !ok || !isP521(pub) {
+		return nil, ErrBadKey
+	}
+	return pub, nil
 }
 
 // sortStrings and trimSpace keep keys.go and checker.go free of imports

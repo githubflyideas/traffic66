@@ -18,9 +18,9 @@ var releaseKeys = []struct {
 	Disabled bool
 	Note     string
 }{
-	{Pub: "DDniUXnyBJ0L7wSQ6tHFmoOWatP5X01ZlMRZ0lf/ga0="},
-	{Pub: "VJ9jBR2bsb2KhU49m/u8LZluQAdxYIyaypug64s/sJY="},
-	{Pub: "xwGTfQZ4Hx35hYJTplm2Au/Ap7M0Cftx1UWAOhA49/c="},
+	{Pub: "MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAWS+sePS4omLSthsFwhUSg8kBWhvmXlBjUF77n5VmK5e2+XAOI6QcuaDYMreRB4/m9v7xco8WsFq3RURdmC25dscAeBFzJqt09OBWSSnmOYtu97sxs+9w7Raf5mJv3OARs7Z5nGldgWxeCSNvfkx7ChJ4ii8OXJ9Wj4bJGWu1ql91DQk="},
+	{Pub: "MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQA0Cp7Ah2bA3L/aWgSRKIvfg+sI7QRJt7uJMz8yM9BVoxc+V4hNNNi9+EOWTd6rxdUNngtcoz+YdJ5iENw/Ka64ZEB3jcAfuQBc9sEzeAbLy7Jqypg2KYyGF0BDr+JOD9FZm8sz+BQd0OnomOO0CoTLdY8/g2kVKDI6k6BMhFXJa2hgWE="},
+	{Pub: "MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQApsi5Pt/x6s+9FoxHu/zLE/vvFgqfeUXEkGLg/8SV9z8dSDjx0Gf3yx7r4gndWo+uMjyjuKYWnD+COqX8wOm6EDcAIGJcgUsZpdWbD5kH9x4qOObBAo7a1KthaZonwtP5gkvLB3AE2ROZlEoX0LSNhR0mgYTxs31vbaXgDCJh9wSBUbQ="},
 }
 
 // issued, when it holds anything, is the fingerprints of every licence

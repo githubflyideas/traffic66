@@ -1,6 +1,7 @@
 package license
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -158,29 +159,31 @@ func TestPerpetual(t *testing.T) {
 	}
 }
 
-// A v1 licence registers the installation but grants no quotas or features.
-func TestLegacyGrantsNothingExtra(t *testing.T) {
-	_, pub := testKey(t)
-	v := vectorNamed(t, "legacy v1")
-	f := v.file
-	f.Signature = v.sig
+// A licence in a retired format registers nothing: the v1 message and
+// the keys that signed it are gone from this build, so a file carrying a
+// v1 signature lands on the unregistered side of every question, like a
+// file with no licence at all.
+func TestRetiredLicenceRegistersNothing(t *testing.T) {
+	priv, pub := testKey(t)
+	f := File{InstallationID: "7f3a1c9e", Customer: "Legacy Co", Product: "traffic66",
+		License: "registration", Expires: str("2027-01-31")}
+	v1 := fmt.Sprintf("traffic66-license-v1\n%s\n%s\n%s\n%s\n%s\n",
+		f.InstallationID, f.Customer, f.Product, f.License, *f.Expires)
+	f.Signature = signMsg(t, priv, []byte(v1))
 	s := Check(SingleKey(pub), f, "7f3a1c9e", now)
-	if !s.Registered() {
-		t.Fatalf("a v1 licence should still register: %s", s.Reason)
+	if s.Registered() {
+		t.Fatal("a licence in a retired format registered")
 	}
-	if s.Watermark() {
-		t.Fatal("a v1 licence is registered, so no watermark")
+	if !s.Watermark() {
+		t.Fatal("and its reports are marked")
 	}
 	if s.UserLimit() != FreeUsers {
-		t.Fatalf("got %d accounts, want %d", s.UserLimit(), FreeUsers)
+		t.Fatalf("got %d accounts, want the free %d", s.UserLimit(), FreeUsers)
 	}
 	for _, feat := range Features {
 		if s.Allowed(feat) {
-			t.Errorf("v1 granted %s", feat)
+			t.Errorf("a retired licence granted %s", feat)
 		}
-	}
-	if s.DeviceLimit() != NotAvailable {
-		t.Fatal("a v1 licence does not open the asset pages")
 	}
 }
 
@@ -231,7 +234,7 @@ func TestLicenseeIsSigned(t *testing.T) {
 	v := vectorNamed(t, "individual")
 	f := v.file
 	f.Signature = v.sig
-	s := Check(SingleKey(pub), f, "7f3a1c9e", now)
+	s := Check(SingleKey(pub), f, "7f3a1c9e5b2d4a6f8091a2b3c4d5e6f7", now)
 	if !s.Registered() || s.Licensee != LicenseeIndividual || s.Customer != "Ada Lovelace" {
 		t.Fatalf("licensed to %q as %q: %s", s.Customer, s.Licensee, s.Reason)
 	}
@@ -240,20 +243,20 @@ func TestLicenseeIsSigned(t *testing.T) {
 	}
 	// the same file, now claiming to be a company's
 	f.Licensee = LicenseeOrganization
-	if s := Check(SingleKey(pub), f, "7f3a1c9e", now); s.Registered() {
+	if s := Check(SingleKey(pub), f, "7f3a1c9e5b2d4a6f8091a2b3c4d5e6f7", now); s.Registered() {
 		t.Fatal("an edited licensee was accepted")
 	}
-	// and a licence issued before v3 carries none, rather than a guess
+	// and a licence that names no licensee carries none, rather than a guess
 	v2 := vectorNamed(t, "subscription")
 	f2 := v2.file
 	f2.Signature = v2.sig
 	s2 := Check(SingleKey(pub), f2, "", now)
 	if !s2.Registered() || s2.Licensee != "" {
-		t.Fatalf("a v2 licence says %q: %s", s2.Licensee, s2.Reason)
+		t.Fatalf("a licence with no licensee says %q: %s", s2.Licensee, s2.Reason)
 	}
 	// nor can one be added to it
 	f2.Licensee = LicenseeOrganization
 	if s := Check(SingleKey(pub), f2, "", now); s.Registered() {
-		t.Fatal("a licensee added to a v2 licence was accepted")
+		t.Fatal("a licensee added after issuing was accepted")
 	}
 }

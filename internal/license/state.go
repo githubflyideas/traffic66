@@ -27,7 +27,7 @@ type State struct {
 	Kind           string // KindUnregistered, KindLicensed, KindExpired
 	Reason         string // why, when not licensed; for the footer and support
 	Customer       string
-	Licensee       string // LicenseeIndividual, LicenseeOrganization, or empty on a licence issued before v3
+	Licensee       string // LicenseeIndividual, LicenseeOrganization, or empty when the licence does not say
 	Product        string
 	Type           string // TypeTrial, TypeSubscription, TypePerpetual
 	Tier           string
@@ -55,7 +55,7 @@ func Unregistered(reason string) State {
 // installation (trials are, paid licences are not, so they work in
 // containers where the data directory is temporary).
 func Check(ring Keyring, f File, installID string, now time.Time) State {
-	key, ver, err := ring.Verify(f)
+	key, _, err := ring.Verify(f)
 	if err != nil {
 		s := Unregistered(err.Error())
 		if key.Note != "" {
@@ -72,15 +72,9 @@ func Check(ring Keyring, f File, installID string, now time.Time) State {
 		Type: f.License, Tier: f.Tier, InstallationID: f.InstallationID,
 		KeyID: key.ID, Days: -1, features: map[string]bool{},
 	}
-	if ver == 1 {
-		// A v1 signature covers no quotas and no features, so it can only
-		// mean the accounts a registered installation always gets.
-		s.maxUsers = FreeUsers
-	} else {
-		s.maxUsers, s.maxSites, s.maxRacks, s.maxDevices = f.MaxUsers, f.MaxSites, f.MaxRacks, f.MaxDevices
-		for _, k := range CanonFeatures(f.Features) {
-			s.features[k] = true
-		}
+	s.maxUsers, s.maxSites, s.maxRacks, s.maxDevices = f.MaxUsers, f.MaxSites, f.MaxRacks, f.MaxDevices
+	for _, k := range CanonFeatures(f.Features) {
+		s.features[k] = true
 	}
 
 	if f.Expires != nil && *f.Expires != "" {

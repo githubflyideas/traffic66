@@ -1,7 +1,10 @@
 package api
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"net/http/httptest"
@@ -14,24 +17,28 @@ import (
 
 // signed builds a licence the test's own key signs, and a checker that
 // accepts that key: a release build does not ship it.
-func signed(t *testing.T, dir string, f license.File) (*license.Checker, ed25519.PrivateKey) {
+func signed(t *testing.T, dir string, f license.File) (*license.Checker, *ecdsa.PrivateKey) {
 	t.Helper()
 	c, err := license.Open(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed := make([]byte, ed25519.SeedSize)
-	for i := range seed {
-		seed[i] = byte(i + 1)
+	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
 	}
-	priv := ed25519.NewKeyFromSeed(seed)
-	c.Ring = license.SingleKey(priv.Public().(ed25519.PublicKey))
+	c.Ring = license.SingleKey(&priv.PublicKey)
 	return c, priv
 }
 
-func sign(priv ed25519.PrivateKey, f license.File) string {
-	f.KeyID = license.KeyID(priv.Public().(ed25519.PublicKey))
-	f.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(priv, license.Message(f)))
+func sign(priv *ecdsa.PrivateKey, f license.File) string {
+	f.KeyID = license.KeyID(&priv.PublicKey)
+	digest := sha512.Sum512(license.Message(f))
+	sig, err := ecdsa.SignASN1(rand.Reader, priv, digest[:])
+	if err != nil {
+		panic(err)
+	}
+	f.Signature = base64.StdEncoding.EncodeToString(sig)
 	b, _ := json.Marshal(f)
 	return string(b)
 }
@@ -87,11 +94,10 @@ func TestLicenseRefusedIsNotWritten(t *testing.T) {
 	dir := t.TempDir()
 	c, priv := signed(t, dir, license.File{})
 	s := &Server{License: c}
-	other := make([]byte, ed25519.SeedSize)
-	for i := range other {
-		other[i] = byte(200 - i)
+	wrongKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
 	}
-	wrongKey := ed25519.NewKeyFromSeed(other)
 	past := "2020-01-01"
 	elsewhere := "ZZZZZZZZ"
 	for _, tc := range []struct{ name, text, want string }{
