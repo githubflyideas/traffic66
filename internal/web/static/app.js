@@ -1851,11 +1851,12 @@ function embedForm(x) {
 
 
 // ------------------------------------------------------------ traffic statistics (billing)
-// One VIP, or every VIP of a product line, with inbound and outbound
-// added together: the figure a business is billed from. The page is a
-// first-level view of its own; the counting is the server's, shared with
-// the CSV and the read-only accounts, who see this page and no other,
-// opened on the one object their account is bound to.
+// One VIP, every VIP of a product line, or every address of a subnet,
+// with inbound and outbound added together: the figure a business is
+// billed from. The page is a first-level view of its own; the counting
+// is the server's, shared with the CSV and the read-only accounts, who
+// see this page and no other, opened on the one object their account
+// is bound to.
 let billObj = null; // {kind, name} as picked on the page
 views.billing = async (el) => {
   const ro = !!(me && me.readonly);
@@ -1877,8 +1878,10 @@ views.billing = async (el) => {
         <select id="blObj" aria-label="${esc(t('bill.object'))}">
           ${prods.map(x => `<option value="p:${esc(x.name)}" ${billObj && billObj.kind === 'product' && billObj.name === x.name ? 'selected' : ''}>${esc(t('bill.product'))}: ${esc(x.name)}</option>`).join('')}
           <option value="vip" ${billObj && billObj.kind === 'vip' ? 'selected' : ''}>${esc(t('bill.vip'))}</option>
+          <option value="subnet" ${billObj && billObj.kind === 'subnet' ? 'selected' : ''}>${esc(t('bill.subnet'))}</option>
         </select>
         <input id="blVip" aria-label="${esc(t('bill.vip'))}" placeholder="203.0.113.10" value="${billObj && billObj.kind === 'vip' ? esc(billObj.name) : ''}" ${billObj && billObj.kind === 'vip' ? '' : 'hidden'}>
+        <input id="blSubnet" aria-label="${esc(t('bill.subnet'))}" placeholder="203.0.113.0/24" value="${billObj && billObj.kind === 'subnet' ? esc(billObj.name) : ''}" ${billObj && billObj.kind === 'subnet' ? '' : 'hidden'}>
         <input type="month" id="blMonth" aria-label="${esc(t('bill.month'))}" value="${monthVal}">
         <input type="datetime-local" id="blFrom" aria-label="${esc(t('sh.from'))}">
         <input type="datetime-local" id="blTo" aria-label="${esc(t('sh.to'))}">
@@ -1892,7 +1895,7 @@ views.billing = async (el) => {
     // a read-only account picks a window, never an object: the object
     // controls go away, the window starts at the last seven days (the
     // widest it may ask for is fourteen)
-    for (const id of ['#blObj', '#blVip', '#blMonth']) { const n = $(id); if (n) n.hidden = true; }
+    for (const id of ['#blObj', '#blVip', '#blSubnet', '#blMonth']) { const n = $(id); if (n) n.hidden = true; }
     const loc = d => { const x = new Date(d.getTime() - d.getTimezoneOffset() * 60000); return x.toISOString().slice(0, 16); };
     $('#blFrom').value = loc(new Date(Date.now() - 7 * 864e5));
     $('#blTo').value = loc(new Date());
@@ -1903,6 +1906,7 @@ views.billing = async (el) => {
     if (ro) { p.set(me.kind === 'product' ? 'product' : 'vip', me.object); return finishParams(p); }
     const o = $('#blObj').value;
     if (o === 'vip') { p.set('vip', $('#blVip').value.trim()); billObj = {kind: 'vip', name: $('#blVip').value.trim()}; }
+    else if (o === 'subnet') { p.set('subnet', $('#blSubnet').value.trim()); billObj = {kind: 'subnet', name: $('#blSubnet').value.trim()}; }
     else { p.set('product', o.slice(2)); billObj = {kind: 'product', name: o.slice(2)}; }
     return finishParams(p);
   };
@@ -1920,7 +1924,11 @@ views.billing = async (el) => {
     if (!res || !res.ok) {
       body.innerHTML = j.error === 'not_registered'
         ? `<div class="verdict warn">${esc(t('bill.locked'))}</div>`
-        : `<div class="empty">${esc(res ? failText(res, j) : t('err.network'))}</div>`;
+        : j.error === 'vip_limit_exceeded'
+          ? `<div class="verdict warn">${esc(t('bill.vip_limit', {limit: j.limit, count: j.count}))}</div>`
+          : j.error === 'bad_subnet'
+            ? `<div class="empty">${esc(t('bill.bad_subnet'))}</div>`
+            : `<div class="empty">${esc(res ? failText(res, j) : t('err.network'))}</div>`;
       return;
     }
     const kpi = (lab, n, d) => `<div class="kpi"><div class="lab">${lab}</div><div class="n">${n}</div><div class="d muted">${d || '&nbsp;'}</div></div>`;
@@ -1942,7 +1950,7 @@ views.billing = async (el) => {
     $('#blLegend').innerHTML = [[t('bill.total'), 'var(--c5)'], [t('if.in'), IF_IN], [t('if.out'), IF_OUT]]
       .map(([n, c]) => `<span><i style="background:${c}"></i>${esc(n)}</span>`).join('');
   };
-  $('#blObj').onchange = () => { $('#blVip').hidden = $('#blObj').value !== 'vip'; };
+  $('#blObj').onchange = () => { $('#blVip').hidden = $('#blObj').value !== 'vip'; $('#blSubnet').hidden = $('#blObj').value !== 'subnet'; };
   $('#blGo').onclick = load;
   $('#blCsv').onclick = () => { location.href = '/api/billing/export?' + params(); };
   await load();
