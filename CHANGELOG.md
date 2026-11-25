@@ -3,7 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## Unreleased
+## 2.11.0
 
 - Traffic statistics: a subnet (`10.0.0.0/24`) can be billed as a whole, beside one VIP and a product line; traffic inside the subnet is counted once (registered installations).
 - Traffic statistics on an unregistered installation: one VIP, or a product line of at most three VIPs, per query; a larger line is answered with the limit.
