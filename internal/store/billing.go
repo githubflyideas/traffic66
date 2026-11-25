@@ -48,6 +48,11 @@ type Billing struct {
 	SettledTo int64       `json:"settled_to,omitempty"`
 	DataFrom  int64       `json:"data_from,omitempty"`
 	Members   []MemberRow `json:"members,omitempty"`
+	// MembersTotal is how many addresses the member split covers,
+	// set when the split itself is capped (a subnet wider than the
+	// cap): Members then holds the largest of them, never silently
+	// fewer than there are.
+	MembersTotal int `json:"members_total,omitempty"`
 }
 
 // MemberRow is one address of the set and its own in and out, for the
