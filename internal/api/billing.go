@@ -1,0 +1,294 @@
+package api
+
+import (
+	"encoding/csv"
+	"errors"
+	"math"
+	"net/http"
+	"net/netip"
+	"strconv"
+	"time"
+
+	"github.com/githubflyideas/traffic66/internal/store"
+)
+
+// Traffic statistics: the traffic of one VIP, or of every VIP of one
+// product line, with inbound and outbound added together — the figure a
+// business is billed from. It is a registered feature, gated the way the
+// platform links are: an unregistered installation is answered
+// not_registered, and nothing else changes.
+//
+// The gate is the registration state itself, not a licence feature name:
+// the Features list in the licence package is signed as a whole and
+// shared with the issuing repository, so a new name is not added for
+// this. The aggregation is store.Billing, the one counting behind the
+// statistics page, its CSV and the read-only accounts' page alike.
+//
+// A read-only account (readonly.go) sees this and nothing else, and
+// only its own bound object, over a window of at most fourteen days,
+// at most sixty queries a minute. There is no way to these figures
+// without signing in: the platform links' key-in-the-URL mechanism is
+// for embedding a chart in another platform, and it stays separate.
+
+// roMaxSpan is the widest window a read-only account may be asked for.
+// Checking a bill does not need the archive: fourteen days reaches back
+// past any single invoice period a customer disputes, and a wider ask
+// is refused as bad_range rather than quietly cut.
+const roMaxSpan = 14 * 24 * time.Hour
+
+// roPerMinute is the query limit of one read-only account, counted per
+// account and per client address both.
+const roPerMinute = 60
+
+// registeredOnly answers whether this installation is registered, and
+// writes the not_registered answer when it is not — the same answer
+// allowed() writes for a feature-gated call.
+func (s *Server) registeredOnly(w http.ResponseWriter, feature string) bool {
+	if s.License != nil && s.License.State().Registered() {
+		return true
+	}
+	writeJSON(w, http.StatusForbidden, map[string]string{"error": "not_registered", "feature": feature})
+	return false
+}
+
+// billingObject is the selection a billing query is about: one VIP, or
+// one product line with all of its VIPs.
+type billingObject struct {
+	Kind  string // "vip" or "product"
+	Name  string // the VIP's address, or the product line's name
+	Addrs []netip.Addr
+}
+
+// resolveBillingObject turns the product / vip parameters into the
+// address set, reading the product lines from the inventory as it stands
+// now — a line edited a minute ago bills by its new membership.
+func (s *Server) resolveBillingObject(v map[string]string) (billingObject, error) {
+	if p := v["product"]; p != "" {
+		prod, ok := s.Inv.Product(p)
+		if !ok {
+			return billingObject{}, errors.New("unknown_product")
+		}
+		return billingObject{Kind: "product", Name: prod.Name, Addrs: prod.VIPs}, nil
+	}
+	if a := v["vip"]; a != "" {
+		addr, err := netip.ParseAddr(a)
+		if err != nil {
+			return billingObject{}, errors.New("bad_vip")
+		}
+		return billingObject{Kind: "vip", Name: addr.Unmap().String(), Addrs: []netip.Addr{addr.Unmap()}}, nil
+	}
+	return billingObject{}, errors.New("no_object")
+}
+
+// billingOut is the answer of a billing query: the object's figures over
+// the window, and the marks that say where the numbers came from.
+type billingOut struct {
+	Kind       string   `json:"kind"`
+	Name       string   `json:"name"`
+	VIPs       []string `json:"vips"`
+	From       int64    `json:"from"`
+	To         int64    `json:"to"`
+	Registered bool     `json:"registered"`
+	Notice     string   `json:"notice,omitempty"`
+	*store.Billing
+	AvgBps  float64 `json:"avg_bps"`
+	PeakBps float64 `json:"peak_bps"`
+	PeakAt  int64   `json:"peak_at,omitempty"`
+}
+
+// billingFor runs the one aggregation behind the statistics page, its
+// CSV and the read-only page. The settled window is what the headline
+// figures describe: AvgBps is the settled total over the settled span.
+func (s *Server) billingFor(obj billingObject, q store.Query) (*billingOut, error) {
+	b, err := s.Store.Billing(q, obj.Addrs)
+	if err != nil {
+		return nil, err
+	}
+	out := &billingOut{Kind: obj.Kind, Name: obj.Name, Billing: b,
+		From: q.From.UnixMilli(), To: q.To.UnixMilli(),
+		Registered: s.License != nil && s.License.State().Registered(),
+		Notice:     s.notice()}
+	for _, a := range obj.Addrs {
+		out.VIPs = append(out.VIPs, a.String())
+	}
+	settledEnd := q.To
+	if b.SettledTo > 0 {
+		settledEnd = time.UnixMilli(b.SettledTo).UTC()
+	}
+	if span := settledEnd.Sub(q.From).Seconds(); span > 0 {
+		out.AvgBps = float64(b.Bytes) * 8 / span
+	}
+	for i, v := range b.Total {
+		if v > out.PeakBps {
+			out.PeakBps, out.PeakAt = v, b.Times[i]
+		}
+	}
+	return out, nil
+}
+
+// resolveKindObject resolves the (kind, object) pair a read-only
+// account is bound to, or a creation asks for.
+func (s *Server) resolveKindObject(kind, object string) (billingObject, error) {
+	switch kind {
+	case "product":
+		return s.resolveBillingObject(map[string]string{"product": object})
+	case "vip":
+		return s.resolveBillingObject(map[string]string{"vip": object})
+	}
+	return billingObject{}, errors.New("bad_kind")
+}
+
+// billingRange reads an explicit from/to window for a billing query.
+// Unlike the chart pages it does not round the window to whole hours:
+// a bill is written for the window that was asked for, to the minute the
+// records are kept in.
+func billingRange(r *http.Request) (store.Query, error) {
+	v := r.URL.Query()
+	f, t := v.Get("from"), v.Get("to")
+	if f == "" || t == "" {
+		// a whole calendar month, this one or the one named by month=,
+		// cut on the viewer's clock
+		zo := zoneOffset(v.Get("tz"))
+		zone := time.FixedZone("", int(zo.Seconds()))
+		now := time.Now().In(zone)
+		y, m := now.Year(), now.Month()
+		if mv := v.Get("month"); mv != "" {
+			tm, err := time.Parse("2006-01", mv)
+			if err != nil {
+				return store.Query{}, errBadRange
+			}
+			y, m = tm.Year(), tm.Month()
+		}
+		from := time.Date(y, m, 1, 0, 0, 0, 0, zone)
+		return store.Query{From: from.UTC(), To: from.AddDate(0, 1, 0).UTC(), ZoneOffset: zo}, nil
+	}
+	fm, err1 := strconv.ParseInt(f, 10, 64)
+	tm, err2 := strconv.ParseInt(t, 10, 64)
+	if err1 != nil || err2 != nil || tm <= fm {
+		return store.Query{}, errBadRange
+	}
+	return store.Query{From: time.UnixMilli(fm).UTC(), To: time.UnixMilli(tm).UTC(),
+		ZoneOffset: zoneOffset(v.Get("tz"))}, nil
+}
+
+// billingRequest settles what a billing call asks for: the object and
+// the window, with the read-only caller's narrower rules applied — its
+// bound object only, a window of at most fourteen days, and its rate
+// limit. It writes the refusal itself and reports false.
+func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billingObject, store.Query, bool) {
+	if !s.registeredOnly(w, "billing") {
+		return billingObject{}, store.Query{}, false
+	}
+	v := r.URL.Query()
+	params := map[string]string{"product": v.Get("product"), "vip": v.Get("vip")}
+	ro, isRO := s.roRole(userOf(r))
+	if isRO {
+		bound, err := s.resolveKindObject(ro.Kind, ro.Object)
+		if err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+			return billingObject{}, store.Query{}, false
+		}
+		// The scope is settled on what was asked for, before any of it
+		// is resolved: another object is a refusal, whether or not it
+		// exists, and only the bound object may pass.
+		if p := params["product"]; p != "" && (bound.Kind != "product" || p != bound.Name) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+			return billingObject{}, store.Query{}, false
+		}
+		if a := params["vip"]; a != "" {
+			addr, perr := netip.ParseAddr(a)
+			if perr == nil && (bound.Kind != "vip" || addr.Unmap().String() != bound.Name) {
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+				return billingObject{}, store.Query{}, false
+			}
+		}
+		if params["product"] == "" && params["vip"] == "" {
+			// asking for nothing in particular is asking for the bound
+			// object: it is the only thing this account can mean
+			params[bound.Kind] = bound.Name
+		}
+	}
+	obj, err := s.resolveBillingObject(params)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return billingObject{}, store.Query{}, false
+	}
+	if isRO && (obj.Kind != ro.Kind || obj.Name != ro.Object) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+		return billingObject{}, store.Query{}, false
+	}
+	q, err := billingRange(r)
+	if err != nil {
+		fail(w, err)
+		return billingObject{}, store.Query{}, false
+	}
+	if isRO {
+		if q.To.Sub(q.From) > roMaxSpan {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_range"})
+			return billingObject{}, store.Query{}, false
+		}
+		if ok, retry := s.roRL.allow(ro.User, clientIP(r), time.Now()); !ok {
+			w.Header().Set("Retry-After", strconv.Itoa(retry))
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "rate_limited"})
+			return billingObject{}, store.Query{}, false
+		}
+		s.audit("billing query user=%s from=%s for %s %s", ro.User, clientIP(r), obj.Kind, obj.Name)
+	}
+	return obj, q, true
+}
+
+// billing answers GET /api/billing?product=…|vip=…&from&to (or &month=).
+func (s *Server) billing(w http.ResponseWriter, r *http.Request) {
+	obj, q, ok := s.billingRequest(w, r)
+	if !ok {
+		return
+	}
+	out, err := s.billingFor(obj, q)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// billingExport answers GET /api/billing/export with the same selection
+// as the statistics page, as a spreadsheet file: one row per bucket with
+// the same field names the page shows, and a final "total" row carrying
+// the settled figures the page headlines.
+func (s *Server) billingExport(w http.ResponseWriter, r *http.Request) {
+	obj, q, ok := s.billingRequest(w, r)
+	if !ok {
+		return
+	}
+	out, err := s.billingFor(obj, q)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	zone := time.FixedZone("", int(q.ZoneOffset.Seconds()))
+	name := "traffic66-billing-" + q.From.In(zone).Format("20060102") + "_" + q.To.In(zone).Format("20060102") + ".csv"
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
+	w.Write([]byte{0xEF, 0xBB, 0xBF})
+	cw := csv.NewWriter(w)
+	cw.Write([]string{"bucket_start", "bucket_end", "in_bytes", "out_bytes", "bytes",
+		"in_bps", "out_bps", "total_bps"})
+	step := time.Duration(out.Step) * time.Second
+	row := func(i int) []string {
+		start := time.UnixMilli(out.Times[i]).In(zone)
+		secs := step.Seconds()
+		ib := uint64(math.Round(out.In[i] * secs / 8))
+		ob := uint64(math.Round(out.Out[i] * secs / 8))
+		tb := uint64(math.Round(out.Total[i] * secs / 8))
+		return []string{start.Format(time.RFC3339), start.Add(step).Format(time.RFC3339),
+			strconv.FormatUint(ib, 10), strconv.FormatUint(ob, 10), strconv.FormatUint(tb, 10),
+			strconv.FormatFloat(out.In[i], 'f', 0, 64), strconv.FormatFloat(out.Out[i], 'f', 0, 64),
+			strconv.FormatFloat(out.Total[i], 'f', 0, 64)}
+	}
+	for i := range out.Times {
+		cw.Write(row(i))
+	}
+	cw.Write([]string{"total", "", strconv.FormatUint(out.InBytes, 10), strconv.FormatUint(out.OutBytes, 10),
+		strconv.FormatUint(out.Bytes, 10), "", "", ""})
+	cw.Flush()
+}

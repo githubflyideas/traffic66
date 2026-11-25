@@ -1,0 +1,691 @@
+[English](MANUAL.md) | [中文](MANUAL.zh.md) | [हिन्दी](MANUAL.hi.md) | [Español](MANUAL.es.md) | [العربية](MANUAL.ar.md) | [Français](MANUAL.fr.md) | **বাংলা** | [Português](MANUAL.pt.md) | [Русский](MANUAL.ru.md) | [Bahasa Indonesia](MANUAL.id.md) | [اردو](MANUAL.ur.md) | [Deutsch](MANUAL.de.md) | [日本語](MANUAL.ja.md) | [Tiếng Việt](MANUAL.vi.md) | [한국어](MANUAL.ko.md)
+
+# traffic66 — NetFlow, sFlow ও IPFIX কালেক্টর এবং ট্রাফিক অ্যানালাইজার
+
+sFlow, NetFlow ও IPFIX-এর জন্য flow analytics, একটিমাত্র প্রোগ্রামে: কে
+bandwidth ব্যবহার করছে, ট্রাফিক কোথায় যাচ্ছে, আর সংখ্যাগুলো ডিভাইসের নিজের
+interface counter-এর সাথে মেলে কি না — web UI ও terminal UI-তে।
+
+ntopng, ElastiFlow, Grafana-সহ pmacct, অথবা PRTG ও SolarWinds NTA-এর flow
+module-এর একটি self-hosted বিকল্প — নেটওয়ার্ক মনিটরিং (network monitoring),
+bandwidth মনিটরিং (bandwidth monitoring), সবচেয়ে বেশি ট্রাফিকের host
+(top talkers), DDoS ও scan শনাক্তকরণ এবং pcap বিশ্লেষণের জন্য,
+Elasticsearch, Kafka বা আলাদা database ছাড়াই।
+
+- Windows, Linux ও macOS-এর জন্য একটিই executable; কোনো database ইনস্টল করতে হয় না, offline-এও চলে।
+- যেকোনো UDP port-এ sFlow v5, NetFlow v5/v9 ও IPFIX, অথবা কোনো interface থেকে local capture।
+- নিজের সংখ্যাগুলো interface counter (sFlow বা SNMP)-এর সাথে মিলিয়ে দেখে এবং পার্থক্য থাকলে কেন তা জানায়।
+- scan, পাসওয়ার্ড অনুমান, lateral movement, অস্বাভাবিক upload, flood ও threat list-এর ট্রাফিক খুঁজে বের করে, sampling-এর মধ্যেও।
+- `traffic66 capture.pcap` কোনো সেটআপ ছাড়াই প্যাকেট ক্যাপচার বিশ্লেষণ করে।
+- 15টি ভাষা। মূল্যায়নের জন্য এবং 100 জনের কম মানুষের প্রতিষ্ঠানের জন্য বিনামূল্যে ([লাইসেন্স](#licence))।
+
+![সারসংক্ষেপ: খোলা সন্দেহজনক কার্যকলাপ, গতকাল একই সময়ের তুলনায় application অনুযায়ী bandwidth, শীর্ষ client ও service](images/overview.png)
+
+<sub>সব স্ক্রিনশট `traffic66 demo` থেকে নেওয়া, একটি simulated কোম্পানি নেটওয়ার্ক।</sub>
+
+<a id="contents"></a>
+
+## সূচিপত্র
+
+1. [দ্রুত শুরু](#1-quick-start)
+2. [উদাহরণ](#2-examples)
+3. [ইউজার ও পাসওয়ার্ড](#3-users-and-passwords)
+4. [আপনার ডিভাইস থেকে flow পাঠান](#4-send-flows-from-your-devices)
+5. [flow পৌঁছাচ্ছে কি না দেখুন](#5-check-that-flows-arrive)
+6. [Interface ও counter](#6-interfaces-and-counters)
+7. [নাম, দেশ ও threat list](#7-names-countries-and-threat-lists)
+8. [web UI ব্যবহার](#8-using-the-web-ui)
+9. [অফলাইন pcap, terminal UI, local capture](#9-offline-pcap-terminal-ui-local-capture)
+10. [অপশন ও ডেটা](#10-options-and-data)
+11. [নিরাপত্তা, সক্ষমতার হিসাব, সমস্যা সমাধান](#11-security-sizing-troubleshooting)
+12. [ইনস্টল, আপগ্রেড, রিভার্স প্রক্সি, পর্যবেক্ষণ](#12-install-upgrade-reverse-proxy-monitoring)
+
+<a id="1-quick-start"></a>
+
+<a id="1-try-the-demo"></a>
+
+## 1. দ্রুত শুরু
+
+1. আপনার সিস্টেমের আর্কাইভ ডাউনলোড করুন: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. খুলে প্রোগ্রামটি চালান:
+
+```
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
+```
+
+Windows: `traffic66-windows-amd64.zip` খুলে `traffic66.exe` চালান (ডাবল-ক্লিকেও হয়)।
+
+macOS: আগে ফোল্ডারে `xattr -dr com.apple.quarantine .` চালান।
+
+তারপর:
+
+- Web UI: `http://<সার্ভার IP>:8066`। এটি সব নেটওয়ার্ক ইন্টারফেসে শোনে।
+- সাইন ইন: ইউজার `admin`, পাসওয়ার্ড `traffic66`। প্রথম সাইন-ইনে নতুন পাসওয়ার্ড দিতে হয়।
+- ডিভাইসগুলোকে সার্ভার IP-তে পাঠাতে দিন: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (সব ইন্টারফেস; প্রতিটি পোর্ট সব প্রোটোকল নেয়)।
+
+<a id="2-examples"></a>
+
+<a id="2-install"></a>
+
+## 2. উদাহরণ
+
+<a id="command-cheat-sheet"></a>
+
+### কমান্ড চিট শিট
+
+| কাজ | কমান্ড |
+|---|---|
+| sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 সংগ্রহ (ডিফল্ট) | `./traffic66` |
+| শুধু sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| শুধু NetFlow v5/v9 (2055) ও IPFIX (4739) | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| অন্য UDP পোর্ট | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| collector একটি IP-তে | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Web UI নির্দিষ্ট IP ও পোর্টে | `./traffic66 -addr 10.0.0.5:8080` |
+| Web UI শুধু এই মেশিনে | `./traffic66 -addr 127.0.0.1:8066` |
+| Web UI HTTPS-এ | `./traffic66 -tls` |
+| ডেটা ডিরেক্টরি | `./traffic66 -data /var/lib/traffic66` |
+| flow বিবরণ ৭ দিন রাখুন | `./traffic66 -retention-days 7` |
+| মেমরি: ডেটাবেসের জন্য RAM-এর ২০% | `./traffic66 -memory 0.20` |
+| লোকাল ক্যাপচারের নেটওয়ার্ক কার্ড তালিকা | `./traffic66 interfaces` |
+| এই মেশিনের NIC ক্যাপচার (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| এই মেশিনের NIC ক্যাপচার (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| এই মেশিনের NIC ক্যাপচার (Windows, Npcap লাগে) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| admin পাসওয়ার্ড সেট/রিসেট (-data DIR থাকলে যোগ করুন) | `./traffic66 passwd` |
+| admin-এর র‍্যান্ডম পাসওয়ার্ড সেট করে দেখান | `./traffic66 passwd -generate` |
+| ইউজার যোগ বা পাসওয়ার্ড বদল | `./traffic66 passwd -user alice` |
+| ইউজার তালিকা | `./traffic66 passwd -list` |
+| শুধু এই রানের পাসওয়ার্ড (স্ক্রিপ্ট, কন্টেইনার) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| traffic66 মেশিনে Terminal UI | `./traffic66 tui` |
+| রিমোট সার্ভারে Terminal UI | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| Terminal UI-এর ভাষা | `./traffic66 tui -lang ja` |
+| ক্যাপচার ফাইল বিশ্লেষণ | `./traffic66 capture.pcap` |
+| collector-এ পরীক্ষামূলক flow পাঠান | `./traffic66 simulate -to 192.0.2.50` |
+| সিমুলেটেড ডিভাইসসহ ডেমো | `./traffic66 demo` |
+| সব অপশন | `./traffic66 serve -h` |
+
+Web UI-এর ভাষা: মেনুর নিচে (ফ্ল্যাগ নেই)। বাকি: `traffic66 serve -h`।
+
+<a id="device-configuration"></a>
+
+### ডিভাইস কনফিগারেশন
+
+`192.0.2.50` হল traffic66, `192.0.2.1` ডিভাইস; timeout ও sampling rate: [অংশ ৪](#4-send-flows-from-your-devices)।
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
+
+### ফায়ারওয়াল খুলুন
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Web UI শুধু এই মেশিনে, SSH দিয়ে
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### সার্ভিস হিসেবে: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### সার্ভিস হিসেবে: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### সার্ভিস হিসেবে: macOS
+
+`/usr/local/traffic66`-এ খুলুন, quarantine ফ্ল্যাগ সরান, `traffic66 passwd -data "/Library/Application Support/traffic66"` চালান, তারপর এমন LaunchDaemon থেকে চালু করুন যার `ProgramArguments` প্রোগ্রাম, `-data` ও সেই ডিরেক্টরি, `RunAtLoad` ও `KeepAlive` সহ।
+
+<a id="3-users-and-passwords"></a>
+
+## 3. ইউজার ও পাসওয়ার্ড
+
+নতুন installation-এ `admin` / `traffic66` দিয়ে সাইন ইন হয়, এবং প্রথম সাইন ইন
+অন্য কিছু দেখানোর আগে নতুন পাসওয়ার্ড চায় (demo `traffic66`-ই রাখে)। এরপর
+menu-র নিচে **অ্যাকাউন্ট**-এ আপনার পাসওয়ার্ড বদলান; administrator (`admin`)
+সেখানেই ইউজার যোগ ও মুছতে এবং তাদের পাসওয়ার্ড reset করতে পারেন। LDAP / Active
+Directory দিয়ে সাইন ইন উন্নয়নাধীন।
+
+ইউজাররা data directory-র `password`-এ salted hash হিসেবে থাকে। একই কাজ
+traffic66 মেশিনে একটি command দিয়েও করা যায় (traffic66 `-data …` দিয়ে চললে
+সেটিও যোগ করুন):
+
+| কাজ | Command |
+|---|---|
+| `admin`-এর পাসওয়ার্ড বদলানো | `traffic66 passwd` |
+| `alice` যোগ করা বা তার পাসওয়ার্ড বদলানো | `traffic66 passwd -user alice` |
+| `alice` মুছে ফেলা | `traffic66 passwd -user alice -delete` |
+| ইউজারদের তালিকা দেখা | `traffic66 passwd -list` |
+
+পরিবর্তন সঙ্গে সঙ্গে কার্যকর হয়। ইউজার পরিচালনা ছাড়া সব ইউজারের অধিকার
+একই। script ও container-এর জন্য `TRAFFIC66_PASSWORD=…` (বা `-password`) ওই run-এ শুধু ওই
+পাসওয়ার্ডসহ `-user`-কে গ্রহণ করে। এক মিনিটের মধ্যে পাঁচবার ভুল পাসওয়ার্ড দিলে
+সেই address এক মিনিটের জন্য block হয়।
+
+<a id="4-send-flows-from-your-devices"></a>
+
+## 4. আপনার ডিভাইস থেকে flow পাঠান
+
+`192.0.2.50` হলো traffic66, `192.0.2.1` ডিভাইস। active timeout 60 সেকেন্ড
+রাখুন, NetFlow/IPFIX ডিভাইসকে তাদের sampler options export করতে দিন, এবং
+**প্রতিটি interface inbound** sample করুন (অথবা শুধু edge interface): তাহলে
+প্রতিটি packet একবারই গোনা হয়। sFlow rate: 1 Gb/s-এ প্রায় 1:1000, 10 Gb/s-এ
+1:4096, 40/100 Gb/s-এ 1:8192।
+
+Cisco, Huawei, H3C, Juniper, Arista, MikroTik ও softflowd-এর কনফিগারেশন: [উদাহরণ → ডিভাইস কনফিগারেশন](#device-configuration)।
+
+<a id="5-check-that-flows-arrive"></a>
+
+## 5. flow পৌঁছাচ্ছে কি না দেখুন
+
+**সেটিংস** কয়েক সেকেন্ডের মধ্যে কিছু পাঠানো প্রতিটি ডিভাইস দেখায়: protocol,
+sampling rate, loss, যে interface-গুলো এটি sample করে, এবং status সবুজ না হলে
+কী ঠিক করতে হবে। sFlow-এর loss দুই ভাগে দেখানো হয়: পথে হারানো
+(`netstat -su` buffer error দেখালে `net.core.rmem_max` বাড়ান) এবং ডিভাইস
+নিজেই যে sample ফেলে দিয়েছে।
+
+চালুর ঠিক পরে একটু অপেক্ষা করা স্বাভাবিক: চার্ট প্রায় এক মিনিট পিছিয়ে থাকে, NetFlow v9/IPFIX ডেটা ডিভাইসের টেমপ্লেটের অপেক্ষা করে, আর যে ডিভাইস এখনও স্যাম্পলিং হার পাঠায়নি তার রেকর্ড সর্বোচ্চ ৫ মিনিট (`-sampling-wait`) ধরে রাখা হয়, তারপর 1:1 ধরে গোনা হয় এবং এখানে চিহ্নিত হয়।
+
+![সেটিংস: প্রতিটি ডিভাইস, তার protocol, sampling, loss আর কী ঠিক করতে হবে](images/sources.png)
+
+কোনো ডিভাইস নেই? `sudo tcpdump -ni any udp port 6343 or udp port 2055
+or udp port 4739` চালান: সেখানে কিছু না থাকলে সমস্যা routing, firewall বা
+ডিভাইসের configuration-এ; packet আছে কিন্তু **সেটিংস**-এ কিছু নেই মানে local
+firewall বা `-listen`। অন্য মেশিন থেকে `traffic66 simulate -to 192.0.2.50`
+simulated ডিভাইস দিয়ে পথটি পরীক্ষা করে।
+
+<a id="6-interfaces-and-counters"></a>
+
+## 6. Interface ও counter
+
+Flow-এর সংখ্যা অনুমান (sample × sampling rate)। **ইন্টারফেস মিলানো** এগুলো
+ডিভাইসের interface counter-এর সাথে তুলনা করে (sFlow counter, অথবা নাম-এ একটি
+`snmp` লাইনের মাধ্যমে SNMP) এবং পার্থক্য কেন তা জানায়: কিছু interface sample
+হচ্ছে না, একই ট্রাফিক দুবার sample হচ্ছে, পথে loss, অথবা sampling rate অজানা।
+প্রতিটি interface-এর একটি bits/s ও একটি packets/s chart আছে, ingress সবুজ ও
+egress নীল, counter ড্যাশ রেখায়।
+
+প্রতিটি row-এ **✎** একটি নাম ও একটি ছোট ট্যাগ (যেমন *uplink*) দেয়, আর **☆**
+এটিকে ডিফল্ট interface (★) করে, যেটিতে পেজগুলো খোলে।
+
+যে ডিভাইস শুধু কিছু interface sample করে, সেটি ওই flow-গুলোর অন্য প্রান্তও
+দেখায়। এই **বিপরীত ইন্টারফেস** তালিকার শেষে ছোট ধূসর লেখায় দেখানো হয়: তাদের
+সংখ্যায় শুধু স্যাম্পল করা interface দিয়ে যাওয়া ট্রাফিক থাকে। স্যাম্পল করা
+interface জানা যায় sFlow-এর data source বা flowDirection field (IPFIX 61)
+থেকে; তা না থাকলে, ডিভাইসের 90% ট্রাফিকে থাকা interface।
+
+![ইন্টারফেস মিলানো: প্রতিটি interface-এর ট্রাফিক, আর ডিভাইসের counter-এর পাশে flow-এর অনুমান](images/interfaces.png)
+
+traffic66 আগে থেকেই ডিভাইস যে rate প্রয়োগ করেছে সেটি ব্যবহার করে, অজানা rate-এর
+জন্য অপেক্ষা করে, export loss-এর ক্ষতিপূরণ করে, লম্বা flow-কে তাদের মিনিটগুলোতে
+ভাগ করে দেয়, এবং NetFlow/IPFIX-এ প্রতি packet-এ 18 byte Ethernet overhead যোগ
+করে (`-l2-overhead`)।
+
+<a id="7-names-countries-and-threat-lists"></a>
+
+## 7. নাম, দেশ ও threat list
+
+যেকোনো address-এ ক্লিক করে **নাম দিন…** বেছে নিন, অথবা **ইনভেন্টরি**
+ব্যবহার করুন। নামগুলো data directory-র `inventory.txt`-এ থাকে:
+
+```
+net    10.10.0.0/16    Office LAN                  # your networks
+net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
+device 192.0.2.1       Core router
+device 192.0.2.9       Branch firewall unsampled    # exports every packet
+device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
+iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
+host   10.10.3.27      Finance PC
+snmp   192.0.2.1       public                       # read counters over SNMPv2c
+snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+```
+
+private range সবসময় আপনার ধরা হয়। **সংরক্ষণ**-এ পরিবর্তন কার্যকর হয়, restart
+লাগে না।
+
+দেশ ও নেটওয়ার্ক (AS) শুরু থেকেই কাজ করে DB-IP-এর বিনামূল্যের Lite
+ডেটাবেস দিয়ে ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "IP
+Geolocation by DB-IP", [db-ip.com](https://db-ip.com)); **সেটিংস** সেগুলো আপডেট
+করে, অথবা তার বদলে MaxMind GeoLite2, IPinfo Lite বা IPtoASN ফাইল নেয়। মানচিত্রের
+সীমানা: [Natural Earth](https://www.naturalearthdata.com)।
+
+![ভূগোল ও নেটওয়ার্ক: বিশ্ব মানচিত্রে দেশ অনুযায়ী বাইরের ট্রাফিক](images/geo.png)
+
+Threat list হলো text ফাইল, প্রতি লাইনে একটি address বা নেটওয়ার্ক,
+`<data>/threats/<name>.txt`-এ (যেমন Spamhaus DROP); বদলানোর পর restart করুন।
+match-গুলো **হুমকির তথ্য**-তে দেখা যায়।
+
+![হুমকির তথ্য: একটি internal host একটি threat list-এর address-এ ডেটা পাঠাচ্ছে](images/threats.png)
+
+<a id="8-using-the-web-ui"></a>
+
+## 8. web UI ব্যবহার
+
+প্রতিটি পেজের প্রতিটি value ক্লিক করা যায়: **শুধু এটি দেখান** / **এটি বাদ
+দিন** (filter প্রতিটি পেজে প্রযোজ্য), **এর ফ্লো রেকর্ড দেখুন**, **বিস্তারিত
+দেখুন** (একটি host বা service সম্পর্কে একটি পেজ), **নাম দিন…**, **অনলাইনে
+খুঁজুন**, **কপি করুন**।
+
+| পেজ | কী দেখায় |
+|---|---|
+| সারসংক্ষেপ | বর্তমান bandwidth, বেছে নেওয়া সময়ের ট্রাফিক, সক্রিয় ভেতরের ও বাইরের host, এবং flow-এর সঙ্গে ডিভাইস counter-এর মিল; application অনুযায়ী bandwidth (মোট, ভেতরে আসা বা বাইরে যাওয়া) গতকাল বা গত সপ্তাহের তুলনায়; ট্রাফিকের দিক ও protocol; শীর্ষ client ও service; সন্দেহজনক কার্যকলাপ; সংগ্রহের অবস্থা |
+| TOP | শীর্ষ 66টি conversation, যেকোনো column অনুযায়ী sort করা যায়, অথবা application, নেটওয়ার্ক, segment, ডিভাইস, encapsulation, VLAN অনুযায়ী গ্রুপ করা; শীর্ষ 33 সবচেয়ে সক্রিয় host |
+| ট্রাফিকের বিস্তারিত | Ring chart: server ও তাদের client (বা উল্টোটা), এবং service |
+| ট্রাফিকের পথ | host → application → দেশ, অথবা client → service → server, অথবা নেটওয়ার্ক অনুযায়ী |
+| ইন্টারফেস মিলানো | সময়ের সাথে প্রতিটি interface তার counter-এর বিপরীতে; নাম, ট্যাগ, ডিফল্ট |
+| ফ্লো রেকর্ড | আলাদা আলাদা flow, প্রতি 5 সেকেন্ডে live বা যেকোনো সময়সীমার জন্য |
+| সন্দেহজনক কার্যকলাপ, হুমকির তথ্য | কীসে নজর দিতে হবে ([নিচে](#findings)); তালিকাভুক্ত address-এর সাথে ট্রাফিক |
+| ভূগোল ও নেটওয়ার্ক | দেশ অনুযায়ী বিশ্ব মানচিত্র, সময়ের সাথে নেটওয়ার্ক (AS) |
+| ইন্টিগ্রেশন | সন্দেহজনক কার্যকলাপ syslog collector-এ পাঠানো ([নিচে](#sending-findings-to-a-collector)) এবং অন্য প্ল্যাটফর্মের জন্য লিংক; নিবন্ধিত ইনস্টলেশনের জন্য |
+| সেটিংস | ট্যাব: **সেটিংস** (ডিভাইস, sampling, loss, SNMP, database), **ইনভেন্টরি** (নাম), **অ্যাকাউন্ট**, **নিবন্ধন ও কেনা** (ইনস্টলেশন নম্বর, লাইসেন্স, লোগো) |
+| অফলাইন pcap বিশ্লেষণ, ডেটা পরিষ্কার | ক্যাপচার ফাইল ([নিচে](#9-offline-pcap-terminal-ui-local-capture)); পুরোনো ডেটা মোছা |
+
+পেজগুলোর ওপরে: **ইন্টারফেস** (সব, অথবা একটি স্যাম্পল করা interface; তখন
+ট্রাফিক পেজগুলো শুধু সেটির মধ্য দিয়ে যাওয়া ট্রাফিক দেখায়), time range (15
+বা 30 মিনিট, 1, 6, 12 বা 24 ঘণ্টা, 7 বা 30 দিন, বা নিজের মতো; বোতামে লেখা 15M,
+30M, 1H, 6H, 12H, 1D, 1W, 30D: M মিনিট, H ঘণ্টা, D দিন, W সপ্তাহ),
+স্বয়ংক্রিয় refresh (range অনুযায়ী প্রতি 20 সেকেন্ড থেকে 5 মিনিটে) এবং ঠিক
+বর্তমান view-এর জন্য **লিংক কপি করুন**। ভাষা ও রঙের থিম (হালকা, কালো, ফিরোজা,
+কমলা, মধ্যরাত; বোতাম চাপলে পরের থিম আসে) menu-র ওপরে, লোগোর নিচে থাকে, সঙ্গে
+সংস্করণ ও নিবন্ধনের অবস্থা। Chart সেখানেই শেষ হয় যেখানে ডেটা সম্পূর্ণ:
+NetFlow/IPFIX-এ ডিভাইসগুলো যতটা দেরিতে export করে ততটা (সর্বোচ্চ 2 মিনিট)। 6
+ঘণ্টার চেয়ে লম্বা range পূর্ণ ঘণ্টা থেকে শুরু হয়; 7 বা 30 দিনের জন্য একটি
+interface flow detail পড়ে, তাই বেশি সময় নেয় এবং ততদূর পেছনে যায় যতদিন
+detail রাখা হয়।
+
+![TOP: শীর্ষ 66টি conversation, যেকোনো column অনুযায়ী সাজানো](images/topn.png)
+
+![ট্রাফিকের বিস্তারিত: server ও তাদের client, service ও তাদের server, ring chart হিসেবে](images/traffic.png)
+
+![একটি host-এর বিস্তারিত: তার সম্পর্কে পাওয়া সন্দেহজনক কার্যকলাপ, তার ট্রাফিক, সে কার সাথে কথা বলে, service, দেশ ও সর্বশেষ flow](images/detail.png)
+
+![ট্রাফিকের পথ: কোন host কোন দেশের দিকে কোন application ব্যবহার করে](images/paths.png)
+
+![চীনা ভাষায় সারসংক্ষেপ](images/overview-zh.png)
+
+<a id="findings"></a>
+
+### সন্দেহজনক কার্যকলাপ
+
+প্রতি 5 মিনিটে শেষ 10 মিনিট পরীক্ষা করা হয়; যা এক ঘণ্টা ধরে চলে তা একটিই
+এন্ট্রি যা বাড়তে থাকে।
+
+| কার্যকলাপ | এর মানে |
+|---|---|
+| স্ক্যান, পোর্ট স্ক্যান | এক port-এ অনেক host-এ, অথবা একটি host-এর অনেক port-এ ছোট probe |
+| পাসওয়ার্ড অনুমান | একটি login service-এ অনেক ছোট connection |
+| ল্যাটেরাল মুভমেন্ট | এমন internal host-এ file sharing বা remote administration, যারা আগে কখনো তা দেয়নি |
+| অস্বাভাবিক আপলোড | একটি নতুন address-এ 10 মিনিটে 100 MB, ফিরে আসা ডেটার তিন গুণ |
+| ফ্লাড | একটি address-এ প্রতি সেকেন্ডে 20,000+ ছোট packet, তার স্বাভাবিক হারের দশ গুণ |
+| হুমকি তালিকা | তালিকাভুক্ত address-এর সাথে ট্রাফিক |
+
+আপনার নেটওয়ার্কের ভেতর থেকে হলে এগুলো উচ্চ, ইন্টারনেট থেকে হলে নিম্ন।
+**সমাধান হয়েছে** এন্ট্রিটি বন্ধ করে, **সমস্যা নয়** এটিকে চিরতরে বন্ধ করে।
+ল্যাটেরাল মুভমেন্ট ও আপলোডের জন্য এক দিনের ইতিহাস লাগে। 1:4096 sampling-এর
+মধ্য দিয়েও ডেমোর আক্রমণ পুরোটাই ধরা পড়ে; খুব ছোট scan sampling-এর পেছনে
+লুকিয়ে থাকতে পারে।
+
+![সন্দেহজনক কার্যকলাপ: একটি আক্রমণের প্রতিটি ধাপ, 1:4096 sFlow sampling-এর মধ্য দিয়েও ধরা পড়েছে](images/findings.png)
+
+<a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+## 9. অফলাইন pcap, terminal UI, local capture
+
+**অফলাইন pcap বিশ্লেষণ** প্যাকেট ক্যাপচার (pcap, pcapng) একই পেজে দেখায়, লাইভ
+ডেটা থেকে আলাদা রেখে: `traffic66 a.pcap b.pcapng` 127.0.0.1-এ চালু হয় এবং
+browser খোলে (সর্বোচ্চ 3টি ফাইল, 3 GB; Ctrl+C ইমপোর্ট করা ডেটা মুছে দেয়),
+অথবা ওই পেজে 50 MB পর্যন্ত 3টি ফাইল আপলোড করুন। একবারে একটি ফাইল বিশ্লেষণ
+করা হয়, প্রতিটি নিজস্ব আলাদা ডেটাবেসে: কোনো ফাইলের সারিতে **বিশ্লেষণ**
+সেটিকে প্রতিটি পেজে দেখায়, আর ওপরের বার অন্য ফাইলে বদলে দেয়। এটি flow নিয়ে
+কাজ করে, প্যাকেটের বিষয়বস্তু নিয়ে নয়।
+
+![অফলাইন বিশ্লেষণ: ক্যাপচার ফাইল, তাদের প্যাকেট, ফ্লো ও সময়](images/sandbox.png)
+
+**Terminal UI**: traffic66 মেশিনে `traffic66 tui`, অথবা
+`traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`।
+তিনটি পেজ: **1 টপ** (ক্লায়েন্ট, সার্ভার, অ্যাপ্লিকেশন, পোর্ট, নেটওয়ার্ক (AS) ও দেশ/অঞ্চল রেট অনুযায়ী; ← → বদলান, Enter কাজ), **2 ইন্টারফেস** (প্রতিটি ডিভাইস ও ইন্টারফেসের রেট, ব্যবহার ও মিলান, সঙ্গে প্রতিটি ডিভাইসের স্যাম্পলিং ও ক্ষতি; Enter ট্রেন্ড ও শীর্ষ হোস্ট/অ্যাপ খোলে) এবং **3 অনুসন্ধান** (`ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1` ধরনের ফিল্টারে ফ্লো রেকর্ড)। কী: `/` ফিল্টার, Backspace/`c` সরান/মুছুন, `t` সময়সীমা (৫ মিনিট থেকে ২৪ ঘণ্টা), `u` বিট/সে, বাইট বা প্যাকেট/সে, `p` বিরতি, `+`/`-` রিফ্রেশ বিরতি, `w` একই ভিউ ব্রাউজারে, `?` সাহায্য, `q` বের হন; `-lang` ভাষা বাছে এবং `NO_COLOR` রং বন্ধ করে।
+
+![Terminal UI: টপ](images/tui-top.png)
+
+![Terminal UI: ইন্টারফেস](images/tui-interfaces.png)
+
+**Local capture** একটি local interface থেকে flow তৈরি করে, সবচেয়ে ভালো হয়
+switch-এর mirror port-এ যুক্ত একটি port: `traffic66 interfaces` সেগুলোর তালিকা
+দেয়, `-capture eth1` capture করে। Windows-এ:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux-এ root বা `setcap cap_net_raw,cap_net_admin+ep` লাগে, macOS-এ root,
+Windows-এ [Npcap](https://npcap.com)। capture করা flow ডিভাইস `127.0.0.1`
+থেকে আসে। Local capture-এ ডিভাইসের interface বা counter নেই, তাই
+**ইন্টারফেস মিলানো**-তে এর জন্য তুলনা করার কিছু নেই।
+
+<a id="sending-findings-to-a-collector"></a>
+
+### ফলাফল কালেক্টরে পাঠানো
+
+নিবন্ধিত ইনস্টলেশন প্রতিটি ফলাফল প্রথমবার দেখা মাত্র syslog কালেক্টরে পাঠাতে পারে:
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` হলো `udp`, `tcp` বা `tls`; `-syslog-min-sev` পাঠানোর মতো সবচেয়ে কম গুরুত্ব; `-syslog-url https://traffic66.example.com` প্রতিটি বার্তায় ফলাফলের লিংক যোগ করে। `-syslog-ascii` ASCII-এর বাইরের সবকিছু এস্কেপ করে, যেসব কালেক্টর UTF-8 নষ্ট করে তাদের জন্য।
+
+ফরম্যাট বেছে নেওয়া যায়, কারণ কী নিজে থেকে পার্স হয় তা নির্ভর করে আপনি আগে থেকে কী চালান তার ওপর:
+
+| `-syslog-format` | পার্সার না লিখেই পড়ে |
+|---|---|
+| `cef` (ডিফল্ট) | ArcSight, QRadar, Splunk, Graylog, Elastic, Wazuh |
+| `leef` | QRadar, নিজস্বভাবে |
+| `json` | Elastic ও Splunk — নামগুলো Elastic Common Schema-র |
+| `text` | একজন মানুষ |
+
+যেকোনো ক্ষেত্রেই বাইরের খাম RFC 5424, এবং মূল অংশ সাধারণ লেখা হলেও এতে ফলাফলের ID, ধরন ও স্যাম্পলিং হার থাকে।
+
+তিনটি কারণে এই ফিড শুধু পড়ার নয়, গোনার যোগ্য। ঘটনার ধরন (`scan`, `brute`, `exfil` …) একটি স্থির শব্দ যা কখনো লেখা বা অনুবাদের সাথে বদলায় না, তাই এটি দিয়ে সাজানো ড্যাশবোর্ড কোনো বাক্য উন্নত করলে ভাঙে না। একটি ফলাফল একটি ID-সহ **একটি** ঘটনা, যা প্রতিবার শনাক্তকরণে নয়, প্রথমবার দেখা গেলে পাঠানো হয়, তাই এক রাতের পাসওয়ার্ড অনুমান একটি ঘটনা, চল্লিশটি নয়। আর স্যাম্পলিং হার প্রতিটি বার্তার সাথে যায়: traffic66 স্যাম্পল করা ডেটায় শনাক্ত করে, তাই বাইট ও প্যাকেটের সংখ্যা আনুমানিক, এবং যে কালেক্টর তা না জেনে যোগ করে সে এমন সংখ্যা দেয় যা কেউ সমর্থন করতে পারে না।
+
+<a id="10-options-and-data"></a>
+
+## 10. অপশন ও ডেটা
+
+`traffic66 -h` সবকিছুর তালিকা দেয়। সবচেয়ে বেশি ব্যবহৃত:
+
+| অপশন | ডিফল্ট | |
+|---|---|---|
+| `-data` | প্রোগ্রামের পাশে `traffic66-data` | data directory |
+| `-addr` | `:8066` | web UI; শুধু এই মেশিনের জন্য `127.0.0.1:8066` |
+| `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP collector; খালি রাখলে বন্ধ |
+| `-retention-days` | `30` | কত দিনের flow detail; summary 400 দিন রাখা হয় |
+| `-memory` | `0.10` | database cache-এর জন্য RAM-এর অংশ |
+| `-sampling-wait` | `5m` | record কতক্ষণ sampling rate-এর জন্য অপেক্ষা করবে |
+| `-capture` | | local interface (একাধিকবার দেওয়া যায়) |
+| `-no-dns` | | কোনো reverse lookup নয় |
+
+data directory-তে থাকে `raw/` (detail, প্রতি ঘণ্টায় একটি ফাইল),
+`traffic66.duckdb` (summary ও counter), `password`, `inventory.txt`,
+`license.json`, আপনার লোগো ও ডেটাবেস। ব্যাকআপ: traffic66 বন্ধ করে directory কপি
+করুন; আপগ্রেড: প্রোগ্রাম ফাইল বদলে দিন। **ডেটা পরিষ্কার** 7–120 দিনের চেয়ে
+পুরোনো ডেটা, বা সব ডেটা মুছে দেয়।
+
+<a id="device-locations"></a>
+
+### ডিভাইসের অবস্থান
+
+ইনভেন্টরি পেজের একটি ট্যাব। ফ্লো কোথা থেকে আসে তার ছবি: ফ্লো পাঠানো প্রতিটি ডিভাইস যে রুম ও র‍্যাকে আছে, এবং তার প্রতিটি পোর্ট যে ক্যারিয়ার ও সার্কিট ID-তে বের হয়। ডিভাইস ও পোর্ট ফ্লো থেকে নিজে থেকেই আসে; Edit চাপুন, এক ফর্মেই ডিভাইসের রুম ও র‍্যাক এবং প্রতিটি পোর্টের ক্যারিয়ার ও সার্কিট লিখুন। এটি একবার পূরণ করা হয় এবং নামের পাশে `inventory.txt`-এ রাখা হয় (`device 192.0.2.1 Core router room=Room_1 rack=A03`, `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`; ফাঁকা জায়গা `_` লেখা হয়)। এতে কিছু খোঁজা হয় না। সাইন-ইন করা সবাই দেখে; অ্যাডমিন সম্পাদনা করেন।
+
+<a id="licence"></a>
+
+### লাইসেন্স
+
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) এবং
+[Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)-এর অধীনে source
+available (ইংরেজি পাঠ বাধ্যতামূলক): মূল্যায়নের জন্য এবং 100 জনের কম মানুষের
+প্রতিষ্ঠানের জন্য বিনামূল্যে; বড় প্রতিষ্ঠান production ব্যবহারের 30 দিন পরে
+নিবন্ধন করে; বিক্রি করা, অন্যদের জন্য host করা বা প্রতিদ্বন্দ্বী পণ্যের জন্য
+বাণিজ্যিক লাইসেন্স লাগে। কোনো কিছুই কখনো বন্ধ করা হয় না। প্রতিটি পেজের নিচে 8
+অঙ্কের ইনস্টলেশন নম্বর দেখায়; সেটি লেখককে পাঠান, আর যে `license.json` ফেরত
+পাবেন তা data directory-তে রাখুন। যোগাযোগ:
+<route66traffic66@gmail.com>।
+
+অ্যাডমিন পেজ থেকেও এটি বসাতে পারেন: **সেটিংস → নিবন্ধন ও কেনা**,
+`license.json`-এর বিষয়বস্তু পেস্ট করুন বা ফাইলটি বেছে নিন, তারপর **বসান**।
+কিছু লেখার আগে এটি যাচাই করা হয়; প্রত্যাখ্যাত হলে কারণ জানানো হয়।
+
+<a id="11-security-sizing-troubleshooting"></a>
+
+## 11. নিরাপত্তা, সক্ষমতার হিসাব, সমস্যা সমাধান
+
+রিভার্স প্রক্সির পেছনে থাকলে [রিভার্স প্রক্সি](#reverse-proxy) দেখুন।
+
+web UI সাধারণ HTTP: যে নেটওয়ার্কে ভরসা নেই সেখানে `-addr 127.0.0.1:8066`
+ব্যবহার করুন, একটি TLS proxy-র পেছনে (`caddy reverse-proxy --from
+traffic66.example.com --to 127.0.0.1:8066`) অথবা SSH tunnel দিয়ে। UDP port শুধু
+আপনার ডিভাইসগুলো থেকে অনুমতি দিন। SNMP community সাধারণ লেখায় (clear text)
+রাখা হয়; read-only community ব্যবহার করুন।
+
+2 core-এ প্রতি সেকেন্ডে 5,000 flow-এ: detail-এর প্রতিদিন প্রায় 12 GB disk (30
+দিনে 360 GB), একটি core-এর ছয় ভাগের এক ভাগ, 0.6–0.8 GB memory। লম্বা range-এর
+overview 0.2 s-এর কম সময় নেয়; সব conversation-এর 1 ঘণ্টার TOP প্রায় 9 s।
+
+| লক্ষণ | সমাধান |
+|---|---|
+| "waiting for the sampling rate" | sampler options export করান, অথবা device লাইনে `sampling=N` / `unsampled` |
+| counter-এর চেয়ে কম | interface sample হচ্ছে না, loss, অথবা active timeout 60 s-এর বেশি |
+| counter-এর চেয়ে বেশি | একই ট্রাফিক দুটি interface বা ডিভাইসে sample হচ্ছে |
+| পাসওয়ার্ড ভুলে গেছেন | traffic66 মেশিনে `traffic66 passwd` |
+| `Conflicting lock is held` | অন্য একটি traffic66 এই data directory ব্যবহার করছে |
+| `address already in use` | `-addr` বা `-listen` দিয়ে অন্য port বেছে নিন |
+| Windows "protected your PC" | **More info** (আরও তথ্য) → **Run anyway** (তবুও চালান) |
+
+সোর্স থেকে বিল্ড: Go 1.26 ও একটি C compiler, তারপর `CGO_ENABLED=1 go build ./cmd/traffic66`।
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. ইনস্টল, আপগ্রেড, রিভার্স প্রক্সি, পর্যবেক্ষণ
+
+ডাউনলোড যাচাই, ডেটা না হারিয়ে আপগ্রেড, traffic66-কে nginx, Caddy বা Traefik-এর পেছনে রাখা, এবং Prometheus দিয়ে নজর রাখার উপায়।
+
+<a id="verify-a-download"></a>
+
+### ডাউনলোড যাচাই
+
+প্রতিটি রিলিজের সাথে একটি `SHA256SUMS` ফাইল, ভেতরের সফটওয়্যারের তালিকা (`traffic66-sbom.cdx.json`, CycloneDX) এবং GitHub Actions-এর বিল্ড উৎস প্রমাণ থাকে, যা প্রমাণ করে আর্কাইভটি এই রিপোজিটরির সোর্স থেকে বানানো। ডাউনলোডের ফোল্ডারে:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows (PowerShell): `Get-FileHash traffic66-windows-amd64.zip` হ্যাশ দেখায়; এটি `SHA256SUMS`-এ সেই ফাইলের লাইনের সমান হতে হবে। `gh attestation verify`-এর জন্য GitHub CLI লাগে, এটি ঐচ্ছিক।
+
+<a id="upgrade-and-roll-back"></a>
+
+### আপগ্রেড ও ফিরে যাওয়া
+
+traffic66 বন্ধ করুন, পুরো ডেটা ডিরেক্টরি কপি করুন, প্রোগ্রাম ফাইলটি বদলে আবার চালু করুন। Linux সার্ভিস হিসেবে:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+ফিরে যেতে traffic66 বন্ধ করুন এবং পুরনো প্রোগ্রাম ও কপি করা ডেটা ডিরেক্টরি ফিরিয়ে রাখুন। কোনো সংস্করণ নতুন ফরম্যাটে লেখা ডেটা অনুমান করে পড়ে না: কোন সংস্করণ লিখেছে তা জানিয়ে থেমে যায়। অন্য `-data` ডিরেক্টরি দিয়ে চালু করুন, বা নতুন সংস্করণে ফিরে যান। ডেটা শেষবার অন্য সংস্করণ লিখে থাকলে প্রতিটি চালুতে তা লগে লেখা হয়।
+
+বিদ্যুৎ চলে গেলে বা `kill -9`-এর পর, পরের চালুতে ফ্লো বিবরণ থেকে শেষ কয়েক ঘণ্টার সারাংশ আবার তৈরি হয়, তাই 24 ঘণ্টা ও তার বেশি দৃশ্যে কিছু কম পড়ে না, এবং তা লগে লেখা হয়।
+
+<a id="reverse-proxy"></a>
+
+### রিভার্স প্রক্সি
+
+পেজের ঠিকানা traffic66 যে ঠিকানা দেখে তার সাথে না মিললে traffic66 সাইন-ইন ও পরিবর্তন প্রত্যাখ্যান করে, যাতে অন্য কোনো ওয়েবসাইট আপনার নামে কাজ করতে না পারে। রিভার্স প্রক্সির পেছনে, প্রক্সিকে ব্রাউজারের হোস্ট নাম পাঠাতে দিন (`Host`, `X-Forwarded-Host` বা `Forwarded` হেডার), অথবা traffic66-কে তার পাবলিক ঠিকানা বলে দিন:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+ডিফল্ট পোর্ট (https-এর জন্য `:443`, http-এর জন্য `:80`) লেখা বা বাদ দেওয়া দুটোই চলে। traffic66 তার হোস্ট নামের মূলে থাকতে হবে, `/traffic66/`-এর মতো কোনো পাথের নিচে নয়। এই কারণে কোনো অনুরোধ প্রত্যাখ্যাত হলে সাইন-ইন পেজ ও অন্য পেজ "পাসওয়ার্ড ভুল" না বলে কারণটিই জানায়। ওয়েব UI শুধু এই মেশিনে রাখুন (`-addr 127.0.0.1:8066`), যাতে শুধু প্রক্সি দিয়েই পৌঁছানো যায়।
+
+**nginx** (ডিফল্ট `proxy_set_header Host $proxy_host;` ভেতরের ঠিকানা পাঠায়, তাই এটি সেট করুন):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** নিজেই হোস্ট নাম পাঠায় এবং তার জন্য সার্টিফিকেট নেয়:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** নিজেই হোস্ট নাম পাঠায় (`passHostHeader` ডিফল্টে চালু); ফাইল প্রোভাইডারের জন্য ডায়নামিক কনফিগারেশন:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### পর্যবেক্ষণ
+
+`/metrics` Prometheus ফরম্যাটে traffic66-এর নিজের অবস্থা দেয়: পাওয়া, প্রত্যাখ্যাত ও বাদ দেওয়া রেকর্ড, প্রতিটি কালেক্টর পোর্টে ডেটাগ্রাম, লেখার ত্রুটি এবং ডিস্ক ব্যবহার। বাকি ওয়েব UI-এর মতো এতেও সাইন-ইন লাগে; Prometheus-কে আলাদা ব্যবহারকারী দিন (`traffic66 passwd -user prometheus`) এবং তার পাসওয়ার্ড দিন:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### কমান্ড-লাইন সাহায্য
+
+`traffic66 help` কমান্ডগুলোর তালিকা দেয়; `traffic66 help <কমান্ড>` বা `traffic66 <কমান্ড> -h` সেই কমান্ডের অপশন উদাহরণসহ দেখায়।
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

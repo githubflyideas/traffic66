@@ -1,0 +1,286 @@
+package api
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"strings"
+
+	"github.com/githubflyideas/traffic66/internal/auth"
+	"github.com/githubflyideas/traffic66/internal/license"
+)
+
+// loginHint tells the sign-in page whether to show the default password:
+// always in the demo, and while some user of a new installation still has it.
+func (s *Server) loginHint(w http.ResponseWriter, r *http.Request) {
+	// a demo started with a password of its own (-password) has no
+	// default password to show
+	open := s.Demo && (s.Accounts == nil || !s.Accounts.Fixed())
+	def := open || (s.Accounts != nil && s.Accounts.HasDefault())
+	out := map[string]any{"demo": s.Demo, "default": def}
+	// The demo is meant to be signed into by strangers, so it still says
+	// how. A real installation does not: this call has no session behind
+	// it, so anyone who can reach the port was being handed the account
+	// and the password while nobody had got round to changing them.
+	//
+	// Nothing is lost by it. Whoever started the process already has the
+	// password: the first start prints "sign in as user %q with password
+	// %q" on the console. The flag stays, so the sign-in page can still
+	// say that this installation is on its first password and where to
+	// read it; the flag on its own tells an attacker no more than one
+	// sign-in attempt would.
+	if open {
+		out["user"], out["password"] = "admin", auth.DefaultPassword
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// me describes the signed-in user: whether they manage the others, whether
+// they must change the default password, and whether passwords can be
+// changed here at all (not when given with -password).
+func (s *Server) me(w http.ResponseWriter, r *http.Request) {
+	u := userOf(r)
+	out := map[string]any{"user": u, "admin": s.isAdmin(r), "must_change": false, "fixed": true, "ldap": false}
+	// a read-only account is told its binding, so its page can open on
+	// the one object it may see without asking for the inventory
+	if ro, isRO := s.roRole(u); isRO {
+		out["readonly"] = true
+		out["kind"], out["object"] = ro.Kind, ro.Object
+	} else {
+		out["readonly"] = false
+	}
+	if s.Accounts != nil {
+		out["fixed"] = s.Accounts.Fixed()
+	}
+	if c, err := r.Cookie(cookieName); err == nil {
+		s.mu.Lock()
+		out["must_change"] = s.sessions[c.Value].mustChange
+		s.mu.Unlock()
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// accounts returns the password file when it can be changed from here.
+func (s *Server) accounts(w http.ResponseWriter) *auth.FileChecker {
+	if s.Accounts == nil || s.Accounts.Fixed() || s.DataDir == "" {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "fixed"})
+		return nil
+	}
+	return s.Accounts
+}
+
+func checkNew(pw string) error {
+	if len([]rune(pw)) < auth.MinLength {
+		return errors.New("too_short")
+	}
+	if pw == auth.DefaultPassword {
+		return errors.New("default")
+	}
+	return nil
+}
+
+// changePassword sets the signed-in user's own password; the old one is
+// asked for again.
+func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
+	a := s.accounts(w)
+	if a == nil {
+		return
+	}
+	var in struct{ Old, New string }
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+		return
+	}
+	u := userOf(r)
+	if u == "" || !s.checkPassword(u, in.Old) {
+		s.audit("password change failed user=%s from=%s", u, clientIP(r))
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "wrong_old"})
+		return
+	}
+	if err := checkNew(in.New); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	s.acctMu.Lock()
+	err := auth.Set(s.DataDir, u, in.New)
+	s.acctMu.Unlock()
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	s.audit("password changed user=%s", u)
+	// A password is changed because the old one is no longer trusted, so
+	// the sessions it opened go with it. The one making the change stays:
+	// logging somebody out of the tab they are working in, as a reward for
+	// changing their password, teaches them not to.
+	var keep string
+	if c, err := r.Cookie(cookieName); err == nil {
+		keep = c.Value
+	}
+	s.mu.Lock()
+	for k, se := range s.sessions {
+		if se.user != u {
+			continue
+		}
+		if k == keep {
+			se.mustChange = false
+			s.sessions[k] = se
+			continue
+		}
+		delete(s.sessions, k)
+	}
+	s.mu.Unlock()
+	writeJSON(w, http.StatusOK, map[string]string{})
+}
+
+// admin answers 403 unless the signed-in user manages the others.
+func (s *Server) admin(w http.ResponseWriter, r *http.Request) *auth.FileChecker {
+	a := s.accounts(w)
+	if a == nil {
+		return nil
+	}
+	if u := userOf(r); u == "" || u != a.Admin() {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "not_admin"})
+		return nil
+	}
+	return a
+}
+
+func (s *Server) listUsers(w http.ResponseWriter, r *http.Request) {
+	a := s.admin(w, r)
+	if a == nil {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"users": a.Users(), "admin": a.Admin(), "limit": s.userLimit()})
+}
+
+// putUser adds a user, or, with reset, sets a new password for one. Adding
+// a name that exists is refused: it would otherwise replace that person's
+// password without anyone meaning to.
+func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
+	if s.admin(w, r) == nil {
+		return
+	}
+	var in struct {
+		User, Password string
+		Reset          bool
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+		return
+	}
+	in.User = strings.TrimSpace(in.User)
+	if in.User == "" || strings.ContainsAny(in.User, ": \t\r\n") || strings.HasPrefix(in.User, "#") || len(in.User) > 64 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_user"})
+		return
+	}
+	if err := checkNew(in.Password); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	// The check and the write happen under one lock: side by side,
+	// twenty administrators adding people at once each saw room for one
+	// more, and the installation ended up with more accounts than its
+	// limit — every one of them complete, none of them refused.
+	s.acctMu.Lock()
+	switch exists := s.hasUser(in.User); {
+	case exists && !in.Reset:
+		s.acctMu.Unlock()
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "exists"})
+		return
+	case !exists && in.Reset:
+		s.acctMu.Unlock()
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+		return
+	}
+	// The limit is on how many people share an installation, so it applies
+	// to adding one, never to the people already there: changing a
+	// password, or an account that already exists, is always allowed. An
+	// installation that somehow holds more accounts than its licence
+	// covers keeps all of them and simply cannot add another.
+	if limit := s.userLimit(); limit > 0 && !s.hasUser(in.User) && len(s.Accounts.Users()) >= limit {
+		s.acctMu.Unlock()
+		writeJSON(w, http.StatusForbidden, map[string]any{"error": "user_limit", "limit": limit})
+		return
+	}
+	err := auth.Set(s.DataDir, in.User, in.Password)
+	s.acctMu.Unlock()
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	if in.Reset {
+		s.audit("password reset user=%s by=%s", in.User, userOf(r))
+	} else {
+		s.audit("user created user=%s by=%s", in.User, userOf(r))
+	}
+	if in.Reset {
+		// a password is reset because the old one is no longer trusted, so
+		// the sessions it opened go with it
+		s.mu.Lock()
+		for k, se := range s.sessions {
+			if se.user == in.User {
+				delete(s.sessions, k)
+			}
+		}
+		s.mu.Unlock()
+	}
+	writeJSON(w, http.StatusOK, map[string]string{})
+}
+
+// userLimit is how many accounts this installation may have; 0 means no
+// limit. Without a licence it is the few an unregistered installation
+// gets, which is what makes a second and third person possible at all
+// without paying, and a fourth a reason to.
+func (s *Server) userLimit() int {
+	if s.License == nil {
+		return license.FreeUsers
+	}
+	return s.License.State().UserLimit()
+}
+
+// hasUser reports whether an account already exists, so that setting a
+// password for it is never refused by the limit.
+func (s *Server) hasUser(name string) bool {
+	if s.Accounts == nil {
+		return false
+	}
+	for _, u := range s.Accounts.Users() {
+		if u == name {
+			return true
+		}
+	}
+	return false
+}
+
+// deleteUser removes a user; their open sessions end. The administrator
+// cannot remove themselves.
+func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
+	a := s.admin(w, r)
+	if a == nil {
+		return
+	}
+	u := r.URL.Query().Get("user")
+	if u == "" {
+		var in struct{ User string }
+		json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in)
+		u = in.User
+	}
+	if u == userOf(r) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "self"})
+		return
+	}
+	s.acctMu.Lock()
+	err := auth.Delete(s.DataDir, u)
+	s.acctMu.Unlock()
+	if err != nil {
+		if errors.Is(err, auth.ErrNoUser) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+			return
+		}
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	s.audit("user deleted user=%s by=%s", u, userOf(r))
+	writeJSON(w, http.StatusOK, map[string]string{})
+}

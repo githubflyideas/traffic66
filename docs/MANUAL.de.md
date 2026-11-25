@@ -1,0 +1,710 @@
+[English](MANUAL.md) | [中文](MANUAL.zh.md) | [हिन्दी](MANUAL.hi.md) | [Español](MANUAL.es.md) | [العربية](MANUAL.ar.md) | [Français](MANUAL.fr.md) | [বাংলা](MANUAL.bn.md) | [Português](MANUAL.pt.md) | [Русский](MANUAL.ru.md) | [Bahasa Indonesia](MANUAL.id.md) | [اردو](MANUAL.ur.md) | **Deutsch** | [日本語](MANUAL.ja.md) | [Tiếng Việt](MANUAL.vi.md) | [한국어](MANUAL.ko.md)
+
+# traffic66 — NetFlow-, sFlow- und IPFIX-Collector und Traffic-Analyzer
+
+Flow-Analyse für sFlow, NetFlow und IPFIX in einem einzigen Programm: wer
+die Bandbreite nutzt, wohin der Verkehr geht und ob die Zahlen mit den
+Schnittstellenzählern der Geräte selbst übereinstimmen, in einer
+Weboberfläche und einer Terminaloberfläche.
+
+Eine selbst gehostete Alternative zu ntopng, ElastiFlow, pmacct mit Grafana
+oder den Flow-Modulen von PRTG und SolarWinds NTA, für Netzwerküberwachung,
+Bandbreitenüberwachung, Top Talkers, DDoS- und Scan-Erkennung sowie
+pcap-Analyse, ohne Elasticsearch, Kafka oder eine separate Datenbank.
+
+- Eine einzige ausführbare Datei für Windows, Linux und macOS; keine Datenbank zu installieren, funktioniert offline.
+- sFlow v5, NetFlow v5/v9 und IPFIX auf jedem UDP-Port oder lokale Erfassung an einer Schnittstelle.
+- Prüft seine Zahlen gegen die Schnittstellenzähler (sFlow oder SNMP) und erklärt, warum sie abweichen.
+- Erkennt Scans, Passwortraten, Lateral Movement, ungewöhnliche Uploads, Floods und Verkehr mit Adressen aus Bedrohungslisten, auch durch Sampling hindurch.
+- `traffic66 capture.pcap` analysiert Paketmitschnitte ohne jede Einrichtung.
+- 15 Sprachen. Kostenlos zur Evaluierung und für Organisationen mit weniger als 100 Personen ([Lizenz](#licence)).
+
+![Übersicht: offene Befunde, Bandbreite nach Anwendung im Vergleich zur gleichen Zeit gestern, wichtigste Clients und Dienste](images/overview.png)
+
+<sub>Alle Screenshots stammen aus `traffic66 demo`, einem simulierten Firmennetz.</sub>
+
+<a id="contents"></a>
+
+## Inhalt
+
+1. [Schnellstart](#1-quick-start)
+2. [Beispiele](#2-examples)
+3. [Benutzer und Passwörter](#3-users-and-passwords)
+4. [Flows von Ihren Geräten senden](#4-send-flows-from-your-devices)
+5. [Prüfen, ob Flows ankommen](#5-check-that-flows-arrive)
+6. [Schnittstellen und Zähler](#6-interfaces-and-counters)
+7. [Namen, Länder und Bedrohungslisten](#7-names-countries-and-threat-lists)
+8. [Die Weboberfläche verwenden](#8-using-the-web-ui)
+9. [Offline-pcap, Terminaloberfläche, lokale Erfassung](#9-offline-pcap-terminal-ui-local-capture)
+10. [Optionen und Daten](#10-options-and-data)
+11. [Sicherheit, Dimensionierung, Fehlerbehebung](#11-security-sizing-troubleshooting)
+12. [Installieren, aktualisieren, Reverse Proxy, Überwachung](#12-install-upgrade-reverse-proxy-monitoring)
+
+<a id="1-quick-start"></a>
+
+<a id="1-try-the-demo"></a>
+
+## 1. Schnellstart
+
+1. Archiv für Ihr System herunterladen: [Releases](https://github.com/githubflyideas/traffic66/releases/latest): `traffic66-linux-amd64.tar.gz`, `traffic66-linux-arm64.tar.gz`, `traffic66-darwin-arm64.tar.gz`, `traffic66-darwin-amd64.tar.gz`, `traffic66-windows-amd64.zip`.
+2. Entpacken und das Programm starten:
+
+```
+tar xzf traffic66-linux-amd64.tar.gz
+cd traffic66-linux-amd64
+./traffic66
+```
+
+Windows: `traffic66-windows-amd64.zip` entpacken und `traffic66.exe` starten (Doppelklick genügt).
+
+macOS: zuerst im Ordner `xattr -dr com.apple.quarantine .` ausführen.
+
+Dann:
+
+- Weboberfläche: `http://<Server-IP>:8066`. Sie lauscht auf allen Netzwerkschnittstellen.
+- Anmelden: Benutzer `admin`, Passwort `traffic66`. Bei der ersten Anmeldung setzen Sie ein neues Passwort.
+- Geräte an die Server-IP senden lassen: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (alle Schnittstellen; jeder Port nimmt jedes Protokoll).
+
+<a id="2-examples"></a>
+
+<a id="2-install"></a>
+
+## 2. Beispiele
+
+<a id="command-cheat-sheet"></a>
+
+### Befehlsübersicht
+
+| Aufgabe | Befehl |
+|---|---|
+| sFlow 6343, NetFlow v5/v9 2055, IPFIX 4739 erfassen (Standard) | `./traffic66` |
+| Nur sFlow, UDP 6343 | `./traffic66 -listen sflow=:6343` |
+| Nur NetFlow v5/v9 auf 2055 und IPFIX auf 4739 | `./traffic66 -listen netflow=:2055,ipfix=:4739` |
+| Andere UDP-Ports | `./traffic66 -listen netflow=:9995,sflow=:6344` |
+| Collector an eine IP-Adresse binden | `./traffic66 -listen sflow=10.0.0.5:6343,netflow=10.0.0.5:2055,ipfix=10.0.0.5:4739` |
+| Weboberfläche auf IP und Port | `./traffic66 -addr 10.0.0.5:8080` |
+| Weboberfläche nur auf diesem Rechner | `./traffic66 -addr 127.0.0.1:8066` |
+| Weboberfläche über HTTPS | `./traffic66 -tls` |
+| Datenverzeichnis | `./traffic66 -data /var/lib/traffic66` |
+| Flow-Details 7 Tage behalten | `./traffic66 -retention-days 7` |
+| Speicher: 20 % des RAM für die Datenbank | `./traffic66 -memory 0.20` |
+| Netzwerkkarten für lokale Erfassung auflisten | `./traffic66 interfaces` |
+| Eigene Netzwerkkarte erfassen (Linux) | `sudo ./traffic66 -capture eth0 -listen ""` |
+| Eigene Netzwerkkarte erfassen (macOS) | `sudo ./traffic66 -capture en0 -listen ""` |
+| Eigene Netzwerkkarte erfassen (Windows, Npcap nötig) | `.\traffic66.exe -capture Wi-Fi -listen ""` |
+| admin-Passwort setzen oder zurücksetzen (ggf. -data DIR) | `./traffic66 passwd` |
+| Zufälliges admin-Passwort setzen und ausgeben | `./traffic66 passwd -generate` |
+| Benutzer anlegen oder Passwort ändern | `./traffic66 passwd -user alice` |
+| Benutzer auflisten | `./traffic66 passwd -list` |
+| Passwort nur für diesen Lauf (Skripte, Container) | `TRAFFIC66_PASSWORD='S3cret-pass' ./traffic66` |
+| Terminaloberfläche auf dem traffic66-Rechner | `./traffic66 tui` |
+| Terminaloberfläche zu einem entfernten Server | `./traffic66 tui -server http://192.0.2.50:8066 -user admin -password 'S3cret-pass'` |
+| Sprache der Terminaloberfläche | `./traffic66 tui -lang ja` |
+| Mitschnittdatei analysieren | `./traffic66 capture.pcap` |
+| Testflows an einen Collector senden | `./traffic66 simulate -to 192.0.2.50` |
+| Demo mit simulierten Geräten | `./traffic66 demo` |
+| Alle Optionen | `./traffic66 serve -h` |
+
+Sprache der Weboberfläche: unten im Menü (kein Flag). Weiteres: `traffic66 serve -h`.
+
+<a id="device-configuration"></a>
+
+### Gerätekonfiguration
+
+`192.0.2.50` ist traffic66, `192.0.2.1` das Gerät; Timeouts und Abtastraten: [Abschnitt 4](#4-send-flows-from-your-devices).
+
+```
+! Cisco IOS-XE, NetFlow v9 (IPFIX: add "export-protocol ipfix" and use "transport udp 4739")
+flow exporter T66
+ destination 192.0.2.50
+ transport udp 2055
+ option sampler-table
+flow monitor T66
+ exporter T66
+ record netflow ipv4 original-input
+ cache timeout active 60
+interface GigabitEthernet0/0/0
+ ip flow monitor T66 input
+```
+
+```
+# Huawei CloudEngine, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface 10GE1/0/1
+ sflow sampling collector 1
+ sflow sampling rate 4096
+ sflow sampling inbound
+ sflow counter collector 1
+ sflow counter interval 30
+```
+
+```
+# Huawei AR/NE, NetStream (NetFlow v9)
+ip netstream export version 9
+ip netstream export host 192.0.2.50 2055
+ip netstream timeout active 1
+interface GigabitEthernet0/0/1
+ ip netstream inbound
+ ip netstream sampler fix-packets 1000 inbound
+```
+
+```
+# H3C Comware 7, sFlow
+sflow agent ip 192.0.2.1
+sflow collector 1 ip 192.0.2.50
+interface Ten-GigabitEthernet1/0/1
+ sflow sampling-rate 4096
+ sflow flow collector 1
+ sflow counter interval 30
+ sflow counter collector 1
+```
+
+```
+# Juniper EX/QFX, sFlow
+set protocols sflow collector 192.0.2.50 udp-port 6343
+set protocols sflow sample-rate ingress 4096
+set protocols sflow interfaces ge-0/0/0
+
+# Arista EOS, sFlow
+sflow sample 4096
+sflow destination 192.0.2.50
+sflow run
+```
+
+```
+# MikroTik RouterOS 7, NetFlow v9 (IPFIX: version=ipfix port=4739)
+/ip traffic-flow set enabled=yes interfaces=all active-flow-timeout=1m
+/ip traffic-flow target add dst-address=192.0.2.50 port=2055 version=9
+
+# Linux host, softflowd
+softflowd -i eth0 -n 192.0.2.50:2055 -v 9 -t maxlife=60
+```
+
+### Firewall öffnen
+
+```
+sudo firewall-cmd --permanent --add-port={6343,2055,4739}/udp --add-port=8066/tcp && sudo firewall-cmd --reload   # RHEL, Fedora
+sudo ufw allow proto udp to any port 6343,2055,4739 && sudo ufw allow 8066/tcp                          # Ubuntu, Debian
+New-NetFirewallRule -DisplayName traffic66 -Direction Inbound -Protocol UDP -LocalPort 6343,2055,4739 -Action Allow   # Windows
+New-NetFirewallRule -DisplayName traffic66-web -Direction Inbound -Protocol TCP -LocalPort 8066 -Action Allow
+```
+
+### Weboberfläche nur auf diesem Rechner, über SSH
+
+```
+./traffic66 -addr 127.0.0.1:8066                 # on the server
+ssh -L 8066:127.0.0.1:8066 user@192.0.2.50        # on your PC, then open http://127.0.0.1:8066
+```
+
+### Als Dienst: Linux (systemd)
+
+```
+sudo mkdir -p /opt/traffic66 && curl -fsSL https://github.com/githubflyideas/traffic66/releases/latest/download/traffic66-linux-amd64.tar.gz | sudo tar xz -C /opt/traffic66 --strip-components=1
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin traffic66
+sudo install -d -o traffic66 -g traffic66 /var/lib/traffic66
+sudo -u traffic66 /opt/traffic66/traffic66 passwd -data /var/lib/traffic66
+```
+
+`/etc/systemd/system/traffic66.service`:
+
+```
+[Unit]
+Description=traffic66 flow analytics
+After=network-online.target
+
+[Service]
+User=traffic66
+ExecStart=/opt/traffic66/traffic66 -data /var/lib/traffic66
+Restart=on-failure
+MemoryMax=2G
+#AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN   # only for local capture
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
+journalctl -u traffic66 -f
+```
+
+### Als Dienst: Windows
+
+```
+$a = New-ScheduledTaskAction -Execute 'C:\traffic66\traffic66.exe' -Argument '-data C:\traffic66\traffic66-data'
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName traffic66 -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User 'NT AUTHORITY\SYSTEM' -RunLevel Highest
+Start-ScheduledTask -TaskName traffic66
+```
+
+### Als Dienst: macOS
+
+Nach `/usr/local/traffic66` entpacken, das Quarantäne-Attribut entfernen, `traffic66 passwd -data "/Library/Application Support/traffic66"` ausführen und über einen LaunchDaemon starten, dessen `ProgramArguments` das Programm, `-data` und dieses Verzeichnis sind, mit `RunAtLoad` und `KeepAlive`.
+
+<a id="3-users-and-passwords"></a>
+
+## 3. Benutzer und Passwörter
+
+Bei einer neuen Installation melden Sie sich als `admin` / `traffic66` an;
+die erste Anmeldung verlangt ein neues Passwort, bevor irgendetwas anderes
+angezeigt wird (die Demo behält `traffic66`). Danach ändern Sie unter
+**Konto**, am Fuß des Menüs, Ihr Passwort; der Administrator (`admin`) legt
+dort auch Benutzer an, löscht sie und setzt ihre Passwörter zurück. Die
+Anmeldung über LDAP / Active Directory ist in Entwicklung.
+
+Benutzer werden als gesalzene Hashes in `password` im Datenverzeichnis
+gespeichert. Dasselbe geht auf dem traffic66-Rechner mit einem einzigen
+Befehl (fügen Sie `-data …` hinzu, wenn traffic66 damit läuft):
+
+| Ziel | Befehl |
+|---|---|
+| Passwort von `admin` ändern | `traffic66 passwd` |
+| `alice` anlegen oder ihr Passwort ändern | `traffic66 passwd -user alice` |
+| `alice` löschen | `traffic66 passwd -user alice -delete` |
+| Benutzer auflisten | `traffic66 passwd -list` |
+
+Änderungen gelten sofort. Abgesehen von der Benutzerverwaltung haben alle
+Benutzer dieselben Rechte. Für Skripte und Container akzeptiert
+`TRAFFIC66_PASSWORD=…` (oder `-password`) für diesen Lauf nur `-user` mit
+diesem Passwort. Fünf falsche Passwörter innerhalb einer Minute sperren die
+Adresse für eine Minute.
+
+<a id="4-send-flows-from-your-devices"></a>
+
+## 4. Flows von Ihren Geräten senden
+
+`192.0.2.50` ist traffic66, `192.0.2.1` das Gerät. Setzen Sie den Active
+Timeout auf 60 Sekunden, lassen Sie NetFlow/IPFIX-Geräte ihre
+Sampler-Optionen exportieren und sampeln Sie **jede Schnittstelle
+eingehend** (oder nur die Randschnittstellen): Dann wird jedes Paket genau
+einmal gezählt. sFlow-Raten: etwa 1:1000 für 1 Gb/s, 1:4096 für 10 Gb/s,
+1:8192 für 40/100 Gb/s.
+
+Konfiguration für Cisco, Huawei, H3C, Juniper, Arista, MikroTik und softflowd: [Beispiele → Gerätekonfiguration](#device-configuration).
+
+<a id="5-check-that-flows-arrive"></a>
+
+## 5. Prüfen, ob Flows ankommen
+
+**Einstellungen** listet innerhalb von Sekunden jedes Gerät auf, das
+irgendetwas sendet: Protokoll, Sampling-Rate, Verluste, die gesampelten
+Schnittstellen und was zu beheben ist, wenn der Status nicht grün ist.
+sFlow-Verluste werden aufgeteilt in Verluste auf dem Weg (erhöhen Sie
+`net.core.rmem_max`, wenn `netstat -su` Pufferfehler zeigt) und Samples,
+die das Gerät selbst verworfen hat.
+
+Direkt nach dem Start ist eine kurze Wartezeit normal: Die Diagramme hängen etwa eine Minute hinterher, NetFlow-v9/IPFIX-Daten warten auf das Template des Geräts, und Datensätze eines Geräts, das seine Sampling-Rate noch nicht gemeldet hat, werden bis zu 5 Minuten zurückgehalten (`-sampling-wait`), dann als 1:1 gezählt und hier markiert.
+
+![Einstellungen: jedes Gerät mit Protokoll, Sampling, Verlusten und was zu beheben ist](images/sources.png)
+
+Fehlt ein Gerät? Führen Sie `sudo tcpdump -ni any udp port 6343 or udp port 2055
+or udp port 4739` aus: Kommt dort nichts an, liegt es am Routing, an einer
+Firewall oder an der Gerätekonfiguration; kommen Pakete an, aber unter
+**Einstellungen** erscheint nichts, liegt es an der lokalen Firewall oder an
+`-listen`. `traffic66 simulate -to 192.0.2.50` von einem anderen Rechner
+testet den Weg mit simulierten Geräten.
+
+<a id="6-interfaces-and-counters"></a>
+
+## 6. Schnittstellen und Zähler
+
+Flow-Zahlen sind Schätzungen (Samples × Sampling-Rate). **Schnittstellenprüfung**
+vergleicht sie mit den Schnittstellenzählern des Geräts (sFlow-Zähler oder
+SNMP über eine `snmp`-Zeile unter Namen) und erklärt, warum sie abweichen:
+nicht gesampelte Schnittstellen, derselbe Verkehr doppelt gesampelt,
+Verluste auf dem Weg oder eine unbekannte Sampling-Rate. Jede Schnittstelle
+hat ein Diagramm in Bit/s und eines in Paketen/s, eingehend grün und
+ausgehend blau, Zähler gestrichelt.
+
+In jeder Zeile vergibt **✎** einen Namen und ein kurzes Tag (etwa *uplink*),
+und **☆** macht sie zur Standardschnittstelle (★), mit der die Seiten
+geöffnet werden.
+
+Ein Gerät, das nur einige Schnittstellen sampelt, zeigt auch die anderen
+Enden dieser Flows. Diese **Gegenschnittstellen** stehen zuletzt in kleiner
+grauer Schrift: Sie enthalten nur den Verkehr über die gesampelte
+Schnittstelle. Die gesampelte Schnittstelle ergibt sich aus der
+sFlow-Datenquelle oder dem Feld flowDirection (IPFIX 61); ohne diese
+Angaben gilt eine Schnittstelle mit 90 % des Verkehrs eines Geräts als
+gesampelt.
+
+![Schnittstellenprüfung: Verkehr jeder Schnittstelle und die Flow-Schätzung neben dem Gerätezähler](images/interfaces.png)
+
+traffic66 verwendet bereits die vom Gerät angewendete Rate, wartet auf
+unbekannte Raten, gleicht Exportverluste aus, verteilt lange Flows auf ihre
+Minuten und rechnet bei NetFlow/IPFIX 18 Byte Ethernet-Overhead pro Paket
+hinzu (`-l2-overhead`).
+
+<a id="7-names-countries-and-threat-lists"></a>
+
+## 7. Namen, Länder und Bedrohungslisten
+
+Klicken Sie auf eine beliebige Adresse und wählen Sie **Benennen…**, oder
+verwenden Sie **Inventar**. Namen werden in `inventory.txt` im
+Datenverzeichnis gespeichert:
+
+```
+net    10.10.0.0/16    Office LAN                  # your networks
+net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
+device 192.0.2.1       Core router
+device 192.0.2.9       Branch firewall unsampled    # exports every packet
+device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
+iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
+host   10.10.3.27      Finance PC
+snmp   192.0.2.1       public                       # read counters over SNMPv2c
+snmp   192.0.2.9       s3cret  10.99.0.9:161        # other management address
+```
+
+Private Adressbereiche gelten immer als Ihre eigenen. Änderungen werden mit
+**Speichern** wirksam, ohne Neustart.
+
+Länder und Netzwerke (AS) funktionieren sofort mit den kostenlosen
+Lite-Datenbanken von DB-IP ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "IP
+Geolocation by DB-IP", [db-ip.com](https://db-ip.com)); **Einstellungen**
+aktualisiert sie oder übernimmt stattdessen Dateien von MaxMind GeoLite2,
+IPinfo Lite oder IPtoASN. Kartenumrisse: [Natural Earth](https://www.naturalearthdata.com).
+
+![Geo & Netze: externer Traffic nach Ländern auf einer Weltkarte](images/geo.png)
+
+Bedrohungslisten sind Textdateien mit einer Adresse oder einem Netz pro
+Zeile in `<data>/threats/<name>.txt` (zum Beispiel Spamhaus DROP); starten
+Sie nach Änderungen neu. Treffer erscheinen unter **Threat Intel**.
+
+![Threat Intel: ein interner Host, der Daten an eine Adresse aus einer Bedrohungsliste sendet](images/threats.png)
+
+<a id="8-using-the-web-ui"></a>
+
+## 8. Die Weboberfläche verwenden
+
+Jeder Wert auf jeder Seite ist anklickbar: **Nur dies anzeigen** / **Dies
+ausschließen** (Filter gelten für alle Seiten), **Flow-Datensätze
+anzeigen**, **Details anzeigen** (eine Seite zu einem Host oder Dienst),
+**Benennen…**, **Online nachschlagen**, **Kopieren**.
+
+| Seite | Was sie zeigt |
+|---|---|
+| Übersicht | Aktuelle Bandbreite, Verkehr im Zeitraum, aktive interne und externe Hosts und wie gut die Flows zu den Gerätezählern passen; Bandbreite nach Anwendung (gesamt, eingehend oder ausgehend) im Vergleich zu gestern oder letzter Woche; Verkehrsrichtung und Protokolle; wichtigste Clients und Dienste; Befunde; Stand der Erfassung |
+| TOP | Die 66 größten Verbindungen, nach jeder Spalte sortierbar oder gruppiert nach Anwendung, Netz, Segment, Gerät, Kapselung, VLAN; die 33 größten Talker |
+| Traffic-Details | Ringdiagramme: Server und ihre Clients (oder umgekehrt) sowie Dienste |
+| Flow-Pfade | Host → Anwendung → Land, oder Client → Dienst → Server, oder nach Netz |
+| Schnittstellenprüfung | Jede Schnittstelle im Zeitverlauf gegen ihre Zähler; Namen, Tags, Standard |
+| Flow-Datensätze | Die einzelnen Flows, live alle 5 Sekunden oder für einen beliebigen Zeitraum |
+| Befunde, Threat Intel | Was Aufmerksamkeit erfordert ([unten](#findings)); Verkehr mit gelisteten Adressen |
+| Geo & Netze | Eine Weltkarte nach Ländern, Netzwerke (AS) im Zeitverlauf |
+| Integrationen | Befunde an einen Syslog-Collector senden ([unten](#sending-findings-to-a-collector)) und Links für andere Plattformen; für registrierte Installationen |
+| Einstellungen | Reiter: **Einstellungen** (Geräte, Sampling, Verluste, SNMP, Datenbanken), **Inventar** (Namen), **Konto**, **Registrierung & Kauf** (Installationsnummer, Lizenz, Logo) |
+| Offline-pcap-Analyse, Datenbereinigung | Mitschnittdateien ([unten](#9-offline-pcap-terminal-ui-local-capture)); Löschen alter Daten |
+
+Über den Seiten: **Schnittstelle** (alle oder eine gesampelte Schnittstelle;
+die Verkehrsseiten zeigen dann nur den Verkehr über diese), der Zeitraum (15
+oder 30 Minuten, 1, 6, 12 oder 24 Stunden, 7 oder 30 Tage oder
+benutzerdefiniert; die Schaltflächen zeigen 15M, 30M, 1H, 6H, 12H, 1D, 1W,
+30D: M Minuten, H Stunden, D Tage, W Wochen), die automatische Aktualisierung
+(je nach Zeitraum alle 20 Sekunden bis 5 Minuten) und **Link kopieren** für
+genau diese Ansicht. Sprache und Farbschema (Hell, Schwarz, Petrol, Orange,
+Mitternacht; die Schaltfläche wechselt zum nächsten) finden Sie oben im Menü
+unter dem Logo, zusammen mit Version und Registrierungsstatus. Diagramme enden
+dort, wo die Daten vollständig sind: bei NetFlow/IPFIX so spät, wie die Geräte
+exportieren (höchstens 2 Minuten). Zeiträume über 6 Stunden beginnen zur
+vollen Stunde; eine Schnittstelle über 7 oder 30 Tage liest die Flow-Details,
+ist daher langsamer und reicht nur so weit zurück, wie Details aufbewahrt
+werden.
+
+![TOP: die 66 größten Verbindungen, nach jeder Spalte sortierbar](images/topn.png)
+
+![Traffic-Details: Server mit ihren Clients und Dienste mit ihren Servern als Ringdiagramme](images/traffic.png)
+
+![Details zu einem Host: die Befunde zu ihm, sein Verkehr, mit wem er kommuniziert, Dienste, Länder und neueste Flows](images/detail.png)
+
+![Flow-Pfade: welcher Host welche Anwendung in Richtung welches Landes nutzt](images/paths.png)
+
+![Übersicht auf Chinesisch](images/overview-zh.png)
+
+<a id="findings"></a>
+
+### Befunde
+
+Alle 5 Minuten über die letzten 10 geprüft; etwas, das eine Stunde andauert,
+ist ein einziger, wachsender Befund.
+
+| Befund | Bedeutung |
+|---|---|
+| Scan, Portscan | Kleine Proben an viele Hosts auf einem Port oder an viele Ports eines Hosts |
+| Passwortraten | Viele kurze Verbindungen zu einem Anmeldedienst |
+| Lateral Movement | Dateifreigabe oder Fernverwaltung zu internen Hosts, die so etwas nie zuvor angeboten haben |
+| Ungewöhnlicher Upload | 100 MB in 10 Minuten an eine neue Adresse, das Dreifache dessen, was zurückkam |
+| Flood | Über 20.000 kleine Pakete/s an eine Adresse, das Zehnfache ihrer üblichen Rate |
+| Bedrohungsliste | Verkehr mit einer gelisteten Adresse |
+
+Aus dem eigenen Netz haben sie hohe Priorität, aus dem Internet niedrige.
+**Erledigt** schließt einen Befund, **Kein Problem** blendet ihn dauerhaft
+aus. Lateral Movement und Uploads benötigen einen Tag Verlauf. Durch ein
+Sampling von 1:4096 wird der Angriff der Demo vollständig erkannt; sehr
+kleine Scans können sich hinter dem Sampling verbergen.
+
+![Befunde: jeder Schritt eines Angriffs, erkannt durch 1:4096-sFlow-Sampling](images/findings.png)
+
+<a id="9-offline-pcap-terminal-ui-local-capture"></a>
+
+## 9. Offline-pcap, Terminaloberfläche, lokale Erfassung
+
+**Offline-pcap-Analyse** zeigt Paketmitschnitte (pcap, pcapng) mit denselben
+Seiten, abgesehen von den Live-Daten: `traffic66 a.pcap b.pcapng` startet
+auf 127.0.0.1 und öffnet den Browser (bis zu 3 Dateien, 3 GB; Strg+C löscht
+die importierten Daten), oder laden Sie auf dieser Seite bis zu 3 Dateien
+mit je 50 MB hoch. Es wird jeweils eine Datei analysiert, jede in einer
+eigenen Datenbank: **Analysieren** in der Zeile einer Datei zeigt sie auf
+allen Seiten, und die Leiste oben wechselt zu einer anderen. Ausgewertet
+werden Flows, nicht Paketinhalte.
+
+![Offline-Analyse: Mitschnittdateien mit ihren Paketen, Flows und Zeitraum](images/sandbox.png)
+
+**Terminaloberfläche**: `traffic66 tui` auf dem traffic66-Rechner oder
+`traffic66 tui -server http://192.0.2.50:8066 -user admin -password …`.
+Drei Seiten: **1 Top** (Clients, Server, Anwendungen, Ports, Netze (AS) und Länder/Regionen nach Rate; ← → wechseln, Enter für Aktionen), **2 Schnittstellen** (Rate, Auslastung und Abgleich je Gerät und Schnittstelle, dazu Sampling und Verlust jedes Geräts; Enter klappt Verlauf und Top-Hosts/-Anwendungen auf) und **3 Suche** (Flow-Datensätze für Filter wie `ip:10.0.0.5 net:10.0.0.0/8 asn:13335 port:443 cc:US dev:192.0.2.1`). Tasten: `/` Filter, Rücktaste/`c` entfernen/leeren, `t` Zeitraum (5 Min. bis 24 Stunden), `u` Bit/s, Bytes oder Pakete/s, `p` Pause, `+`/`-` Aktualisierungsintervall, `w` dieselbe Ansicht im Browser, `?` Hilfe, `q` Beenden; `-lang` wählt die Sprache, `NO_COLOR` schaltet Farben ab.
+
+![Terminaloberfläche: Top](images/tui-top.png)
+
+![Terminaloberfläche: Schnittstellen](images/tui-interfaces.png)
+
+**Lokale Erfassung** bildet Flows aus einer lokalen Schnittstelle, am besten
+einem Port, der mit dem Mirror-Port eines Switches verbunden ist:
+`traffic66 interfaces` listet sie auf, `-capture eth1` erfasst. Unter
+Windows:
+
+```
+traffic66.exe interfaces          # list the network cards: name, number, address
+traffic66.exe -capture Wi-Fi      # capture on the wireless card (or by number: -capture 2)
+```
+
+Linux benötigt root oder `setcap cap_net_raw,cap_net_admin+ep`, macOS root,
+Windows [Npcap](https://npcap.com). Erfasste Flows stammen vom Gerät
+`127.0.0.1`. Die lokale Erfassung hat keine Geräteschnittstellen oder
+-zähler, daher hat die **Schnittstellenprüfung** für sie nichts zu
+vergleichen.
+
+<a id="sending-findings-to-a-collector"></a>
+
+### Befunde an einen Collector senden
+
+Eine registrierte Installation kann jeden Befund, sobald er zum ersten Mal gesehen wird, an einen Syslog-Collector senden:
+
+```
+traffic66 serve -syslog siem.example.com:514 -syslog-format cef
+```
+
+`-syslog-transport` ist `udp`, `tcp` oder `tls`; `-syslog-min-sev` ist der geringste Schweregrad, der gesendet wird; `-syslog-url https://traffic66.example.com` setzt einen Link zum Befund in jede Nachricht. `-syslog-ascii` maskiert alles außerhalb von ASCII, für Collectors, die UTF-8 verstümmeln.
+
+Das Format ist wählbar, denn was sich von selbst parsen lässt, hängt davon ab, was Sie schon betreiben:
+
+| `-syslog-format` | gelesen ohne eigenen Parser von |
+|---|---|
+| `cef` (Standard) | ArcSight, QRadar, Splunk, Graylog, Elastic, Wazuh |
+| `leef` | QRadar, nativ |
+| `json` | Elastic und Splunk — die Namen sind Elastic Common Schema |
+| `text` | einem Menschen |
+
+Der Umschlag ist in jedem Fall RFC 5424 und trägt die ID des Befunds, seinen Typ und die Sampling-Rate, auch wenn der Text reiner Text ist.
+
+Drei Dinge machen den Feed zählenswert statt nur lesenswert. Der Ereignistyp (`scan`, `brute`, `exfil` …) ist ein festes Wort, das sich nie mit der Formulierung oder Übersetzung ändert, sodass ein danach gruppiertes Dashboard nicht bricht, wenn ein Satz verbessert wird. Ein Befund ist **ein** Ereignis mit einer ID, gesendet beim ersten Auftreten statt bei jedem Erkennungsdurchlauf, sodass eine Nacht Passwortraten ein Vorfall ist und nicht vierzig. Und die Sampling-Rate reist mit jeder Nachricht: traffic66 erkennt auf gesampelten Daten, also sind Byte- und Paketzahlen Schätzungen, und ein Collector, der sie ohne dieses Wissen summiert, erzeugt eine Zahl, die niemand vertreten kann.
+
+<a id="10-options-and-data"></a>
+
+## 10. Optionen und Daten
+
+`traffic66 -h` listet alles auf. Die meistgenutzten:
+
+| Option | Standard | |
+|---|---|---|
+| `-data` | `traffic66-data` neben dem Programm | Datenverzeichnis |
+| `-addr` | `:8066` | Weboberfläche; `127.0.0.1:8066` nur für diesen Rechner |
+| `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP-Collectors; leer deaktiviert sie |
+| `-retention-days` | `30` | Tage mit Flow-Details; Zusammenfassungen werden 400 Tage aufbewahrt |
+| `-memory` | `0.10` | Anteil des RAM für den Datenbank-Cache |
+| `-sampling-wait` | `5m` | wie lange Datensätze auf eine Sampling-Rate warten |
+| `-capture` | | lokale Schnittstelle (mehrfach angebbar) |
+| `-no-dns` | | keine Reverse-Lookups |
+
+Das Datenverzeichnis enthält `raw/` (Details, eine Datei pro Stunde),
+`traffic66.duckdb` (Zusammenfassungen und Zähler), `password`,
+`inventory.txt`, `license.json`, Ihr Logo und die Datenbanken. Zur
+Sicherung stoppen Sie traffic66 und kopieren es; zum Upgrade ersetzen Sie
+die Programmdatei. **Datenbereinigung** löscht Daten, die älter als 7–120
+Tage sind, oder alle Daten.
+
+<a id="device-locations"></a>
+
+### Gerätestandorte
+
+Ein Reiter der Inventarseite. Ein Bild davon, woher die Flows kommen: für jedes Gerät, das Flows sendet, der Raum und das Rack, in dem es steht, und für jeden seiner Ports der Carrier und die Leitungs-ID, zu der er hinausgeht. Geräte und Ports erscheinen von selbst aus den Flows; mit Bearbeiten tragen Sie Raum und Rack des Geräts und Carrier und Leitung jedes Ports in einem Formular ein. Es wird einmal ausgefüllt und in `inventory.txt` neben den Namen gespeichert (`device 192.0.2.1 Core router room=Room_1 rack=A03`, `iface 192.0.2.1 3 Uplink isp=China_Telecom circuit=SH-12345`; ein Leerzeichen wird als `_` geschrieben). Nichts wird darin nachgeschlagen. Alle Angemeldeten sehen es; der Administrator bearbeitet es.
+
+<a id="licence"></a>
+
+### Lizenz
+
+Source-available unter der [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
+und dem [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (die
+englische Fassung ist verbindlich): kostenlos zur Evaluierung und für
+Organisationen mit weniger als 100 Personen; größere Organisationen
+registrieren sich nach 30 Tagen Produktivbetrieb; Verkauf, Hosting für
+Dritte oder konkurrierende Produkte erfordern eine kommerzielle Lizenz. Es
+wird nie etwas abgeschaltet. Am Fuß jeder Seite steht die 8-stellige
+Installationsnummer; senden Sie sie an den Autor und legen Sie die
+zurückgeschickte `license.json` in das Datenverzeichnis. Kontakt:
+<route66traffic66@gmail.com>.
+
+Ein Administrator kann sie auch in der Oberfläche einspielen: **Einstellungen
+→ Registrierung & Kauf**, den Inhalt von `license.json` einfügen oder die
+Datei wählen, dann **Einspielen**. Sie wird geprüft, bevor etwas geschrieben
+wird; eine abgelehnte Lizenz nennt den Grund.
+
+<a id="11-security-sizing-troubleshooting"></a>
+
+## 11. Sicherheit, Dimensionierung, Fehlerbehebung
+
+Hinter einem Reverse Proxy siehe [Reverse Proxy](#reverse-proxy).
+
+Die Weboberfläche ist reines HTTP: In nicht vertrauenswürdigen Netzen
+verwenden Sie `-addr 127.0.0.1:8066` hinter einem TLS-Proxy (`caddy reverse-proxy --from traffic66.example.com --to
+127.0.0.1:8066`) oder einem SSH-Tunnel. Erlauben Sie die UDP-Ports nur von
+Ihren Geräten. SNMP-Communities werden im Klartext gespeichert; verwenden
+Sie nur lesende.
+
+Bei 5.000 Flows/s auf 2 Kernen: etwa 12 GB Festplatte pro Tag Details
+(360 GB für 30 Tage), ein Sechstel eines Kerns, 0,6–0,8 GB Arbeitsspeicher.
+Übersichten über lange Zeiträume dauern unter 0,2 s; ein TOP aller
+Verbindungen über 1 Stunde etwa 9 s.
+
+| Symptom | Abhilfe |
+|---|---|
+| "Warte auf die Sampling-Rate" | Sampler-Optionen exportieren oder `sampling=N` / `unsampled` in der Gerätezeile |
+| Niedriger als die Zähler | Nicht gesampelte Schnittstellen, Verluste oder ein Active Timeout über 60 s |
+| Höher als die Zähler | Derselbe Verkehr wird an zwei Schnittstellen oder Geräten gesampelt |
+| Passwort vergessen | `traffic66 passwd` auf dem traffic66-Rechner |
+| `Conflicting lock is held` | Eine andere traffic66-Instanz verwendet dieses Datenverzeichnis |
+| `address already in use` | Andere Ports mit `-addr` oder `-listen` wählen |
+| Windows: "Der Computer wurde durch Windows geschützt" | **Weitere Informationen** → **Trotzdem ausführen** |
+
+Aus dem Quellcode bauen: Go 1.26 und ein C-Compiler, dann `CGO_ENABLED=1 go build ./cmd/traffic66`.
+
+<a id="12-install-upgrade-reverse-proxy-monitoring"></a>
+
+## 12. Installieren, aktualisieren, Reverse Proxy, Überwachung
+
+Wie man einen Download prüft, ohne Datenverlust aktualisiert, traffic66 hinter nginx, Caddy oder Traefik betreibt und mit Prometheus überwacht.
+
+<a id="verify-a-download"></a>
+
+### Einen Download prüfen
+
+Jede Version hat eine Datei `SHA256SUMS`, eine Liste der enthaltenen Software (`traffic66-sbom.cdx.json`, CycloneDX) und einen Herkunftsnachweis von GitHub Actions, der belegt, dass das Archiv aus dem Quellcode dieses Repositorys gebaut wurde. Im Ordner mit den Downloads:
+
+```
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS
+gh attestation verify traffic66-linux-amd64.tar.gz -R githubflyideas/traffic66
+```
+
+Windows (PowerShell): `Get-FileHash traffic66-windows-amd64.zip` gibt den Hash aus; er muss der Zeile dieser Datei in `SHA256SUMS` entsprechen. `gh attestation verify` braucht die GitHub CLI und ist optional.
+
+<a id="upgrade-and-roll-back"></a>
+
+### Aktualisieren und zurückkehren
+
+traffic66 anhalten, das ganze Datenverzeichnis kopieren, die Programmdatei ersetzen und wieder starten. Als Linux-Dienst:
+
+```
+systemctl stop traffic66
+cp -a /opt/traffic66/traffic66-data /opt/traffic66/traffic66-data.bak
+tar xzf traffic66-linux-amd64.tar.gz && cp traffic66-linux-amd64/traffic66 /opt/traffic66/
+systemctl start traffic66
+```
+
+Zum Zurückkehren traffic66 anhalten und das alte Programm sowie das kopierte Datenverzeichnis zurücklegen. Eine Version rät nie bei Daten in einem neueren Format: Sie hält mit einer Meldung an, die die schreibende Version nennt. Starten Sie sie mit einem anderen `-data`-Verzeichnis oder gehen Sie zur neueren Version zurück. Jeder Start protokolliert, wenn die Daten zuletzt von einer anderen Version geschrieben wurden.
+
+Nach einem Stromausfall oder `kill -9` baut der nächste Start die Zusammenfassungen der letzten Stunden aus den Flow-Details neu auf, sodass den Ansichten ab 24 Stunden nichts fehlt, und protokolliert das.
+
+<a id="reverse-proxy"></a>
+
+### Reverse Proxy
+
+traffic66 lehnt Anmeldungen und Änderungen von einer Seite ab, deren Adresse nicht zu der Adresse passt, die traffic66 sieht; so kann keine andere Website in Ihrem Namen handeln. Hinter einem Reverse Proxy lassen Sie den Proxy den Hostnamen des Browsers weitergeben (Header `Host`, `X-Forwarded-Host` oder `Forwarded`) oder nennen traffic66 seine öffentliche Adresse:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
+```
+
+Der Standardport (`:443` für https, `:80` für http) darf angegeben oder weggelassen werden. traffic66 muss an der Wurzel seines Hostnamens liegen, nicht unter einem Pfad wie `/traffic66/`. Wird eine Anfrage aus diesem Grund abgelehnt, sagen die Anmeldeseite und die anderen Seiten das, statt „falsches Passwort“. Lassen Sie die Web-Oberfläche nur auf diesem Rechner (`-addr 127.0.0.1:8066`), damit sie nur über den Proxy erreichbar ist.
+
+**nginx** (das voreingestellte `proxy_set_header Host $proxy_host;` sendet die interne Adresse, also setzen Sie es):
+
+```
+server {
+    listen 443 ssl;
+    server_name traffic66.example.com;
+    ssl_certificate     /etc/ssl/traffic66.crt;
+    ssl_certificate_key /etc/ssl/traffic66.key;
+    client_max_body_size 200m;
+    location / {
+        proxy_pass http://127.0.0.1:8066;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** gibt den Hostnamen von selbst weiter und holt ein Zertifikat dafür:
+
+```
+traffic66.example.com {
+    reverse_proxy 127.0.0.1:8066
+}
+```
+
+**Traefik** gibt den Hostnamen von selbst weiter (`passHostHeader` ist standardmäßig an); dynamische Konfiguration für den File-Provider:
+
+```
+http:
+  routers:
+    traffic66:
+      rule: Host(`traffic66.example.com`)
+      entryPoints: [websecure]
+      tls: {}
+      service: traffic66
+  services:
+    traffic66:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8066
+```
+
+<a id="monitoring"></a>
+
+### Überwachung
+
+`/metrics` liefert den Zustand von traffic66 selbst im Prometheus-Format: empfangene, abgelehnte und verworfene Datensätze, Datagramme pro Collector-Port, Schreibfehler und Plattenbelegung. Wie der Rest der Web-Oberfläche braucht es eine Anmeldung; geben Sie Prometheus einen eigenen Benutzer (`traffic66 passwd -user prometheus`) und dessen Passwort:
+
+```
+scrape_configs:
+  - job_name: traffic66
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: '…'
+    static_configs:
+      - targets: ['traffic66.example.com']
+```
+
+<a id="command-line-help"></a>
+
+### Hilfe auf der Kommandozeile
+
+`traffic66 help` listet die Befehle; `traffic66 help <Befehl>` oder `traffic66 <Befehl> -h` zeigt die Optionen eines Befehls mit Beispielen.
+
+```
+traffic66 help
+traffic66 help serve
+traffic66 help pcap
+```

@@ -1,0 +1,800 @@
+// Package api serves the JSON API and the embedded web UI.
+package api
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"github.com/githubflyideas/traffic66/internal/snmp"
+	"github.com/githubflyideas/traffic66/internal/tlscert"
+	"io/fs"
+	"log"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"regexp"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/githubflyideas/traffic66/internal/auth"
+	"github.com/githubflyideas/traffic66/internal/collector"
+	"github.com/githubflyideas/traffic66/internal/detect"
+	"github.com/githubflyideas/traffic66/internal/dnsres"
+	"github.com/githubflyideas/traffic66/internal/enrich"
+	"github.com/githubflyideas/traffic66/internal/license"
+	"github.com/githubflyideas/traffic66/internal/pipeline"
+	"github.com/githubflyideas/traffic66/internal/sandbox"
+	"github.com/githubflyideas/traffic66/internal/store"
+	"github.com/githubflyideas/traffic66/internal/web"
+)
+
+// extRoutes add routes from parts that are compiled in separately.
+var extRoutes []func(s *Server, mux *http.ServeMux, api, adminAPI func(string, http.HandlerFunc))
+
+// Server wires the API together.
+type Server struct {
+	Store   *store.Store
+	Pipe    *pipeline.Pipeline
+	Col     *collector.Collector
+	Inv     *enrich.Inventory
+	ASN     *enrich.ASNDB
+	Thr     *enrich.Threats
+	DNS     *dnsres.Resolver
+	Det     *detect.Detector
+	SB      *sandbox.Sandbox // offline analysis of capture files
+	Offline bool             // started on capture files (traffic66 file.pcap): no live data
+	License *license.Checker // trial or licence state for the page footer
+	// AutoLogin is a one-time token: /auto?t=<it> signs the browser in once.
+	AutoLogin string
+	Static    fs.FS
+	Version   string
+	BuildKind string // "official" for what we release, "community" otherwise
+	// Cert describes the certificate the web UI is served with, nil over
+	// plain HTTP. The settings page shows its fingerprint so somebody can
+	// check the one their browser warned about.
+	Cert *tlscert.Info
+	// PublicURL is the address the browser uses (-public-url), when it is
+	// set: behind a reverse proxy, the origin of a change must be it.
+	PublicURL *url.URL
+	Demo      bool
+	Users     map[string]string          // fixed passwords (tests)
+	Check     func(user, pw string) bool // login check; replaces Users when set
+	Exists    func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
+	LocalTok  string                     // token for the TUI on this machine
+	// Accounts is the password file: changing passwords and managing users
+	// from the web UI. Nil in tests and when it does not apply.
+	Accounts *auth.FileChecker
+	Capture  func() []CaptureInfo
+	SNMP     func() []snmp.Status
+	Started  time.Time
+	DataDir  string
+	// Listen is the UDP collectors, for the first-run guide on Overview.
+	Listen []ListenInfo
+
+	mu       sync.Mutex
+	sessions map[string]session
+	fails    failLimiter
+	rates    rates
+	// acctMu serialises changes to the account file, so the user limit
+	// is checked against the same file the write then lands in.
+	acctMu sync.Mutex
+	// the API tokens (tokens.json), re-read when the file changes
+	tokMu     sync.Mutex
+	toks      []auth.Token
+	tokStamp  string
+	tokLoaded bool
+	// the read-only accounts' roles (readonly.json), kept the same way,
+	// and their query rate limit
+	roMu sync.Mutex
+	roSt roStore
+	roRL roRate
+}
+
+type session struct {
+	user string
+	exp  time.Time
+	// mustChange: signed in with the default password; only changing it
+	// is allowed until then
+	mustChange bool
+}
+
+type ctxKey struct{}
+
+// audit records a security event in the server log: sign-ins, sign-outs
+// and everything that happens to accounts. It is the record an operator
+// answers "who did that?" from, so it names the user and, for sign-ins,
+// the address — never a password or a token.
+func (s *Server) audit(format string, args ...any) {
+	log.Printf("audit: "+format, args...)
+}
+
+// userOf returns the signed-in user of a request ("" for the TUI token).
+func userOf(r *http.Request) string {
+	u, _ := r.Context().Value(ctxKey{}).(string)
+	return u
+}
+
+// localKey marks a request that arrived on this machine's own token
+// rather than as a signed-in user: the TUI, and the subcommands that
+// read the data directory. It is a key of its own rather than a reserved
+// user name, so no account can be named to impersonate it.
+type localKey struct{}
+
+// local reports whether the request carries this machine's token.
+func local(r *http.Request) bool {
+	v, _ := r.Context().Value(localKey{}).(bool)
+	return v
+}
+
+// allowedBeforeChange are the calls a session that must change its
+// password may make.
+var allowedBeforeChange = map[string]bool{"/api/me": true, "/api/password": true, "/api/status": true}
+
+// CaptureInfo describes a local capture interface.
+type CaptureInfo struct {
+	Iface   string `json:"iface"`
+	Method  string `json:"method"`
+	Packets uint64 `json:"packets"`
+	Dropped uint64 `json:"dropped"`
+	Flows   int    `json:"active_flows"`
+	Err     string `json:"error,omitempty"`
+}
+
+const cookieName = "t66s"
+
+// apiVersion is the version of the HTTP API — the family's "API rules
+// v1", the same rules fogping, pingping, vrf-ping and vyos-sflow follow:
+// every /api answer carries it in the Api-Version header, the current
+// version also answers under /api/v1/, errors are one JSON shape with a
+// stable code, a wrong method is a 405 that says what is allowed, and
+// programs authenticate with scoped tokens, not a browser session.
+const apiVersion = "1"
+
+// Handler returns the HTTP handler.
+func (s *Server) Handler() http.Handler {
+	s.sessions = map[string]session{}
+	if s.Started.IsZero() {
+		s.Started = time.Now()
+	}
+	go s.sampleRates()
+	mux := http.NewServeMux()
+	mux.Handle("POST /api/login", s.sameOriginOnly(s.login))
+	mux.Handle("POST /api/logout", s.sameOriginOnly(s.logout))
+	mux.HandleFunc("GET /auto", s.autoLogin)
+	mux.HandleFunc("GET /logo", s.logo)
+	mux.HandleFunc("GET /api/loginhint", s.loginHint)
+	mux.HandleFunc("GET /tls.crt", s.certDownload)
+	mux.HandleFunc("GET /healthz", s.healthz)
+	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
+	// adminAPI is api plus the administrator check. The permission belongs
+	// in this table rather than inside each handler: a new route's gate is
+	// then a decision someone makes while writing the route down, instead
+	// of one they can forget to make at all.
+	adminAPI := func(pattern string, h http.HandlerFunc) { api(pattern, s.adminOnly(h)) }
+	api("GET /api/status", s.status)
+	api("GET /metrics", s.metrics)
+	api("GET /api/manual", s.manual)
+	api("GET /api/manual/images/{name}", s.manualImage)
+	api("GET /api/me", s.me)
+	api("POST /api/password", s.changePassword)
+	api("GET /api/users", s.listUsers)
+	api("POST /api/users", s.putUser)
+	api("DELETE /api/users", s.deleteUser)
+	adminAPI("GET /api/tokens", s.listTokens)
+	adminAPI("POST /api/tokens", s.createToken)
+	adminAPI("DELETE /api/tokens", s.deleteToken)
+	api("GET /api/openapi.json", s.openapi)
+	api("GET /api/overview", s.data((*Server).overview))
+	api("GET /api/topn", s.data((*Server).topn))
+	api("GET /api/sankey", s.data((*Server).sankey))
+	api("GET /api/series", s.data((*Server).series))
+	api("GET /api/records", s.data((*Server).records))
+	api("GET /api/threats", s.data((*Server).threats))
+	api("GET /api/rings", s.data((*Server).rings))
+	api("GET /api/geolines", s.data((*Server).geoLines))
+	api("GET /api/report", s.data((*Server).report))
+	api("GET /api/export/rollups", s.exportRollups)
+	api("GET /api/ifaces", s.ifaces)
+	api("GET /api/recon", s.recon)
+	api("GET /api/sources", s.sources)
+	adminAPI("POST /api/sources/block", s.postBlock)
+	adminAPI("DELETE /api/sources/block", s.deleteBlock)
+	api("POST /api/resolve", s.resolve)
+	api("GET /api/inventory", s.getInventory)
+	adminAPI("POST /api/inventory", s.putInventory)
+	adminAPI("POST /api/iface", s.putIface)
+	api("GET /api/racks", s.getRacks)
+	adminAPI("POST /api/threats/lists", s.putThreatList)
+	adminAPI("DELETE /api/threats/lists", s.deleteThreatList)
+	adminAPI("POST /api/racks/device", s.putRackDevice)
+	adminAPI("POST /api/racks/iface", s.putRackIface)
+	api("GET /api/findings", s.data((*Server).findings))
+	api("POST /api/findings", s.data((*Server).setFindings))
+	api("GET /api/cleanup", s.getCleanup)
+	adminAPI("POST /api/cleanup", s.postCleanup)
+	adminAPI("POST /api/cleanup/exporter", s.postPurgeExporter)
+	api("GET /api/sandbox", s.getSandbox)
+	api("POST /api/sandbox/files", s.putSandboxFile)
+	adminAPI("DELETE /api/sandbox/files", s.deleteSandbox)
+	api("POST /api/sandbox/active", s.putSandboxActive)
+	adminAPI("POST /api/license", s.putLicense)
+	adminAPI("POST /api/logo", s.putLogo)
+	adminAPI("DELETE /api/logo", s.deleteLogo)
+	api("GET /api/geo", s.getGeo)
+	adminAPI("POST /api/geo", s.putGeo)
+	adminAPI("DELETE /api/geo", s.deleteGeo)
+	adminAPI("POST /api/geo/dbip", s.updateDBIP)
+	api("GET /api/billing", s.billing)
+	api("GET /api/billing/export", s.billingExport)
+	adminAPI("GET /api/readonly", s.listReadonly)
+	adminAPI("POST /api/readonly", s.createReadonly)
+	adminAPI("POST /api/readonly/update", s.updateReadonly)
+	adminAPI("POST /api/readonly/password", s.resetReadonlyPassword)
+	adminAPI("DELETE /api/readonly", s.deleteReadonly)
+	for _, f := range extRoutes {
+		f(s, mux, api, adminAPI)
+	}
+	// What the mux would otherwise send to the static files: an API path
+	// with the wrong method, or one that does not exist. Both are API
+	// answers, in the API's shape.
+	mux.HandleFunc("/api/", s.apiFallback)
+	mux.HandleFunc("/metrics", s.apiFallback)
+	static := http.FileServer(http.FS(s.Static))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Content-Security-Policy", web.CSP)
+		// no-cache on every file: after an upgrade the browser must not keep
+		// the old app.js or app.css (the embedded files carry no date to
+		// revalidate against, so a cached copy could outlive the program)
+		w.Header().Set("Cache-Control", "no-cache")
+		static.ServeHTTP(w, r)
+	})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Served over TLS, the address is worth pinning to TLS: a browser
+		// that has seen the certificate once is told to never come back
+		// over plain HTTP. (Through a proxy the forwarded scheme counts,
+		// the same signal the session cookie's Secure flag follows.)
+		if secureCookie(r) {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/metrics" {
+			w.Header().Set("Api-Version", apiVersion)
+			// /api/v1/… names the version in the address; it is the same
+			// API, so the prefix is rewritten away and the table above
+			// answers. The unprefixed address stays the current version.
+			if strings.HasPrefix(r.URL.Path, "/api/v1/") {
+				r = r.Clone(r.Context())
+				r.URL.Path = "/api/" + strings.TrimPrefix(r.URL.Path, "/api/v1/")
+			}
+		}
+		mux.ServeHTTP(w, r)
+	})
+}
+
+// apiRouteTable is the route table once more, as path templates, for the
+// one job the mux cannot do itself: telling a caller who used the wrong
+// method on a real path apart from one who asked for a path that does
+// not exist. Keep it in step with Handler().
+var apiRouteTable = []struct{ method, pat string }{
+	{"POST", "/api/login"}, {"POST", "/api/logout"}, {"GET", "/api/loginhint"},
+	{"GET", "/api/status"}, {"GET", "/metrics"}, {"GET", "/api/manual"},
+	{"GET", "/api/manual/images/{name}"}, {"GET", "/api/me"}, {"POST", "/api/password"},
+	{"GET", "/api/users"}, {"POST", "/api/users"}, {"DELETE", "/api/users"},
+	{"GET", "/api/tokens"}, {"POST", "/api/tokens"}, {"DELETE", "/api/tokens"},
+	{"GET", "/api/openapi.json"},
+	{"GET", "/api/overview"}, {"GET", "/api/topn"}, {"GET", "/api/sankey"},
+	{"GET", "/api/series"}, {"GET", "/api/records"}, {"GET", "/api/threats"},
+	{"GET", "/api/rings"}, {"GET", "/api/geolines"}, {"GET", "/api/report"},
+	{"GET", "/api/export/rollups"}, {"GET", "/api/ifaces"}, {"GET", "/api/recon"},
+	{"GET", "/api/sources"}, {"POST", "/api/sources/block"}, {"DELETE", "/api/sources/block"},
+	{"POST", "/api/resolve"}, {"GET", "/api/inventory"}, {"POST", "/api/inventory"},
+	{"POST", "/api/iface"}, {"GET", "/api/racks"}, {"POST", "/api/threats/lists"},
+	{"DELETE", "/api/threats/lists"}, {"POST", "/api/racks/device"}, {"POST", "/api/racks/iface"},
+	{"GET", "/api/findings"}, {"POST", "/api/findings"}, {"GET", "/api/cleanup"},
+	{"POST", "/api/cleanup"}, {"POST", "/api/cleanup/exporter"}, {"GET", "/api/sandbox"},
+	{"POST", "/api/sandbox/files"}, {"DELETE", "/api/sandbox/files"}, {"POST", "/api/sandbox/active"},
+	{"POST", "/api/license"}, {"POST", "/api/logo"}, {"DELETE", "/api/logo"},
+	{"GET", "/api/geo"}, {"POST", "/api/geo"}, {"DELETE", "/api/geo"}, {"POST", "/api/geo/dbip"},
+	{"GET", "/api/billing"}, {"GET", "/api/billing/export"},
+	{"GET", "/api/readonly"}, {"POST", "/api/readonly"}, {"POST", "/api/readonly/update"},
+	{"POST", "/api/readonly/password"}, {"DELETE", "/api/readonly"},
+}
+
+// matchTemplate reports whether path fits a route template; a {name}
+// segment stands for any one segment.
+func matchTemplate(pat, path string) bool {
+	p, q := strings.Split(pat, "/"), strings.Split(path, "/")
+	if len(p) != len(q) {
+		return false
+	}
+	for i := range p {
+		if strings.HasPrefix(p[i], "{") {
+			if q[i] == "" {
+				return false
+			}
+			continue
+		}
+		if p[i] != q[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// apiFallback answers the API requests no route took: a real path with
+// the wrong method (405, naming what is allowed) or a path that does not
+// exist (404) — both as JSON with a stable code, never the static
+// server's plain-text page.
+func (s *Server) apiFallback(w http.ResponseWriter, r *http.Request) {
+	var allow []string
+	for _, rt := range apiRouteTable {
+		if rt.method != r.Method && !(r.Method == http.MethodHead && rt.method == http.MethodGet) &&
+			matchTemplate(rt.pat, r.URL.Path) && !slices.Contains(allow, rt.method) {
+			allow = append(allow, rt.method)
+		}
+	}
+	if len(allow) > 0 {
+		w.Header().Set("Allow", strings.Join(allow, ", "))
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
+		return
+	}
+	writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+}
+
+// failLimiter locks out a client address after repeated failed logins.
+type failLimiter struct {
+	mu  sync.Mutex
+	m   map[string]*failState
+	now func() time.Time
+}
+
+type failState struct {
+	n           int
+	first, lock time.Time
+}
+
+const (
+	maxFails   = 5
+	failWindow = time.Minute
+	lockFor    = time.Minute
+)
+
+func clientIP(r *http.Request) string {
+	h, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return h
+}
+
+func (f *failLimiter) clock() time.Time {
+	if f.now != nil {
+		return f.now()
+	}
+	return time.Now()
+}
+
+// blocked reports whether ip is locked out.
+func (f *failLimiter) blocked(ip string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	st := f.m[ip]
+	return st != nil && f.clock().Before(st.lock)
+}
+
+// fail records a failed attempt.
+func (f *failLimiter) fail(ip string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	now := f.clock()
+	if f.m == nil {
+		f.m = map[string]*failState{}
+	}
+	if len(f.m) > 10000 { // forget stale entries
+		for k, v := range f.m {
+			if now.Sub(v.first) > failWindow && now.After(v.lock) {
+				delete(f.m, k)
+			}
+		}
+	}
+	st := f.m[ip]
+	if st == nil || now.Sub(st.first) > failWindow {
+		st = &failState{first: now}
+		f.m[ip] = st
+	}
+	st.n++
+	if st.n >= maxFails {
+		st.lock = now.Add(lockFor)
+		st.n, st.first = 0, now
+	}
+}
+
+func (f *failLimiter) ok(ip string) {
+	f.mu.Lock()
+	delete(f.m, ip)
+	f.mu.Unlock()
+}
+
+func tooMany(w http.ResponseWriter) {
+	w.Header().Set("Retry-After", "60")
+	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too_many_logins"})
+}
+
+func (s *Server) auth(next http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.markHeader(w)
+		if !s.sameOrigin(r) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
+			return
+		}
+		bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if bearer != "" && s.LocalTok != "" &&
+			subtle.ConstantTimeCompare([]byte(bearer), []byte(s.LocalTok)) == 1 {
+			next(w, r.WithContext(context.WithValue(r.Context(), localKey{}, true)))
+			return
+		}
+		// An API token stands in for its user, within its scope: a read
+		// token may only look. It is how programs use the API — the
+		// browser session below is for people.
+		if strings.HasPrefix(bearer, "t66_") {
+			ent, ok := s.tokenAuth(bearer)
+			if !ok {
+				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "token_invalid"})
+				return
+			}
+			if ent.Scope != "write" && r.Method != http.MethodGet && r.Method != http.MethodHead {
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "token_scope"})
+				return
+			}
+			if !s.roAllowed(w, r, ent.User) {
+				return
+			}
+			next(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, ent.User)))
+			return
+		}
+		if u, p, ok := r.BasicAuth(); ok {
+			ip := clientIP(r)
+			if s.fails.blocked(ip) {
+				tooMany(w)
+				return
+			}
+			if !s.checkPassword(u, p) {
+				s.fails.fail(ip)
+				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login"})
+				return
+			}
+			s.fails.ok(ip)
+			// The forced change applies here as well. It used to be checked
+			// only on the cookie path, where it is carried by the session,
+			// so Basic auth walked straight past it: the whole API answered
+			// to admin and the password every installation starts with, for
+			// as long as nobody got round to changing it.
+			if s.mustChangeNow(p) && !allowedBeforeChange[r.URL.Path] {
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "change_password"})
+				return
+			}
+			if !s.roAllowed(w, r, u) {
+				return
+			}
+			next(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, u)))
+			return
+		}
+		if c, err := r.Cookie(cookieName); err == nil {
+			s.mu.Lock()
+			se, ok := s.sessions[c.Value]
+			if ok && s.Exists != nil && !s.Exists(se.user) {
+				delete(s.sessions, c.Value)
+				ok = false
+			}
+			if ok && time.Now().Before(se.exp) {
+				se.exp = time.Now().Add(12 * time.Hour)
+				s.sessions[c.Value] = se
+				s.mu.Unlock()
+				if se.mustChange && !allowedBeforeChange[r.URL.Path] {
+					writeJSON(w, http.StatusForbidden, map[string]string{"error": "change_password"})
+					return
+				}
+				if !s.roAllowed(w, r, se.user) {
+					return
+				}
+				next(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, se.user)))
+				return
+			}
+			s.mu.Unlock()
+		}
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login"})
+	})
+}
+
+// mustChangeNow reports whether a caller signing in with this password has
+// to change it before doing anything else: it is the password every
+// installation starts with, and this is neither the demo (deliberately
+// open) nor an installation whose accounts came from -password (nothing
+// here can change those).
+func (s *Server) mustChangeNow(password string) bool {
+	return !s.Demo && s.Accounts != nil && !s.Accounts.Fixed() && password == auth.DefaultPassword
+}
+
+func (s *Server) checkPassword(u, p string) bool {
+	if s.Check != nil {
+		return s.Check(u, p)
+	}
+	want, ok := s.Users[u]
+	return ok && subtle.ConstantTimeCompare([]byte(want), []byte(p)) == 1
+}
+
+func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	var in struct{ User, Password string }
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+		return
+	}
+	ip := clientIP(r)
+	if s.fails.blocked(ip) {
+		s.audit("login refused (locked out) user=%s from=%s", in.User, ip)
+		tooMany(w)
+		return
+	}
+	if !s.checkPassword(in.User, in.Password) {
+		s.fails.fail(ip)
+		s.audit("login failed user=%s from=%s", in.User, ip)
+		time.Sleep(500 * time.Millisecond)
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "bad_credentials"})
+		return
+	}
+	s.fails.ok(ip)
+	if ro, isRO := s.roRole(in.User); isRO && ro.Disabled {
+		s.audit("login refused (account disabled) user=%s from=%s", in.User, ip)
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "account_disabled"})
+		return
+	}
+	s.audit("login user=%s from=%s", in.User, ip)
+	b := make([]byte, 24)
+	rand.Read(b)
+	tok := hex.EncodeToString(b)
+	s.mu.Lock()
+	now := time.Now()
+	for k, v := range s.sessions {
+		if now.After(v.exp) {
+			delete(s.sessions, k)
+		}
+	}
+	// the default password of a new installation is changed before
+	// anything else (not in the demo, nor with -password)
+	must := s.mustChangeNow(in.Password)
+	s.sessions[tok] = session{user: in.User, exp: now.Add(12 * time.Hour), mustChange: must}
+	s.mu.Unlock()
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true,
+		SameSite: http.SameSiteStrictMode, Secure: secureCookie(r)})
+	writeJSON(w, http.StatusOK, map[string]any{"user": in.User, "must_change": must})
+}
+
+// autoLogin signs in with the one-time token printed for traffic66 file.pcap
+// and opens the offline analysis.
+func (s *Server) autoLogin(w http.ResponseWriter, r *http.Request) {
+	t := r.URL.Query().Get("t")
+	s.mu.Lock()
+	ok := s.AutoLogin != "" && subtle.ConstantTimeCompare([]byte(t), []byte(s.AutoLogin)) == 1
+	if ok {
+		s.AutoLogin = "" // once
+		b := make([]byte, 24)
+		rand.Read(b)
+		tok := hex.EncodeToString(b)
+		s.sessions[tok] = session{user: "admin", exp: time.Now().Add(12 * time.Hour)}
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/", HttpOnly: true,
+			SameSite: http.SameSiteLaxMode, Secure: secureCookie(r)})
+	}
+	s.mu.Unlock()
+	http.Redirect(w, r, "/#v=sandbox", http.StatusSeeOther)
+}
+
+// secureCookie says whether the session cookie may carry the Secure
+// attribute. It is set whenever the request reached us over TLS, directly
+// or through a proxy that says so, and not otherwise: a Secure cookie on a
+// plain HTTP installation is dropped by the browser, and nobody could sign
+// in. traffic66 is run both ways, so this is decided per request rather
+// than configured.
+func secureCookie(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	// Only the first value counts; a proxy appends and the one it added is
+	// the one describing the hop we can see.
+	proto, _, _ := strings.Cut(r.Header.Get("X-Forwarded-Proto"), ",")
+	return strings.EqualFold(strings.TrimSpace(proto), "https")
+}
+
+func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
+	if c, err := r.Cookie(cookieName); err == nil {
+		s.mu.Lock()
+		if se, ok := s.sessions[c.Value]; ok {
+			s.audit("logout user=%s", se.user)
+		}
+		delete(s.sessions, c.Value)
+		s.mu.Unlock()
+	}
+	// The clearing cookie must match the one it replaces on the attributes
+	// browsers compare, or the real one is left in place.
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: -1,
+		HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: secureCookie(r)})
+	writeJSON(w, http.StatusOK, map[string]string{})
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("api: encode: %v", err)
+	}
+}
+
+// duckErr matches DuckDB's error format ("Out of Memory Error: …").
+var duckErr = regexp.MustCompile(`\b[A-Z][A-Za-z]* Error: `)
+
+// fail answers a failed request. The error is always a stable code —
+// programs switch on it, pages translate it — and where the detail is
+// the point (which filter, which field) it rides along as a message.
+// Database failures are logged in full and the browser gets only their
+// kind, so pages can say "the database is at its memory limit" instead
+// of showing SQL.
+func fail(w http.ResponseWriter, err error) {
+	if errors.Is(err, errBadRange) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_range"})
+		return
+	}
+	msg := err.Error()
+	kind := ""
+	switch {
+	case strings.Contains(msg, "Out of Memory") || strings.Contains(msg, "memory_limit") || strings.Contains(msg, "failed to allocate"):
+		kind = "memory"
+	case duckErr.MatchString(msg) || strings.Contains(msg, "database") || strings.Contains(msg, "driver:"):
+		kind = "storage"
+	}
+	var pe *fs.PathError
+	var le *os.LinkError
+	if kind == "" && (errors.As(err, &pe) || errors.As(err, &le)) {
+		// a file could not be read or written: the reason goes to the log,
+		// not the server's paths to the browser
+		log.Printf("api: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "file"})
+		return
+	}
+	if kind == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "message": msg})
+		return
+	}
+	log.Printf("api: database (%s): %v", kind, err)
+	w.Header().Set("Retry-After", "30")
+	writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database", "kind": kind})
+}
+
+// rates samples pipeline counters once per second.
+type rates struct {
+	mu                 sync.Mutex
+	recPerSec, rowRate float64
+	lastRec, lastRow   uint64
+}
+
+func (s *Server) sampleRates() {
+	t := time.NewTicker(time.Second)
+	n := 0
+	for now := range t.C {
+		if n++; n%5 == 0 {
+			s.sampleSources(now)
+		}
+		rec, row := s.Pipe.Records.Load(), s.Pipe.Rows.Load()
+		s.rates.mu.Lock()
+		s.rates.recPerSec = s.rates.recPerSec*0.8 + float64(rec-s.rates.lastRec)*0.2
+		s.rates.rowRate = s.rates.rowRate*0.8 + float64(row-s.rates.lastRow)*0.2
+		s.rates.lastRec, s.rates.lastRow = rec, row
+		s.rates.mu.Unlock()
+	}
+}
+
+// healthz is for probes and load balancers: no sign-in, no data. 200 while
+// the database answers and nothing failed to be written, 503 otherwise.
+func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if s.Store == nil || s.Store.DB.PingContext(ctx) != nil || (s.Pipe != nil && s.Pipe.WriteErrs.Load() != 0) {
+		http.Error(w, "storage unhealthy", http.StatusServiceUnavailable)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": s.Version})
+}
+
+// sameOrigin refuses a change requested by a page from another origin: a
+// browser sends Origin and Sec-Fetch-Site with such requests, and the
+// session cookie would otherwise go with them. Reads, and programs that
+// send neither header (the terminal UI, scripts), are not affected.
+//
+// The origin must name the host the browser asked for: the request's Host,
+// the one a reverse proxy passes on in X-Forwarded-Host or Forwarded
+// (host=), or the address given with -public-url. A port is compared as
+// well, the scheme's default port (443, 80) being the same as none. A page
+// on another site cannot set those headers on the browser's request (that
+// needs a cross-origin preflight, which is never allowed), so accepting
+// them does not let it through.
+func (s *Server) sameOrigin(r *http.Request) bool {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+		return true
+	}
+	if site := r.Header.Get("Sec-Fetch-Site"); site == "cross-site" || site == "same-site" {
+		return false
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return false
+	}
+	want := hostKey(u.Host, u.Scheme)
+	if p := s.PublicURL; p != nil && u.Scheme == p.Scheme && want == hostKey(p.Host, p.Scheme) {
+		return true
+	}
+	for _, h := range [...]string{r.Host, firstValue(r.Header.Get("X-Forwarded-Host")), forwardedHost(r.Header.Get("Forwarded"))} {
+		if h != "" && hostKey(h, u.Scheme) == want {
+			return true
+		}
+	}
+	return false
+}
+
+// hostKey is host[:port] in one form: lower case, without the scheme's
+// default port, IPv6 addresses in brackets.
+func hostKey(h, scheme string) string {
+	h = strings.ToLower(strings.TrimSpace(h))
+	host, port, err := net.SplitHostPort(h)
+	if err != nil {
+		host, port = strings.Trim(h, "[]"), ""
+	}
+	if (scheme == "https" && port == "443") || (scheme == "http" && port == "80") {
+		port = ""
+	}
+	host = strings.TrimSuffix(host, ".")
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	if port != "" {
+		return host + ":" + port
+	}
+	return host
+}
+
+func firstValue(v string) string {
+	return strings.TrimSpace(strings.Split(v, ",")[0])
+}
+
+// forwardedHost reads host= from the first element of a Forwarded header
+// (RFC 7239), the one the proxy nearest the browser wrote.
+func forwardedHost(v string) string {
+	for _, pair := range strings.Split(firstValue(v), ";") {
+		k, val, ok := strings.Cut(strings.TrimSpace(pair), "=")
+		if ok && strings.EqualFold(k, "host") {
+			return strings.Trim(val, `"`)
+		}
+	}
+	return ""
+}
+
+// sameOriginOnly applies sameOrigin to a handler that needs no session:
+// signing in or out from another site's page is refused too.
+func (s *Server) sameOriginOnly(h http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !s.sameOrigin(r) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
+			return
+		}
+		h(w, r)
+	})
+}

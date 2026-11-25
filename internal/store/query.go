@@ -1,0 +1,1295 @@
+package store
+
+import (
+	"database/sql"
+	"fmt"
+	"net/netip"
+	"sort"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"time"
+)
+
+// Filter is one condition: Field equals (or, with Neg, does not equal) Value.
+type Filter struct {
+	Field string `json:"f"`
+	Neg   bool   `json:"neg"`
+	Value string `json:"v"`
+}
+
+// Query selects flow slices in [From, To).
+type Query struct {
+	From, To   time.Time
+	Filters    []Filter
+	IncludeDup bool
+	// ZoneOffset is how far the viewer's clock is ahead of UTC, as the
+	// browser reports it. Buckets are cut on that clock, not on UTC's: a
+	// day cut at UTC midnight falls at nine in the morning in Tokyo, so
+	// every day of a Japanese installation was split across two columns
+	// and neither was a day's traffic. It is zero for a viewer on UTC and
+	// for callers that do not care, which is the behaviour this had.
+	//
+	// It is one offset for the whole range rather than a named zone: the
+	// boundaries of a range are already the browser's to decide here (see
+	// the billing endpoint), and a zone database in the binary would be a
+	// large dependency for the hour that a range spanning a daylight-saving
+	// change would move one boundary by.
+	ZoneOffset time.Duration
+}
+
+// localTrunc truncates t down to a multiple of step on the viewer's clock.
+func (q Query) localTrunc(t time.Time, step time.Duration) time.Time {
+	return t.UTC().Add(q.ZoneOffset).Truncate(step).Add(-q.ZoneOffset)
+}
+
+// bucketSQL is the expression that puts a row in its bucket, on the same
+// clock localTrunc uses, so the rows and the column they are counted into
+// agree.
+func (q Query) bucketSQL(step time.Duration) string {
+	secs := int64(step.Seconds())
+	off := int64(q.ZoneOffset.Seconds())
+	if off == 0 {
+		return fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts)", secs)
+	}
+	return fmt.Sprintf("time_bucket(INTERVAL '%d seconds', ts + INTERVAL '%d seconds') - INTERVAL '%d seconds'", secs, off, off)
+}
+
+func (q Query) span() time.Duration { return q.To.Sub(q.From) }
+
+var dirNames = map[string]int{"outbound": DirOutbound, "inbound": DirInbound, "internal": DirInternal, "transit": DirTransit}
+
+// DirName is the stored direction's API name.
+func DirName(d uint8) string {
+	for k, v := range dirNames {
+		if v == int(d) {
+			return k
+		}
+	}
+	return "unknown"
+}
+
+var protoByName = map[string]int{"icmp": 1, "igmp": 2, "ipip": 4, "tcp": 6, "udp": 17, "ipv6": 41, "gre": 47, "esp": 50, "ah": 51, "icmpv6": 58, "ospf": 89, "sctp": 132}
+
+func v4range(p netip.Prefix) (uint32, uint32, bool) {
+	if !p.Addr().Is4() {
+		return 0, 0, false
+	}
+	a := p.Masked().Addr().As4()
+	lo := uint32(a[0])<<24 | uint32(a[1])<<16 | uint32(a[2])<<8 | uint32(a[3])
+	hi := lo | (uint32(1)<<(32-p.Bits()) - 1)
+	if p.Bits() == 0 {
+		hi = 0xFFFFFFFF
+	}
+	return lo, hi, true
+}
+
+// oneDevice: the query keeps to one device or interface. Duplicates are
+// left out so that traffic reported by two devices counts once; within one
+// device they are its own traffic and count.
+func (q Query) oneDevice() bool {
+	for _, f := range q.Filters {
+		if f.Neg {
+			continue
+		}
+		if f.Field == "exporter" || strings.HasPrefix(f.Field, "iface") {
+			return true
+		}
+		if f.Field == "ifscope" {
+			// a scope spanning several devices is not one device; a scope
+			// inside one device is.
+			if refs, err := parseIfaceList(f.Value); err == nil && len(refs) > 0 {
+				same := true
+				for _, rf := range refs[1:] {
+					if rf.exporter != refs[0].exporter {
+						same = false
+					}
+				}
+				if same {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+type ifaceRef struct {
+	exporter string
+	ifindex  int
+}
+
+// parseIfaceList parses "exporter/ifindex,exporter/ifindex" for the
+// ifscope filter. At most 256 entries: a scope is something a person
+// picked, not a generated list.
+func parseIfaceList(v string) ([]ifaceRef, error) {
+	parts := strings.Split(v, ",")
+	if len(parts) > 256 {
+		return nil, fmt.Errorf("interface scope too large: %d", len(parts))
+	}
+	out := make([]ifaceRef, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		i := strings.LastIndexByte(p, '/')
+		if i <= 0 {
+			return nil, fmt.Errorf("bad interface %q", p)
+		}
+		n, err := strconv.Atoi(p[i+1:])
+		if err != nil || n < 0 {
+			return nil, fmt.Errorf("bad interface %q", p)
+		}
+		out = append(out, ifaceRef{p[:i], n})
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("empty interface scope")
+	}
+	return out, nil
+}
+
+// where builds the WHERE clause and its arguments.
+func (q Query) where() (string, []any, error) {
+	conds := []string{"ts >= ?", "ts < ?"}
+	args := []any{q.From.UTC(), q.To.UTC()}
+	if !q.IncludeDup && !q.oneDevice() {
+		conds = append(conds, "NOT dup")
+	}
+	for _, f := range q.Filters {
+		var c string
+		v := strings.TrimSpace(f.Value)
+		switch f.Field {
+		case "ip", "client", "server":
+			cols := map[string][]string{"ip": {"client", "server"}, "client": {"client"}, "server": {"server"}}[f.Field]
+			n4 := map[string][]string{"ip": {"cli4", "srv4"}, "client": {"cli4"}, "server": {"srv4"}}[f.Field]
+			var parts []string
+			if p, err := netip.ParsePrefix(v); err == nil && !p.IsSingleIP() {
+				lo, hi, ok := v4range(p)
+				if !ok {
+					return "", nil, fmt.Errorf("IPv6 prefixes are not supported in filters yet: %s", v)
+				}
+				for _, col := range n4 {
+					parts = append(parts, col+" BETWEEN ? AND ?")
+					args = append(args, lo, hi)
+				}
+			} else {
+				if p, err := netip.ParsePrefix(v); err == nil {
+					v = p.Addr().Unmap().String() // a single address: /32 or /128
+				} else if a, err := netip.ParseAddr(v); err == nil {
+					v = a.Unmap().String()
+				}
+				for _, col := range cols {
+					parts = append(parts, col+" = ?")
+					args = append(args, v)
+				}
+			}
+			c = "(" + strings.Join(parts, " OR ") + ")"
+		case "src", "dst":
+			// one address as the sender, or as the receiver, of the bytes:
+			// what went to an address and what came from it
+			a, err := netip.ParseAddr(v)
+			if err != nil {
+				return "", nil, fmt.Errorf("bad address %q", v)
+			}
+			c = f.Field + " = ?"
+			args = append(args, a.Unmap().String())
+		case "port":
+			port := v
+			if i := strings.IndexByte(v, '/'); i > 0 {
+				port = v[:i]
+				pn := protoByName[strings.ToLower(v[i+1:])]
+				if pn > 0 {
+					c = "(svc_port = ? AND proto = ?)"
+					pv, _ := strconv.Atoi(port)
+					args = append(args, pv, pn)
+					break
+				}
+			}
+			pv, err := strconv.Atoi(port)
+			if err != nil {
+				return "", nil, fmt.Errorf("bad port %q", v)
+			}
+			c = "svc_port = ?"
+			args = append(args, pv)
+		case "app":
+			c = "app = ?"
+			args = append(args, v)
+		case "country":
+			if v == "__internal__" {
+				c = "dir = 3"
+			} else {
+				c = "peer_cc = ?"
+				args = append(args, strings.ToUpper(v))
+			}
+		case "asn":
+			n, err := strconv.ParseUint(strings.TrimPrefix(strings.ToUpper(v), "AS"), 10, 32)
+			if err != nil {
+				return "", nil, fmt.Errorf("bad ASN %q", v)
+			}
+			c = "peer_asn = ?"
+			args = append(args, n)
+		case "proto":
+			n, ok := protoByName[strings.ToLower(v)]
+			if !ok {
+				x, err := strconv.Atoi(v)
+				if err != nil {
+					return "", nil, fmt.Errorf("bad protocol %q", v)
+				}
+				n = x
+			}
+			c = "proto = ?"
+			args = append(args, n)
+		case "dir":
+			n, ok := dirNames[v]
+			if !ok {
+				return "", nil, fmt.Errorf("bad direction %q", v)
+			}
+			c = "dir = ?"
+			args = append(args, n)
+		case "bytes":
+			// Which way the bytes went, from your networks' point of view:
+			// "in" is what arrived at an internal host from outside, "out"
+			// what an internal host sent outside. It is not dir, which says
+			// who opened the connection: on a network whose hosts only open
+			// connections outwards, the replies they download are inbound
+			// bytes on outbound connections, and dir=inbound is empty.
+			srcInt := "(CASE WHEN src = client THEN cli_int ELSE srv_int END)"
+			dstInt := "(CASE WHEN dst = client THEN cli_int ELSE srv_int END)"
+			switch v {
+			case "in":
+				c = "(NOT " + srcInt + " AND " + dstInt + ")"
+			case "out":
+				c = "(" + srcInt + " AND NOT " + dstInt + ")"
+			default:
+				return "", nil, fmt.Errorf("bad byte direction %q", v)
+			}
+		case "encap":
+			c = "encap = ?"
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				return "", nil, fmt.Errorf("bad encapsulation %q", v)
+			}
+			args = append(args, n)
+		case "exporter":
+			c = "exporter = ?"
+			args = append(args, v)
+		case "segment":
+			c = "segment = ?"
+			args = append(args, v)
+		case "threat":
+			c = "threat = ?"
+			args = append(args, v)
+		case "vlan":
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				return "", nil, fmt.Errorf("bad VLAN %q", v)
+			}
+			c = "vlan = ?"
+			args = append(args, n)
+		case "ifscope":
+			// a set of interfaces, as "exporter/ifindex,exporter/ifindex":
+			// a row is in the set when it crossed any of them, in either
+			// direction (the same traversal sense the interface counters
+			// use). Negated, it is the subtraction gesture: everything
+			// except these interfaces.
+			refs, err := parseIfaceList(v)
+			if err != nil {
+				return "", nil, err
+			}
+			var parts []string
+			for _, rf := range refs {
+				parts = append(parts, "(exporter = ? AND (in_if = ? OR out_if = ?))")
+				args = append(args, rf.exporter, rf.ifindex, rf.ifindex)
+			}
+			c = "(" + strings.Join(parts, " OR ") + ")"
+		case "iface", "iface_in", "iface_out":
+			// exporter/ifindex: either direction, or only what came in
+			// through it, or only what went out through it
+			i := strings.LastIndexByte(v, '/')
+			if i <= 0 {
+				return "", nil, fmt.Errorf("bad interface %q", v)
+			}
+			n, err := strconv.Atoi(v[i+1:])
+			if err != nil {
+				return "", nil, fmt.Errorf("bad interface %q", v)
+			}
+			switch f.Field {
+			case "iface_in":
+				c = "(exporter = ? AND in_if = ?)"
+				args = append(args, v[:i], n)
+			case "iface_out":
+				c = "(exporter = ? AND out_if = ?)"
+				args = append(args, v[:i], n)
+			default:
+				c = "(exporter = ? AND (in_if = ? OR out_if = ?))"
+				args = append(args, v[:i], n, n)
+			}
+		default:
+			return "", nil, fmt.Errorf("unknown filter field %q", f.Field)
+		}
+		if f.Neg {
+			c = "NOT " + c
+		}
+		conds = append(conds, c)
+	}
+	return strings.Join(conds, " AND "), args, nil
+}
+
+// TopRow is one Top-N entry.
+type TopRow struct {
+	Key   string `json:"key"`
+	Key2  string `json:"key2,omitempty"`
+	Key3  string `json:"key3,omitempty"`
+	Extra string `json:"extra,omitempty"`
+	Bytes uint64 `json:"bytes"`
+	Wire  uint64 `json:"wire"`
+	Pkts  uint64 `json:"pkts"`
+	Flows uint64 `json:"flows"`
+	Peers uint64 `json:"peers,omitempty"`
+	Int   bool   `json:"internal,omitempty"`
+}
+
+// dimension definitions: SQL expression(s) and the rollup that serves them.
+type dimDef struct {
+	expr   string // key expression over flow rows
+	expr2  string
+	expr3  string
+	extra  string // additional grouped column shown next to the key
+	rollup string // r_dim dim name, "host:1"/"host:2" for r_host, "" for none
+	peers  string // column counted distinct as peers
+	intCol string
+}
+
+var dims = map[string]dimDef{
+	"client":   {expr: "client", rollup: "host:1", peers: "server", intCol: "bool_or(cli_int)"},
+	"server":   {expr: "server", extra: "any_value(peer_cc)", rollup: "host:2", peers: "client", intCol: "bool_or(srv_int)"},
+	"service":  {expr: "server", expr2: portProtoExpr, extra: "any_value(app)", peers: "client", intCol: "bool_or(srv_int)"},
+	"conv":     {expr: "client", expr2: "server", expr3: portProtoExpr, extra: "any_value(peer_cc)"},
+	"app":      {expr: "app", rollup: "app"},
+	"port":     {expr: portProtoExpr, extra: "any_value(app)", rollup: "port"},
+	"country":  {expr: "CASE WHEN dir = 3 THEN '__internal__' ELSE peer_cc END", rollup: "country"},
+	"asn":      {expr: "CAST(peer_asn AS VARCHAR)", extra: "any_value(peer_org)", rollup: "asn"},
+	"proto":    {expr: "CAST(proto AS VARCHAR)", rollup: "proto"},
+	"dir":      {expr: "CAST(dir AS VARCHAR)", rollup: "dir"},
+	"exporter": {expr: "exporter", rollup: "exporter"},
+	"segment":  {expr: "segment", rollup: "segment"},
+	"encap":    {expr: "CAST(encap AS VARCHAR)", rollup: "encap"},
+	"threat":   {expr: "threat", expr2: "client", expr3: "server", extra: "concat(any_value(peer_cc), '|', any_value(dir))"},
+	"vlan":     {expr: "CAST(vlan AS VARCHAR)", rollup: "vlan"},
+}
+
+const portProtoExpr = "concat(svc_port, '/', CASE proto WHEN 6 THEN 'tcp' WHEN 17 THEN 'udp' ELSE CAST(proto AS VARCHAR) END)"
+
+type keyPart struct {
+	inner   []string // select expressions in the grouping query
+	groups  []string // aliases grouped by
+	inner6  []string // same for the IPv6 half (address parts only)
+	groups6 []string
+	v4cond  string // condition selecting IPv4 rows ("" if not an address)
+	outer   string // display expression over the grouped result
+}
+
+// keyPartFor maps a dimension expression to fast grouping keys.
+func keyPartFor(expr string, i int) keyPart {
+	g := "g" + strconv.Itoa(i)
+	addr := func(col, num string) keyPart {
+		// IPv4 is grouped and printed from its number without reading the
+		// address text; IPv6 rows are grouped by text in a separate pass.
+		n, t := g+"n", g+"s"
+		v4 := "concat(" + n + " >> 24, '.', (" + n + " >> 16) & 255, '.', (" + n + " >> 8) & 255, '.', " + n + " & 255)"
+		return keyPart{
+			inner:   []string{num + " AS " + n, "NULL::VARCHAR AS " + t},
+			groups:  []string{n},
+			inner6:  []string{"0::UINTEGER AS " + n, col + " AS " + t},
+			groups6: []string{t},
+			v4cond:  num + " <> 0",
+			outer:   "CASE WHEN " + n + " <> 0 THEN " + v4 + " ELSE " + t + " END",
+		}
+	}
+	switch expr {
+	case "client":
+		return addr("client", "cli4")
+	case "server":
+		return addr("server", "srv4")
+	case portProtoExpr:
+		in := []string{"svc_port AS " + g + "p", "proto AS " + g + "t"}
+		gr := []string{g + "p", g + "t"}
+		return keyPart{inner: in, groups: gr, inner6: in, groups6: gr,
+			outer: "concat(" + g + "p, '/', CASE " + g + "t WHEN 6 THEN 'tcp' WHEN 17 THEN 'udp' ELSE CAST(" + g + "t AS VARCHAR) END)"}
+	}
+	in := []string{expr + " AS " + g}
+	return keyPart{inner: in, groups: []string{g}, inner6: in, groups6: []string{g}, outer: g}
+}
+
+// TopN returns the largest groups by wire bytes.
+func (s *Store) TopN(q Query, dim string, limit int) ([]TopRow, error) {
+	return s.TopNBy(q, dim, limit, "wire")
+}
+
+// topOrder maps a ranking measure to the aggregate it orders by, for the
+// detail query and the rollup query.
+var topOrder = map[string][2]string{
+	"wire":  {"x_w", "CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT)"},
+	"bytes": {"x_b", "CAST(CASE WHEN sum(bytes) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(bytes) END AS UBIGINT)"},
+	"pkts":  {"x_p", "CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT)"},
+	"flows": {"x_f", "CAST(CASE WHEN sum(flows) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(flows) END AS UBIGINT)"},
+	"peers": {"x_peers", "CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT)"}, // rollups hold no peer counts
+	// average packet size; smallest first is the interesting end (scans,
+	// floods), so callers ask for it ascending
+	"avg": {"x_w / greatest(x_p, 1)", "CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT) / greatest(CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT), 1)"},
+}
+
+// TopNBy returns the groups ranked by one measure: wire, bytes, pkts,
+// flows, peers or avg (average wire bytes per packet). asc ranks the
+// smallest first.
+func (s *Store) TopNBy(q Query, dim string, limit int, by string, asc ...bool) ([]TopRow, error) {
+	ord, ok := topOrder[by]
+	if !ok {
+		return nil, fmt.Errorf("unknown ranking %q", by)
+	}
+	dir := "DESC"
+	if len(asc) > 0 && asc[0] {
+		dir = "ASC"
+	}
+	d, ok := dims[dim]
+	if !ok {
+		return nil, fmt.Errorf("unknown dimension %q", dim)
+	}
+	if limit <= 0 || limit > 1000 {
+		limit = 66
+	}
+	if isConvDim(dim) {
+		if src, ef, et := s.TopSource(q, dim); src != "detail" {
+			return s.topConv(q, dim, src, ef, et, limit, by, dir)
+		}
+	}
+	if d.rollup != "" && s.rollupOK(q, strings.HasPrefix(d.rollup, "host:")) {
+		return s.topRollup(q, d.rollup, limit, ord[1]+" "+dir)
+	}
+	where, args, err := q.where()
+	if err != nil {
+		return nil, err
+	}
+	cond := where
+	if dim == "threat" {
+		cond += " AND threat <> ''"
+	}
+	// Group by cheap keys (numeric IPv4, port and protocol as integers) and
+	// format for display afterwards: grouping on address text is several
+	// times slower. An IPv4 address is grouped by its number with no text,
+	// an IPv6 one by its text with the number 0, so the two never share a
+	// group.
+	var parts []keyPart
+	var v4conds []string
+	for i, e := range []string{d.expr, d.expr2, d.expr3} {
+		if e == "" {
+			continue
+		}
+		kp := keyPartFor(e, i)
+		parts = append(parts, kp)
+		if kp.v4cond != "" {
+			v4conds = append(v4conds, kp.v4cond)
+		}
+	}
+	v4 := "true"
+	if len(v4conds) > 0 {
+		v4 = strings.Join(v4conds, " AND ")
+	}
+	// keySel and keySel6: the keys of the IPv4 rows (an address as its
+	// number, its text NULL) and of the others (the number 0, the text),
+	// read as two parts so the IPv4 rows never read the address text,
+	// which takes longer than everything else the query reads
+	var keySel, keySel6, groups, outer, on []string
+	for _, kp := range parts {
+		if kp.v4cond != "" {
+			n := kp.inner[0][:strings.LastIndex(kp.inner[0], " AS ")]
+			t := kp.inner6[1][:strings.LastIndex(kp.inner6[1], " AS ")]
+			keySel = append(keySel, n+" AS "+kp.groups[0], "NULL::VARCHAR AS "+kp.groups6[0])
+			keySel6 = append(keySel6, "0::UINTEGER AS "+kp.groups[0], t+" AS "+kp.groups6[0])
+			groups = append(groups, kp.groups[0], kp.groups6[0])
+			continue
+		}
+		keySel = append(keySel, kp.inner...)
+		keySel6 = append(keySel6, kp.inner...)
+		groups = append(groups, kp.groups...)
+	}
+	for i, e := range []string{d.expr, d.expr2, d.expr3} {
+		if e == "" {
+			outer = append(outer, "'' AS k"+strconv.Itoa(i))
+		} else {
+			outer = append(outer, keyPartFor(e, i).outer+" AS k"+strconv.Itoa(i))
+		}
+	}
+	// pg: the group columns of a step joined back to t, renamed so the
+	// two sides of the join do not both have them
+	var pg, onP []string
+	// plain equality, which the database joins by hashing; the address
+	// text is NULL for IPv4 rows, so it is compared as '' there
+	for _, g := range groups {
+		text := strings.HasSuffix(g, "s") // an address as text: NULL for IPv4 rows
+		if text {
+			on = append(on, "coalesce(t."+g+", '') = coalesce(x."+g+", '')")
+			onP = append(onP, "coalesce(t."+g+", '') = coalesce(p.p_"+g+", '')")
+		} else {
+			on = append(on, "t."+g+" = x."+g)
+			onP = append(onP, "t."+g+" = p.p_"+g)
+		}
+		pg = append(pg, "x."+g+" AS p_"+g)
+	}
+	extra := "''"
+	if d.extra != "" {
+		extra = "coalesce(CAST(" + d.extra + " AS VARCHAR), '')"
+	}
+	intc := "false"
+	if d.intCol != "" {
+		intc = d.intCol
+	}
+	// the peer as a hash of its number, or of its text in the IPv6 part,
+	// for the same reason the keys are read that way; a flow's two ends
+	// are always the same family
+	peerCol, peerCol6 := "NULL::UBIGINT", "NULL::UBIGINT"
+	if d.peers != "" {
+		peerCol = "hash(" + map[string]string{"client": "cli4", "server": "srv4"}[d.peers] + ")"
+		peerCol6 = "hash(" + d.peers + ")"
+		if len(v4conds) == 0 {
+			peerCol = peerCol6
+		}
+	}
+	// x is the rows, with their keys, in only the columns the steps
+	// below use: the flow files are read by column, and every other
+	// one would be read for nothing. Where the range is small enough
+	// (see topRowsFit) x is kept, and the steps below read the kept
+	// projection instead of scanning the records again; where it is
+	// not, x is read again by each step rather than kept: kept, a
+	// week of rows is more than the memory there is.
+	kept := "NOT MATERIALIZED"
+	if s.topRowsFit(q) {
+		kept = "MATERIALIZED"
+	}
+	src := s.Source(q.From, q.To)
+	// only the columns the steps use: the parts of x are not trimmed to
+	// what is used after it, and every text column read costs as much as
+	// the rest of the query
+	cols := "bytes, wire, pkts, flows"
+	for _, c := range []string{"peer_cc", "peer_org", "app", "dir", "cli_int", "srv_int"} {
+		if strings.Contains(extra+intc, c) {
+			cols += ", " + c
+		}
+	}
+	x := fmt.Sprintf(`x AS `+kept+` (SELECT %s, %s, %s AS x_pc FROM %s WHERE (%s) AND %s`,
+		cols, strings.Join(keySel, ", "), peerCol, src, cond, v4)
+	if len(v4conds) > 0 {
+		x += fmt.Sprintf(` UNION ALL SELECT %s, %s, %s FROM %s WHERE (%s) AND NOT (%s)`,
+			cols, strings.Join(keySel6, ", "), peerCol6, src, cond, v4)
+		args = append(append([]any{}, args...), args...)
+	}
+	x += ")"
+	g := strings.Join(groups, ", ")
+	sums := fmt.Sprintf(`%s AS x_extra, CAST(CASE WHEN sum(bytes) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(bytes) END AS UBIGINT) AS x_b, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT) AS x_w, CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT) AS x_p, CAST(CASE WHEN sum(flows) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(flows) END AS UBIGINT) AS x_f, %s AS x_int`, extra, intc)
+	// Rank on what can be summed, which the database can do in any amount
+	// of memory, and count the peers only for the rows that made the list.
+	// Counting them for every group first (two million clients over a week)
+	// is what ran out of memory. Ranked by peers, the distinct pairs are
+	// counted instead, which spills to disk as well.
+	var with string
+	if by == "peers" {
+		with = fmt.Sprintf(`WITH %s,
+			t AS (SELECT %s, count(*) AS x_peers FROM (SELECT DISTINCT %s, x_pc FROM x WHERE x_pc IS NOT NULL) GROUP BY ALL ORDER BY x_peers %s LIMIT %d),
+			p AS (SELECT %s, %s FROM x SEMI JOIN t ON %s GROUP BY ALL)
+			SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM t JOIN p ON %s ORDER BY x_peers %s, x_w DESC`,
+			x, g, g, dir, limit, strings.Join(pg, ", "), sums, strings.Join(on, " AND "), strings.Join(outer, ", "), strings.Join(onP, " AND "), dir)
+	} else {
+		peers := "0"
+		if d.peers != "" {
+			peers = "approx_count_distinct(x_pc)"
+		}
+		// ranked on the one measure alone: the groups of a week by client
+		// are millions, and each sum carried for all of them made the
+		// ranking several times slower; the sums are taken for the top
+		// rows only, with their peers
+		with = fmt.Sprintf(`WITH %s,
+			t AS (SELECT %s, %s AS x_rank FROM x GROUP BY ALL ORDER BY x_rank %s LIMIT %d),
+			p AS (SELECT %s, %s, %s AS x_peers FROM x SEMI JOIN t ON %s GROUP BY ALL)
+			SELECT %s, x_extra, x_b, x_w, x_p, x_f, x_peers, x_int FROM t JOIN p ON %s ORDER BY x_rank %s, x_w DESC`,
+			x, g, ord[1], dir, limit, strings.Join(pg, ", "), sums, peers, strings.Join(on, " AND "), strings.Join(outer, ", "),
+			strings.Join(onP, " AND "), dir)
+	}
+	rows, err := s.DB.Query(with, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []TopRow
+	for rows.Next() {
+		var t TopRow
+		var k, k2, k3 sql.NullString
+		if err := rows.Scan(&k, &k2, &k3, &t.Extra, &t.Bytes, &t.Wire, &t.Pkts, &t.Flows, &t.Peers, &t.Int); err != nil {
+			return nil, err
+		}
+		t.Key, t.Key2, t.Key3 = k.String, k2.String, k3.String
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// isConvDim reports whether the dimension is one of the conversation
+// family — conversations themselves, the services they used and the
+// threats among them — which the conversation summaries answer.
+func isConvDim(dim string) bool {
+	return dim == "conv" || dim == "service" || dim == "threat"
+}
+
+// TopSource is where TopNBy answers this query from: "detail" (the
+// flow records), "rollup" (the summaries) or "rollup_day" (the daily
+// conversation summaries). With it come the moments the answer
+// actually covers: the summaries are kept by the hour — the daily
+// ones by the day — and are read by the whole buckets that cover the
+// range, so the covered range can be up to a bucket wider at each
+// end than the one asked for, never narrower. For "detail" the
+// range asked for comes back unchanged.
+func (s *Store) TopSource(q Query, dim string) (string, time.Time, time.Time) {
+	d, ok := dims[dim]
+	if !ok {
+		return "detail", q.From, q.To
+	}
+	if isConvDim(dim) {
+		if s.convOK(q) {
+			ds := s.DetailStart()
+			cs := s.convStart()
+			// the summaries answer only where they reach back before
+			// the records do; before they are folded at all, or on a
+			// store too young for retention to have bitten, the
+			// records answer, as they did before there were summaries
+			if !ds.IsZero() && !cs.IsZero() && !cs.After(ds) && q.From.Before(ds) {
+				if q.From.Before(cs) {
+					if dayStart := s.convDayStart(); !dayStart.IsZero() {
+						return "rollup_day", dayFloor(q.From), dayCeil(q.To)
+					}
+					return "detail", q.From, q.To
+				}
+				ef, et := hourRange(q.From, q.To)
+				return "rollup", ef, et
+			}
+		}
+		return "detail", q.From, q.To
+	}
+	if d.rollup != "" && s.rollupOK(q, strings.HasPrefix(d.rollup, "host:")) {
+		if v, _ := q.view(); v.key == "" {
+			ef, et := hourRange(q.From, q.To)
+			return "rollup", ef, et
+		}
+		return "rollup", q.From, q.To
+	}
+	return "detail", q.From, q.To
+}
+
+// convOK reports whether the conversation summaries can answer q:
+// nothing narrowing it but at most one device picked, whose rows the
+// summaries keep apart by exporter, like the records do.
+func (s *Store) convOK(q Query) bool {
+	if !s.convReady.Load() {
+		return false
+	}
+	for _, f := range q.Filters {
+		if f.Neg || f.Field != "exporter" {
+			return false
+		}
+	}
+	return len(q.Filters) <= 1
+}
+
+// topConv answers a Top of conversations, services or threats from
+// the conversation summaries — r_conv by the hour, r_conv_day by the
+// day — over the bucket-aligned range TopSource gives. The keys and
+// extras are the ones the records path prints. Peers are counted
+// approximately for services, as the records path counts them; for
+// conversations and threats the summaries do not carry them, and a
+// Top by peers is ranked by wire bytes there, as the other summaries
+// rank it.
+func (s *Store) topConv(q Query, dim, table string, from, to time.Time, limit int, by, dir string) ([]TopRow, error) {
+	where := "ts >= ? AND ts < ?"
+	args := []any{from.UTC(), to.UTC()}
+	if len(q.Filters) == 1 {
+		where += " AND exporter = ?"
+		args = append(args, q.Filters[0].Value)
+	} else if !q.IncludeDup {
+		where += " AND NOT dup"
+	}
+	if dim == "threat" {
+		where += " AND threat <> ''"
+	}
+	sum := func(c string) string {
+		return fmt.Sprintf("CAST(CASE WHEN sum(%s) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(%s) END AS UBIGINT)", c, c)
+	}
+	sums := sum("bytes") + ", " + sum("wire") + ", " + sum("pkts") + ", " + sum("flows")
+	ord := topOrder[by][1]
+	var keys, grp, extra, peers, intc string
+	switch dim {
+	case "conv":
+		keys = "client, server, " + portProtoExpr
+		grp = "client, server, svc_port, proto"
+		extra = "coalesce(any_value(peer_cc), '')"
+		peers, intc = "0", "false"
+	case "service":
+		keys = "server, " + portProtoExpr + ", ''"
+		grp = "server, svc_port, proto"
+		extra = "coalesce(any_value(app), '')"
+		peers = "approx_count_distinct(CASE WHEN cli4 <> 0 THEN hash(cli4) ELSE hash(client) END)"
+		intc = "bool_or(srv_int)"
+	default: // threat
+		keys = "threat, client, server"
+		grp = "threat, client, server"
+		extra = "coalesce(concat(any_value(peer_cc), '|', any_value(dir)), '')"
+		peers, intc = "0", "false"
+	}
+	if by == "peers" {
+		if dim == "service" {
+			ord = peers
+		} else {
+			ord = topOrder["wire"][1]
+		}
+	}
+	tbl := "r_conv"
+	if table == "rollup_day" {
+		tbl = "r_conv_day"
+	}
+	rows, err := s.DB.Query(fmt.Sprintf(`SELECT %s, %s, %s, %s, %s FROM %s WHERE %s GROUP BY %s ORDER BY %s %s, %s DESC LIMIT %d`,
+		keys, extra, sums, peers, intc, tbl, where, grp, ord, dir, sum("wire"), limit), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []TopRow
+	for rows.Next() {
+		var t TopRow
+		var k, k2, k3 sql.NullString
+		if err := rows.Scan(&k, &k2, &k3, &t.Extra, &t.Bytes, &t.Wire, &t.Pkts, &t.Flows, &t.Peers, &t.Int); err != nil {
+			return nil, err
+		}
+		t.Key, t.Key2, t.Key3 = k.String, k2.String, k3.String
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// topRowsFit reports whether the flow rows in q's range are few
+// enough for TopNBy to keep its projection of them: the row counts
+// recorded for the sealed files in range, plus a count of the hot
+// table. The bound is what the projection of that many rows costs —
+// a few hundred megabytes at most, against the memory limit every
+// store runs with — and it covers the ranges the Top page is actually
+// browsed at (an hour of a busy installation is about half a million
+// rows) while leaving very large ranges to the unkept shape, which
+// needs no memory for the projection at all. An error answers no:
+// keeping nothing is always safe, just slower.
+func (s *Store) topRowsFit(q Query) bool {
+	var seg int64
+	if err := s.DB.QueryRow(`SELECT CAST(coalesce(sum(rows), 0) AS BIGINT) FROM segments WHERE max_ts >= ? AND min_ts < ?`,
+		q.From.UTC(), q.To.UTC()).Scan(&seg); err != nil {
+		return false
+	}
+	var hot int64
+	if err := s.DB.QueryRow(`SELECT count(*) FROM hot WHERE ts >= ? AND ts < ?`,
+		q.From.UTC(), q.To.UTC()).Scan(&hot); err != nil {
+		return false
+	}
+	return seg+hot <= 2_000_000
+}
+
+func (s *Store) topRollup(q Query, rollup string, limit int, order string) ([]TopRow, error) {
+	var sqlq string
+	args := []any{q.From.UTC(), q.To.UTC()}
+	if v, _ := q.view(); v.key == "" {
+		// the summaries of all traffic are kept by the hour: read the
+		// whole buckets that cover the range (a device's summaries are
+		// patched up from the hot table instead, and stay exact)
+		f, t := hourRange(q.From, q.To)
+		args = []any{f, t}
+	}
+	if strings.HasPrefix(rollup, "host:") {
+		role, _ := strconv.Atoi(rollup[5:])
+		sqlq = fmt.Sprintf(`SELECT ip, CAST(CASE WHEN sum(bytes) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(bytes) END AS UBIGINT), CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT), CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT), CAST(CASE WHEN sum(flows) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(flows) END AS UBIGINT), bool_or(internal) FROM {r_host}
+			WHERE ts >= ? AND ts < ? AND role = %d GROUP BY 1 ORDER BY %s LIMIT %d`, role, order, limit)
+	} else {
+		sqlq = fmt.Sprintf(`SELECT val, CAST(CASE WHEN sum(bytes) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(bytes) END AS UBIGINT), CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT), CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT), CAST(CASE WHEN sum(flows) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(flows) END AS UBIGINT), false FROM {r_dim}
+			WHERE ts >= ? AND ts < ? AND dim = ? GROUP BY 1 ORDER BY %s LIMIT %d`, order, limit)
+		args = append(args, rollup)
+	}
+	sqlq, pre, err := s.rollups(q, sqlq)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.DB.Query(sqlq, append(pre, args...)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []TopRow
+	for rows.Next() {
+		var t TopRow
+		if err := rows.Scan(&t.Key, &t.Bytes, &t.Wire, &t.Pkts, &t.Flows, &t.Int); err != nil {
+			return nil, err
+		}
+		if rollup == "port" || rollup == "asn" {
+			// value carries "key\textra"
+			if i := strings.IndexByte(t.Key, '\t'); i >= 0 {
+				t.Key, t.Extra = t.Key[:i], t.Key[i+1:]
+			}
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// Series is a time series split by one dimension.
+type Series struct {
+	Step   int64       `json:"step"` // seconds
+	Times  []int64     `json:"times"`
+	Names  []string    `json:"names"`
+	Values [][]float64 `json:"values"` // [series][time] bits (or packets) per second
+	// SeriesBy only: each series' total over the range (bytes or packets),
+	// and how many distinct values there were
+	Totals   []float64 `json:"totals,omitempty"`
+	Distinct int       `json:"distinct,omitempty"`
+	// SettledTo is the moment up to which the data is complete, in
+	// milliseconds. Buckets after it are drawn, because leaving the newest
+	// data off a live chart is its own kind of lie, but they are still
+	// filling: the page marks them rather than letting a half-counted
+	// minute look like a fall in traffic. Zero when the whole range is
+	// settled, which is every range that does not reach up to now.
+	SettledTo int64 `json:"settled_to,omitempty"`
+	// DataFrom is when the stored data begins, in milliseconds, when that
+	// is inside the range. Buckets that end before it are not "no traffic"
+	// but "not collecting yet": the page leaves them out instead of
+	// drawing a flat line at zero.
+	DataFrom int64 `json:"data_from,omitempty"`
+}
+
+// bucketSecs is how many seconds of bucket i the data can cover, the
+// divisor that turns its bytes into a rate. A bucket is cut short at the
+// start by the beginning of the data (an installation that started
+// mid-bucket) and at the end by the end of the range. Rows are kept per
+// minute, so a range that ends in the past covers its last minute whole:
+// that minute's row is in it. A range that ends now only covers up to now.
+func bucketSecs(start time.Time, i int, step time.Duration, to, dataFrom time.Time) float64 {
+	b := start.Add(time.Duration(i) * step)
+	e := b.Add(step)
+	end := to
+	if time.Since(to) > 2*time.Minute {
+		if c := to.Truncate(time.Minute); c.Before(to) {
+			end = c.Add(time.Minute)
+		}
+	}
+	if e.After(end) {
+		e = end
+	}
+	// a bucket with data in it that ends before the start of the data
+	// (rows older than the start known a moment ago) counts whole
+	if dataFrom.After(b) && dataFrom.Before(e) {
+		b = dataFrom
+	}
+	return max(1, e.Sub(b).Seconds())
+}
+
+// dataFromMark is the DataFrom of a series starting at start, or 0.
+func dataFromMark(start, dataFrom time.Time) int64 {
+	if dataFrom.IsZero() || !dataFrom.After(start) {
+		return 0
+	}
+	return dataFrom.UnixMilli()
+}
+
+// settle is how long the data of a moment keeps arriving after it. The
+// pipeline measures it from the flows themselves: about a second for sFlow,
+// up to the active timeout for NetFlow and IPFIX (capped at 2 minutes).
+var settleNs atomic.Int64
+
+func init() { settleNs.Store(int64(time.Minute)) }
+
+// SetSettle records the current delay of incoming data.
+func SetSettle(d time.Duration) { settleNs.Store(int64(d)) }
+
+// Settle is the current delay of incoming data.
+func Settle() time.Duration { return time.Duration(settleNs.Load()) }
+
+// settledTo is the moment up to which the data of a range that ends now is
+// complete. Rows are kept per minute: with data that arrives at once
+// (sFlow) the current minute is complete as far as it goes; with delayed
+// data (NetFlow, IPFIX) only the minutes older than the settle delay are.
+// Summaries are written once a minute, a minute later.
+//
+// A range that ends in the past is complete throughout, and gets back the
+// end it was given.
+func settledTo(to time.Time, rollup bool) time.Time {
+	now, s := time.Now(), Settle()
+	if rollup {
+		s += time.Minute
+	}
+	if now.Sub(to) > s+2*time.Minute {
+		return to // a range in the past
+	}
+	e := now
+	if s > 5*time.Second {
+		e = now.Add(-s).Truncate(time.Minute)
+	}
+	if e.Before(to) {
+		return e
+	}
+	return to
+}
+
+// unsettledMark reports the boundary to put on a series, in milliseconds,
+// or 0 when there is nothing to mark because the range is complete.
+func unsettledMark(settled, to time.Time) int64 {
+	if !settled.Before(to) {
+		return 0
+	}
+	return settled.UnixMilli()
+}
+
+// bucketCount is the number of buckets from start up to to; a last bucket
+// that would cover less than 15 seconds is left out.
+func bucketCount(start, to time.Time, step time.Duration) int {
+	n := int(to.Sub(start)/step) + 1
+	if n > 1 && to.Sub(start.Add(time.Duration(n-1)*step)) < 15*time.Second {
+		n--
+	}
+	return n
+}
+
+// StepFor picks a bucket size giving at most ~300 points.
+func StepFor(span time.Duration) time.Duration {
+	for _, s := range []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute, time.Hour, 3 * time.Hour, 6 * time.Hour, 24 * time.Hour} {
+		if span/s <= 300 {
+			return s
+		}
+	}
+	return 24 * time.Hour
+}
+
+// SeriesBy returns bits/s over time split by app (top k, rest as "__other__").
+func (s *Store) SeriesByApp(q Query, k int) (*Series, error) {
+	step := StepFor(q.span())
+	q.From = q.localTrunc(q.From, step)
+	rollup := s.rollupOK(q, false)
+	settled := settledTo(q.To, rollup)
+	var rows *sql.Rows
+	var err error
+	bucket := q.bucketSQL(step)
+	if rollup {
+		sqlq, pre, rerr := s.rollups(q, fmt.Sprintf(`SELECT %s AS b, app, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT) FROM {r_ts} WHERE ts >= ? AND ts < ? GROUP BY 1,2`, bucket))
+		if rerr != nil {
+			return nil, rerr
+		}
+		rows, err = s.DB.Query(sqlq, append(pre, q.From.UTC(), q.To.UTC())...)
+	} else {
+		where, args, werr := q.where()
+		if werr != nil {
+			return nil, werr
+		}
+		rows, err = s.DB.Query(fmt.Sprintf(`SELECT %s AS b, app, CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT) FROM %s WHERE %s GROUP BY 1,2`, bucket, s.Source(q.From, q.To), where), args...)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	type pt struct {
+		t   time.Time
+		app string
+		v   float64
+	}
+	var pts []pt
+	tot := map[string]float64{}
+	for rows.Next() {
+		var p pt
+		var w uint64
+		if err := rows.Scan(&p.t, &p.app, &w); err != nil {
+			return nil, err
+		}
+		p.v = float64(w)
+		pts = append(pts, p)
+		tot[p.app] += p.v
+	}
+	names := make([]string, 0, len(tot))
+	for n := range tot {
+		names = append(names, n)
+	}
+	// equal totals by name, so the legend keeps its order between redraws
+	sort.Slice(names, func(i, j int) bool {
+		if tot[names[i]] != tot[names[j]] {
+			return tot[names[i]] > tot[names[j]]
+		}
+		return names[i] < names[j]
+	})
+	if len(names) > k {
+		names = append(names[:k:k], "__other__")
+	}
+	idx := map[string]int{}
+	for i, n := range names {
+		idx[n] = i
+	}
+	start := q.localTrunc(q.From, step)
+	n := bucketCount(start, q.To, step)
+	se := &Series{Step: int64(step.Seconds()), Names: names, Values: make([][]float64, len(names))}
+	se.SettledTo = unsettledMark(settled, q.To)
+	dataFrom := s.DataStart()
+	se.DataFrom = dataFromMark(start, dataFrom)
+	for i := 0; i < n; i++ {
+		se.Times = append(se.Times, start.Add(time.Duration(i)*step).UnixMilli())
+	}
+	for i := range se.Values {
+		se.Values[i] = make([]float64, n)
+	}
+	for _, p := range pts {
+		ti := int(p.t.UTC().Sub(start) / step)
+		if ti < 0 || ti >= n {
+			continue
+		}
+		si, ok := idx[p.app]
+		if !ok {
+			si = idx["__other__"]
+		}
+		se.Values[si][ti] += p.v * 8 / bucketSecs(start, ti, step, q.To, dataFrom)
+	}
+	return se, nil
+}
+
+// TotalSeries returns total bits/s over time (one series), used for
+// baselines. It shares SeriesByApp's bucketing.
+func (s *Store) TotalSeries(q Query) (*Series, error) {
+	se, err := s.SeriesByApp(q, 1<<30)
+	if err != nil {
+		return nil, err
+	}
+	tot := make([]float64, len(se.Times))
+	for _, v := range se.Values {
+		for i, x := range v {
+			tot[i] += x
+		}
+	}
+	return &Series{Step: se.Step, Times: se.Times, Names: []string{"total"}, Values: [][]float64{tot}}, nil
+}
+
+// Totals are headline numbers for a range.
+type Totals struct {
+	Bytes     uint64 `json:"bytes"`
+	Wire      uint64 `json:"wire"`
+	Pkts      uint64 `json:"pkts"`
+	Flows     uint64 `json:"flows"`
+	Hosts     uint64 `json:"hosts"`     // internal addresses seen
+	Peers     uint64 `json:"peers"`     // external addresses seen
+	Countries uint64 `json:"countries"` // distinct peer countries
+}
+
+// oneRange runs one summary query over [from, to), substituting the
+// summary tables the query's view calls for.
+func (s *Store) oneRange(q Query, sqlq string, from, to time.Time, dst ...any) error {
+	sqlq, pre, err := s.rollups(q, sqlq)
+	if err != nil {
+		return err
+	}
+	return s.DB.QueryRow(sqlq, append(pre, from.UTC(), to.UTC())...).Scan(dst...)
+}
+
+func (s *Store) Totals(q Query) (Totals, error) {
+	var t Totals
+	if s.rollupOK(q, false) {
+		one := func(sqlq string, dst ...any) error {
+			return s.oneRange(q, sqlq, q.From, q.To, dst...)
+		}
+		if err := one(`SELECT coalesce(CAST(CASE WHEN sum(bytes) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(bytes) END AS UBIGINT),0), coalesce(CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT),0), coalesce(CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT),0), coalesce(CAST(CASE WHEN sum(flows) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(flows) END AS UBIGINT),0) FROM {r_ts} WHERE ts >= ? AND ts < ?`,
+			&t.Bytes, &t.Wire, &t.Pkts, &t.Flows); err != nil {
+			return t, err
+		}
+		// the summaries by dimension and address are kept by the hour
+		// (the ones by time, above, by the minute, and stay exact):
+		// read the whole buckets that cover the range, as Top does
+		hf, ht := q.From, q.To
+		if v, _ := q.view(); v.key == "" {
+			hf, ht = hourRange(q.From, q.To)
+		}
+		s.oneRange(q, `SELECT count(DISTINCT val) FROM {r_dim} WHERE ts >= ? AND ts < ? AND dim = 'country' AND val NOT IN ('', '__internal__')`, hf, ht, &t.Countries)
+		if v, _ := q.view(); v.key == "" {
+			s.oneRange(q, `SELECT count(DISTINCT ip) FILTER (WHERE internal), count(DISTINCT ip) FILTER (WHERE NOT internal) FROM {r_host} WHERE ts >= ? AND ts < ?`, hf, ht, &t.Hosts, &t.Peers)
+			return t, nil
+		}
+		// a device or an interface has no summary by address: its
+		// addresses are counted from the flow records
+		where, args, err := q.where()
+		if err != nil {
+			return t, err
+		}
+		err = s.DB.QueryRow(s.hostCounts(q, where), args...).Scan(&t.Hosts, &t.Peers)
+		return t, err
+	}
+	where, args, err := q.where()
+	if err != nil {
+		return t, err
+	}
+	src := s.Source(q.From, q.To)
+	err = s.DB.QueryRow(fmt.Sprintf(`SELECT coalesce(CAST(CASE WHEN sum(bytes) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(bytes) END AS UBIGINT),0), coalesce(CAST(CASE WHEN sum(wire) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(wire) END AS UBIGINT),0), coalesce(CAST(CASE WHEN sum(pkts) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(pkts) END AS UBIGINT),0), coalesce(CAST(CASE WHEN sum(flows) > 18446744073709551615::HUGEINT THEN 18446744073709551615::HUGEINT ELSE sum(flows) END AS UBIGINT),0),
+		count(DISTINCT nullif(peer_cc, ''))
+		FROM %s WHERE %s`, src, where), args...).
+		Scan(&t.Bytes, &t.Wire, &t.Pkts, &t.Flows, &t.Countries)
+	if err != nil {
+		return t, err
+	}
+	err = s.DB.QueryRow(s.hostCounts(q, where), args...).Scan(&t.Hosts, &t.Peers)
+	return t, err
+}
+
+// hostCounts counts the internal addresses on either side, each once (a
+// host is often a client in one conversation and a server in another),
+// and the external ones. They are counted by grouping them, which spills
+// to disk where count(DISTINCT) over a week of addresses ran out of memory.
+func (s *Store) hostCounts(q Query, where string) string {
+	return fmt.Sprintf(`WITH x AS NOT MATERIALIZED (SELECT client, server, cli_int, srv_int FROM %s WHERE %s)
+		SELECT (SELECT count(*) FROM (SELECT client FROM x WHERE cli_int UNION SELECT server FROM x WHERE srv_int)),
+			(SELECT count(*) FROM (SELECT CASE WHEN NOT srv_int THEN server ELSE client END FROM x WHERE NOT srv_int OR NOT cli_int GROUP BY 1))`,
+		s.Source(q.From, q.To), where)
+}
+
+// Record is one detail row for the flow records view.
+type Record struct {
+	TS       int64   `json:"ts"`
+	Client   string  `json:"client"`
+	Server   string  `json:"server"`
+	CPort    uint16  `json:"cport"`
+	SvcPort  uint16  `json:"port"`
+	Proto    uint8   `json:"proto"`
+	App      string  `json:"app"`
+	CC       string  `json:"cc"`
+	ASN      uint32  `json:"asn"`
+	Encap    uint8   `json:"encap"`
+	Wire     uint64  `json:"wire"`
+	Pkts     uint64  `json:"pkts"`
+	Exporter string  `json:"exporter"`
+	InIf     uint32  `json:"in_if"`
+	OutIf    uint32  `json:"out_if"`
+	VLAN     uint16  `json:"vlan"`
+	Flags    uint8   `json:"tcp_flags"`
+	Mult     float32 `json:"mult"`
+	Dir      uint8   `json:"dir"`
+	Threat   string  `json:"threat,omitempty"`
+}
+
+func (s *Store) Records(q Query, limit int, offset ...int) ([]Record, error) {
+	if limit <= 0 || limit > 2000 {
+		limit = 200
+	}
+	off := 0
+	if len(offset) > 0 && offset[0] > 0 {
+		off = offset[0]
+	}
+	where, args, err := q.where()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.DB.Query(fmt.Sprintf(`SELECT ts, client, server, CASE WHEN client = src THEN sport ELSE dport END, svc_port, proto, app,
+		peer_cc, peer_asn, encap, wire, pkts, exporter, in_if, out_if, vlan, tcp_flags, mult, dir, threat
+		FROM %s WHERE %s ORDER BY ts DESC, wire DESC LIMIT %d OFFSET %d`, s.Source(q.From, q.To), where, limit, off), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Record
+	for rows.Next() {
+		var r Record
+		var ts time.Time
+		if err := rows.Scan(&ts, &r.Client, &r.Server, &r.CPort, &r.SvcPort, &r.Proto, &r.App, &r.CC, &r.ASN, &r.Encap,
+			&r.Wire, &r.Pkts, &r.Exporter, &r.InIf, &r.OutIf, &r.VLAN, &r.Flags, &r.Mult, &r.Dir, &r.Threat); err != nil {
+			return nil, err
+		}
+		r.TS = ts.UnixMilli()
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// SankeyLink is one segment→app or app→country link.
+type SankeyLink struct {
+	Seg, App, CC string
+	Wire         uint64
+}
+
+// Sankey modes: the three columns of the flow paths chart.
+var sankeyCols = map[string][3]string{
+	// the internal side of each conversation (the client, or the server of
+	// inbound traffic) → application → remote country
+	"host":    {"CASE WHEN dir = 2 THEN server ELSE client END", "app", sankeyCC},
+	"segment": {"segment", "app", sankeyCC},
+	"conv":    {"client", portProtoExpr, "server"},
+}
+
+const sankeyCC = `CASE WHEN dir = 3 THEN '__internal__' WHEN peer_cc = '' THEN '__unknown__' ELSE peer_cc END`
+
+// Sankey returns traffic by the mode's three columns. The first and last
+// columns keep their top n0 and n2 values; the rest are "__other__".
+func (s *Store) Sankey(q Query, mode string, n0, n2 int) ([]SankeyLink, error) {
+	where, args, err := q.where()
+	if err != nil {
+		return nil, err
+	}
+	c, ok := sankeyCols[mode]
+	if !ok {
+		return nil, fmt.Errorf("unknown flow paths mode %q", mode)
+	}
+	// b is the rows, read again by each step rather than summed by all
+	// three columns first: by client and server, a week is a group for
+	// nearly every row, more than the memory there is
+	sqlq := fmt.Sprintf(`WITH b AS NOT MATERIALIZED (SELECT %s AS c0, %s AS c1, %s AS c2, wire AS w FROM %s WHERE %s),
+			t0 AS (SELECT c0 FROM b GROUP BY c0 ORDER BY sum(w) DESC LIMIT %d),
+			t2 AS (SELECT c2 FROM b GROUP BY c2 ORDER BY sum(w) DESC LIMIT %d)
+		SELECT CASE WHEN c0 IN (SELECT c0 FROM t0) THEN c0 ELSE '__other__' END,
+			c1, CASE WHEN c2 IN (SELECT c2 FROM t2) THEN c2 ELSE '__other__' END, sum(w)
+		FROM b GROUP BY 1,2,3`, c[0], c[1], c[2], s.Source(q.From, q.To), where, n0, n2)
+	rows, err := s.DB.Query(sqlq, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []SankeyLink
+	for rows.Next() {
+		var l SankeyLink
+		if err := rows.Scan(&l.Seg, &l.App, &l.CC, &l.Wire); err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}
+
+// RecordCounts counts the rows matching q (a flow that spans minutes has
+// a row per minute) and the flows themselves, in all and the flows per time
+// bucket (the same buckets as the charts). A flow counts in the minute it
+// ended, where its row carries flows = 1.
+func (s *Store) RecordCounts(q Query) (total, flows int64, se *Series, err error) {
+	step := StepFor(q.span())
+	q.From = q.localTrunc(q.From, step)
+	where, args, err := q.where()
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	rows, err := s.DB.Query(fmt.Sprintf(`SELECT %s, count(*), coalesce(sum(flows), 0) FROM %s WHERE %s GROUP BY 1`,
+		q.bucketSQL(step), s.Source(q.From, q.To), where), args...)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	defer rows.Close()
+	n := int(q.To.Sub(q.From)/step) + 1
+	se = &Series{Step: int64(step.Seconds()), Names: []string{"flows"}, Values: [][]float64{make([]float64, n)}}
+	for i := 0; i < n; i++ {
+		se.Times = append(se.Times, q.From.Add(time.Duration(i)*step).UnixMilli())
+	}
+	for rows.Next() {
+		var t time.Time
+		var c, f int64
+		if err := rows.Scan(&t, &c, &f); err != nil {
+			return 0, 0, nil, err
+		}
+		if i := int(t.UTC().Sub(q.From) / step); i >= 0 && i < n {
+			se.Values[0][i] += float64(f)
+		}
+		total += c
+		flows += f
+	}
+	return total, flows, se, rows.Err()
+}

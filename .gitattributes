@@ -1,0 +1,4 @@
+# The TopN golden file is compared against generated output that uses
+# LF line endings only; never let a checkout convert it to CRLF (the
+# default git behaviour on Windows).
+internal/store/testdata/topn_golden.txt text eol=lf
