@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -239,7 +240,13 @@ func (inv *Inventory) Parse(text string) error {
 			words := []string{}
 			for _, w := range f[3:] {
 				if strings.HasPrefix(w, "speed=") {
-					it.Speed, _ = strconv.ParseUint(strings.TrimPrefix(w, "speed="), 10, 64)
+					// a speed that cannot be read ("fast") is refused: read
+					// as 0 it would quietly drop the interface's utilisation
+					sp, err := parseSpeed(strings.TrimPrefix(w, "speed="))
+					if err != nil {
+						return bad("speed= is bits per second, e.g. speed=1000000000 or speed=1G: " + w)
+					}
+					it.Speed = sp
 					continue
 				}
 				if strings.HasPrefix(w, "tag=") {
@@ -1124,4 +1131,31 @@ func (db *ASNDB) TableFile() string {
 		return ""
 	}
 	return filepath.Base(db.tsvFile)
+}
+
+// parseSpeed reads an interface speed in bits per second: a plain number,
+// or one with a decimal K, M, G or T after it (speed=10G). Zero is
+// refused: it is no speed at all.
+func parseSpeed(v string) (uint64, error) {
+	mul := uint64(1)
+	if n := len(v); n > 0 {
+		switch v[n-1] {
+		case 'k', 'K':
+			mul = 1e3
+		case 'm', 'M':
+			mul = 1e6
+		case 'g', 'G':
+			mul = 1e9
+		case 't', 'T':
+			mul = 1e12
+		}
+		if mul > 1 {
+			v = v[:n-1]
+		}
+	}
+	n, err := strconv.ParseUint(v, 10, 64)
+	if err != nil || n == 0 || n > math.MaxUint64/mul {
+		return 0, errors.New("bad speed")
+	}
+	return n * mul, nil
 }
