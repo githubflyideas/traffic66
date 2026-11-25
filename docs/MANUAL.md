@@ -541,7 +541,7 @@ and the [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (English
 binding): free for evaluation and for organizations under 50 people;
 larger organizations register after 30 days of production use; selling,
 hosting for others or competing products need a commercial licence. The foot
-of each page shows the 8-digit installation number; send it to the author,
+of each page shows the installation number; send it to the author,
 and put the `license.json` you get back in the data directory. Contact:
 <route66traffic66@gmail.com>.
 

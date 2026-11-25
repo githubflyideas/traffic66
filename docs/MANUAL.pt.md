@@ -549,7 +549,7 @@ inglês é o que vale): gratuito para avaliação e para organizações com meno
 de 50 pessoas; organizações maiores se registram após 30 dias de uso em
 produção; vender, hospedar para terceiros ou produtos concorrentes exigem
 uma licença comercial. Nada é desligado, nunca. O rodapé de cada página
-mostra o número de instalação de 8 dígitos; envie-o ao autor e coloque o
+mostra o número de instalação; envie-o ao autor e coloque o
 `license.json` que receber de volta no diretório de dados. Contato:
 <route66traffic66@gmail.com>.
 

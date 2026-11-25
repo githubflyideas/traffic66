@@ -2,9 +2,8 @@ package license
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"sync"
@@ -57,11 +56,15 @@ func installation(dir string) (string, error) {
 		}
 	}
 	if id == "" {
-		n, err := rand.Int(rand.Reader, big.NewInt(90000000))
-		if err != nil {
+		// A new installation number is 128 random bits, hex encoded.
+		// The 8-digit numbers the first releases handed out had about
+		// 26 bits, which is few enough to guess a neighbour's; an
+		// installation that already has a number keeps it, above.
+		var b [16]byte
+		if _, err := rand.Read(b[:]); err != nil {
 			return "", err
 		}
-		id = fmt.Sprintf("%08d", n.Int64()+10000000)
+		id = hex.EncodeToString(b[:])
 	}
 	if err := os.WriteFile(path, []byte(id+"\n"), 0o644); err != nil {
 		return "", err

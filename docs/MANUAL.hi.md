@@ -540,7 +540,7 @@ data directory में `raw/` (detail, हर घंटे की एक फ�
 available (अंग्रेज़ी पाठ ही बाध्यकारी है): evaluation के लिए और 50 से कम लोगों
 वाले संगठनों के लिए मुफ़्त; बड़े संगठन production use के 30 दिन बाद रजिस्टर
 करते हैं; बेचने, दूसरों के लिए host करने या प्रतिस्पर्धी products के लिए
-commercial licence चाहिए। कभी कुछ बंद नहीं होता। हर पेज के नीचे 8 अंकों का
+commercial licence चाहिए। कभी कुछ बंद नहीं होता। हर पेज के नीचे
 installation number दिखता है; उसे लेखक को भेजें, और जो `license.json` वापस
 मिले उसे data directory में रखें। संपर्क:
 <route66traffic66@gmail.com>।

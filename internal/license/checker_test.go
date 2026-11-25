@@ -1,7 +1,8 @@
 package license
 
 import (
-	"crypto/ed25519"
+	"crypto/elliptic"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,8 +15,11 @@ func TestOpenGivesAnInstallationNumber(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(c.Install) != 8 {
+	if len(c.Install) != 32 {
 		t.Fatalf("installation number %q", c.Install)
+	}
+	if _, err := hex.DecodeString(c.Install); err != nil {
+		t.Fatalf("installation number %q is not hex: %v", c.Install, err)
 	}
 	if c.State().Registered() {
 		t.Fatal("a fresh data directory is not registered")
@@ -70,12 +74,7 @@ func TestCheckPicksUpALicence(t *testing.T) {
 	}
 	id := c.Install
 
-	seed := make([]byte, ed25519.SeedSize)
-	for i := range seed {
-		seed[i] = byte(i + 1)
-	}
-	priv := ed25519.NewKeyFromSeed(seed)
-	pub := priv.Public().(ed25519.PublicKey)
+	priv, pub := testKey(t)
 	c.Ring = SingleKey(pub) // this build does not ship the test key
 
 	f := File{
@@ -83,7 +82,7 @@ func TestCheckPicksUpALicence(t *testing.T) {
 		License: TypeSubscription, Tier: TierStandard, Expires: str("2027-10-31"),
 		MaxUsers: 25, Features: []string{FeatSyslog, FeatDCIM},
 	}
-	f.Signature = b64.EncodeToString(ed25519.Sign(priv, Message(f)))
+	f.Signature = signMsg(t, priv, Message(f))
 	if err := Save(c.Path, f); err != nil {
 		t.Fatal(err)
 	}
@@ -112,8 +111,8 @@ func TestReleaseKeysParse(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for _, k := range r.Keys {
-		if len(k.Pub) != ed25519.PublicKeySize {
-			t.Fatalf("key %s is not an Ed25519 key", k.ID)
+		if !isP521(k.Pub) || k.Pub.Curve != elliptic.P521() {
+			t.Fatalf("key %s is not an ECDSA P-521 key", k.ID)
 		}
 		if seen[k.ID] {
 			t.Fatalf("key %s appears twice", k.ID)

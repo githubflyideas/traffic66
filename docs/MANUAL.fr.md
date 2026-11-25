@@ -564,7 +564,7 @@ moins de 50 personnes ; les organisations plus grandes s'enregistrent après
 30 jours d'utilisation en production ; la vente, l'hébergement pour des
 tiers ou les produits concurrents nécessitent une licence commerciale. Rien
 n'est jamais désactivé. Le bas de chaque page affiche le numéro
-d'installation à 8 chiffres ; envoyez-le à l'auteur et placez le
+d'installation ; envoyez-le à l'auteur et placez le
 `license.json` reçu en retour dans le répertoire de données. Contact :
 <route66traffic66@gmail.com>.
 

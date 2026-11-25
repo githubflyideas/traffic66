@@ -554,7 +554,7 @@ en inglés es el vinculante): gratis para evaluación y para organizaciones de
 menos de 50 personas; las organizaciones más grandes se registran tras 30
 días de uso en producción; vender, alojar para terceros o productos
 competidores requieren una licencia comercial. Nunca se desactiva nada. El
-pie de cada página muestra el número de instalación de 8 dígitos; envíelo
+pie de cada página muestra el número de instalación; envíelo
 al autor y ponga el `license.json` que reciba en el directorio de datos.
 Contacto: <route66traffic66@gmail.com>.
 

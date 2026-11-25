@@ -550,7 +550,7 @@ Inggris yang mengikat): gratis untuk evaluasi dan untuk organisasi dengan
 kurang dari 50 orang; organisasi yang lebih besar mendaftar setelah 30 hari
 penggunaan produksi; menjual, meng-host untuk pihak lain, atau produk pesaing
 memerlukan lisensi komersial. Tidak ada yang pernah dimatikan. Bagian bawah
-setiap halaman menampilkan nomor instalasi 8 digit; kirim nomor itu kepada
+setiap halaman menampilkan nomor instalasi; kirim nomor itu kepada
 pembuatnya, lalu letakkan `license.json` yang Anda terima di direktori data.
 Kontak: <route66traffic66@gmail.com>.
 

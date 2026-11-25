@@ -452,7 +452,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 
 ### 许可
 
-以 [PolyForm Noncommercial License 1.0.0](../LICENSE.md) 和 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) 公开源码（以英文文本为准）：评估免费，少于 50 人的组织免费；更大的组织在生产使用 30 天后需注册；销售、为他人托管或提供竞争性产品需要商业许可。任何功能都不会被关闭。每个页面底部显示 8 位安装编号；把它发给作者，并把收到的 `license.json` 放进数据目录。联系方式：<route66traffic66@gmail.com>。
+以 [PolyForm Noncommercial License 1.0.0](../LICENSE.md) 和 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) 公开源码（以英文文本为准）：评估免费，少于 50 人的组织免费；更大的组织在生产使用 30 天后需注册；销售、为他人托管或提供竞争性产品需要商业许可。任何功能都不会被关闭。每个页面底部显示安装编号；把它发给作者，并把收到的 `license.json` 放进数据目录。联系方式：<route66traffic66@gmail.com>。
 
 管理员也可以在页面上安装：**设定 → 注册与购买**，粘贴 `license.json` 的内容或选择该文件，然后点 **安装**。写入之前会先校验；被拒绝时会说明原因。
 

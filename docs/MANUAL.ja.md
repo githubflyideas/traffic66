@@ -452,7 +452,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 
 ### ライセンス
 
-[PolyForm Noncommercial License 1.0.0](../LICENSE.md) と [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)（英語版が正本）のもとでのソースアベイラブルです。評価用途と 50 人未満の組織は無料。それより大きな組織は本番利用 30 日後に登録が必要です。販売、他者向けのホスティング、競合製品には商用ライセンスが必要です。機能が止まることは一切ありません。各ページの下部に 8 桁のインストール番号が表示されるので、それを作者に送り、返ってきた `license.json` をデータディレクトリに置いてください。連絡先：<route66traffic66@gmail.com>。
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) と [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)（英語版が正本）のもとでのソースアベイラブルです。評価用途と 50 人未満の組織は無料。それより大きな組織は本番利用 30 日後に登録が必要です。販売、他者向けのホスティング、競合製品には商用ライセンスが必要です。機能が止まることは一切ありません。各ページの下部に インストール番号が表示されるので、それを作者に送り、返ってきた `license.json` をデータディレクトリに置いてください。連絡先：<route66traffic66@gmail.com>。
 
 管理者は画面から導入することもできます。**設定 → 登録と購入** で `license.json` の内容を貼り付けるかファイルを選び、**導入** を押します。書き込む前に確認され、受け付けられない場合は理由が表示されます。
 
