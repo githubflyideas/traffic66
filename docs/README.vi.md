@@ -85,8 +85,8 @@ Sau đó:
 
 Trong giao diện web: **Trợ giúp** trên menu. Trên GitHub: [MANUAL.vi.md](MANUAL.vi.md)
 
-15 ngôn ngữ. Miễn phí để dùng thử và cho tổ chức dưới 100 người ([giấy phép](../LICENSE.md)).
+15 ngôn ngữ. Miễn phí để dùng thử và cho tổ chức dưới 50 người ([giấy phép](../LICENSE.md)).
 
-- **Miễn phí**: mọi tổ chức được đánh giá, thử nghiệm và trình diễn không giới hạn thời gian; dùng thực tế miễn phí cho tổ chức dưới 100 người (nhân viên cộng nhà thầu) và cho mục đích phi thương mại. Tổ chức lớn hơn: dùng thực tế 30 ngày, sau đó cần đăng ký. Chi tiết: [LICENSE.md](../LICENSE.md), [Additional Use Grant](../ADDITIONAL-USE-GRANT.md).
+- **Miễn phí**: mọi tổ chức được đánh giá, thử nghiệm và trình diễn không giới hạn thời gian; dùng thực tế miễn phí cho tổ chức dưới 50 người (nhân viên cộng nhà thầu) và cho mục đích phi thương mại. Tổ chức lớn hơn: dùng thực tế 30 ngày, sau đó cần đăng ký. Chi tiết: [LICENSE.md](../LICENSE.md), [Additional Use Grant](../ADDITIONAL-USE-GRANT.md).
 - **Chưa đăng ký**: báo cáo và biểu đồ có dấu "DÙNG THỬ"; tối đa 3 tài khoản web.
 - **Đã đăng ký**: không còn dấu. Liên hệ: route66traffic66@gmail.com.

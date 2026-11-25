@@ -11,7 +11,7 @@
 - 用接口计数器（sFlow 或 SNMP）校验自己的统计结果，并说明对不上的原因。
 - 找出扫描、暴力破解、横向移动、异常上传、泛洪和威胁情报流量，采样数据同样适用。
 - `traffic66 capture.pcap` 直接分析抓包文件，无需任何配置。
-- 支持 15 种语言。评估免费，少于 100 人的组织免费（[许可](#licence)）。
+- 支持 15 种语言。评估免费，少于 50 人的组织免费（[许可](#licence)）。
 
 ![概览：未处理的发现、按应用划分的带宽与昨天同一时间对比、主要客户端和服务](images/overview.png)
 
@@ -427,7 +427,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 | `-data` | 程序旁边的 `traffic66-data` | 数据目录 |
 | `-addr` | `:8066` | Web 界面；`127.0.0.1:8066` 表示仅本机可访问 |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP 采集器；留空则禁用 |
-| `-retention-days` | `30` | 流明细保留天数；汇总数据保留 400 天 |
+| `-retention-days` | `7` | 流明细保留天数；汇总数据保留 180 天 |
 | `-memory` | `0.10` | 数据库缓存可使用的内存比例 |
 | `-sampling-wait` | `5m` | 记录等待采样率的时间 |
 | `-capture` | | 本机网卡（可重复指定） |
@@ -445,7 +445,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 
 ### 许可
 
-以 [PolyForm Noncommercial License 1.0.0](../LICENSE.md) 和 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) 公开源码（以英文文本为准）：评估免费，少于 100 人的组织免费；更大的组织在生产使用 30 天后需注册；销售、为他人托管或提供竞争性产品需要商业许可。任何功能都不会被关闭。每个页面底部显示 8 位安装编号；把它发给作者，并把收到的 `license.json` 放进数据目录。联系方式：<route66traffic66@gmail.com>。
+以 [PolyForm Noncommercial License 1.0.0](../LICENSE.md) 和 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) 公开源码（以英文文本为准）：评估免费，少于 50 人的组织免费；更大的组织在生产使用 30 天后需注册；销售、为他人托管或提供竞争性产品需要商业许可。任何功能都不会被关闭。每个页面底部显示 8 位安装编号；把它发给作者，并把收到的 `license.json` 放进数据目录。联系方式：<route66traffic66@gmail.com>。
 
 管理员也可以在页面上安装：**设定 → 注册与购买**，粘贴 `license.json` 的内容或选择该文件，然后点 **安装**。写入之前会先校验；被拒绝时会说明原因。
 

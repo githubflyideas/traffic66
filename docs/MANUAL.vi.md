@@ -18,7 +18,7 @@ Elasticsearch, Kafka hay một cơ sở dữ liệu riêng.
 - Đối chiếu số liệu với bộ đếm giao diện (sFlow hoặc SNMP) và giải thích vì sao chúng chênh lệch.
 - Phát hiện quét mạng, dò mật khẩu, di chuyển ngang (lateral movement), tải lên bất thường, tấn công flood và lưu lượng liên quan đến danh sách mối đe dọa, kể cả khi lấy mẫu.
 - `traffic66 capture.pcap` phân tích file bắt gói tin mà không cần cấu hình gì.
-- 15 ngôn ngữ. Miễn phí để dùng thử và cho tổ chức dưới 100 người ([giấy phép](#licence)).
+- 15 ngôn ngữ. Miễn phí để dùng thử và cho tổ chức dưới 50 người ([giấy phép](#licence)).
 
 ![Tổng quan: các phát hiện đang mở, băng thông theo ứng dụng so với cùng thời điểm hôm qua, các client và dịch vụ hàng đầu](images/overview.png)
 
@@ -508,7 +508,7 @@ Ba điều khiến luồng này đáng để đếm chứ không chỉ để đ�
 | `-data` | `traffic66-data` cạnh chương trình | thư mục dữ liệu |
 | `-addr` | `:8066` | giao diện web; `127.0.0.1:8066` để chỉ truy cập từ máy này |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | bộ thu UDP; để trống để tắt |
-| `-retention-days` | `30` | số ngày giữ dữ liệu luồng chi tiết; dữ liệu tổng hợp được giữ 400 ngày |
+| `-retention-days` | `7` | số ngày giữ dữ liệu luồng chi tiết; dữ liệu tổng hợp được giữ 180 ngày |
 | `-memory` | `0.10` | tỷ lệ RAM dành cho cache cơ sở dữ liệu |
 | `-sampling-wait` | `5m` | thời gian bản ghi chờ tỷ lệ lấy mẫu |
 | `-capture` | | giao diện cục bộ (dùng được nhiều lần) |
@@ -532,7 +532,7 @@ Một thẻ của trang danh mục thiết bị. Bức tranh về nơi các lu�
 
 Mã nguồn công khai theo [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
 và [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (bản tiếng Anh
-có giá trị pháp lý): miễn phí để dùng thử và cho tổ chức dưới 100 người; tổ
+có giá trị pháp lý): miễn phí để dùng thử và cho tổ chức dưới 50 người; tổ
 chức lớn hơn đăng ký sau 30 ngày sử dụng thực tế; bán lại, cung cấp dịch vụ
 lưu trữ cho bên khác hoặc sản phẩm cạnh tranh cần giấy phép thương mại. Không
 có tính năng nào bị khóa. Cuối mỗi trang hiển thị mã cài đặt 8 chữ số; gửi mã

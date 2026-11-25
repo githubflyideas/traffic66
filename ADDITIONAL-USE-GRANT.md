@@ -1,4 +1,4 @@
-# Traffic66 Additional Use Grant 1.0
+# Traffic66 Additional Use Grant 1.1
 
 Required Notice: Copyright 2026 flyideas (https://github.com/githubflyideas/traffic66)
 
@@ -9,7 +9,7 @@ Traffic66 ("the Software") is licensed under the PolyForm Noncommercial License 
 ## Definitions
 
 - **Organization**: a legal entity together with all entities that control, are controlled by, or are under common control with it.
-- **Small Organization**: an Organization with fewer than 100 total individuals working as employees and independent contractors.
+- **Small Organization**: an Organization with fewer than 50 total individuals working as employees and independent contractors.
 - **Production Use**: use of the Software to process real network traffic or data in support of an Organization's ongoing operations, as opposed to evaluation, testing, development or demonstration.
 - **Registration License**: a written license, license file or license key issued by the licensor that permits Production Use beyond this grant.
 - **Competing Offering**: a product or service offered to third parties for a fee or other commercial benefit that provides network traffic analysis functionality substantially similar to the Software and that includes the Software, or any part or modification of it.
@@ -74,7 +74,7 @@ The English text is binding. Translations are for reference only.
 
 ---
 
-# Traffic66 Autorisation d'utilisation supplémentaire 1.0 (traduction française de référence ; seul le texte anglais fait foi)
+# Traffic66 Autorisation d'utilisation supplémentaire 1.1 (traduction française de référence ; seul le texte anglais fait foi)
 
 ## Relation avec la licence de base
 
@@ -83,7 +83,7 @@ Traffic66 (« le Logiciel ») est concédé sous la PolyForm Noncommercial Licen
 ## Définitions
 
 - **Organisation** : une entité juridique ainsi que toutes les entités qui la contrôlent, qu'elle contrôle ou qui sont placées avec elle sous un contrôle commun.
-- **Petite organisation** : une Organisation comptant au total moins de 100 personnes, salariés et travailleurs indépendants confondus.
+- **Petite organisation** : une Organisation comptant au total moins de 50 personnes, salariés et travailleurs indépendants confondus.
 - **Utilisation en production** : l'utilisation du Logiciel pour traiter du trafic réseau ou des données réels au service des activités courantes d'une Organisation, par opposition à l'évaluation, aux tests, au développement ou à la démonstration.
 - **Licence d'enregistrement** : une licence écrite, un fichier de licence ou une clé de licence émis par le concédant et permettant une Utilisation en production au-delà de la présente autorisation.
 - **Offre concurrente** : un produit ou service proposé à des tiers contre rémunération ou autre avantage commercial, offrant des fonctions d'analyse du trafic réseau substantiellement similaires à celles du Logiciel et incluant le Logiciel, ou toute partie ou modification de celui-ci.
@@ -148,7 +148,7 @@ Seul le texte anglais fait foi. Les traductions sont fournies à titre de réfé
 
 ---
 
-# Traffic66 Concesión de uso adicional 1.0 (traducción española de referencia; solo el texto inglés es vinculante)
+# Traffic66 Concesión de uso adicional 1.1 (traducción española de referencia; solo el texto inglés es vinculante)
 
 ## Relación con la licencia base
 
@@ -157,7 +157,7 @@ Traffic66 («el Software») se licencia bajo la PolyForm Noncommercial License 1
 ## Definiciones
 
 - **Organización**: una entidad jurídica junto con todas las entidades que la controlan, que están controladas por ella o que están bajo control común con ella.
-- **Organización pequeña**: una Organización con menos de 100 personas en total entre empleados y contratistas independientes.
+- **Organización pequeña**: una Organización con menos de 50 personas en total entre empleados y contratistas independientes.
 - **Uso en producción**: el uso del Software para procesar tráfico de red o datos reales en apoyo de las operaciones continuas de una Organización, a diferencia de la evaluación, las pruebas, el desarrollo o la demostración.
 - **Licencia de registro**: una licencia escrita, archivo de licencia o clave de licencia emitida por el licenciante que permite el Uso en producción más allá de esta concesión.
 - **Oferta competidora**: un producto o servicio ofrecido a terceros a cambio de una tarifa u otro beneficio comercial que proporciona funciones de análisis de tráfico de red sustancialmente similares a las del Software y que incluye el Software, o cualquier parte o modificación del mismo.
@@ -222,7 +222,7 @@ Solo el texto inglés es vinculante. Las traducciones son meramente de referenci
 
 ---
 
-# Traffic66 附加使用授权 1.0（中文参考译文，以英文为准）
+# Traffic66 附加使用授权 1.1（中文参考译文，以英文为准）
 
 ## 与基础许可证的关系
 
@@ -231,7 +231,7 @@ Traffic66（"本软件"）以 PolyForm Noncommercial License 1.0.0（"基础许�
 ## 定义
 
 - **组织**：一个法律实体，以及控制它、受其控制或与其处于共同控制下的所有实体。
-- **小型组织**：员工与独立承包人合计少于 100 人的组织。
+- **小型组织**：员工与独立承包人合计少于 50 人的组织。
 - **生产使用**：为支持组织的持续运营而用本软件处理真实网络流量或数据；评估、测试、开发、演示不属于生产使用。
 - **注册许可**：许可方签发的、允许超出本授权范围进行生产使用的书面许可、许可证文件或许可证密钥。
 - **竞争性产品**：向第三方收费或获取其他商业利益提供的、具有与本软件实质相同网络流量分析功能，且包含本软件或其任何部分或修改的产品或服务。
@@ -296,7 +296,7 @@ Traffic66（"本软件"）以 PolyForm Noncommercial License 1.0.0（"基础许�
 
 ---
 
-# Traffic66 追加使用許諾 1.0（日本語参考訳。英語原文が優先します）
+# Traffic66 追加使用許諾 1.1（日本語参考訳。英語原文が優先します）
 
 ## 基本ライセンスとの関係
 
@@ -305,7 +305,7 @@ Traffic66（以下「本ソフトウェア」）は PolyForm Noncommercial Licen
 ## 定義
 
 - **組織**：一つの法人、およびそれを支配し、それに支配され、またはそれと共通の支配下にあるすべての事業体。
-- **小規模組織**：従業員と独立請負人の合計が 100 人未満の組織。
+- **小規模組織**：従業員と独立請負人の合計が 50 人未満の組織。
 - **本番利用**：組織の継続的な業務を支えるために、本ソフトウェアで実際のネットワークトラフィックまたはデータを処理すること。評価、テスト、開発、デモンストレーションは含みません。
 - **登録ライセンス**：許諾者が発行する、本許諾の範囲を超える本番利用を認める書面によるライセンス、ライセンスファイルまたはライセンスキー。
 - **競合製品**：本ソフトウェアと実質的に同様のネットワークトラフィック分析機能を提供し、かつ本ソフトウェアまたはその一部もしくは改変物を含む、有償その他の商業的利益を得て第三者に提供される製品またはサービス。

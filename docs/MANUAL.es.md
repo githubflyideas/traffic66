@@ -19,7 +19,7 @@ datos aparte.
 - Contrasta sus cifras con los contadores de interfaz (sFlow o SNMP) y explica por qué difieren.
 - Detecta escaneos, adivinación de contraseñas, movimiento lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas, también a través del muestreo.
 - `traffic66 capture.pcap` analiza capturas de paquetes sin configurar nada.
-- 15 idiomas. Gratis para evaluación y para organizaciones de menos de 100 personas ([licencia](#licence)).
+- 15 idiomas. Gratis para evaluación y para organizaciones de menos de 50 personas ([licencia](#licence)).
 
 ![Resumen: hallazgos abiertos, ancho de banda por aplicación frente a la misma hora de ayer, principales clientes y servicios](images/overview.png)
 
@@ -518,7 +518,7 @@ Tres cosas hacen que valga la pena contar estos mensajes y no solo leerlos. El t
 | `-data` | `traffic66-data` junto al programa | directorio de datos |
 | `-addr` | `:8066` | interfaz web; `127.0.0.1:8066` solo para esta máquina |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | colectores UDP; vacío los desactiva |
-| `-retention-days` | `30` | días de detalle de flujos; los resúmenes se guardan 400 días |
+| `-retention-days` | `7` | días de detalle de flujos; los resúmenes se guardan 180 días |
 | `-memory` | `0.10` | fracción de la RAM para la caché de la base de datos |
 | `-sampling-wait` | `5m` | cuánto esperan los registros a una tasa de muestreo |
 | `-capture` | | interfaz local (repetible) |
@@ -544,7 +544,7 @@ Una pestaña de la página de inventario. Una imagen de dónde vienen los flujos
 Código fuente disponible bajo la [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
 y la [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (el texto
 en inglés es el vinculante): gratis para evaluación y para organizaciones de
-menos de 100 personas; las organizaciones más grandes se registran tras 30
+menos de 50 personas; las organizaciones más grandes se registran tras 30
 días de uso en producción; vender, alojar para terceros o productos
 competidores requieren una licencia comercial. Nunca se desactiva nada. El
 pie de cada página muestra el número de instalación de 8 dígitos; envíelo

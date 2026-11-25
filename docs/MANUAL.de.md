@@ -17,7 +17,7 @@ pcap-Analyse, ohne Elasticsearch, Kafka oder eine separate Datenbank.
 - Prüft seine Zahlen gegen die Schnittstellenzähler (sFlow oder SNMP) und erklärt, warum sie abweichen.
 - Erkennt Scans, Passwortraten, Lateral Movement, ungewöhnliche Uploads, Floods und Verkehr mit Adressen aus Bedrohungslisten, auch durch Sampling hindurch.
 - `traffic66 capture.pcap` analysiert Paketmitschnitte ohne jede Einrichtung.
-- 15 Sprachen. Kostenlos zur Evaluierung und für Organisationen mit weniger als 100 Personen ([Lizenz](#licence)).
+- 15 Sprachen. Kostenlos zur Evaluierung und für Organisationen mit weniger als 50 Personen ([Lizenz](#licence)).
 
 ![Übersicht: offene Befunde, Bandbreite nach Anwendung im Vergleich zur gleichen Zeit gestern, wichtigste Clients und Dienste](images/overview.png)
 
@@ -521,7 +521,7 @@ Drei Dinge machen den Feed zählenswert statt nur lesenswert. Der Ereignistyp (`
 | `-data` | `traffic66-data` neben dem Programm | Datenverzeichnis |
 | `-addr` | `:8066` | Weboberfläche; `127.0.0.1:8066` nur für diesen Rechner |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP-Collectors; leer deaktiviert sie |
-| `-retention-days` | `30` | Tage mit Flow-Details; Zusammenfassungen werden 400 Tage aufbewahrt |
+| `-retention-days` | `7` | Tage mit Flow-Details; Zusammenfassungen werden 180 Tage aufbewahrt |
 | `-memory` | `0.10` | Anteil des RAM für den Datenbank-Cache |
 | `-sampling-wait` | `5m` | wie lange Datensätze auf eine Sampling-Rate warten |
 | `-capture` | | lokale Schnittstelle (mehrfach angebbar) |
@@ -547,7 +547,7 @@ Ein Reiter der Inventarseite. Ein Bild davon, woher die Flows kommen: für jedes
 Source-available unter der [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
 und dem [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (die
 englische Fassung ist verbindlich): kostenlos zur Evaluierung und für
-Organisationen mit weniger als 100 Personen; größere Organisationen
+Organisationen mit weniger als 50 Personen; größere Organisationen
 registrieren sich nach 30 Tagen Produktivbetrieb; Verkauf, Hosting für
 Dritte oder konkurrierende Produkte erfordern eine kommerzielle Lizenz. Es
 wird nie etwas abgeschaltet. Am Fuß jeder Seite steht die 8-stellige

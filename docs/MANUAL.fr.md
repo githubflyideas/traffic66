@@ -19,7 +19,7 @@ Kafka ni base de données séparée.
 - Vérifie ses chiffres par rapport aux compteurs d'interface (sFlow ou SNMP) et explique pourquoi ils diffèrent.
 - Repère les scans, les essais de mots de passe, les mouvements latéraux, les envois inhabituels, les inondations et le trafic des listes de menaces, y compris à travers l'échantillonnage.
 - `traffic66 capture.pcap` analyse des captures de paquets sans rien configurer.
-- 15 langues. Gratuit pour l'évaluation et pour les organisations de moins de 100 personnes ([licence](#licence)).
+- 15 langues. Gratuit pour l'évaluation et pour les organisations de moins de 50 personnes ([licence](#licence)).
 
 ![Vue d'ensemble : détections ouvertes, bande passante par application comparée à la même heure hier, principaux clients et services](images/overview.png)
 
@@ -527,7 +527,7 @@ Trois choses rendent ce flux digne d’être compté et pas seulement lu. Le typ
 | `-data` | `traffic66-data` à côté du programme | répertoire de données |
 | `-addr` | `:8066` | interface web ; `127.0.0.1:8066` pour cette machine uniquement |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | collecteurs UDP ; vide pour désactiver |
-| `-retention-days` | `30` | jours de détail des flux ; les agrégats sont gardés 400 jours |
+| `-retention-days` | `7` | jours de détail des flux ; les agrégats sont gardés 180 jours |
 | `-memory` | `0.10` | part de la RAM pour le cache de la base de données |
 | `-sampling-wait` | `5m` | durée pendant laquelle les enregistrements attendent un taux d'échantillonnage |
 | `-capture` | | interface locale (répétable) |
@@ -553,7 +553,7 @@ Un onglet de la page d’inventaire. Une image de l’origine des flux : pour ch
 Source disponible sous la [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
 et le [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (le texte
 anglais fait foi) : gratuit pour l'évaluation et pour les organisations de
-moins de 100 personnes ; les organisations plus grandes s'enregistrent après
+moins de 50 personnes ; les organisations plus grandes s'enregistrent après
 30 jours d'utilisation en production ; la vente, l'hébergement pour des
 tiers ou les produits concurrents nécessitent une licence commerciale. Rien
 n'est jamais désactivé. Le bas de chaque page affiche le numéro

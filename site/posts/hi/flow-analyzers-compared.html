@@ -56,7 +56,7 @@
 
 <h2>छोटे ISPs, cable operators और colleges के लिए इसका मतलब</h2>
 <p>अगर आपके network के edge पर MikroTik router है, तो शुरुआत आसान है। MikroTik के official documentation के अनुसार RouterOS का Traffic Flow feature NetFlow v1, v5, v9 और IPFIX export करता है। traffic66 NetFlow v5/v9 और IPFIX किसी भी UDP port पर लेता है, इसलिए router पर <code>/ip traffic-flow set enabled=yes</code> और collector के address के साथ <code>/ip traffic-flow target add</code>, इन दो lines से data आने लगता है। NetFlow में interface counters नहीं आते; <strong>इंटरफ़ेस मिलान</strong> के लिए traffic66 में एक <code>snmp</code> line जोड़ें और RouterOS पर SNMP चालू करें, जो default में बंद रहता है और जिसकी MIBs में IF-MIB शामिल है।</p>
-<p>किसी college, छोटी company या local operator के पास अक्सर अलग server का बजट नहीं होता, पर एक Windows PC या Linux machine पहले से मौजूद होती है। traffic66 evaluation के लिए और 100 से कम लोगों वाली organizations के लिए मुफ़्त है, और उसी machine पर बिना किसी अतिरिक्त service के चलता है।</p>
+<p>किसी college, छोटी company या local operator के पास अक्सर अलग server का बजट नहीं होता, पर एक Windows PC या Linux machine पहले से मौजूद होती है। traffic66 evaluation के लिए और 50 से कम लोगों वाली organizations के लिए मुफ़्त है, और उसी machine पर बिना किसी अतिरिक्त service के चलता है।</p>
 <p>Flow records में users के IP addresses होते हैं। traffic66 इन्हें आपकी अपनी machine पर, embedded DuckDB में रखता है; इन्हें किसी cloud service पर भेजने की ज़रूरत नहीं पड़ती। भारत में डिजिटल personal data के लिए Digital Personal Data Protection Act, 2023 बनाया गया है। आपके flow data पर यह क़ानून कैसे लागू होता है, यह अपने legal सलाहकार से पूछें; यह लेख क़ानूनी सलाह नहीं है। हम सिर्फ़ इतना कहते हैं कि data कहाँ रखा है, यह फ़ैसला आपके हाथ में रहता है।</p>
 
 <h2>2. क्या आँकड़े interface counters से मेल खाते हैं?</h2>
@@ -160,7 +160,7 @@
   <div class="card"><div class="who">FastNetMon</div><h4>अपने-आप DDoS mitigation</h4><p>FastNetMon attack पकड़ते ही BGP blackhole या FlowSpec rule announce कर सकता है। traffic66 floods की रिपोर्ट देता है और routing को नहीं छूता।</p></div>
   <div class="card"><div class="who">pmacct</div><h4>Routing data और लचीलापन</h4><p>pmacct flows के साथ BGP और BMP भी लेता है, records में routing की जानकारी जोड़ता है और लगभग किसी भी जगह लिख सकता है। traffic66 एक तैयार product है, toolkit नहीं।</p></div>
   <div class="card"><div class="who">पुराने, स्थापित projects</div><h4>उम्र और community</h4><p>ntopng के क़रीब 30,000 commits हैं; nfdump दो दशकों से मौजूद है। traffic66 ने अभी stars जुटाना शुरू ही किया है और production में इसका अनुभव कहीं कम है।</p></div>
-  <div class="card"><div class="who">Table के ज़्यादातर projects</div><h4>Licence</h4><p>ये OSI से मान्य open-source licences इस्तेमाल करते हैं। traffic66 source-available है: evaluation के लिए और 100 से कम लोगों वाली organizations के लिए मुफ़्त; बड़ी organizations 30 दिन बाद register करती हैं। कुछ भी बंद नहीं किया जाता, पर यह open source नहीं है।</p></div>
+  <div class="card"><div class="who">Table के ज़्यादातर projects</div><h4>Licence</h4><p>ये OSI से मान्य open-source licences इस्तेमाल करते हैं। traffic66 source-available है: evaluation के लिए और 50 से कम लोगों वाली organizations के लिए मुफ़्त; बड़ी organizations 30 दिन बाद register करती हैं। कुछ भी बंद नहीं किया जाता, पर यह open source नहीं है।</p></div>
 </div>
 </div>
 

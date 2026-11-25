@@ -16,7 +16,7 @@ analysis, without Elasticsearch, Kafka or a separate database.
 - Checks its numbers against interface counters (sFlow or SNMP) and says why they differ.
 - Finds scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic, also through sampling.
 - `traffic66 capture.pcap` analyses packet captures with nothing to set up.
-- 15 languages. Free for evaluation and for organizations under 100 people ([licence](#licence)).
+- 15 languages. Free for evaluation and for organizations under 50 people ([licence](#licence)).
 
 ![Overview: open findings, bandwidth by application compared with the same time yesterday, top clients and services](images/overview.png)
 
@@ -531,7 +531,7 @@ administrator edits it.
 
 Source available under the [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
 and the [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (English
-binding): free for evaluation and for organizations under 100 people;
+binding): free for evaluation and for organizations under 50 people;
 larger organizations register after 30 days of production use; selling,
 hosting for others or competing products need a commercial licence. The foot
 of each page shows the 8-digit installation number; send it to the author,

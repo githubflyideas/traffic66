@@ -17,7 +17,7 @@ Elasticsearch, Kafka या अलग database के।
 - अपने आँकड़ों को interface counters (sFlow या SNMP) से मिलाकर जाँचता है और बताता है कि फ़र्क़ क्यों है।
 - scans, पासवर्ड का अनुमान, lateral movement, असामान्य uploads, floods और threat list वाला ट्रैफ़िक ढूँढता है, sampling के बावजूद भी।
 - `traffic66 capture.pcap` बिना किसी सेटअप के पैकेट कैप्चर का विश्लेषण करता है।
-- 15 भाषाएँ। evaluation के लिए और 100 से कम लोगों वाले संगठनों के लिए मुफ़्त ([लाइसेंस](#licence))।
+- 15 भाषाएँ। evaluation के लिए और 50 से कम लोगों वाले संगठनों के लिए मुफ़्त ([लाइसेंस](#licence))।
 
 ![सारांश: खुली संदिग्ध गतिविधियाँ, कल इसी समय की तुलना में application के हिसाब से bandwidth, top clients और services](images/overview.png)
 
@@ -506,7 +506,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 | `-data` | प्रोग्राम के बगल में `traffic66-data` | data directory |
 | `-addr` | `:8066` | web UI; केवल इसी मशीन के लिए `127.0.0.1:8066` |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP collectors; ख़ाली हो तो बंद |
-| `-retention-days` | `30` | flow detail के दिन; summaries 400 दिन रखी जाती हैं |
+| `-retention-days` | `7` | flow detail के दिन; summaries 180 दिन रखी जाती हैं |
 | `-memory` | `0.10` | database cache के लिए RAM का हिस्सा |
 | `-sampling-wait` | `5m` | records sampling rate का कितनी देर इंतज़ार करें |
 | `-capture` | | local interface (दोहराया जा सकता है) |
@@ -530,7 +530,7 @@ data directory में `raw/` (detail, हर घंटे की एक फ�
 
 [PolyForm Noncommercial License 1.0.0](../LICENSE.md) और
 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) के तहत source
-available (अंग्रेज़ी पाठ ही बाध्यकारी है): evaluation के लिए और 100 से कम लोगों
+available (अंग्रेज़ी पाठ ही बाध्यकारी है): evaluation के लिए और 50 से कम लोगों
 वाले संगठनों के लिए मुफ़्त; बड़े संगठन production use के 30 दिन बाद रजिस्टर
 करते हैं; बेचने, दूसरों के लिए host करने या प्रतिस्पर्धी products के लिए
 commercial licence चाहिए। कभी कुछ बंद नहीं होता। हर पेज के नीचे 8 अंकों का

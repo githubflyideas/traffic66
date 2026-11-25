@@ -11,7 +11,7 @@ ntopng、ElastiFlow、pmacct と Grafana の組み合わせ、あるいは PRTG 
 - 自身の数値をインターフェースカウンター（sFlow または SNMP）と照合し、ずれの理由を示します。
 - スキャン、パスワード総当たり、横展開、不審なアップロード、フラッド、脅威リストとの通信を、サンプリング越しでも見つけます。
 - `traffic66 capture.pcap` で、設定なしにパケットキャプチャを分析できます。
-- 15 言語に対応。評価用途と 100 人未満の組織は無料です（[ライセンス](#licence)）。
+- 15 言語に対応。評価用途と 50 人未満の組織は無料です（[ライセンス](#licence)）。
 
 ![概要：未対応の検知、アプリケーション別の帯域と昨日の同じ時刻との比較、上位のクライアントとサービス](images/overview.png)
 
@@ -427,7 +427,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 | `-data` | プログラムと同じ場所の `traffic66-data` | データディレクトリ |
 | `-addr` | `:8066` | Web UI。`127.0.0.1:8066` でこのマシンからのみ |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP コレクター。空にすると無効 |
-| `-retention-days` | `30` | フロー明細の保存日数。集計は 400 日保存 |
+| `-retention-days` | `7` | フロー明細の保存日数。集計は 180 日保存 |
 | `-memory` | `0.10` | データベースのキャッシュに使うメモリの割合 |
 | `-sampling-wait` | `5m` | レコードがサンプリングレートを待つ時間 |
 | `-capture` | | ローカルインターフェース（複数指定可） |
@@ -445,7 +445,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 
 ### ライセンス
 
-[PolyForm Noncommercial License 1.0.0](../LICENSE.md) と [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)（英語版が正本）のもとでのソースアベイラブルです。評価用途と 100 人未満の組織は無料。それより大きな組織は本番利用 30 日後に登録が必要です。販売、他者向けのホスティング、競合製品には商用ライセンスが必要です。機能が止まることは一切ありません。各ページの下部に 8 桁のインストール番号が表示されるので、それを作者に送り、返ってきた `license.json` をデータディレクトリに置いてください。連絡先：<route66traffic66@gmail.com>。
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md) と [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)（英語版が正本）のもとでのソースアベイラブルです。評価用途と 50 人未満の組織は無料。それより大きな組織は本番利用 30 日後に登録が必要です。販売、他者向けのホスティング、競合製品には商用ライセンスが必要です。機能が止まることは一切ありません。各ページの下部に 8 桁のインストール番号が表示されるので、それを作者に送り、返ってきた `license.json` をデータディレクトリに置いてください。連絡先：<route66traffic66@gmail.com>。
 
 管理者は画面から導入することもできます。**設定 → 登録と購入** で `license.json` の内容を貼り付けるかファイルを選び、**導入** を押します。書き込む前に確認され、受け付けられない場合は理由が表示されます。
 

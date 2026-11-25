@@ -11,7 +11,7 @@ ntopng, ElastiFlow, pmacct와 Grafana 조합, 또는 PRTG와 SolarWinds NTA의 �
 - 자체 수치를 인터페이스 카운터(sFlow 또는 SNMP)와 대조하고, 차이가 나는 이유를 알려 줍니다.
 - 스캔, 비밀번호 대입, 내부 확산, 비정상 업로드, 플러드, 위협 목록 트래픽을 샘플링을 거쳐서도 찾아냅니다.
 - `traffic66 capture.pcap`은 설정할 것 없이 패킷 캡처를 분석합니다.
-- 15개 언어 지원. 평가 용도와 100명 미만 조직은 무료입니다([라이선스](#licence)).
+- 15개 언어 지원. 평가 용도와 50명 미만 조직은 무료입니다([라이선스](#licence)).
 
 ![개요: 미처리 탐지, 어제 같은 시각과 비교한 애플리케이션별 대역폭, 상위 클라이언트와 서비스](images/overview.png)
 
@@ -427,7 +427,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 | `-data` | 프로그램 옆의 `traffic66-data` | 데이터 디렉터리 |
 | `-addr` | `:8066` | 웹 UI. `127.0.0.1:8066`이면 이 머신에서만 |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | UDP 수집기. 비우면 비활성화 |
-| `-retention-days` | `30` | 플로 상세 보관 일수. 요약은 400일 보관 |
+| `-retention-days` | `7` | 플로 상세 보관 일수. 요약은 180일 보관 |
 | `-memory` | `0.10` | 데이터베이스 캐시에 쓰는 메모리 비율 |
 | `-sampling-wait` | `5m` | 레코드가 샘플링 비율을 기다리는 시간 |
 | `-capture` | | 로컬 인터페이스(반복 지정 가능) |
@@ -445,7 +445,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 
 ### 라이선스
 
-[PolyForm Noncommercial License 1.0.0](../LICENSE.md)과 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)(영문이 구속력을 가짐)에 따른 소스 공개: 평가 용도와 100명 미만 조직은 무료이고, 더 큰 조직은 운영 사용 30일 뒤 등록합니다. 판매, 타인을 위한 호스팅, 경쟁 제품에는 상용 라이선스가 필요합니다. 꺼지는 기능은 전혀 없습니다. 모든 페이지 하단에 8자리 설치 번호가 표시되니 작성자에게 보내고, 돌려받은 `license.json`을 데이터 디렉터리에 넣으십시오. 연락처: <route66traffic66@gmail.com>.
+[PolyForm Noncommercial License 1.0.0](../LICENSE.md)과 [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md)(영문이 구속력을 가짐)에 따른 소스 공개: 평가 용도와 50명 미만 조직은 무료이고, 더 큰 조직은 운영 사용 30일 뒤 등록합니다. 판매, 타인을 위한 호스팅, 경쟁 제품에는 상용 라이선스가 필요합니다. 꺼지는 기능은 전혀 없습니다. 모든 페이지 하단에 8자리 설치 번호가 표시되니 작성자에게 보내고, 돌려받은 `license.json`을 데이터 디렉터리에 넣으십시오. 연락처: <route66traffic66@gmail.com>.
 
 관리자는 화면에서 설치할 수도 있습니다. **설정 → 등록 및 구매**에서 `license.json` 내용을 붙여 넣거나 파일을 고른 뒤 **설치**를 누릅니다. 쓰기 전에 먼저 확인하며, 거부되면 이유를 알려 줍니다.
 

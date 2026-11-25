@@ -73,6 +73,6 @@ Web UI: **Help** in the menu. GitHub: [MANUAL.md](docs/MANUAL.md)
 
 ## Licence
 
-- **Free**: evaluation, testing and demos for any organization, without time limit; production use by organizations under 100 people (employees plus contractors) and noncommercial use. Larger organizations: 30 days of production use, then registration. Details: [LICENSE.md](LICENSE.md), [Additional Use Grant](ADDITIONAL-USE-GRANT.md).
+- **Free**: evaluation, testing and demos for any organization, without time limit; production use by organizations under 50 people (employees plus contractors) and noncommercial use. Larger organizations: 30 days of production use, then registration. Details: [LICENSE.md](LICENSE.md), [Additional Use Grant](ADDITIONAL-USE-GRANT.md).
 - **Unregistered**: reports and charts carry an EVALUATION COPY mark; up to 3 web accounts.
 - **Registered**: no mark. Contact route66traffic66@gmail.com.

@@ -3,6 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## Unreleased
+
+- Licence: the Additional Use Grant is now version 1.1. Production use is free for organizations of fewer than 50 people (before, 100); larger organizations register after 30 days of production use, as before.
+
 ## 2.10.0
 
 - Traffic statistics (registered installations): a new page in the sidebar for the traffic of one VIP or of a whole product line — the VIPs a line bills together are written in the inventory as a product line (`product Shop vip=203.0.113.10,203.0.113.11`; one address belongs to one line only). Inbound and outbound are added together as the headline figure, with the split kept underneath, the members listed per address, and a CSV export with the same figures. Traffic between two VIPs of the same line is counted once. The figures say they come from the sampled flow records and cover the settled part of the window.

@@ -82,8 +82,8 @@ macOS：先在该目录运行 `xattr -dr com.apple.quarantine .`。
 
 Web 界面菜单中的 **帮助**；GitHub 上： [MANUAL.zh.md](MANUAL.zh.md)
 
-支持 15 种语言。评估免费，少于 100 人的组织免费（[许可](../LICENSE.md)）。
+支持 15 种语言。评估免费，少于 50 人的组织免费（[许可](../LICENSE.md)）。
 
-- **免费**：任何组织都可以无限期评估、测试和演示；少于 100 人（员工加外包合计）的组织和非商业用途可以免费用于生产。更大的组织生产使用 30 天后需要注册。详见 [LICENSE.md](../LICENSE.md) 和 [附加使用授权](../ADDITIONAL-USE-GRANT.md)。
+- **免费**：任何组织都可以无限期评估、测试和演示；少于 50 人（员工加外包合计）的组织和非商业用途可以免费用于生产。更大的组织生产使用 30 天后需要注册。详见 [LICENSE.md](../LICENSE.md) 和 [附加使用授权](../ADDITIONAL-USE-GRANT.md)。
 - **未注册**：报表和图上带「评估版」水印，最多 3 个 Web 账号。
 - **注册**：去掉水印。联系 route66traffic66@gmail.com。

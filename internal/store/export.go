@@ -9,7 +9,7 @@ import (
 // IfaceHour is one hour of one interface's device counters: how much the
 // device itself says passed through it in that hour, in each direction.
 // It is the row of the rollup export — the counters are the one
-// per-interface record kept for the whole rollup retention (400 days),
+// per-interface record kept for the whole rollup retention (180 days),
 // long after the flow detail (30 days) is gone.
 type IfaceHour struct {
 	Start    time.Time // hour start, an instant; the caller renders it in the viewer's zone

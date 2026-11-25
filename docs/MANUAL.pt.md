@@ -18,7 +18,7 @@ sem Elasticsearch, Kafka nem um banco de dados separado.
 - Confere os próprios números com os contadores de interface (sFlow ou SNMP) e explica por que diferem.
 - Encontra varreduras, tentativas de senhas, movimento lateral, envios incomuns, inundações e tráfego de listas de ameaças, inclusive através da amostragem.
 - `traffic66 capture.pcap` analisa capturas de pacotes sem configurar nada.
-- 15 idiomas. Gratuito para avaliação e para organizações com menos de 100 pessoas ([licença](#licence)).
+- 15 idiomas. Gratuito para avaliação e para organizações com menos de 50 pessoas ([licença](#licence)).
 
 ![Visão geral: detecções abertas, banda por aplicação em comparação com o mesmo horário de ontem, principais clientes e serviços](images/overview.png)
 
@@ -514,7 +514,7 @@ Três coisas fazem valer a pena contar este fluxo, e não só lê-lo. O tipo de 
 | `-data` | `traffic66-data` ao lado do programa | diretório de dados |
 | `-addr` | `:8066` | interface web; `127.0.0.1:8066` só para esta máquina |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | coletores UDP; vazio desativa |
-| `-retention-days` | `30` | dias de detalhe de fluxo; os resumos são mantidos por 400 dias |
+| `-retention-days` | `7` | dias de detalhe de fluxo; os resumos são mantidos por 180 dias |
 | `-memory` | `0.10` | fração da RAM para o cache do banco de dados |
 | `-sampling-wait` | `5m` | quanto tempo os registros esperam por uma taxa de amostragem |
 | `-capture` | | interface local (repetível) |
@@ -539,7 +539,7 @@ Uma aba da página de inventário. Um retrato de onde vêm os fluxos: para cada 
 Código-fonte disponível sob a [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
 e a [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (o texto em
 inglês é o que vale): gratuito para avaliação e para organizações com menos
-de 100 pessoas; organizações maiores se registram após 30 dias de uso em
+de 50 pessoas; organizações maiores se registram após 30 dias de uso em
 produção; vender, hospedar para terceiros ou produtos concorrentes exigem
 uma licença comercial. Nada é desligado, nunca. O rodapé de cada página
 mostra o número de instalação de 8 dígitos; envie-o ao autor e coloque o

@@ -18,7 +18,7 @@ pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 - Mencocokkan angkanya dengan counter interface (sFlow atau SNMP) dan menjelaskan penyebab selisihnya.
 - Menemukan pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman, juga melalui sampling.
 - `traffic66 capture.pcap` menganalisis tangkapan paket tanpa pengaturan apa pun.
-- 15 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 100 orang ([lisensi](#licence)).
+- 15 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 50 orang ([lisensi](#licence)).
 
 ![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding waktu yang sama kemarin, klien dan layanan teratas](images/overview.png)
 
@@ -514,7 +514,7 @@ Tiga hal membuat umpan ini layak dihitung, bukan sekadar dibaca. Jenis peristiwa
 | `-data` | `traffic66-data` di sebelah program | direktori data |
 | `-addr` | `:8066` | antarmuka web; `127.0.0.1:8066` hanya untuk mesin ini |
 | `-listen` | `sflow=:6343,netflow=:2055,ipfix=:4739` | collector UDP; kosong berarti nonaktif |
-| `-retention-days` | `30` | berapa hari detail flow disimpan; ringkasan disimpan 400 hari |
+| `-retention-days` | `7` | berapa hari detail flow disimpan; ringkasan disimpan 180 hari |
 | `-memory` | `0.10` | porsi RAM untuk cache database |
 | `-sampling-wait` | `5m` | berapa lama record menunggu sampling rate |
 | `-capture` | | interface lokal (bisa diulang) |
@@ -540,7 +540,7 @@ Sebuah tab di halaman inventaris. Gambaran dari mana flow datang: untuk setiap p
 Kode sumber tersedia di bawah [PolyForm Noncommercial License 1.0.0](../LICENSE.md)
 dan [Traffic66 Additional Use Grant](../ADDITIONAL-USE-GRANT.md) (teks bahasa
 Inggris yang mengikat): gratis untuk evaluasi dan untuk organisasi dengan
-kurang dari 100 orang; organisasi yang lebih besar mendaftar setelah 30 hari
+kurang dari 50 orang; organisasi yang lebih besar mendaftar setelah 30 hari
 penggunaan produksi; menjual, meng-host untuk pihak lain, atau produk pesaing
 memerlukan lisensi komersial. Tidak ada yang pernah dimatikan. Bagian bawah
 setiap halaman menampilkan nomor instalasi 8 digit; kirim nomor itu kepada

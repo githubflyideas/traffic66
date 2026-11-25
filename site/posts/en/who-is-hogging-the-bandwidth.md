@@ -38,7 +38,7 @@ In one sentence: it collects sFlow, NetFlow, and IPFIX flow data and tells you w
 
 ## Licensing, stated plainly
 
-Evaluation is free. Organizations with fewer than 100 people can use it in production for free. Larger organizations need to register for production use after 30 days. Registration doesn't disable any features.
+Evaluation is free. Organizations with fewer than 50 people can use it in production for free. Larger organizations need to register for production use after 30 days. Registration doesn't disable any features.
 
 ---
 

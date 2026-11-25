@@ -85,8 +85,8 @@ Después:
 
 En la interfaz web: **Ayuda** en el menú. En GitHub: [MANUAL.es.md](MANUAL.es.md)
 
-15 idiomas. Gratis para evaluación y para organizaciones de menos de 100 personas ([licencia](../LICENSE.md)).
+15 idiomas. Gratis para evaluación y para organizaciones de menos de 50 personas ([licencia](../LICENSE.md)).
 
-- **Gratis**: evaluación, pruebas y demostraciones para cualquier organización, sin límite de tiempo; uso en producción para organizaciones de menos de 100 personas (empleados y contratistas) y para uso no comercial. Organizaciones mayores: 30 días en producción y después registro. Detalles: [LICENSE.md](../LICENSE.md), [Additional Use Grant](../ADDITIONAL-USE-GRANT.md).
+- **Gratis**: evaluación, pruebas y demostraciones para cualquier organización, sin límite de tiempo; uso en producción para organizaciones de menos de 50 personas (empleados y contratistas) y para uso no comercial. Organizaciones mayores: 30 días en producción y después registro. Detalles: [LICENSE.md](../LICENSE.md), [Additional Use Grant](../ADDITIONAL-USE-GRANT.md).
 - **Sin registrar**: informes y gráficos llevan la marca «EVALUACIÓN»; hasta 3 cuentas web.
 - **Registrado**: sin marca. Contacto: route66traffic66@gmail.com.
