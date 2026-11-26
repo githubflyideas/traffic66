@@ -347,7 +347,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -576,7 +575,7 @@ traffic66 и скопируйте каталог; обновление: заме
 
 | Симптом | Решение |
 |---|---|
-| "ожидание частоты сэмплирования" | Экспортируйте параметры сэмплера или укажите `sampling=N` / `unsampled` в строке устройства |
+| "ожидание частоты сэмплирования" | Экспортируйте параметры сэмплера или укажите `unsampled` в строке устройства |
 | Меньше, чем счётчики | Интерфейсы без выборки, потери или активный тайм-аут больше 60 с |
 | Больше, чем счётчики | Один и тот же трафик сэмплируется на двух интерфейсах или устройствах |
 | Забыли пароль | `traffic66 passwd` на машине с traffic66 |

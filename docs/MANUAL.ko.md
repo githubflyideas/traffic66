@@ -299,7 +299,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -468,7 +467,7 @@ traffic66 serve -syslog siem.example.com:514 -syslog-format cef
 
 | 증상 | 해결 |
 |---|---|
-| "waiting for the sampling rate" | 샘플러 옵션을 익스포트하거나, device 줄에 `sampling=N` / `unsampled` 지정 |
+| "waiting for the sampling rate" | 샘플러 옵션을 익스포트하거나, device 줄에 `unsampled` 지정 |
 | 카운터보다 낮음 | 샘플링되지 않은 인터페이스, 유실, 또는 60초를 넘는 액티브 타임아웃 |
 | 카운터보다 높음 | 같은 트래픽을 두 인터페이스 또는 두 장비에서 샘플링함 |
 | 비밀번호를 잊어버림 | traffic66 서버에서 `traffic66 passwd` |

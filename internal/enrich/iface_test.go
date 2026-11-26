@@ -53,8 +53,10 @@ func TestPlacesAndCircuits(t *testing.T) {
 	if p := inv.PlaceOf(a); p.Room != "Room 1" || p.Rack != "A03" || inv.Device(a) != "Core router" {
 		t.Fatalf("place %+v name %q", p, inv.Device(a))
 	}
-	if inv.Sampling()[a] != 1000 {
-		t.Fatal("the sampling rate on the device line was lost")
+	// sampling= from an older inventory: loaded, and dropped from the line
+	// rather than read into the name
+	if strings.Contains(inv.Device(a), "sampling") {
+		t.Fatalf("name %q", inv.Device(a))
 	}
 	if err := inv.SetCircuit(a, 3, "Telecom uplink", "China Telecom", "SH-12345"); err != nil {
 		t.Fatal(err)
@@ -76,7 +78,7 @@ func TestPlacesAndCircuits(t *testing.T) {
 	if c := inv.Circuits(); len(c) != 1 {
 		t.Fatalf("circuits %v", c)
 	}
-	want := "device 10.0.0.1 Core router room=Room_1 rack=A03 sampling=1000\n" +
+	want := "device 10.0.0.1 Core router room=Room_1 rack=A03\n" +
 		"iface 10.0.0.1 3 WAN speed=1000000000 tag=wan isp=China_Telecom circuit=SH-12345 default\n"
 	if got := inv.Text(); got != want {
 		t.Fatalf("text\n%s\nwant\n%s", got, want)

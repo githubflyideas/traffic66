@@ -7,9 +7,9 @@ net 192.168.0.0/16 Office country=JP
 # country=XX (two letters) places a network on the world map: lines are drawn
 # from that country to the countries it talks to
 #
-# device <exporter address>  <name> [room=R] [rack=K] [unsampled] [sampling=N]
-# (sampling=N: the device samples 1:N but does not declare it in its export;
-# room= and rack= place it on the Rooms and racks page, a space written as _)
+# device <exporter address>  <name> [room=R] [rack=K] [unsampled]
+# (unsampled: the device exports every packet; the sampling rate is otherwise
+# the one the device declares; room= and rack= place it on the Rooms and racks page, a space written as _)
 device 192.0.2.1 Core router room=Room_1 rack=A03
 #
 # iface  <exporter address> <ifIndex> <name> [speed=<bits per second, or 100M, 10G>] [isp=C] [circuit=ID]

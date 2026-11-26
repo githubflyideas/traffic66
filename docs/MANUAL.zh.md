@@ -299,7 +299,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -468,7 +467,7 @@ Web 界面使用明文 HTTP：在不可信的网络中，请使用 `-addr 127.0.
 
 | 现象 | 解决方法 |
 |---|---|
-| "waiting for the sampling rate" | 导出采样器选项，或在设备行上使用 `sampling=N` / `unsampled` |
+| "waiting for the sampling rate" | 导出采样器选项，或在设备行上使用 `unsampled` |
 | 低于接口计数器 | 有接口未采样、丢包，或活动超时超过 60 秒 |
 | 高于接口计数器 | 同一流量在两个接口或两台设备上被采样 |
 | 忘记密码 | 在 traffic66 主机上执行 `traffic66 passwd` |

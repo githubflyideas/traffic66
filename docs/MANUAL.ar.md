@@ -339,7 +339,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -557,7 +556,7 @@ SNMP نصًا صريحًا؛ استخدم مجتمعات للقراءة فقط.
 
 | العَرَض | الحل |
 |---|---|
-| "waiting for the sampling rate" | صدّر خيارات أخذ العينات، أو `sampling=N` / `unsampled` في سطر الجهاز |
+| "waiting for the sampling rate" | صدّر خيارات أخذ العينات، أو `unsampled` في سطر الجهاز |
 | أقل من العدّادات | واجهات لا تؤخذ منها عينات، أو فقد، أو مهلة تدفق نشط أطول من 60 ثانية |
 | أعلى من العدّادات | الحركة نفسها مأخوذة بالعينات على واجهتين أو جهازين |
 | نسيت كلمة المرور | `traffic66 passwd` على جهاز traffic66 |

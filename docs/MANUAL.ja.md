@@ -299,7 +299,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -468,7 +467,7 @@ Web UI は平文の HTTP です。信頼できないネットワークでは `-a
 
 | 症状 | 対処 |
 |---|---|
-| "waiting for the sampling rate" | サンプラーオプションをエクスポートするか、device 行に `sampling=N` / `unsampled` を付ける |
+| "waiting for the sampling rate" | サンプラーオプションをエクスポートするか、device 行に `unsampled` を付ける |
 | カウンターより小さい | サンプリングされていないインターフェース、ロス、またはアクティブタイムアウトが 60 秒超 |
 | カウンターより大きい | 同じトラフィックを 2 つのインターフェースまたは 2 台の機器でサンプリングしている |
 | パスワードを忘れた | traffic66 のマシンで `traffic66 passwd` |

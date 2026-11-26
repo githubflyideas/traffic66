@@ -340,7 +340,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -567,7 +566,7 @@ overview 0.2 s-এর কম সময় নেয়; সব conversation-এ�
 
 | লক্ষণ | সমাধান |
 |---|---|
-| "waiting for the sampling rate" | sampler options export করান, অথবা device লাইনে `sampling=N` / `unsampled` |
+| "waiting for the sampling rate" | sampler options export করান, অথবা device লাইনে `unsampled` |
 | counter-এর চেয়ে কম | interface sample হচ্ছে না, loss, অথবা active timeout 60 s-এর বেশি |
 | counter-এর চেয়ে বেশি | একই ট্রাফিক দুটি interface বা ডিভাইসে sample হচ্ছে |
 | পাসওয়ার্ড ভুলে গেছেন | traffic66 মেশিনে `traffic66 passwd` |

@@ -458,7 +458,7 @@ func serve(args []string, demo bool) {
 			n, filepath.Join(f.data, collector.BlockFile))
 	}
 	col.NF.HoldFor = f.hold
-	col.SetSampling(inv.Unsampled(), inv.Sampling())
+	col.SetSampling(inv.Unsampled())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

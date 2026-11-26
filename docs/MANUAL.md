@@ -318,7 +318,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -583,7 +582,7 @@ take under 0.2 s; a 1-hour TOP of all conversations about 9 s.
 
 | Symptom | Fix |
 |---|---|
-| "waiting for the sampling rate" | Export sampler options, or `sampling=N` / `unsampled` on the device line |
+| "waiting for the sampling rate" | Export sampler options, or `unsampled` on the device line |
 | Lower than the counters | Interfaces not sampled, loss, or an active timeout over 60 s |
 | Higher than the counters | The same traffic sampled on two interfaces or devices |
 | Forgot the password | `traffic66 passwd` on the traffic66 machine |

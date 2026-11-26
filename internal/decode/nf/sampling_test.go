@@ -3,7 +3,6 @@ package nf
 import (
 	"encoding/binary"
 	"math"
-	"net/netip"
 	"testing"
 
 	"github.com/githubflyideas/traffic66/internal/encode"
@@ -71,7 +70,7 @@ func TestSamplingForms(t *testing.T) {
 	}
 }
 
-func TestSamplingOtherDomainAndManual(t *testing.T) {
+func TestSamplingOtherDomainAndUndeclared(t *testing.T) {
 	// the rate is declared in one observation domain, the flows come in another
 	d := NewDecoder()
 	opt := encode.Template{ID: 405, Scope: []encode.Field{{ID: ieObsDomainID, Len: 4}}, Fields: []encode.Field{{ID: ieSamplingInterval, Len: 4}}}
@@ -83,21 +82,13 @@ func TestSamplingOtherDomainAndManual(t *testing.T) {
 		t.Fatalf("other domain: mult %v", got)
 	}
 
-	// nothing declared: held; a rate set by hand releases it
+	// nothing declared: held until the device says what it samples at,
+	// never counted as if it had said 1:1
 	d = NewDecoder()
 	if got := decodeOne(t, d, 1, nil, nil, ipfixFlow(1, 2)); got != 0 {
 		t.Fatalf("expected held, mult %v", got)
 	}
-	res := d.SetManual(map[netip.Addr]uint32{exp: 1000})
-	if len(res.Records) != 1 || res.Records[0].Mult != 1000 {
-		t.Fatalf("manual: %+v", res.Records)
-	}
-	st := d.Stats()[0]
-	if st.SamplingState != "manual" || st.Sampling != 1000 || len(st.TemplateInfo) != 1 {
-		t.Fatalf("stats %+v", st)
-	}
-	// a rate the device declares wins over the hand-set one
-	if got := decodeOne(t, d, 1, &opt, encode.Values{encode.U(1, 4), encode.U(500, 4)}, ipfixFlow(1, 2)); got != 500 {
-		t.Fatalf("declared over manual: mult %v", got)
+	if st := d.Stats()[0]; st.Sampling != 0 {
+		t.Fatalf("an undeclared rate is shown as %d", st.Sampling)
 	}
 }

@@ -36,7 +36,6 @@ type Stats struct {
 	// the interface each flow was sampled on is known; "no" when they do
 	// not; "" before any data template.
 	DirField string
-	Manual   bool // the rate was set by hand (sampling= in the names)
 	// LossComp is the multiplier currently applied to make up for records
 	// lost in transit (1 = no loss).
 	LossComp float64
@@ -143,9 +142,6 @@ type Decoder struct {
 	MaxSessions int
 	// Unsampled lists exporters known to export every packet.
 	Unsampled map[netip.Addr]bool
-	// Manual is the sampling rate of exporters that do not declare it,
-	// from sampling= in the names; a declared rate takes precedence.
-	Manual map[netip.Addr]uint32
 	// byAddr is the last rate an exporter declared, in any domain.
 	byAddr map[netip.Addr]uint32
 }
@@ -157,7 +153,6 @@ func NewDecoder() *Decoder {
 		MaxPending:  200000,
 		MaxSessions: 10000,
 		Unsampled:   map[netip.Addr]bool{},
-		Manual:      map[netip.Addr]uint32{},
 		byAddr:      map[netip.Addr]uint32{},
 	}
 }
@@ -224,13 +219,7 @@ func (d *Decoder) Stats() []Stats {
 			}
 			st.DirField = "no"
 		}
-		if s.def == 0 && len(s.bySampler) == 0 && len(s.byIf) == 0 && d.Manual[s.stats.Exporter] > 0 {
-			st.Manual = true
-			st.Sampling = d.Manual[s.stats.Exporter]
-		}
-		if !st.Manual {
-			st.Sampling = s.def
-		}
+		st.Sampling = s.def
 		st.LossComp = s.comp
 		seen := map[uint32]bool{}
 		add := func(r uint32) {
@@ -240,9 +229,6 @@ func (d *Decoder) Stats() []Stats {
 			}
 		}
 		add(s.def)
-		if st.Manual {
-			add(st.Sampling)
-		}
 		for _, r := range s.bySampler {
 			add(r)
 		}
@@ -251,8 +237,6 @@ func (d *Decoder) Stats() []Stats {
 		}
 		sort.Slice(st.Rates, func(i, j int) bool { return st.Rates[i] < st.Rates[j] })
 		switch {
-		case st.Manual:
-			st.SamplingState = "manual"
 		case s.assumed && len(st.Rates) == 0 && d.byAddr[s.stats.Exporter] == 0:
 			// counted 1:1 at first, but a rate has been declared since:
 			// what arrives now is counted with it
@@ -335,9 +319,6 @@ func (d *Decoder) rateFor(s *session, rec *flow.Record, ref samplerRef, inRecord
 		// declared by the same device in another observation domain (line
 		// cards export under their own ids)
 		rate = d.byAddr[rec.Exporter]
-	}
-	if rate == 0 {
-		rate = d.Manual[rec.Exporter]
 	}
 	return rate
 }
@@ -513,17 +494,4 @@ func (d *Decoder) SetUnsampled(m map[netip.Addr]bool) {
 	d.mu.Lock()
 	d.Unsampled = m
 	d.mu.Unlock()
-}
-
-// SetManual replaces the hand-set sampling rates; records waiting for a
-// rate are released with them.
-func (d *Decoder) SetManual(m map[netip.Addr]uint32) Result {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	d.Manual = m
-	var res Result
-	for _, s := range d.sessions {
-		d.retryPending(s, &res.Records)
-	}
-	return res
 }

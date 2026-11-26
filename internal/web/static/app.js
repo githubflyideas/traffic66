@@ -2529,13 +2529,13 @@ views.sources = async (el) => {
     const kind = s.status;
     return `<tr class="${s.issues?.length ? 'has-fix' : ''}"><td>${s.name ? esc(s.name) + ' ' : ''}<span class="muted" style="font-size:var(--fs-4)">${esc(s.exporter)}${s.domain ? ' / ' + s.domain : ''}</span>${obsLine(s)}</td>
       <td class="nw">${esc(s.proto)}</td><td class="num">${nf(s.rec_per_sec, 1)}</td>
-      <td class="nw">${s.sampling ? esc(s.sampling) : (s.sampling_state === 'waiting' ? '<span class="muted">?</span>' : '1:1')}${s.sampling_state === 'manual' ? ` <span class="muted">(${esc(t('src.manual'))})</span>` : ''}${s.effective ? ` <span class="muted">(${esc(t('src.effective', {v: '1:' + nf(s.effective)}))})</span>` : ''}${s.wait_step ? `<br><span class="muted" style="font-size:var(--fs-3)">${esc(t('src.wait_' + s.wait_step))}${s.first_seen ? ' · ' + esc(t('wait.elapsed', {m: Math.max(1, Math.floor((Date.now() - Date.parse(s.first_seen)) / 60000))})) : ''}</span>` : ''}</td>
+      <td class="nw">${s.sampling ? esc(s.sampling) : (s.sampling_state === 'waiting' ? '<span class="muted">?</span>' : '1:1')}${s.effective ? ` <span class="muted">(${esc(t('src.effective', {v: '1:' + nf(s.effective)}))})</span>` : ''}${s.wait_step ? `<br><span class="muted" style="font-size:var(--fs-3)">${esc(t('src.wait_' + s.wait_step))}${s.first_seen ? ' · ' + esc(t('wait.elapsed', {m: Math.max(1, Math.floor((Date.now() - Date.parse(s.first_seen)) / 60000))})) : ''}</span>` : ''}</td>
       <td class="num">${nf(s.lost_pct, 2)}%</td><td class="nw muted">${s.last_seen ? ago(Date.parse(s.last_seen)) : ''}</td>
       <td>${status(kind, t('st.' + kind))}</td>
       ${admOnly(`<td class="nw" style="text-align:end">${s.blocked
         ? `<span class="tag">${esc(t('blk.on'))}</span>`
         : `<button class="btn sm danger" data-block="${esc(s.exporter)}">${esc(t('blk.block'))}</button>`}</td>`)}</tr>
-      ${s.issues?.length ? `<tr><td colspan="${adm() ? 8 : 7}" style="padding-top:0">${s.issues.map(c => `<div class="issue">${esc(issueText(c, s))}</div>`).join('')}${['assumed1', 'waiting', 'manual'].includes(s.sampling_state) && s.template_info?.length ? `<div class="issue muted" style="font-family:var(--mono);font-size:var(--fs-3)">${esc(t('src.templates'))} ${s.template_info.map(esc).join(' · ')}</div>` : ''}</td></tr>` : ''}`;
+      ${s.issues?.length ? `<tr><td colspan="${adm() ? 8 : 7}" style="padding-top:0">${s.issues.map(c => `<div class="issue">${esc(issueText(c, s))}</div>`).join('')}${['assumed1', 'waiting'].includes(s.sampling_state) && s.template_info?.length ? `<div class="issue muted" style="font-family:var(--mono);font-size:var(--fs-3)">${esc(t('src.templates'))} ${s.template_info.map(esc).join(' · ')}</div>` : ''}</td></tr>` : ''}`;
   }).join('');
   const lis = (d.listeners || []).map(l => `<span class="tag">UDP ${esc(l.addr)} · ${esc(l.proto)} · ${nf(l.packets)}</span>`).join(' ');
   const caps = (d.captures || []).map(c => `<span class="tag">${esc(c.iface)} · ${esc(c.method)} · ${nf(c.packets)}${c.error ? ' · ' + esc(c.error) : ''}</span>`).join(' ');

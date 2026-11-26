@@ -633,14 +633,10 @@ func (c *Collector) Sources() []SourceInfo {
 	return out
 }
 
-// SetSampling applies the names' sampling settings: devices that export
-// every packet, and hand-set rates for devices that do not declare one.
-// Records that were waiting for a rate go on with it.
-func (c *Collector) SetSampling(unsampled map[netip.Addr]bool, manual map[netip.Addr]uint32) {
+// SetSampling applies the names' sampling settings: the devices that
+// export every packet. Every other rate is the one the device declares.
+func (c *Collector) SetSampling(unsampled map[netip.Addr]bool) {
 	c.NF.SetUnsampled(unsampled)
-	if res := c.NF.SetManual(manual); len(res.Records) > 0 {
-		c.sink.Submit(res.Records)
-	}
 }
 
 // maxFlowSpan is the longest duration a record keeps when its times are

@@ -342,7 +342,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -568,7 +567,7 @@ traffic66.example.com --to 127.0.0.1:8066`) یا SSH tunnel کے ذریعے۔ UD
 
 | علامت | حل |
 |---|---|
-| "waiting for the sampling rate" | sampler options export کریں، یا device لائن میں `sampling=N` / `unsampled` |
+| "waiting for the sampling rate" | sampler options export کریں، یا device لائن میں `unsampled` |
 | counters سے کم | interfaces sample نہیں ہو رہے، loss، یا active timeout 60 s سے زیادہ |
 | counters سے زیادہ | ایک ہی ٹریفک دو interfaces یا ڈیوائسز پر sample ہو رہی ہے |
 | پاس ورڈ بھول گئے | traffic66 مشین پر `traffic66 passwd` |

@@ -341,7 +341,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -569,7 +568,7 @@ bộ phiên hội thoại mất khoảng 9 giây.
 
 | Triệu chứng | Cách xử lý |
 |---|---|
-| "đang chờ tỷ lệ lấy mẫu" | Xuất sampler options, hoặc thêm `sampling=N` / `unsampled` vào dòng device |
+| "đang chờ tỷ lệ lấy mẫu" | Xuất sampler options, hoặc thêm `unsampled` vào dòng device |
 | Thấp hơn bộ đếm | Giao diện không được lấy mẫu, mất gói, hoặc active timeout trên 60 giây |
 | Cao hơn bộ đếm | Cùng một lưu lượng bị lấy mẫu trên hai giao diện hoặc hai thiết bị |
 | Quên mật khẩu | `traffic66 passwd` trên máy chạy traffic66 |

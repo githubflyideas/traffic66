@@ -29,32 +29,7 @@ type flowRec struct {
 	bytes    uint64
 }
 
-// A device sampling 1 in 1000 that does not say so in the v5 header: the
-// operator supplies the rate by hand, and it has to be applied, or the
-// traffic is recorded at a thousandth of what went past.
-func TestV5ManualRateIsApplied(t *testing.T) {
-	d := NewDecoder()
-	d.Manual = map[netip.Addr]uint32{exp: 1000}
-	got := v5Msg(t, d, 0, 1)
-	if got.mult != 1000 {
-		t.Errorf("multiplier %v, want 1000: the hand-set rate was not applied", got.mult)
-	}
-	if got.sampling != 1000 || !got.known {
-		t.Errorf("sampling %d known %v, want 1000 and known", got.sampling, got.known)
-	}
-}
-
-// A rate in the header wins over one set by hand: the device knows better.
-func TestV5HeaderRateWinsOverManual(t *testing.T) {
-	d := NewDecoder()
-	d.Manual = map[netip.Addr]uint32{exp: 1000}
-	got := v5Msg(t, d, 100, 1)
-	if got.mult != 100 || got.sampling != 100 || !got.known {
-		t.Errorf("got %+v, want the header's 100", got)
-	}
-}
-
-// Nothing declared and nothing set: the counts are taken as they came, but
+// Nothing declared: the counts are taken as they came, but
 // the collector does not claim to know the rate. Saying it knows the rate
 // is 1 is what stopped the interface comparison explaining the difference.
 func TestV5NoRateIsNotClaimedKnown(t *testing.T) {
@@ -83,16 +58,8 @@ func TestV5UnsampledIsKnown(t *testing.T) {
 // device. Forcing it to 1 made it look declared.
 func TestV5UndeclaredRateIsNotStoredAsDeclared(t *testing.T) {
 	d := NewDecoder()
-	d.Manual = map[netip.Addr]uint32{exp: 1000}
 	v5Msg(t, d, 0, 1)
-	st := d.Stats()[0]
-	if !st.Manual {
-		t.Error("the sources page does not show the rate as hand-set")
-	}
-	if st.Sampling != 1000 {
-		t.Errorf("sources page shows rate %d, want 1000", st.Sampling)
-	}
-	if st.SamplingState != "manual" {
-		t.Errorf("sampling state %q, want \"manual\"", st.SamplingState)
+	if st := d.Stats()[0]; st.Sampling != 0 {
+		t.Errorf("sources page shows rate %d for a device that declared none", st.Sampling)
 	}
 }

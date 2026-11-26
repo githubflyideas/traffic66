@@ -350,7 +350,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -586,7 +585,7 @@ Verbindungen über 1 Stunde etwa 9 s.
 
 | Symptom | Abhilfe |
 |---|---|
-| "Warte auf die Sampling-Rate" | Sampler-Optionen exportieren oder `sampling=N` / `unsampled` in der Gerätezeile |
+| "Warte auf die Sampling-Rate" | Sampler-Optionen exportieren oder `unsampled` in der Gerätezeile |
 | Niedriger als die Zähler | Nicht gesampelte Schnittstellen, Verluste oder ein Active Timeout über 60 s |
 | Höher als die Zähler | Derselbe Verkehr wird an zwei Schnittstellen oder Geräten gesampelt |
 | Passwort vergessen | `traffic66 passwd` auf dem traffic66-Rechner |

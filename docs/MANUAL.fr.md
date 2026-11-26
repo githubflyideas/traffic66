@@ -354,7 +354,6 @@ net    10.10.0.0/16    Office LAN                  # your networks
 net    203.0.113.0/24  Public servers country=JP    # country: lines on the world map
 device 192.0.2.1       Core router
 device 192.0.2.9       Branch firewall unsampled    # exports every packet
-device 192.0.2.20      Edge router sampling=1000    # rate it does not declare
 iface  192.0.2.1 3     ISP uplink speed=1000000000 tag=uplink default
 host   10.10.3.27      Finance PC
 snmp   192.0.2.1       public                       # read counters over SNMPv2c
@@ -592,7 +591,7 @@ d'une heure de toutes les conversations, environ 9 s.
 
 | Symptôme | Solution |
 |---|---|
-| "en attente du taux d'échantillonnage" | Exportez les options de l'échantillonneur, ou `sampling=N` / `unsampled` sur la ligne de l'équipement |
+| "en attente du taux d'échantillonnage" | Exportez les options de l'échantillonneur, ou `unsampled` sur la ligne de l'équipement |
 | Inférieur aux compteurs | Interfaces non échantillonnées, pertes, ou timeout actif supérieur à 60 s |
 | Supérieur aux compteurs | Le même trafic échantillonné sur deux interfaces ou équipements |
 | Mot de passe oublié | `traffic66 passwd` sur la machine traffic66 |

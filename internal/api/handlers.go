@@ -770,7 +770,7 @@ func (s *Server) putInventory(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	s.Col.SetSampling(s.Inv.Unsampled(), s.Inv.Sampling())
+	s.Col.SetSampling(s.Inv.Unsampled())
 	writeJSON(w, http.StatusOK, map[string]string{"ok": "saved"})
 }
 

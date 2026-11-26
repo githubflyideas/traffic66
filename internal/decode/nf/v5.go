@@ -58,15 +58,12 @@ func (d *Decoder) decodeV5(b []byte, addr netip.Addr, now time.Time) (Result, er
 	s.stats.Records += uint64(count)
 
 	// With nothing declared, fall back the way the v9 and IPFIX path does
-	// in rateFor: a rate set by hand for a device that does not declare one
-	// counts as known, as does one known to export every packet. Failing
-	// both, the counts are taken as they came but not claimed to be known,
+	// in rateFor: a device known to export every packet counts as 1:1.
+	// Failing that, the counts are taken as they came but not claimed to be known,
 	// so the interface comparison can say why its numbers differ.
 	rate, known := declared, declared > 0
 	switch {
 	case known:
-	case d.Manual[addr] > 0:
-		rate, known = d.Manual[addr], true
 	case d.Unsampled[addr]:
 		rate, known = 1, true
 	default:

@@ -82,7 +82,6 @@ type Inventory struct {
 	ifaces    map[string]Iface // "exporter/ifindex"
 	hosts     map[netip.Addr]string
 	unsampled map[netip.Addr]bool
-	sampling  map[netip.Addr]uint32 // sampling=N on device lines
 	snmp      []SNMPTarget
 	products  []Product // in the order their lines are written
 	// autoIfs are interface names learned from the devices (SNMP ifName);
@@ -150,7 +149,6 @@ func (inv *Inventory) Parse(text string) error {
 	ifs := map[string]Iface{}
 	hosts := map[netip.Addr]string{}
 	uns := map[netip.Addr]bool{}
-	samp := map[netip.Addr]uint32{}
 	var snmps []SNMPTarget
 	var prods []Product
 	prodVIP := map[netip.Addr]string{} // VIP -> the product that claimed it
@@ -210,12 +208,11 @@ func (inv *Inventory) Parse(text string) error {
 					uns[a] = true
 					continue
 				}
-				if v, ok := strings.CutPrefix(strings.ToLower(w), "sampling="); ok {
-					n, err := strconv.ParseUint(strings.TrimPrefix(v, "1:"), 10, 32)
-					if err != nil || n == 0 {
-						return bad("sampling= needs a number such as sampling=1000")
-					}
-					samp[a] = uint32(n)
+				// sampling= was a hand-set rate for devices that do not
+				// declare one; the rate is now always the device's own. A
+				// line from an older inventory still loads, the word dropped
+				// rather than read into the device's name.
+				if strings.HasPrefix(strings.ToLower(w), "sampling=") {
 					continue
 				}
 				words = append(words, w)
@@ -356,7 +353,6 @@ func (inv *Inventory) Parse(text string) error {
 	inv.mu.Lock()
 	inv.places = places
 	inv.networks, inv.devices, inv.ifaces, inv.hosts, inv.unsampled, inv.snmp, inv.text = nets, devs, ifs, hosts, uns, snmps, text
-	inv.sampling = samp
 	inv.products = prods
 	inv.mu.Unlock()
 	return nil
@@ -442,10 +438,10 @@ func (inv *Inventory) editIface(exporter netip.Addr, idx uint32, edit func(*Ifac
 }
 
 // SetDevice names a device and says which room and rack it stands in,
-// keeping what else its device line says (sampling=, unsampled).
+// keeping what else its device line says (unsampled).
 func (inv *Inventory) SetDevice(a netip.Addr, name, room, rack string) error {
 	inv.mu.RLock()
-	samp, uns := inv.sampling[a], inv.unsampled[a]
+	uns := inv.unsampled[a]
 	inv.mu.RUnlock()
 	name = strings.Join(strings.Fields(name), " ")
 	if name == "" {
@@ -457,9 +453,6 @@ func (inv *Inventory) SetDevice(a netip.Addr, name, room, rack string) error {
 	}
 	if v := attrOut(rack); v != "" {
 		line += " rack=" + v
-	}
-	if samp != 0 {
-		line += fmt.Sprintf(" sampling=%d", samp)
 	}
 	if uns {
 		line += " unsampled"
@@ -666,18 +659,6 @@ func (inv *Inventory) Unsampled() map[netip.Addr]bool {
 	out := map[netip.Addr]bool{}
 	for a := range inv.unsampled {
 		out[a] = true
-	}
-	return out
-}
-
-// Sampling is the hand-set sampling rate of devices (sampling=N), used
-// where a device does not declare its own.
-func (inv *Inventory) Sampling() map[netip.Addr]uint32 {
-	inv.mu.RLock()
-	defer inv.mu.RUnlock()
-	out := map[netip.Addr]uint32{}
-	for a, n := range inv.sampling {
-		out[a] = n
 	}
 	return out
 }

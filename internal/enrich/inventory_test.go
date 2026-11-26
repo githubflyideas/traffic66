@@ -59,8 +59,8 @@ snmp 192.0.2.1 public 198.51.100.1:1161
 	if !inv.Unsampled()[A("192.0.2.2")] || inv.Unsampled()[A("192.0.2.1")] {
 		t.Errorf("unsampled %v", inv.Unsampled())
 	}
-	if inv.Sampling()[A("192.0.2.3")] != 512 {
-		t.Errorf("sampling %v", inv.Sampling())
+	if inv.Device(A("192.0.2.3")) != "Old switch" {
+		t.Errorf("an old sampling= word read into the name: %q", inv.Device(A("192.0.2.3")))
 	}
 	if len(inv.Devices()) != 3 {
 		t.Errorf("devices %v", inv.Devices())
@@ -102,7 +102,6 @@ func TestInventoryRefusesBadLines(t *testing.T) {
 		"unknown kind": "router 192.0.2.1 X\n",
 		"bad speed":    "iface 192.0.2.1 3 Up speed=fast\n",
 		"bad country":  "net 10.0.0.0/8 X country=JPN\n",
-		"bad sampling": "device 192.0.2.1 X sampling=0\n",
 	} {
 		if err := inv.Parse(text); err == nil {
 			t.Errorf("%s: accepted %q", name, text)
