@@ -74,6 +74,7 @@ func (s *Store) BillingSubnet(q Query, p netip.Prefix) (*Billing, error) {
 			b.InBytes += uint64(inB[i])
 			b.OutBytes += uint64(outB[i])
 			b.Bytes += uint64(inB[i] + outB[i] - insB[i])
+			b.addDay(bt, q.ZoneOffset, inB[i], outB[i], inB[i]+outB[i]-insB[i])
 		}
 	}
 	b.SettledTo = unsettledMark(settled, q.To)

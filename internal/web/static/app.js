@@ -1260,14 +1260,14 @@ async function seriesData(by, measure, filters) {
   return d;
 }
 // Bars over time (flow record counts).
-function barChart(el, times, values, fmtV) {
+function barChart(el, times, values, fmtV, fmtAx = fmtAxisBps) {
   const draw = () => {
     const W = el.clientWidth, H = el.clientHeight; if (W < 120 || !times.length) { el.innerHTML = ''; return; }
     const rtl = document.documentElement.dir === 'rtl', L = rtl ? 8 : 50, R = rtl ? 50 : 8, T = 8, B = 22, n = times.length;
     const Y = niceMax(Math.max(...values) * 1.05), y = v => T + (H - T - B) * (1 - v / Y);
     const bw = (W - L - R) / n, x = i => rtl ? W - R - bw * (i + 1) : L + bw * i, span = times[n - 1] - times[0];
     let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(el.getAttribute('aria-label') || el.closest('.panel')?.querySelector('h2,h3')?.textContent || t('nav.' + state.v))}">`;
-    for (let k = 0; k <= 4; k++) { const yy = y(Y * k / 4); s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="ax" x="${rtl ? W - R + 8 : L - 8}" y="${yy + 4}" text-anchor="${rtl ? 'start' : 'end'}">${fmtAxisBps(Y * k / 4)}</text>`; }
+    for (let k = 0; k <= 4; k++) { const yy = y(Y * k / 4); s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="ax" x="${rtl ? W - R + 8 : L - 8}" y="${yy + 4}" text-anchor="${rtl ? 'start' : 'end'}">${fmtAx(Y * k / 4)}</text>`; }
     const ticks = W < 600 ? 4 : 7, step = Math.max(1, Math.round(n / ticks));
     for (let i = 0; i < n; i += step) s += `<text class="ax" x="${x(i) + bw / 2}" y="${H - 5}" text-anchor="middle">${fmtAxisTime(times[i], span)}</text>`;
     values.forEach((v, i) => { if (v > 0) s += `<rect x="${(x(i) + 1).toFixed(1)}" y="${y(v).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${(H - B - y(v)).toFixed(1)}" rx="${Math.min(2, bw / 4)}" fill="var(--c1)"/>`; });
@@ -1858,10 +1858,18 @@ function embedForm(x) {
 // see this page and no other, opened on the one object their account
 // is bound to.
 let billObj = null; // {kind, name} as picked on the page
+// the window presets, matched to how the data is kept: the flow records
+// (seven days, by the minute) give the short ranges 5- and 15-minute
+// points; past them the hourly billing summaries (180 days) answer, by
+// the hour or coarser. A read-only account may ask for fourteen days.
+let billRange = 'month';
+const billRanges = ro => ro ? ['today', '1d', '3d', '7d', '14d', 'custom'] : ['today', '1d', '3d', '7d', '30d', 'month', 'lastmonth', 'custom'];
+const fmtStep = sec => !sec ? '' : sec < 3600 ? t('bill.min', {n: sec / 60}) : sec < 86400 ? t('bill.hour', {n: sec / 3600}) : t('bill.day', {n: sec / 86400});
 views.billing = async (el) => {
   const ro = !!(me && me.readonly);
   const inv = ro ? {text: ''} : await fetch('/api/inventory').then(r => r.json()).catch(() => ({text: ''}));
   if (ro) billObj = {kind: me.kind, name: me.object};
+  if (!billRanges(ro).includes(billRange)) billRange = '7d';
   const prods = [];
   for (const line of (inv.text || '').split('\n')) {
     const f = line.trim().split(/\s+/);
@@ -1882,8 +1890,9 @@ views.billing = async (el) => {
   const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   el.innerHTML = `<div class="grid">
     <div class="panel c12"><div class="ph"><h2>${esc(t('nav.billing'))}</h2><span class="sub">${esc(t('bill.sub'))}</span></div>
+      <div class="seg" role="group" id="blRanges" style="margin:4px 0 10px;flex-wrap:wrap" aria-label="${esc(t('bill.window'))}">${billRanges(ro).map(k => `<button data-blr="${k}" aria-pressed="${billRange === k}">${esc(t('bill.r_' + k))}</button>`).join('')}</div>
       <div class="nmform" style="flex-wrap:wrap">
-        <select id="blObj" aria-label="${esc(t('bill.object'))}">
+        <select id="blObj" style="min-width:16em" aria-label="${esc(t('bill.object'))}">
           ${prods.map(x => `<option value="p:${esc(x.name)}" ${billObj && billObj.kind === 'product' && billObj.name === x.name ? 'selected' : ''}>${esc(t('bill.product'))}: ${esc(x.name)}</option>`).join('')}
           ${invAddrs.length ? `<optgroup label="${esc(t('bill.inv_addrs'))}">${invAddrs.map(x => `<option value="v:${esc(x.addr)}" ${billObj && billObj.kind === 'vip' && billObj.name === x.addr ? 'selected' : ''}>${esc(x.addr)}${x.label ? ' · ' + esc(x.label) : ''}</option>`).join('')}</optgroup>` : ''}
           <option value="vip" ${billObj && billObj.kind === 'vip' && !invAddrs.some(x => x.addr === billObj.name) ? 'selected' : ''}>${esc(t('bill.vip_list'))}</option>
@@ -1891,9 +1900,8 @@ views.billing = async (el) => {
         </select>
         <input id="blVip" aria-label="${esc(t('bill.vip_list'))}" title="${esc(t('bill.vip_hint'))}" placeholder="203.0.113.10, 203.0.113.11" style="min-width:18em" value="${billObj && billObj.kind === 'vip' && !invAddrs.some(x => x.addr === billObj.name) ? esc(billObj.name) : ''}" ${billObj && billObj.kind === 'vip' && !invAddrs.some(x => x.addr === billObj.name) ? '' : 'hidden'}>
         <input id="blSubnet" aria-label="${esc(t('bill.subnet'))}" placeholder="203.0.113.0/24" value="${billObj && billObj.kind === 'subnet' ? esc(billObj.name) : ''}" ${billObj && billObj.kind === 'subnet' ? '' : 'hidden'}>
-        <input type="month" id="blMonth" aria-label="${esc(t('bill.month'))}" value="${monthVal}">
-        <input type="datetime-local" id="blFrom" aria-label="${esc(t('sh.from'))}">
-        <input type="datetime-local" id="blTo" aria-label="${esc(t('sh.to'))}">
+        <input type="datetime-local" id="blFrom" aria-label="${esc(t('sh.from'))}" ${billRange === 'custom' ? '' : 'hidden'}>
+        <input type="datetime-local" id="blTo" aria-label="${esc(t('sh.to'))}" ${billRange === 'custom' ? '' : 'hidden'}>
         <button class="primary" id="blGo">${esc(t('sh.apply'))}</button>
         <button class="btn" id="blCsv">${esc(t('exp.csv'))}</button>
       </div>
@@ -1904,10 +1912,7 @@ views.billing = async (el) => {
     // a read-only account picks a window, never an object: the object
     // controls go away, the window starts at the last seven days (the
     // widest it may ask for is fourteen)
-    for (const id of ['#blObj', '#blVip', '#blSubnet', '#blMonth']) { const n = $(id); if (n) n.hidden = true; }
-    const loc = d => { const x = new Date(d.getTime() - d.getTimezoneOffset() * 60000); return x.toISOString().slice(0, 16); };
-    $('#blFrom').value = loc(new Date(Date.now() - 7 * 864e5));
-    $('#blTo').value = loc(new Date());
+    for (const id of ['#blObj', '#blVip', '#blSubnet']) { const n = $(id); if (n) n.hidden = true; }
     $('#blMsg').textContent = `${t('bill.object')}: ${me.object}`;
   }
   const params = () => {
@@ -1921,9 +1926,17 @@ views.billing = async (el) => {
     return finishParams(p);
   };
   const finishParams = p => {
-    const f = $('#blFrom').value, e = $('#blTo').value;
-    if (f && e) { p.set('from', String(new Date(f).getTime())); p.set('to', String(new Date(e).getTime())); }
-    else if ($('#blMonth').value) p.set('month', $('#blMonth').value);
+    const now = new Date(), ym = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const span = {'1d': 1, '3d': 3, '7d': 7, '14d': 14, '30d': 30}[billRange];
+    if (billRange === 'month') p.set('month', ym(now));
+    else if (billRange === 'lastmonth') p.set('month', ym(new Date(now.getFullYear(), now.getMonth() - 1, 1)));
+    else if (billRange === 'today') { const d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()); p.set('from', String(d0.getTime())); p.set('to', String(now.getTime())); }
+    else if (span) { p.set('from', String(now.getTime() - span * 864e5)); p.set('to', String(now.getTime())); }
+    else {
+      const f = $('#blFrom').value, e = $('#blTo').value;
+      if (f && e) { p.set('from', String(new Date(f).getTime())); p.set('to', String(new Date(e).getTime())); }
+      else p.set('month', ym(now));
+    }
     return p;
   };
   // this month's usage of the same object: inbound plus outbound, in GB,
@@ -1957,22 +1970,35 @@ views.billing = async (el) => {
         ${kpi(esc(t('bill.total')), fmtBytes(j.bytes), esc(t('bill.total_sub')))}
         ${kpi(esc(t('if.in')), fmtBytes(j.in_bytes), '')}
         ${kpi(esc(t('if.out')), fmtBytes(j.out_bytes), '')}
-        ${kpi(esc(t('em.avg')) + ' / ' + esc(t('em.peak')), fmtBps(j.avg_bps), fmtBps(j.peak_bps))}
+        ${kpi(esc(t('bill.p95')), fmtBps(j.p95_bps), esc(t('bill.p95_sub', {avg: fmtBps(j.avg_bps), peak: fmtBps(j.peak_bps), step: fmtStep(j.p95_step)})))}
       </div>
-      <div class="chart" id="blChart" style="height:220px;margin-top:12px" aria-label="${esc(t('nav.billing'))}"></div>
+      <h3 style="margin:16px 0 4px;font-size:var(--fs-3)">${esc(t('bill.rate_title'))} <span class="muted" style="font-weight:normal">${esc(t('bill.step', {s: fmtStep(j.step)}))}</span></h3>
+      <div class="chart" id="blChart" style="height:240px" aria-label="${esc(t('bill.rate_title'))}"></div>
       <div class="legend" id="blLegend"></div>
+      ${(j.days || []).length >= 2 && j.bytes > 0 ? `<h3 style="margin:16px 0 4px;font-size:var(--fs-3)">${esc(t('bill.daily_title'))}</h3>
+      <div class="chart" id="blDays" style="height:180px" aria-label="${esc(t('bill.daily_title'))}"></div>` : ''}
       ${(j.members || []).length > 1 ? `<table style="margin-top:12px"><tr><th>${esc(t('bill.vip'))}</th><th class="num">${esc(t('if.in'))}</th><th class="num">${esc(t('if.out'))}</th><th class="num">${esc(t('bill.total'))}</th></tr>
         ${j.members.map(m => `<tr><td><code>${esc(m.addr)}</code></td><td class="num">${fmtBytes(m.in_bytes)}</td><td class="num">${fmtBytes(m.out_bytes)}</td><td class="num">${fmtBytes(m.bytes)}</td></tr>`).join('')}</table>
         <p class="muted" style="font-size:var(--fs-5)">${esc(t('bill.member_note'))}</p>` : ''}
       <p class="muted" style="font-size:var(--fs-5)">${esc(t('bill.note'))}</p>`;
-    tsChart($('#blChart'), {times: j.times, settledTo: j.settled_to, dataFrom: j.data_from,
+    tsChart($('#blChart'), {times: j.times, settledTo: j.settled_to, dataFrom: j.data_from, empty: esc(t('empty.nodata')),
       lines: [{name: t('bill.total'), color: 'var(--c5)', data: j.total, fill: true},
         {name: t('if.in'), color: IF_IN, data: j.in}, {name: t('if.out'), color: IF_OUT, data: j.out}]});
     $('#blLegend').innerHTML = [[t('bill.total'), 'var(--c5)'], [t('if.in'), IF_IN], [t('if.out'), IF_OUT]]
       .map(([n, c]) => `<span><i style="background:${c}"></i>${esc(n)}</span>`).join('');
+    if ((j.days || []).length >= 2 && j.bytes > 0) {
+      const dayMs = j.days.map(d => { const [y, m, dd] = d.day.split('-').map(Number); return new Date(y, m - 1, dd).getTime(); });
+      barChart($('#blDays'), dayMs, j.days.map(d => d.bytes), fmtBytes, fmtBytes);
+    }
     if (!ro) monthUse(p);
   };
-  $('#blObj').onchange = () => { $('#blVip').hidden = $('#blObj').value !== 'vip'; $('#blSubnet').hidden = $('#blObj').value !== 'subnet'; };
+  el.querySelectorAll('[data-blr]').forEach(b => b.onclick = () => {
+    billRange = b.dataset.blr;
+    el.querySelectorAll('[data-blr]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    $('#blFrom').hidden = $('#blTo').hidden = billRange !== 'custom';
+    if (billRange !== 'custom') load();
+  });
+  if (!ro) $('#blObj').onchange = () => { $('#blVip').hidden = $('#blObj').value !== 'vip'; $('#blSubnet').hidden = $('#blObj').value !== 'subnet'; };
   $('#blGo').onclick = load;
   $('#blCsv').onclick = () => { location.href = '/api/billing/export?' + params(); };
   await load();

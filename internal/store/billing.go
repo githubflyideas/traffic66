@@ -53,6 +53,31 @@ type Billing struct {
 	// cap): Members then holds the largest of them, never silently
 	// fewer than there are.
 	MembersTotal int `json:"members_total,omitempty"`
+	// Days is the settled volume of each calendar day in the query's
+	// zone, added up from the same buckets as the totals, so the days
+	// always add up to InBytes, OutBytes and Bytes exactly.
+	Days []BillingDay `json:"days,omitempty"`
+}
+
+// BillingDay is one calendar day's settled volume.
+type BillingDay struct {
+	Day      string `json:"day"` // YYYY-MM-DD in the query's zone
+	InBytes  uint64 `json:"in_bytes"`
+	OutBytes uint64 `json:"out_bytes"`
+	Bytes    uint64 `json:"bytes"`
+}
+
+// addDay adds one settled bucket's bytes to the day it starts in. The
+// buckets come in time order, so a new day is always the last one.
+func (b *Billing) addDay(bt time.Time, zone time.Duration, in, out, total float64) {
+	day := bt.In(time.FixedZone("", int(zone.Seconds()))).Format("2006-01-02")
+	if n := len(b.Days); n == 0 || b.Days[n-1].Day != day {
+		b.Days = append(b.Days, BillingDay{Day: day})
+	}
+	d := &b.Days[len(b.Days)-1]
+	d.InBytes += uint64(in)
+	d.OutBytes += uint64(out)
+	d.Bytes += uint64(total)
 }
 
 // MemberRow is one address of the set and its own in and out, for the
@@ -135,6 +160,7 @@ func (s *Store) Billing(q Query, addrs []netip.Addr) (*Billing, error) {
 			b.InBytes += uint64(inB[i])
 			b.OutBytes += uint64(outB[i])
 			b.Bytes += uint64(inB[i] + outB[i] - insB[i])
+			b.addDay(bt, q.ZoneOffset, inB[i], outB[i], inB[i]+outB[i]-insB[i])
 		}
 	}
 	b.SettledTo = unsettledMark(settled, q.To)

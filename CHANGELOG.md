@@ -3,6 +3,13 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.11.2
+
+- Traffic statistics: the window is picked from presets matched to how the data is kept: today, 1 day, 3 days and 1 week (from the flow records, a point every 5 or 15 minutes, or every hour), 30 days, this month and last month (from the hourly summaries), or a custom range. A read-only account has today to 2 weeks.
+- Traffic statistics: the 95th percentile of the total rate, with the point width it was taken over, beside the average and the peak; the peak and the percentile leave out buckets still filling and buckets from before there was any data.
+- Traffic statistics: usage per day as bars, under the bandwidth chart, for windows of two days or more. The days are added up from the same buckets as the total, so they always add up to it exactly, and they are the viewer's calendar days.
+- Traffic statistics: an empty window says there is no data in it, instead of a message about waiting for a device.
+
 ## 2.11.1
 
 - Interface check: the Inbound and Outbound views of the bandwidth chart show the traffic into and out of the interface being inspected, as the overview does. Before, they split by the inventory's own networks and stayed on "not yet" on a network whose ranges were not in the inventory.

@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"net/netip"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -155,6 +156,12 @@ type billingOut struct {
 	AvgBps  float64 `json:"avg_bps"`
 	PeakBps float64 `json:"peak_bps"`
 	PeakAt  int64   `json:"peak_at,omitempty"`
+	// P95Bps is the 95th percentile of the total rate over the settled
+	// buckets, the figure bandwidth is commonly billed on; P95Step is the
+	// bucket it was taken over, in seconds, because a 95th percentile is
+	// only comparable between bills taken over the same bucket width.
+	P95Bps  float64 `json:"p95_bps"`
+	P95Step int64   `json:"p95_step,omitempty"`
 }
 
 // billingFor runs the one aggregation behind the statistics page, its
@@ -194,10 +201,27 @@ func (s *Server) billingFor(obj billingObject, q store.Query) (*billingOut, erro
 	if span := settledEnd.Sub(q.From).Seconds(); span > 0 {
 		out.AvgBps = float64(b.Bytes) * 8 / span
 	}
+	// peak and 95th percentile over the settled buckets only:
+	// a bucket still filling would pull every one of them down
+	settledMs := settledEnd.UnixMilli()
+	stepMs := b.Step * 1000
+	var vals []float64
 	for i, v := range b.Total {
+		if stepMs > 0 && b.Times[i]+stepMs > settledMs {
+			continue
+		}
+		// nor buckets from before there was any data: zeros that are
+		// "not recorded", not "idle", would drag the percentile down
+		if b.DataFrom > 0 && b.Times[i]+stepMs <= b.DataFrom {
+			continue
+		}
+		vals = append(vals, v)
 		if v > out.PeakBps {
 			out.PeakBps, out.PeakAt = v, b.Times[i]
 		}
+	}
+	if len(vals) > 0 {
+		out.P95Bps, out.P95Step = percentile95(vals), b.Step
 	}
 	return out, nil
 }
@@ -418,4 +442,16 @@ func parseVIPs(s string) ([]netip.Addr, error) {
 		return nil, errors.New("bad_vip")
 	}
 	return out, nil
+}
+
+// percentile95 is the nearest-rank 95th percentile: sorted, the top 5%
+// of the samples are the ones left out, and the next one is the figure.
+// It sorts vals in place.
+func percentile95(vals []float64) float64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	sort.Float64s(vals)
+	k := int(math.Ceil(0.95*float64(len(vals)))) - 1
+	return vals[max(k, 0)]
 }
