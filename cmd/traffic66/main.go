@@ -333,9 +333,9 @@ func serve(args []string, demo bool) {
 	fs.Float64Var(&f.mem, "memory", 0.10, "share of physical memory for the database cache, and the same again as a soft limit for the rest of the program (each at least 256 MB)")
 	fs.IntVar(&f.l2, "l2-overhead", 18, "bytes added per packet to IP-layer counts to match interface counters")
 	fs.DurationVar(&f.hold, "sampling-wait", 5*time.Minute, "how long to hold NetFlow/IPFIX records waiting for the sampling rate")
-	fs.StringVar(&f.dnsUpstream, "dns-upstream", "", "DNS server for reverse lookups (default: system resolver)")
-	fs.Float64Var(&f.dnsRate, "dns-rate", 20, "maximum reverse lookups per second")
-	fs.DurationVar(&f.dnsTTL, "dns-cache", 120*time.Second, "how long reverse lookup results are cached")
+	fs.StringVar(&f.dnsUpstream, "dns-upstream", "", "DNS server for reverse lookups (registered installations; default: system resolver)")
+	fs.Float64Var(&f.dnsRate, "dns-rate", dnsDefaultRate, "maximum reverse lookups per second (registered installations)")
+	fs.DurationVar(&f.dnsTTL, "dns-cache", dnsDefaultTTL, "how long reverse lookup results are cached (registered installations)")
 	fs.BoolVar(&f.noDNS, "no-dns", false, "disable reverse lookups")
 	fs.BoolVar(&f.tuiAfter, "tui", false, "also open the terminal UI in this terminal")
 	fs.Parse(args)
@@ -578,7 +578,13 @@ func serve(args []string, demo bool) {
 	if f.noDNS {
 		dns = dnsres.New(dnsres.Options{PerSecond: 1e-9, Upstream: "127.0.0.1:1"})
 	} else {
-		dns = dnsres.New(dnsres.Options{Upstream: f.dnsUpstream, PerSecond: f.dnsRate, TTL: f.dnsTTL})
+		registered := lic != nil && lic.State().Registered()
+		opt, ignored := dnsOptions(f, registered)
+		if len(ignored) > 0 {
+			log.Printf("dns: %s need a registered installation; reverse lookups use the system resolver, %g a second, cached %s",
+				strings.Join(ignored, ", "), opt.PerSecond, opt.TTL)
+		}
+		dns = dnsres.New(opt)
 	}
 	srv := &api.Server{Store: st, Pipe: pipe, Col: col, Inv: inv, ASN: asn, Thr: thr, DNS: dns, Det: det, Static: web.FS(), Version: version, BuildKind: buildKind,
 		Demo: demo, Check: checker.Check, Exists: checker.Exists, Accounts: checker, LocalTok: tok, DataDir: f.data, Started: time.Now(), Listen: listens}
@@ -1240,4 +1246,33 @@ func parsePublicURL(v string) (*url.URL, error) {
 		return nil, fmt.Errorf("-public-url %q: give the address browsers use, such as https://traffic66.example.org or https://example.org:8443", v)
 	}
 	return u, nil
+}
+
+// Reverse lookups are part of every installation; tuning them is a
+// registered feature. dnsDefault* are what an unregistered installation
+// uses whatever its flags say.
+const (
+	dnsDefaultRate = 20
+	dnsDefaultTTL  = 120 * time.Second
+)
+
+// dnsOptions turns the -dns-* flags into the resolver's options. On an
+// unregistered installation the upstream, rate and cache flags are
+// ignored for the defaults, and the ones that were set are named so the
+// log can say so.
+func dnsOptions(f serveFlags, registered bool) (dnsres.Options, []string) {
+	if registered {
+		return dnsres.Options{Upstream: f.dnsUpstream, PerSecond: f.dnsRate, TTL: f.dnsTTL}, nil
+	}
+	var ignored []string
+	if f.dnsUpstream != "" {
+		ignored = append(ignored, "-dns-upstream")
+	}
+	if f.dnsRate != dnsDefaultRate {
+		ignored = append(ignored, "-dns-rate")
+	}
+	if f.dnsTTL != dnsDefaultTTL {
+		ignored = append(ignored, "-dns-cache")
+	}
+	return dnsres.Options{PerSecond: dnsDefaultRate, TTL: dnsDefaultTTL}, ignored
 }

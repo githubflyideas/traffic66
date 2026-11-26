@@ -5,6 +5,7 @@ heading is the version number.
 
 ## Unreleased
 
+- Reverse DNS: lookups stay in every installation; tuning them (-dns-upstream, -dns-rate, -dns-cache) is a registered feature. Unregistered, the flags are ignored for the system resolver, 20 lookups a second and a 2-minute cache, and the log says which were ignored. -no-dns works everywhere.
 - Traffic statistics are a registered feature as a whole: an unregistered installation is refused every query, one VIP as much as a group or a subnet, on the page, its CSV and the read-only accounts alike. The three-VIP allowance for unregistered installations is gone.
 - Inventory: `sampling=` on device lines is gone. The sampling rate is always the one the device declares (sFlow in every sample, NetFlow v9 and IPFIX in their sampler options); a device that exports every packet is still marked `unsampled`. An older inventory with `sampling=` still loads: the word is ignored.
 
