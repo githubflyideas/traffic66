@@ -833,7 +833,6 @@
 "bill.vip": "VIP",
 "bill.subnet": "网段",
 "bill.bad_subnet": "这不是一个网段。请用 CIDR 写法，如 203.0.113.0/24。",
-"bill.vip_limit": "未注册版一次合并查询最多 {limit} 个 VIP；这次查了 {count} 个。注册后不限。",
 "bill.month": "月份",
 "bill.total": "总量（入+出）",
 "bill.total_sub": "入向+出向，VIP 组内部流量只算一次",

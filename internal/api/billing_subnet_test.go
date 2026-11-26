@@ -35,11 +35,11 @@ func capServer(t *testing.T) (reg, unreg *Server, ts time.Time) {
 	return reg, unreg, time.Now().UTC().Add(-2 * time.Hour).Truncate(time.Minute)
 }
 
-// The merged-query limit: unregistered, one VIP and a line of three
-// are answered, a line of four is refused with the limit and the
-// count — on the page's endpoint and the CSV alike — while a
-// registered installation bills the four without a murmur.
-func TestBillingVIPLimit(t *testing.T) {
+// Unregistered, the traffic statistics answer nothing: one VIP, a VIP
+// group of any size and a subnet are all refused with not_registered,
+// on the page's endpoint and the CSV alike, while a registered
+// installation bills them.
+func TestBillingUnregisteredRefused(t *testing.T) {
 	reg, unreg, ts := capServer(t)
 	win := billingWindow(ts)
 	call := func(s *Server, path string, export bool) *httptest.ResponseRecorder {
@@ -51,22 +51,12 @@ func TestBillingVIPLimit(t *testing.T) {
 		}
 		return w
 	}
-	for _, path := range []string{"/api/billing?vip=203.0.113.10&" + win, "/api/billing?product=Trio&" + win} {
-		if w := call(unreg, path, false); w.Code != 200 {
-			t.Errorf("unregistered %s: %d %s, want 200", path, w.Code, w.Body)
-		}
-	}
-	for _, export := range []bool{false, true} {
-		w := call(unreg, "/api/billing?product=Quad&"+win, export)
-		if w.Code != 403 {
-			t.Fatalf("unregistered Quad (export=%v): %d %s, want 403", export, w.Code, w.Body)
-		}
-		var out map[string]any
-		if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
-			t.Fatal(err)
-		}
-		if out["error"] != "vip_limit_exceeded" || out["limit"] != float64(3) || out["count"] != float64(4) {
-			t.Errorf("refusal = %v, want vip_limit_exceeded with limit 3 and count 4", out)
+	for _, q := range []string{"vip=203.0.113.10", "vip=203.0.113.10,203.0.113.11", "product=Trio", "product=Quad", "subnet=203.0.113.0/24"} {
+		for _, export := range []bool{false, true} {
+			w := call(unreg, "/api/billing?"+q+"&"+win, export)
+			if w.Code != 403 || !strings.Contains(w.Body.String(), `"not_registered"`) {
+				t.Errorf("unregistered %s (export=%v): %d %s, want 403 not_registered", q, export, w.Code, w.Body)
+			}
 		}
 	}
 	if w := call(reg, "/api/billing?product=Quad&"+win, false); w.Code != 200 {
@@ -190,17 +180,17 @@ func TestReadonlyBillingAdjudication(t *testing.T) {
 		t.Fatalf("creating shop: %d %s", w.Code, w.Body)
 	}
 	shop := login("shop", "shop-password-1")
-	if w := call("GET", "/api/billing?product=Shop&"+win, "", shop); w.Code != 200 ||
-		!strings.Contains(w.Body.String(), `"bytes":17000`) {
-		t.Errorf("unregistered, bound line of two: %d %s, want 200 with the figures", w.Code, w.Body)
-	}
-	if w := call("GET", "/api/billing?subnet=203.0.113.0/24&"+win, "", shop); w.Code != 403 ||
-		!strings.Contains(w.Body.String(), `"readonly_scope"`) {
-		t.Errorf("read-only subnet: %d %s, want 403 readonly_scope", w.Code, w.Body)
+	// unregistered, a read-only account's own object is refused like
+	// everything else on the page, and so is a subnet
+	for _, q := range []string{"product=Shop", "subnet=203.0.113.0/24"} {
+		if w := call("GET", "/api/billing?"+q+"&"+win, "", shop); w.Code != 403 ||
+			!strings.Contains(w.Body.String(), `"not_registered"`) {
+			t.Errorf("unregistered read-only %s: %d %s, want 403 not_registered", q, w.Code, w.Body)
+		}
 	}
 
-	// a line of four on an unregistered install: the account is
-	// created and signs in, and its queries meet the merged limit
+	// a group of four on an unregistered install: the account is
+	// created and signs in, and its queries are refused
 	s2, ts2 := billingServer(t)
 	s2.License = nil
 	inv := enrich.NewInventory()
@@ -246,7 +236,7 @@ func TestReadonlyBillingAdjudication(t *testing.T) {
 	}
 	quad := func(r *http.Request) { r.AddCookie(&http.Cookie{Name: cookieName, Value: cookie}) }
 	if w := call2("GET", "/api/billing?product=Quad&"+billingWindow(ts2), "", quad); w.Code != 403 ||
-		!strings.Contains(w.Body.String(), `"vip_limit_exceeded"`) || !strings.Contains(w.Body.String(), `"count":4`) {
-		t.Errorf("unregistered, bound line of four: %d %s, want 403 vip_limit_exceeded count 4", w.Code, w.Body)
+		!strings.Contains(w.Body.String(), `"not_registered"`) {
+		t.Errorf("unregistered, bound group of four: %d %s, want 403 not_registered", w.Code, w.Body)
 	}
 }

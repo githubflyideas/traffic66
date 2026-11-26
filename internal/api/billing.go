@@ -16,14 +16,10 @@ import (
 
 // Traffic statistics: the traffic of one VIP, or of every VIP of one
 // product line, with inbound and outbound added together — the figure a
-// business is billed from. How much of it an installation may ask for
-// turns on its registration state, adjudicated in billingRequest once
-// the object is resolved: a registered installation merges as many
-// VIPs as a line holds and may also bill a whole subnet, a registered
-// feature of its own; an unregistered one may still merge, up to
-// unregVIPLimit VIPs in one query, and past the limit is answered
-// vip_limit_exceeded. A subnet asked for unregistered is answered
-// not_registered, the way the platform links are gated.
+// business is billed from. It is a registered feature as a whole: an
+// unregistered installation is answered not_registered for every
+// object, one VIP as much as a group or a subnet, before anything is
+// resolved or counted.
 //
 // The gate is the registration state itself, not a licence feature name:
 // the Features list in the licence package is signed as a whole and
@@ -62,39 +58,6 @@ func (s *Server) registeredOnly(w http.ResponseWriter, feature string) bool {
 	}
 	writeJSON(w, http.StatusForbidden, map[string]string{"error": "not_registered", "feature": feature})
 	return false
-}
-
-// unregVIPLimit is how many VIPs one merged billing query may span
-// on an unregistered installation: a single VIP, or a small product
-// line. The limit is adjudicated on the query, on the addresses the
-// object resolves to — a line may hold more members than this; what
-// it may not do unregistered is bill them all at once.
-const unregVIPLimit = 3
-
-// billingGate adjudicates a resolved VIP or product-line query
-// against the installation's registration state: registered passes
-// outright; unregistered passes up to unregVIPLimit distinct
-// addresses and is answered vip_limit_exceeded past it, with the
-// limit and the count that was asked for. Subnet queries never
-// reach here — they are registered-only, gated before resolution.
-func (s *Server) billingGate(w http.ResponseWriter, obj billingObject) bool {
-	if s.registered() {
-		return true
-	}
-	seen := map[string]bool{}
-	n := 0
-	for _, a := range obj.Addrs {
-		if k := a.Unmap().String(); !seen[k] {
-			seen[k] = true
-			n++
-		}
-	}
-	if n > unregVIPLimit {
-		writeJSON(w, http.StatusForbidden, map[string]any{
-			"error": "vip_limit_exceeded", "limit": unregVIPLimit, "count": n})
-		return false
-	}
-	return true
 }
 
 // billingObject is the selection a billing query is about: one VIP,
@@ -280,13 +243,13 @@ func billingRange(r *http.Request) (store.Query, error) {
 // billingRequest settles what a billing call asks for: the object and
 // the window, with the read-only caller's narrower rules applied — its
 // bound object only, a window of at most fourteen days, and its rate
-// limit — and the installation's registration adjudication: a subnet
-// is registered-only, and a merged VIP or product-line query past
-// unregVIPLimit addresses is registered-only too. The adjudication
-// sits on the resolved object, because the limit is on how many
-// addresses a query spans, which only resolution settles. It writes
-// the refusal itself and reports false.
+// limit — after the registration check, which comes first: the whole
+// page is a registered feature. It writes the refusal itself and
+// reports false.
 func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billingObject, store.Query, bool) {
+	if !s.registeredOnly(w, "billing") {
+		return billingObject{}, store.Query{}, false
+	}
 	v := r.URL.Query()
 	params := map[string]string{"product": v.Get("product"), "vip": v.Get("vip"), "subnet": v.Get("subnet")}
 	ro, isRO := s.roRole(userOf(r))
@@ -329,9 +292,6 @@ func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billing
 			params[bound.Kind] = bound.Name
 		}
 	}
-	if params["subnet"] != "" && !s.registeredOnly(w, "billing") {
-		return billingObject{}, store.Query{}, false
-	}
 	obj, err := s.resolveBillingObject(params)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -339,9 +299,6 @@ func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billing
 	}
 	if isRO && (obj.Kind != ro.Kind || obj.Name != ro.Object) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
-		return billingObject{}, store.Query{}, false
-	}
-	if obj.Kind != "subnet" && !s.billingGate(w, obj) {
 		return billingObject{}, store.Query{}, false
 	}
 	q, err := billingRange(r)

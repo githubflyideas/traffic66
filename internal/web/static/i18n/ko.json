@@ -833,7 +833,6 @@
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
-"bill.vip_limit": "An unregistered installation can merge at most {limit} VIPs in one query; this one spans {count}. Register for no limit.",
 "bill.month": "월",
 "bill.total": "합계(인+아웃)",
 "bill.total_sub": "인바운드+아웃바운드, 라인 내부 트래픽은 한 번만 셉니다",

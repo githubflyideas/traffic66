@@ -1958,8 +1958,6 @@ views.billing = async (el) => {
     if (!res || !res.ok) {
       body.innerHTML = j.error === 'not_registered'
         ? `<div class="verdict warn">${esc(t('bill.locked'))}</div>`
-        : j.error === 'vip_limit_exceeded'
-          ? `<div class="verdict warn">${esc(t('bill.vip_limit', {limit: j.limit, count: j.count}))}</div>`
           : j.error === 'bad_range'
             ? `<div class="empty">${esc(t('bill.too_long'))}</div>`
           : j.error === 'bad_subnet'
