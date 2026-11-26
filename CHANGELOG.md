@@ -3,7 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## 2.11.3
+## 2.11.4
 
 - Inventory: product lines are called VIP groups on every page. Picking the type VIP group, the form asks for the group's name (say "Product A public") and its VIPs; commas, full-width commas, 、 and spaces all separate them, and the line is saved in the standard form. The table shows the group's name and its VIPs.
 - Traffic statistics: one query covers a month at most (it was 186 days), so a many-VIP group or a wide subnet never ties the database up; a longer custom range says so.
