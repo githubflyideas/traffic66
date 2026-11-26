@@ -830,7 +830,7 @@
 "nav.billing": "트래픽 통계",
 "bill.sub": "VIP 하나 또는 제품 라인 전체의 트래픽으로, 인바운드와 아웃바운드를 합한 수치가 과금 근거입니다.",
 "bill.object": "대상",
-"bill.product": "제품 라인",
+"bill.product": "VIP 그룹",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "데이터베이스가 바쁩니다. 잠시 후 다시 시도하세요.",
 "sh.err_bad_request": "요청을 이해할 수 없습니다.",
 "sh.err_load": "수치를 불러올 수 없습니다.",
-"nm.k_product": "제품 라인",
+"nm.k_product": "VIP 그룹",
 "nm.bad_vips": "{a}은(는) IP 주소 목록이 아닙니다",
 "bill.inv_addrs": "대장의 주소",
 "bill.vip_list": "VIP(여러 개는 쉼표로 구분)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "일별 사용량",
 "bill.min": "{n}분",
 "bill.hour": "{n}시간",
-"bill.day": "{n}일"
+"bill.day": "{n}일",
+"nm.ph_group": "그룹 이름, 예: A 제품 외부",
+"nm.ph_vips": "VIP(여러 개는 쉼표로 구분)",
+"nm.group_name": "그룹 이름",
+"nm.group_vips": "VIP",
+"bill.too_long": "한 번에 최대 한 달까지 조회할 수 있습니다. 더 짧은 기간을 고르세요."
 }

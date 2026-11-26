@@ -238,6 +238,12 @@ func (s *Server) resolveKindObject(kind, object string) (billingObject, error) {
 	return billingObject{}, errors.New("bad_kind")
 }
 
+// billMaxSpan is the widest window one billing query may cover: a
+// calendar month, and a day over for the viewer's zone. A bill is written
+// per month; a wider query over a many-VIP line or a wide subnet would
+// only cost the database time every other page is waiting on.
+const billMaxSpan = 32 * 24 * time.Hour
+
 // billingRange reads an explicit from/to window for a billing query.
 // Unlike the chart pages it does not round the window to whole hours:
 // a bill is written for the window that was asked for, to the minute the
@@ -264,7 +270,7 @@ func billingRange(r *http.Request) (store.Query, error) {
 	}
 	fm, err1 := strconv.ParseInt(f, 10, 64)
 	tm, err2 := strconv.ParseInt(t, 10, 64)
-	if d := tm - fm; err1 != nil || err2 != nil || d <= 0 || d > summarySpan.Milliseconds() {
+	if d := tm - fm; err1 != nil || err2 != nil || d <= 0 || d > billMaxSpan.Milliseconds() {
 		return store.Query{}, errBadRange
 	}
 	return store.Query{From: time.UnixMilli(fm).UTC(), To: time.UnixMilli(tm).UTC(),

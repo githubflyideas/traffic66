@@ -830,7 +830,7 @@
 "nav.billing": "إحصاءات الحركة",
 "bill.sub": "حركة VIP واحد أو خط منتجات كامل، الوارد والصادر مجموعان معًا — الرقم الذي تُبنى عليه الفاتورة.",
 "bill.object": "الكائن",
-"bill.product": "خط المنتجات",
+"bill.product": "مجموعة VIP",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "قاعدة البيانات مشغولة — حاول بعد قليل.",
 "sh.err_bad_request": "لم يُفهم الطلب.",
 "sh.err_load": "تعذر تحميل الأرقام.",
-"nm.k_product": "خط المنتجات",
+"nm.k_product": "مجموعة VIP",
 "nm.bad_vips": "{a} ليست قائمة عناوين IP",
 "bill.inv_addrs": "العناوين في السجل",
 "bill.vip_list": "عناوين VIP (مفصولة بفواصل)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "الاستخدام اليومي",
 "bill.min": "{n} دقيقة",
 "bill.hour": "{n} ساعة",
-"bill.day": "{n} يوم"
+"bill.day": "{n} يوم",
+"nm.ph_group": "اسم المجموعة، مثل المنتج A الخارجي",
+"nm.ph_vips": "عناوين VIP مفصولة بفواصل",
+"nm.group_name": "اسم المجموعة",
+"nm.group_vips": "VIP",
+"bill.too_long": "يغطي الاستعلام الواحد شهرًا على الأكثر. اختر فترة أقصر."
 }

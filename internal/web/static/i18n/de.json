@@ -830,7 +830,7 @@
 "nav.billing": "Verkehrsstatistik",
 "bill.sub": "Der Verkehr einer VIP oder einer ganzen Produktlinie, eingehend und ausgehend addiert — die Zahl, nach der abgerechnet wird.",
 "bill.object": "Objekt",
-"bill.product": "Produktlinie",
+"bill.product": "VIP-Gruppe",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "Die Datenbank ist beschäftigt — versuchen Sie es gleich noch einmal.",
 "sh.err_bad_request": "Die Anfrage wurde nicht verstanden.",
 "sh.err_load": "Die Zahlen konnten nicht geladen werden.",
-"nm.k_product": "Produktlinie",
+"nm.k_product": "VIP-Gruppe",
 "nm.bad_vips": "{a} ist keine Liste von IP-Adressen",
 "bill.inv_addrs": "Adressen im Inventar",
 "bill.vip_list": "VIPs (durch Kommas getrennt)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "Verbrauch pro Tag",
 "bill.min": "{n} min",
 "bill.hour": "{n} h",
-"bill.day": "{n} T"
+"bill.day": "{n} T",
+"nm.ph_group": "Gruppenname, z. B. Produkt A extern",
+"nm.ph_vips": "VIPs, durch Kommas getrennt",
+"nm.group_name": "Gruppenname",
+"nm.group_vips": "VIPs",
+"bill.too_long": "Eine Abfrage umfasst höchstens einen Monat. Bitte einen kürzeren Zeitraum wählen."
 }

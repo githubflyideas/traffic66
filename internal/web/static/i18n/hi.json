@@ -830,7 +830,7 @@
 "nav.billing": "ट्रैफ़िक आँकड़े",
 "bill.sub": "एक VIP या पूरी उत्पाद लाइन का ट्रैफ़िक, इनबाउंड और आउटबाउंड जोड़कर — यही आँकड़ा बिल का आधार है।",
 "bill.object": "वस्तु",
-"bill.product": "उत्पाद लाइन",
+"bill.product": "VIP समूह",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "डेटाबेस व्यस्त है — कुछ देर में फिर प्रयास करें।",
 "sh.err_bad_request": "अनुरोध समझ नहीं आया।",
 "sh.err_load": "आँकड़े लोड नहीं हो सके।",
-"nm.k_product": "उत्पाद लाइन",
+"nm.k_product": "VIP समूह",
 "nm.bad_vips": "{a} IP पतों की सूची नहीं है",
 "bill.inv_addrs": "इन्वेंटरी के पते",
 "bill.vip_list": "VIP (कॉमा से अलग)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "रोज़ का उपयोग",
 "bill.min": "{n} मिनट",
 "bill.hour": "{n} घंटे",
-"bill.day": "{n} दिन"
+"bill.day": "{n} दिन",
+"nm.ph_group": "समूह का नाम, जैसे Product A public",
+"nm.ph_vips": "VIP, कॉमा से अलग",
+"nm.group_name": "समूह का नाम",
+"nm.group_vips": "VIP",
+"bill.too_long": "एक query ज़्यादा से ज़्यादा एक महीने की होती है। छोटी अवधि चुनें।"
 }

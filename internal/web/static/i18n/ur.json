@@ -830,7 +830,7 @@
 "nav.billing": "ٹریفک کے اعداد و شمار",
 "bill.sub": "ایک VIP یا پوری پروڈکٹ لائن کا ٹریفک، ان باؤنڈ اور آؤٹ باؤنڈ ملا کر — یہی عدد بل کی بنیاد ہے۔",
 "bill.object": "شے",
-"bill.product": "پروڈکٹ لائن",
+"bill.product": "VIP گروپ",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "ڈیٹا بیس مصروف ہے — کچھ دیر بعد دوبارہ کوشش کریں۔",
 "sh.err_bad_request": "درخواست سمجھ نہیں آئی۔",
 "sh.err_load": "اعداد لوڈ نہیں ہو سکے۔",
-"nm.k_product": "پروڈکٹ لائن",
+"nm.k_product": "VIP گروپ",
 "nm.bad_vips": "{a} IP پتوں کی فہرست نہیں ہے",
 "bill.inv_addrs": "رجسٹر کے پتے",
 "bill.vip_list": "VIP (کوما سے الگ)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "روزانہ استعمال",
 "bill.min": "{n} منٹ",
 "bill.hour": "{n} گھنٹے",
-"bill.day": "{n} دن"
+"bill.day": "{n} دن",
+"nm.ph_group": "گروپ کا نام، مثلاً Product A public",
+"nm.ph_vips": "VIP، کوما سے الگ",
+"nm.group_name": "گروپ کا نام",
+"nm.group_vips": "VIP",
+"bill.too_long": "ایک query زیادہ سے زیادہ ایک مہینے کی ہوتی ہے۔ چھوٹی مدت چنیں۔"
 }

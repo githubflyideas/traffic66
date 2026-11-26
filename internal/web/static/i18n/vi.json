@@ -830,7 +830,7 @@
 "nav.billing": "Thống kê lưu lượng",
 "bill.sub": "Lưu lượng của một VIP hoặc cả một dòng sản phẩm, chiều vào và chiều ra cộng lại — con số làm căn cứ tính hóa đơn.",
 "bill.object": "Đối tượng",
-"bill.product": "Dòng sản phẩm",
+"bill.product": "Nhóm VIP",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "Cơ sở dữ liệu đang bận — thử lại sau giây lát.",
 "sh.err_bad_request": "Yêu cầu không được hiểu.",
 "sh.err_load": "Không tải được số liệu.",
-"nm.k_product": "Dòng sản phẩm",
+"nm.k_product": "Nhóm VIP",
 "nm.bad_vips": "{a} không phải danh sách địa chỉ IP",
 "bill.inv_addrs": "Địa chỉ trong sổ quản lý",
 "bill.vip_list": "VIP (phân cách bằng dấu phẩy)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "Lưu lượng theo ngày",
 "bill.min": "{n} phút",
 "bill.hour": "{n} giờ",
-"bill.day": "{n} ngày"
+"bill.day": "{n} ngày",
+"nm.ph_group": "Tên nhóm, ví dụ Sản phẩm A công khai",
+"nm.ph_vips": "VIP, phân cách bằng dấu phẩy",
+"nm.group_name": "Tên nhóm",
+"nm.group_vips": "VIP",
+"bill.too_long": "Mỗi truy vấn tối đa một tháng. Hãy chọn khoảng ngắn hơn."
 }

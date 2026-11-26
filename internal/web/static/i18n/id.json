@@ -830,7 +830,7 @@
 "nav.billing": "Statistik lalu lintas",
 "bill.sub": "Lalu lintas satu VIP atau seluruh lini produk, masuk dan keluar dijumlahkan — angka yang menjadi dasar tagihan.",
 "bill.object": "Objek",
-"bill.product": "Lini produk",
+"bill.product": "Grup VIP",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "Basis data sibuk — coba lagi sebentar.",
 "sh.err_bad_request": "Permintaan tidak dipahami.",
 "sh.err_load": "Angka tidak dapat dimuat.",
-"nm.k_product": "Lini produk",
+"nm.k_product": "Grup VIP",
 "nm.bad_vips": "{a} bukan daftar alamat IP",
 "bill.inv_addrs": "Alamat di inventaris",
 "bill.vip_list": "VIP (pisahkan dengan koma)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "Pemakaian per hari",
 "bill.min": "{n} mnt",
 "bill.hour": "{n} jam",
-"bill.day": "{n} hr"
+"bill.day": "{n} hr",
+"nm.ph_group": "Nama grup, mis. Produk A publik",
+"nm.ph_vips": "VIP, pisahkan dengan koma",
+"nm.group_name": "Nama grup",
+"nm.group_vips": "VIP",
+"bill.too_long": "Satu kueri paling lama satu bulan. Pilih rentang yang lebih pendek."
 }

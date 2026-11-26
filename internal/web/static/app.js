@@ -1960,6 +1960,8 @@ views.billing = async (el) => {
         ? `<div class="verdict warn">${esc(t('bill.locked'))}</div>`
         : j.error === 'vip_limit_exceeded'
           ? `<div class="verdict warn">${esc(t('bill.vip_limit', {limit: j.limit, count: j.count}))}</div>`
+          : j.error === 'bad_range'
+            ? `<div class="empty">${esc(t('bill.too_long'))}</div>`
           : j.error === 'bad_subnet'
             ? `<div class="empty">${esc(t('bill.bad_subnet'))}</div>`
             : `<div class="empty">${esc(res ? failText(res, j) : t('err.network'))}</div>`;
@@ -2757,7 +2759,7 @@ function nmParse(text) {
     return {i, k, a: f[1] || '', x: k === 'iface' ? (f[2] || '') : '', n: words.join(' '), c};
   }).filter(Boolean);
 }
-const nmLine = r => r.k === 'product' ? `product ${r.a} vip=${r.n.replace(/\s+/g, '')}` : [r.k, r.a, r.k === 'iface' ? r.x : '', r.n, r.k === 'net' && r.c ? 'country=' + r.c : ''].filter(Boolean).join(' ');
+const nmLine = r => r.k === 'product' ? `product ${r.a} vip=${r.n.replace(/[，、;；\s]+/g, ',').replace(/,+/g, ',').replace(/^,|,$/g, '')}` : [r.k, r.a, r.k === 'iface' ? r.x : '', r.n, r.k === 'net' && r.c ? 'country=' + r.c : ''].filter(Boolean).join(' ');
 function namesForm() {
   const tab = $('#nmTab'); if (!tab) return;
   let editing = null;
@@ -2766,8 +2768,11 @@ function namesForm() {
   const sync = () => {
     const k = $('#nmK').value;
     $('#nmI').hidden = k !== 'iface';
-    $('#nmA').placeholder = t(k === 'net' ? 'nm.ph_net' : 'nm.ph_addr');
-    $('#nmN').placeholder = t(k === 'snmp' ? 'nm.community' : 'nm.name');
+    $('#nmA').placeholder = t(k === 'net' ? 'nm.ph_net' : k === 'product' ? 'nm.ph_group' : 'nm.ph_addr');
+    $('#nmN').placeholder = t(k === 'snmp' ? 'nm.community' : k === 'product' ? 'nm.ph_vips' : 'nm.name');
+    $('#nmA').setAttribute('aria-label', t(k === 'product' ? 'nm.group_name' : 'nm.address'));
+    $('#nmN').setAttribute('aria-label', t(k === 'product' ? 'nm.group_vips' : 'nm.name'));
+    $('#nmN').style.minWidth = k === 'product' ? '22em' : '';
     $('#nmC').hidden = k !== 'net';
   };
   // countries for networks, named in the reader's language
@@ -2777,7 +2782,7 @@ function namesForm() {
     $('#nmC').value = cur;
   }).catch(() => {});
   tab.innerHTML = `<tr><th>${t('nm.type')}</th><th>${t('nm.address')}</th><th>${t('nm.name')}</th><th><span class="vh">#</span></th></tr>` + (rows.map(r => `<tr><td class="nw">${t('nm.k_' + r.k)}</td>
-      <td class="nw"><code>${esc(r.a)}${r.k === 'iface' ? ' #' + esc(r.x) : ''}</code></td><td>${r.c ? `<span class="tag">${esc(country(r.c))}</span> ` : ''}${r.k === 'snmp' ? `<span class="muted">${esc(t('nm.community'))}:</span> ` : ''}${esc(r.n.replace(/\s*\bspeed=\d+/, ''))}${/\bspeed=(\d+)/.test(r.n) ? ` <span class="muted">${fmtBps(+r.n.match(/\bspeed=(\d+)/)[1])}</span>` : ''}</td>
+      <td class="nw">${r.k === 'product' ? `<b>${esc(r.a)}</b>` : `<code>${esc(r.a)}${r.k === 'iface' ? ' #' + esc(r.x) : ''}</code>`}</td><td>${r.k === 'product' ? `<code>${esc(r.n.split(',').join(', '))}</code>` : `${r.c ? `<span class="tag">${esc(country(r.c))}</span> ` : ''}${r.k === 'snmp' ? `<span class="muted">${esc(t('nm.community'))}:</span> ` : ''}${esc(r.n.replace(/\s*\bspeed=\d+/, ''))}${/\bspeed=(\d+)/.test(r.n) ? ` <span class="muted">${fmtBps(+r.n.match(/\bspeed=(\d+)/)[1])}</span>` : ''}`}</td>
       <td class="nw" style="text-align:end">${admOnly(`<button class="btn" data-nme="${r.i}">${t('nm.edit')}</button> <button class="btn" data-nmd="${r.i}">${t('nm.delete')}</button>`)}</td></tr>`).join('') ||
     `<tr><td colspan="4" class="empty">${t('nm.empty')}</td></tr>`);
   const msg = (ok, text) => { const m = $('#nmMsg'); m.style.color = ok ? 'var(--good)' : 'var(--crit)'; m.textContent = text; };
@@ -2800,7 +2805,9 @@ function namesForm() {
     if (!r.a || !r.n || (r.k === 'iface' && !r.x)) { msg(false, t('nm.missing')); return; }
     const ip = /^(\d{1,3}(\.\d{1,3}){3}|[0-9a-fA-F:]*:[0-9a-fA-F:.]*)$/;
     if (r.k === 'product') {
-      if (!r.n.split(',').every(x => ip.test(x.trim()))) { msg(false, t('nm.bad_vips', {a: r.n})); return; }
+      // commas, full-width commas, 、 or spaces all separate VIPs
+      r.n = r.n.split(/[,，、;；\s]+/).filter(Boolean).join(',');
+      if (!r.n || !r.n.split(',').every(x => ip.test(x))) { msg(false, t('nm.bad_vips', {a: r.n})); return; }
     } else if (r.k === 'net' ? !(r.a.includes('/') && ip.test(r.a.split('/')[0]) && /^\d{1,3}$/.test(r.a.split('/')[1])) : !ip.test(r.a)) { msg(false, t(r.k === 'net' ? 'nm.bad_net' : 'nm.bad_addr', {a: r.a})); return; }
     if (r.k === 'iface' && !/^\d+$/.test(r.x)) { msg(false, t('nm.bad_index', {x: r.x})); return; }
     const ls = lines();

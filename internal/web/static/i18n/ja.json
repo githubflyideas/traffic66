@@ -830,7 +830,7 @@
 "nav.billing": "トラフィック統計",
 "bill.sub": "1つのVIPまたは製品ライン全体のトラフィック。インとアウトを合算した数字が課金の根拠です。",
 "bill.object": "対象",
-"bill.product": "製品ライン",
+"bill.product": "VIP グループ",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "データベースが混雑しています。しばらくしてからお試しください。",
 "sh.err_bad_request": "リクエストを理解できませんでした。",
 "sh.err_load": "数字を読み込めませんでした。",
-"nm.k_product": "製品ライン",
+"nm.k_product": "VIP グループ",
 "nm.bad_vips": "{a} はIPアドレスのリストではありません",
 "bill.inv_addrs": "台帳のアドレス",
 "bill.vip_list": "VIP（複数はカンマ区切り）",
@@ -896,5 +896,10 @@
 "bill.daily_title": "日別の使用量",
 "bill.min": "{n} 分",
 "bill.hour": "{n} 時間",
-"bill.day": "{n} 日"
+"bill.day": "{n} 日",
+"nm.ph_group": "グループ名（例：製品A 外部）",
+"nm.ph_vips": "VIP（複数はカンマ区切り）",
+"nm.group_name": "グループ名",
+"nm.group_vips": "VIP",
+"bill.too_long": "1 回に問い合わせできるのは最長 1 か月です。短い期間を選んでください。"
 }

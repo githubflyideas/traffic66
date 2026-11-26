@@ -830,7 +830,7 @@
 "nav.billing": "Статистика трафика",
 "bill.sub": "Трафик одного VIP или целой продуктовой линии, входящий и исходящий сложены вместе, — цифра, по которой выставляют счёт.",
 "bill.object": "Объект",
-"bill.product": "Продуктовая линия",
+"bill.product": "Группа VIP",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "База данных занята — попробуйте через минуту.",
 "sh.err_bad_request": "Запрос не понят.",
 "sh.err_load": "Не удалось загрузить цифры.",
-"nm.k_product": "Продуктовая линия",
+"nm.k_product": "Группа VIP",
 "nm.bad_vips": "{a} — не список IP-адресов",
 "bill.inv_addrs": "Адреса из реестра",
 "bill.vip_list": "VIP (через запятую)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "Расход по дням",
 "bill.min": "{n} мин",
 "bill.hour": "{n} ч",
-"bill.day": "{n} д"
+"bill.day": "{n} д",
+"nm.ph_group": "Имя группы, напр. Продукт A внешний",
+"nm.ph_vips": "VIP через запятую",
+"nm.group_name": "Имя группы",
+"nm.group_vips": "VIP",
+"bill.too_long": "Один запрос охватывает не больше месяца. Выберите период короче."
 }

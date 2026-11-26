@@ -3,6 +3,11 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.11.3
+
+- Inventory: product lines are called VIP groups on every page. Picking the type VIP group, the form asks for the group's name (say "Product A public") and its VIPs; commas, full-width commas, 、 and spaces all separate them, and the line is saved in the standard form. The table shows the group's name and its VIPs.
+- Traffic statistics: one query covers a month at most (it was 186 days), so a many-VIP group or a wide subnet never ties the database up; a longer custom range says so.
+
 ## 2.11.2
 
 - Traffic statistics: the window is picked from presets matched to how the data is kept: today, 1 day, 3 days and 1 week (from the flow records, a point every 5 or 15 minutes, or every hour), 30 days, this month and last month (from the hourly summaries), or a custom range. A read-only account has today to 2 weeks.

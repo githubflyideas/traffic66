@@ -830,7 +830,7 @@
 "nav.billing": "Statistiques de trafic",
 "bill.sub": "Le trafic d'un VIP ou d'une ligne de produits entière, entrant et sortant additionnés — le chiffre qui sert à facturer.",
 "bill.object": "Objet",
-"bill.product": "Ligne de produits",
+"bill.product": "Groupe de VIP",
 "bill.vip": "VIP",
 "bill.subnet": "Subnet",
 "bill.bad_subnet": "That is not a subnet. Write it as CIDR, like 203.0.113.0/24.",
@@ -872,7 +872,7 @@
 "sh.err_database": "La base de données est occupée — réessayez dans un moment.",
 "sh.err_bad_request": "La requête n'a pas été comprise.",
 "sh.err_load": "Impossible de charger les chiffres.",
-"nm.k_product": "Ligne de produits",
+"nm.k_product": "Groupe de VIP",
 "nm.bad_vips": "{a} n'est pas une liste d'adresses IP",
 "bill.inv_addrs": "Adresses de l'inventaire",
 "bill.vip_list": "VIP (séparées par des virgules)",
@@ -896,5 +896,10 @@
 "bill.daily_title": "Consommation par jour",
 "bill.min": "{n} min",
 "bill.hour": "{n} h",
-"bill.day": "{n} j"
+"bill.day": "{n} j",
+"nm.ph_group": "Nom du groupe, ex. Produit A public",
+"nm.ph_vips": "VIP, séparées par des virgules",
+"nm.group_name": "Nom du groupe",
+"nm.group_vips": "VIP",
+"bill.too_long": "Une requête couvre un mois au plus. Choisissez une période plus courte."
 }

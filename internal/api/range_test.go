@@ -61,11 +61,16 @@ func TestSummaryQueriesAreCapped(t *testing.T) {
 		if _, err := parseQuerySpan(httptest.NewRequest("GET", "/api/export/rollups?"+ft, nil), summarySpan); err != errBadRange {
 			t.Errorf("export %s: %v, want bad_range", ft, err)
 		}
+
+	}
+	// billing: a month at most
+	month := "from=1767225600000&to=" + strconv.FormatInt(1767225600000+billMaxSpan.Milliseconds(), 10)
+	if _, err := billingRange(httptest.NewRequest("GET", "/api/billing?"+month, nil)); err != nil {
+		t.Errorf("billing at the limit: %v", err)
+	}
+	for _, ft := range []string{"from=1767225600000&to=" + strconv.FormatInt(1767225600000+billMaxSpan.Milliseconds()+1, 10), half, "from=0&to=9300000000000"} {
 		if _, err := billingRange(httptest.NewRequest("GET", "/api/billing?"+ft, nil)); err != errBadRange {
 			t.Errorf("billing %s: %v, want bad_range", ft, err)
 		}
-	}
-	if _, err := billingRange(httptest.NewRequest("GET", "/api/billing?"+half, nil)); err != nil {
-		t.Errorf("billing at the limit: %v", err)
 	}
 }
