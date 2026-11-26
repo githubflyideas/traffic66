@@ -873,5 +873,10 @@
 "sh.err_bad_request": "لم يُفهم الطلب.",
 "sh.err_load": "تعذر تحميل الأرقام.",
 "nm.k_product": "خط المنتجات",
-"nm.bad_vips": "{a} ليست قائمة عناوين IP"
+"nm.bad_vips": "{a} ليست قائمة عناوين IP",
+"bill.inv_addrs": "العناوين في السجل",
+"bill.vip_list": "عناوين VIP (مفصولة بفواصل)",
+"bill.vip_hint": "عنوان واحد، أو عدة عناوين مفصولة بفواصل: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "المستخدم في {m}:",
+"bill.month_used_sub": "وارد {in} + صادر {out}"
 }

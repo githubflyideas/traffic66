@@ -3,6 +3,12 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.11.1
+
+- Interface check: the Inbound and Outbound views of the bandwidth chart show the traffic into and out of the interface being inspected, as the overview does. Before, they split by the inventory's own networks and stayed on "not yet" on a network whose ranges were not in the inventory.
+- Traffic statistics: the object list offers every address the inventory names (the product lines' VIPs and the named hosts), and several VIPs can be billed together, separated by commas (`203.0.113.10, 203.0.113.11`).
+- Traffic statistics: this month's usage of the object, inbound plus outbound in GB, as one figure above the window's.
+
 ## 2.11.0
 
 - Traffic statistics: a subnet (`10.0.0.0/24`) can be billed as a whole, beside one VIP and a product line; traffic inside the subnet is counted once (registered installations).

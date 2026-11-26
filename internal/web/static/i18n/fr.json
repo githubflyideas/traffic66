@@ -873,5 +873,10 @@
 "sh.err_bad_request": "La requête n'a pas été comprise.",
 "sh.err_load": "Impossible de charger les chiffres.",
 "nm.k_product": "Ligne de produits",
-"nm.bad_vips": "{a} n'est pas une liste d'adresses IP"
+"nm.bad_vips": "{a} n'est pas une liste d'adresses IP",
+"bill.inv_addrs": "Adresses de l'inventaire",
+"bill.vip_list": "VIP (séparées par des virgules)",
+"bill.vip_hint": "Une adresse, ou plusieurs séparées par des virgules : 203.0.113.10, 203.0.113.11",
+"bill.month_used": "Consommé en {m} :",
+"bill.month_used_sub": "entrant {in} + sortant {out}"
 }

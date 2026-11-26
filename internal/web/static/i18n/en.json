@@ -873,5 +873,10 @@
 "sh.err_bad_request": "The request was not understood.",
 "sh.err_load": "Could not load the figures.",
 "nm.k_product": "Product line",
-"nm.bad_vips": "{a} is not a list of IP addresses"
+"nm.bad_vips": "{a} is not a list of IP addresses",
+"bill.inv_addrs": "Addresses in the inventory",
+"bill.vip_list": "VIPs (comma-separated)",
+"bill.vip_hint": "One address, or several separated by commas: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "Used in {m}:",
+"bill.month_used_sub": "inbound {in} + outbound {out}"
 }

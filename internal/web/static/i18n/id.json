@@ -873,5 +873,10 @@
 "sh.err_bad_request": "Permintaan tidak dipahami.",
 "sh.err_load": "Angka tidak dapat dimuat.",
 "nm.k_product": "Lini produk",
-"nm.bad_vips": "{a} bukan daftar alamat IP"
+"nm.bad_vips": "{a} bukan daftar alamat IP",
+"bill.inv_addrs": "Alamat di inventaris",
+"bill.vip_list": "VIP (pisahkan dengan koma)",
+"bill.vip_hint": "Satu alamat, atau beberapa dipisahkan koma: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "Terpakai {m}:",
+"bill.month_used_sub": "masuk {in} + keluar {out}"
 }

@@ -873,5 +873,10 @@
 "sh.err_bad_request": "リクエストを理解できませんでした。",
 "sh.err_load": "数字を読み込めませんでした。",
 "nm.k_product": "製品ライン",
-"nm.bad_vips": "{a} はIPアドレスのリストではありません"
+"nm.bad_vips": "{a} はIPアドレスのリストではありません",
+"bill.inv_addrs": "台帳のアドレス",
+"bill.vip_list": "VIP（複数はカンマ区切り）",
+"bill.vip_hint": "1 つのアドレス、または複数をカンマで区切って：203.0.113.10, 203.0.113.11",
+"bill.month_used": "{m} の使用量：",
+"bill.month_used_sub": "受信 {in} + 送信 {out}"
 }

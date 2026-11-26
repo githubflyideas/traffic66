@@ -873,5 +873,10 @@
 "sh.err_bad_request": "درخواست سمجھ نہیں آئی۔",
 "sh.err_load": "اعداد لوڈ نہیں ہو سکے۔",
 "nm.k_product": "پروڈکٹ لائن",
-"nm.bad_vips": "{a} IP پتوں کی فہرست نہیں ہے"
+"nm.bad_vips": "{a} IP پتوں کی فہرست نہیں ہے",
+"bill.inv_addrs": "رجسٹر کے پتے",
+"bill.vip_list": "VIP (کوما سے الگ)",
+"bill.vip_hint": "ایک پتا، یا کئی پتے کوما سے الگ: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "{m} میں استعمال:",
+"bill.month_used_sub": "inbound {in} + outbound {out}"
 }

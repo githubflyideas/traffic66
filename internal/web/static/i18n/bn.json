@@ -873,5 +873,10 @@
 "sh.err_bad_request": "অনুরোধটি বোঝা যায়নি।",
 "sh.err_load": "সংখ্যাগুলো লোড করা যায়নি।",
 "nm.k_product": "পণ্য লাইন",
-"nm.bad_vips": "{a} IP ঠিকানার তালিকা নয়"
+"nm.bad_vips": "{a} IP ঠিকানার তালিকা নয়",
+"bill.inv_addrs": "ইনভেন্টরির ঠিকানা",
+"bill.vip_list": "VIP (কমা দিয়ে আলাদা)",
+"bill.vip_hint": "একটি ঠিকানা, বা কমা দিয়ে আলাদা করা কয়েকটি: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "{m}-এ ব্যবহৃত:",
+"bill.month_used_sub": "inbound {in} + outbound {out}"
 }

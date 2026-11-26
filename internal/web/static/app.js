@@ -1869,6 +1869,14 @@ views.billing = async (el) => {
     const vi = f.findIndex(w => w.startsWith('vip='));
     if (vi > 0) prods.push({name: f.slice(1, vi).join(' '), vips: f[vi].slice(4).split(',').filter(Boolean)});
   }
+  // every address the inventory names, to pick one without typing it:
+  // the product lines' VIPs, then the named hosts
+  const invAddrs = [], seenAddr = new Set();
+  for (const p of prods) for (const a of p.vips) if (!seenAddr.has(a)) { seenAddr.add(a); invAddrs.push({addr: a, label: p.name}); }
+  for (const line of (inv.text || '').split('\n')) {
+    const f = line.trim().split(/\s+/);
+    if ((f[0] || '').toLowerCase() === 'host' && f[1] && !seenAddr.has(f[1])) { seenAddr.add(f[1]); invAddrs.push({addr: f[1], label: f.slice(2).join(' ')}); }
+  }
   if (!billObj && prods.length) billObj = {kind: 'product', name: prods[0].name};
   const now = new Date();
   const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -1877,10 +1885,11 @@ views.billing = async (el) => {
       <div class="nmform" style="flex-wrap:wrap">
         <select id="blObj" aria-label="${esc(t('bill.object'))}">
           ${prods.map(x => `<option value="p:${esc(x.name)}" ${billObj && billObj.kind === 'product' && billObj.name === x.name ? 'selected' : ''}>${esc(t('bill.product'))}: ${esc(x.name)}</option>`).join('')}
-          <option value="vip" ${billObj && billObj.kind === 'vip' ? 'selected' : ''}>${esc(t('bill.vip'))}</option>
+          ${invAddrs.length ? `<optgroup label="${esc(t('bill.inv_addrs'))}">${invAddrs.map(x => `<option value="v:${esc(x.addr)}" ${billObj && billObj.kind === 'vip' && billObj.name === x.addr ? 'selected' : ''}>${esc(x.addr)}${x.label ? ' · ' + esc(x.label) : ''}</option>`).join('')}</optgroup>` : ''}
+          <option value="vip" ${billObj && billObj.kind === 'vip' && !invAddrs.some(x => x.addr === billObj.name) ? 'selected' : ''}>${esc(t('bill.vip_list'))}</option>
           <option value="subnet" ${billObj && billObj.kind === 'subnet' ? 'selected' : ''}>${esc(t('bill.subnet'))}</option>
         </select>
-        <input id="blVip" aria-label="${esc(t('bill.vip'))}" placeholder="203.0.113.10" value="${billObj && billObj.kind === 'vip' ? esc(billObj.name) : ''}" ${billObj && billObj.kind === 'vip' ? '' : 'hidden'}>
+        <input id="blVip" aria-label="${esc(t('bill.vip_list'))}" title="${esc(t('bill.vip_hint'))}" placeholder="203.0.113.10, 203.0.113.11" style="min-width:18em" value="${billObj && billObj.kind === 'vip' && !invAddrs.some(x => x.addr === billObj.name) ? esc(billObj.name) : ''}" ${billObj && billObj.kind === 'vip' && !invAddrs.some(x => x.addr === billObj.name) ? '' : 'hidden'}>
         <input id="blSubnet" aria-label="${esc(t('bill.subnet'))}" placeholder="203.0.113.0/24" value="${billObj && billObj.kind === 'subnet' ? esc(billObj.name) : ''}" ${billObj && billObj.kind === 'subnet' ? '' : 'hidden'}>
         <input type="month" id="blMonth" aria-label="${esc(t('bill.month'))}" value="${monthVal}">
         <input type="datetime-local" id="blFrom" aria-label="${esc(t('sh.from'))}">
@@ -1905,7 +1914,8 @@ views.billing = async (el) => {
     const p = new URLSearchParams({tz: String(-new Date().getTimezoneOffset())});
     if (ro) { p.set(me.kind === 'product' ? 'product' : 'vip', me.object); return finishParams(p); }
     const o = $('#blObj').value;
-    if (o === 'vip') { p.set('vip', $('#blVip').value.trim()); billObj = {kind: 'vip', name: $('#blVip').value.trim()}; }
+    if (o.startsWith('v:')) { p.set('vip', o.slice(2)); billObj = {kind: 'vip', name: o.slice(2)}; }
+    else if (o === 'vip') { p.set('vip', $('#blVip').value.trim()); billObj = {kind: 'vip', name: $('#blVip').value.trim()}; }
     else if (o === 'subnet') { p.set('subnet', $('#blSubnet').value.trim()); billObj = {kind: 'subnet', name: $('#blSubnet').value.trim()}; }
     else { p.set('product', o.slice(2)); billObj = {kind: 'product', name: o.slice(2)}; }
     return finishParams(p);
@@ -1915,6 +1925,17 @@ views.billing = async (el) => {
     if (f && e) { p.set('from', String(new Date(f).getTime())); p.set('to', String(new Date(e).getTime())); }
     else if ($('#blMonth').value) p.set('month', $('#blMonth').value);
     return p;
+  };
+  // this month's usage of the same object: inbound plus outbound, in GB,
+  // one figure whatever window the page is showing
+  const monthUse = async p => {
+    const q = new URLSearchParams(p); q.delete('from'); q.delete('to'); q.set('month', monthVal);
+    const r = await fetch('/api/billing?' + q).catch(() => null);
+    const m = r && r.ok ? await r.json().catch(() => null) : null;
+    const n = $('#blMonthUse');
+    if (!m || !n) return;
+    const gb = b => nf(b / 1e9, 2) + ' GB';
+    n.innerHTML = `${esc(t('bill.month_used', {m: monthVal}))} <b style="font-size:var(--fs-1)">${gb(m.bytes)}</b> <span class="muted">${esc(t('bill.month_used_sub', {in: gb(m.in_bytes), out: gb(m.out_bytes)}))}</span>`;
   };
   const load = async () => {
     const p = params(), body = $('#blBody'), msg = $('#blMsg');
@@ -1932,7 +1953,7 @@ views.billing = async (el) => {
       return;
     }
     const kpi = (lab, n, d) => `<div class="kpi"><div class="lab">${lab}</div><div class="n">${n}</div><div class="d muted">${d || '&nbsp;'}</div></div>`;
-    body.innerHTML = `<div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+    body.innerHTML = `${ro ? '' : `<div id="blMonthUse" style="font-size:var(--fs-3);margin:0 0 10px"></div>`}<div class="kpis" style="grid-template-columns:repeat(4,1fr)">
         ${kpi(esc(t('bill.total')), fmtBytes(j.bytes), esc(t('bill.total_sub')))}
         ${kpi(esc(t('if.in')), fmtBytes(j.in_bytes), '')}
         ${kpi(esc(t('if.out')), fmtBytes(j.out_bytes), '')}
@@ -1949,6 +1970,7 @@ views.billing = async (el) => {
         {name: t('if.in'), color: IF_IN, data: j.in}, {name: t('if.out'), color: IF_OUT, data: j.out}]});
     $('#blLegend').innerHTML = [[t('bill.total'), 'var(--c5)'], [t('if.in'), IF_IN], [t('if.out'), IF_OUT]]
       .map(([n, c]) => `<span><i style="background:${c}"></i>${esc(n)}</span>`).join('');
+    if (!ro) monthUse(p);
   };
   $('#blObj').onchange = () => { $('#blVip').hidden = $('#blObj').value !== 'vip'; $('#blSubnet').hidden = $('#blObj').value !== 'subnet'; };
   $('#blGo').onclick = load;
@@ -2383,7 +2405,11 @@ views.ifaces = async (el) => {
   const ifod = ['inbound', 'outbound'].includes(state.ifod) ? state.ifod : '';
   let os = ov?.series || {times: [], names: [], values: []};
   if (ifod) {
-    const ds = await api('series', {by: 'app', measure: 'wire', top: 8, dup: 1}, [...state.f, {f: 'bytes', v: ifod === 'inbound' ? 'in' : 'out', neg: false}]).catch(() => null);
+    // in and out of the interface being inspected, the way the overview
+    // reads them: the address-based direction is empty on a network whose
+    // own ranges are not in the inventory, and then the chart said
+    // "not yet" for ever
+    const ds = await api('series', {by: 'app', measure: 'wire', top: 8, dup: 1}, [...state.f, {f: ifod === 'inbound' ? 'iface_in' : 'iface_out', v: key, neg: false}]).catch(() => null);
     if (ds) os = ds;
   }
   const oAreas = os.names.map((n, i) => ({name: appLabel(n), color: color(i, n), data: os.values[i]}));
@@ -2392,7 +2418,7 @@ views.ifaces = async (el) => {
   const name = `${ifName(sel)} · ${sel.device || sel.exporter}`;
   const r = rc.recon || {}, ctr = !!r.has_counters;
   const leg = withCtr => `<div class="legend"><span><i style="background:${IF_IN}"></i>${t('if.in')}</span><span><i style="background:${IF_OUT}"></i>${t('if.out')}</span>${withCtr ? `<span><i class="line dash" style="border-top:2px dashed var(--ink-2);background:none"></i>${t('if.counter')}</span>` : ''}</div>`;
-  el.innerHTML = `<div class="grid" style="margin-bottom:16px"><div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[ifod])}</h2><span class="sub">${oLines.length ? esc(baseText(ov, 'sub')) : ''}</span>
+  el.innerHTML = `<div class="grid" style="margin-bottom:16px"><div class="panel c12"><div class="ph"><h2>${t({'': 'ov.bw_all', inbound: 'ov.bw_in', outbound: 'ov.bw_out'}[ifod])}</h2><span class="sub">${ifod ? esc(name) : oLines.length ? esc(baseText(ov, 'sub')) : ''}</span>
       <div class="seg" role="group" style="margin-inline-start:auto">${[['', 'ov.dir_total'], ['inbound', 'if.in'], ['outbound', 'if.out']].map(([k, l]) => `<button data-ifod="${k}" aria-pressed="${ifod === k}">${t(l)}</button>`).join('')}</div></div>
       <div class="chart" id="ifTot" style="height:250px" aria-label="${esc(t('ov.bw_title'))}"></div>
       <div class="legend">${oAreas.map((a, i) => `<span><i style="background:${a.color}"></i>${os.names[i] === '__other__' ? esc(a.name) : V('app', os.names[i], a.name)}</span>`).join('')}</div></div></div>
@@ -2420,7 +2446,8 @@ views.ifaces = async (el) => {
   const lb = [{name: t('if.in'), color: IF_IN, data: pick(ri), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(ro), fill: true}];
   if (ctr && r.times && r.times.length) lb.push({name: t('if.in') + ' · ' + t('if.counter'), color: IF_IN, dash: true, keep: true, data: onTimes(ri.times, r.in_counter)},
     {name: t('if.out') + ' · ' + t('if.counter'), color: IF_OUT, dash: true, keep: true, data: onTimes(ri.times, r.out_counter)});
-  tsChart($('#ifTot'), {times: os.times, areas: oAreas, lines: oLines, settledTo: os.settled_to, dataFrom: os.data_from});
+  tsChart($('#ifTot'), {times: os.times, areas: oAreas, lines: oLines, settledTo: os.settled_to, dataFrom: os.data_from,
+    empty: ifod ? esc(t('ov.dir_empty', {if: ifName(sel), d: t(ifod === 'inbound' ? 'if.in' : 'if.out')})) : ''});
   tsChart($('#ifB'), {times: ri.times, settledTo: ri.settled_to, dataFrom: ri.data_from, lines: lb});
   tsChart($('#ifP'), {times: pi.times, settledTo: pi.settled_to, dataFrom: pi.data_from, fmtY: fmtAxisBps, fmtV: fmtPps, lines: [{name: t('if.in'), color: IF_IN, data: pick(pi), fill: true}, {name: t('if.out'), color: IF_OUT, data: pick(po), fill: true}]});
   el.querySelectorAll('[data-ifod]').forEach(b => b.onclick = () => { state.ifod = b.dataset.ifod; render(); });

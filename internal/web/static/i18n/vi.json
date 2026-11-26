@@ -873,5 +873,10 @@
 "sh.err_bad_request": "Yêu cầu không được hiểu.",
 "sh.err_load": "Không tải được số liệu.",
 "nm.k_product": "Dòng sản phẩm",
-"nm.bad_vips": "{a} không phải danh sách địa chỉ IP"
+"nm.bad_vips": "{a} không phải danh sách địa chỉ IP",
+"bill.inv_addrs": "Địa chỉ trong sổ quản lý",
+"bill.vip_list": "VIP (phân cách bằng dấu phẩy)",
+"bill.vip_hint": "Một địa chỉ, hoặc nhiều địa chỉ phân cách bằng dấu phẩy: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "Đã dùng {m}:",
+"bill.month_used_sub": "chiều vào {in} + chiều ra {out}"
 }

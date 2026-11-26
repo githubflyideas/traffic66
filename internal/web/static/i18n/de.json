@@ -873,5 +873,10 @@
 "sh.err_bad_request": "Die Anfrage wurde nicht verstanden.",
 "sh.err_load": "Die Zahlen konnten nicht geladen werden.",
 "nm.k_product": "Produktlinie",
-"nm.bad_vips": "{a} ist keine Liste von IP-Adressen"
+"nm.bad_vips": "{a} ist keine Liste von IP-Adressen",
+"bill.inv_addrs": "Adressen im Inventar",
+"bill.vip_list": "VIPs (durch Kommas getrennt)",
+"bill.vip_hint": "Eine Adresse oder mehrere, durch Kommas getrennt: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "Verbrauch {m}:",
+"bill.month_used_sub": "eingehend {in} + ausgehend {out}"
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/netip"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/githubflyideas/traffic66/internal/store"
@@ -126,11 +127,15 @@ func (s *Server) resolveBillingObject(v map[string]string) (billingObject, error
 		return billingObject{Kind: "product", Name: prod.Name, Addrs: prod.VIPs}, nil
 	}
 	if a := v["vip"]; a != "" {
-		addr, err := netip.ParseAddr(a)
+		addrs, err := parseVIPs(a)
 		if err != nil {
-			return billingObject{}, errors.New("bad_vip")
+			return billingObject{}, err
 		}
-		return billingObject{Kind: "vip", Name: addr.Unmap().String(), Addrs: []netip.Addr{addr.Unmap()}}, nil
+		names := make([]string, len(addrs))
+		for i, x := range addrs {
+			names[i] = x.String()
+		}
+		return billingObject{Kind: "vip", Name: strings.Join(names, ","), Addrs: addrs}, nil
 	}
 	return billingObject{}, errors.New("no_object")
 }
@@ -276,6 +281,12 @@ func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billing
 			return billingObject{}, store.Query{}, false
 		}
 		if a := params["vip"]; a != "" {
+			// a read-only account is bound to one address; a list is
+			// never its object, whatever it holds
+			if strings.ContainsAny(a, ",， ") {
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+				return billingObject{}, store.Query{}, false
+			}
 			addr, perr := netip.ParseAddr(a)
 			if perr == nil && (bound.Kind != "vip" || addr.Unmap().String() != bound.Name) {
 				writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
@@ -377,4 +388,34 @@ func (s *Server) billingExport(w http.ResponseWriter, r *http.Request) {
 	cw.Write([]string{"total", "", strconv.FormatUint(out.InBytes, 10), strconv.FormatUint(out.OutBytes, 10),
 		strconv.FormatUint(out.Bytes, 10), "", "", ""})
 	cw.Flush()
+}
+
+// maxVIPs is how many addresses one ad-hoc VIP list may name.
+const maxVIPs = 64
+
+// parseVIPs reads the vip parameter: one address, or several merged into
+// one bill, separated by commas (a full-width comma or spaces work too,
+// as they are typed). Repeats are dropped, the order is kept.
+func parseVIPs(s string) ([]netip.Addr, error) {
+	f := strings.FieldsFunc(s, func(r rune) bool { return r == ',' || r == '，' || r == ' ' || r == '\t' })
+	if len(f) == 0 {
+		return nil, errors.New("bad_vip")
+	}
+	seen := map[netip.Addr]bool{}
+	var out []netip.Addr
+	for _, x := range f {
+		a, err := netip.ParseAddr(x)
+		if err != nil {
+			return nil, errors.New("bad_vip")
+		}
+		a = a.Unmap()
+		if !seen[a] {
+			seen[a] = true
+			out = append(out, a)
+		}
+	}
+	if len(out) > maxVIPs {
+		return nil, errors.New("bad_vip")
+	}
+	return out, nil
 }

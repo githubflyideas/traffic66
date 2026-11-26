@@ -873,5 +873,10 @@
 "sh.err_bad_request": "La solicitud no se entendió.",
 "sh.err_load": "No se pudieron cargar las cifras.",
 "nm.k_product": "Línea de productos",
-"nm.bad_vips": "{a} no es una lista de direcciones IP"
+"nm.bad_vips": "{a} no es una lista de direcciones IP",
+"bill.inv_addrs": "Direcciones del inventario",
+"bill.vip_list": "VIP (separadas por comas)",
+"bill.vip_hint": "Una dirección, o varias separadas por comas: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "Usado en {m}:",
+"bill.month_used_sub": "entrada {in} + salida {out}"
 }

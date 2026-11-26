@@ -873,5 +873,10 @@
 "sh.err_bad_request": "O pedido não foi compreendido.",
 "sh.err_load": "Não foi possível carregar os números.",
 "nm.k_product": "Linha de produtos",
-"nm.bad_vips": "{a} não é uma lista de endereços IP"
+"nm.bad_vips": "{a} não é uma lista de endereços IP",
+"bill.inv_addrs": "Endereços do inventário",
+"bill.vip_list": "VIPs (separadas por vírgulas)",
+"bill.vip_hint": "Um endereço, ou vários separados por vírgulas: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "Usado em {m}:",
+"bill.month_used_sub": "entrada {in} + saída {out}"
 }

@@ -873,5 +873,10 @@
 "sh.err_bad_request": "अनुरोध समझ नहीं आया।",
 "sh.err_load": "आँकड़े लोड नहीं हो सके।",
 "nm.k_product": "उत्पाद लाइन",
-"nm.bad_vips": "{a} IP पतों की सूची नहीं है"
+"nm.bad_vips": "{a} IP पतों की सूची नहीं है",
+"bill.inv_addrs": "इन्वेंटरी के पते",
+"bill.vip_list": "VIP (कॉमा से अलग)",
+"bill.vip_hint": "एक पता, या कई पते कॉमा से अलग: 203.0.113.10, 203.0.113.11",
+"bill.month_used": "{m} में इस्तेमाल:",
+"bill.month_used_sub": "inbound {in} + outbound {out}"
 }
