@@ -618,3 +618,10 @@ dialog.embdlg{width:min(620px,96vw)}
 /* share of all traffic behind a row (registered) */
 table.talk tr.shade{background:linear-gradient(to right,color-mix(in srgb,var(--accent) 22%,transparent) var(--sh),transparent var(--sh))}
 [dir=rtl] table.talk tr.shade{background:linear-gradient(to left,color-mix(in srgb,var(--accent) 22%,transparent) var(--sh),transparent var(--sh))}
+
+/* the registered pages: a small tag in the menu, and the page shown
+   while they are closed */
+.protag{display:inline-block;margin-inline-start:6px;padding:0 5px;border-radius:var(--r-1,4px);font-size:var(--fs-5);line-height:1.5;font-weight:600;color:var(--c1);border:1px solid currentColor;vertical-align:middle}
+.paywall{max-width:640px;padding:24px 8px}
+.paywall h2{margin:0 0 12px}
+.paywall p{margin:0 0 12px;line-height:1.6}

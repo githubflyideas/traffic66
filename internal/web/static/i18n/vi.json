@@ -899,5 +899,12 @@
 "nm.ph_vips": "VIP, phân cách bằng dấu phẩy",
 "nm.group_name": "Tên nhóm",
 "nm.group_vips": "VIP",
-"bill.too_long": "Mỗi truy vấn tối đa một tháng. Hãy chọn khoảng ngắn hơn."
+"bill.too_long": "Mỗi truy vấn tối đa một tháng. Hãy chọn khoảng ngắn hơn.",
+"pay.tag": "Bản đăng ký",
+"pay.btn": "Đăng ký / Mua",
+"pay.note": "Tính năng của bản đã đăng ký. Thu thập dữ liệu và các trang miễn phí vẫn hoạt động đầy đủ.",
+"pay.lead_billing": "Lưu lượng của một VIP, một nhóm VIP hoặc một subnet, cộng chiều vào và chiều ra: con số dùng để tính cước, kèm phân vị 95, lưu lượng theo ngày và GB tháng này.",
+"pay.lead_recon": "So sánh ước tính luồng của từng giao diện với bộ đếm của thiết bị, xem giao diện nào lệch và vì sao, rồi cộng các giao diện đã chọn.",
+"pay.lead_findings": "Những gì quy tắc phát hiện tìm thấy trong lưu lượng — quét, kết nối định kỳ, lưu lượng ra bất thường, dịch vụ bị lộ — bằng câu có thể xử lý ngay.",
+"pay.lead_inventory": "Đặt tên cho máy, mạng, thiết bị và giao diện, gom VIP thành nhóm để tính cước và xếp thiết bị vào phòng, tủ rack; mọi trang sẽ hiển thị tên của bạn."
 }

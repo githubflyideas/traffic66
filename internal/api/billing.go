@@ -46,7 +46,22 @@ const roPerMinute = 60
 
 // registered reports whether this installation is registered.
 func (s *Server) registered() bool {
-	return s.License != nil && s.License.State().Registered()
+	// the demo shows every page: its data is simulated, so nothing it
+	// shows can be put to use, and the registered pages are what an
+	// evaluator most wants to see
+	return s.Demo || (s.License != nil && s.License.State().Registered())
+}
+
+// paidOnly wraps a route that belongs to the registered pages: traffic
+// statistics, interface check, findings and the inventory. Unregistered
+// it is answered not_registered with the feature's name, before the
+// handler runs.
+func (s *Server) paidOnly(feature string, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if s.registeredOnly(w, feature) {
+			h(w, r)
+		}
+	}
 }
 
 // registeredOnly answers whether this installation is registered, and

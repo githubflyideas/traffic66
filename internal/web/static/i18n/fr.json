@@ -899,5 +899,12 @@
 "nm.ph_vips": "VIP, séparées par des virgules",
 "nm.group_name": "Nom du groupe",
 "nm.group_vips": "VIP",
-"bill.too_long": "Une requête couvre un mois au plus. Choisissez une période plus courte."
+"bill.too_long": "Une requête couvre un mois au plus. Choisissez une période plus courte.",
+"pay.tag": "Pro",
+"pay.btn": "S'enregistrer ou acheter",
+"pay.note": "Une fonction de la version enregistrée. La collecte et les pages gratuites continuent de fonctionner entièrement.",
+"pay.lead_billing": "Le trafic d'une VIP, d'un groupe de VIP ou d'un sous-réseau, entrant et sortant additionnés : le chiffre d'après lequel on facture, avec le 95e centile, la consommation par jour et les Go du mois.",
+"pay.lead_recon": "Comparez l'estimation de flux de chaque interface aux compteurs de l'équipement, voyez lesquelles divergent et pourquoi, et additionnez celles que vous choisissez.",
+"pay.lead_findings": "Ce que les règles de détection ont trouvé dans votre trafic — balayages, rappels réguliers, volumes sortants inhabituels, services exposés — en phrases sur lesquelles agir.",
+"pay.lead_inventory": "Nommez hôtes, réseaux, équipements et interfaces, regroupez des VIP pour la facturation et placez les équipements en salles et baies ; chaque page affiche alors vos noms."
 }

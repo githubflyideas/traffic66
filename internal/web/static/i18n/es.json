@@ -899,5 +899,12 @@
 "nm.ph_vips": "VIP, separadas por comas",
 "nm.group_name": "Nombre del grupo",
 "nm.group_vips": "VIP",
-"bill.too_long": "Una consulta abarca un mes como máximo. Elija un periodo más corto."
+"bill.too_long": "Una consulta abarca un mes como máximo. Elija un periodo más corto.",
+"pay.tag": "Pro",
+"pay.btn": "Registrar o comprar",
+"pay.note": "Una función de la versión registrada. La recolección y las páginas gratuitas siguen funcionando por completo.",
+"pay.lead_billing": "El tráfico de una VIP, un grupo de VIP o una subred, entrada y salida sumadas: la cifra con la que se factura, con el percentil 95, el uso por día y los GB del mes.",
+"pay.lead_recon": "Compare la estimación de flujos de cada interfaz con los contadores del equipo, vea cuáles no coinciden y por qué, y sume las que elija.",
+"pay.lead_findings": "Lo que las reglas de detección encontraron en su tráfico —escaneos, conexiones periódicas, volúmenes salientes inusuales, servicios expuestos— en frases con las que actuar.",
+"pay.lead_inventory": "Nombre hosts, redes, equipos e interfaces, agrupe VIP para facturar y ubique los equipos en salas y racks; todas las páginas muestran entonces sus nombres."
 }

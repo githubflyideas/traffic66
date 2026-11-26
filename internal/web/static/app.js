@@ -426,6 +426,35 @@ const ifScoped = path => state.ifv && state.ifv !== 'all' && IFV_VIEWS.has(state
 // What the licence grants. The server checks it too and is the only thing
 // that decides.
 let lic = null;
+// paidFlag: the registered pages are open (a registered installation, or
+// the demo); from /api/status
+let paidFlag = false;
+const paid = () => paidFlag;
+// the pages that are a registered feature, and the settings tab that is
+const PAID_VIEWS = {billing: 'billing', ifaces: 'recon', findings: 'findings', names: 'inventory'};
+// markPaidNav puts a small Pro tag on the registered pages in the
+// sidebar while they are closed; they stay in the menu, so what can be
+// bought is in sight
+function markPaidNav() {
+  for (const v of Object.keys(PAID_VIEWS)) {
+    const b = document.querySelector(`#nav [data-v="${v}"], nav [data-v="${v}"]`);
+    if (!b) continue;
+    let tag = b.querySelector('.protag');
+    if (paid()) { tag?.remove(); continue; }
+    if (!tag) { tag = document.createElement('span'); tag.className = 'protag'; b.appendChild(tag); }
+    tag.textContent = t('pay.tag');
+  }
+}
+// paidPage is what a registered page shows while it is closed: what the
+// page does, and the way to registration
+function paidPage(el, view) {
+  const f = PAID_VIEWS[view];
+  el.innerHTML = `<div class="grid"><div class="panel c12"><div class="paywall">
+    <h2>${esc(t('nav.' + (view === 'names' ? 'names' : view)))} <span class="protag">${esc(t('pay.tag'))}</span></h2>
+    <p>${esc(t('pay.lead_' + f))}</p>
+    <p class="muted">${esc(t('pay.note'))}</p>
+    <a class="btn primary" href="#v=license">${esc(t('pay.btn'))}</a></div></div></div>`;
+}
 let waiting = null;  // what the collector is still waiting for, from /api/status
 let setup = null;    // sources, UDP ports and addresses, for the first-run guide
 
@@ -683,7 +712,7 @@ function openPop(c, rect) {
     <button role="menuitem" data-a="not">${t('pop.not')}<kbd>X</kbd></button>
     <button role="menuitem" data-a="records">${t('pop.records')}<kbd>↵</kbd></button>
     ${DETAIL.has(c.k) ? `<button role="menuitem" data-a="detail">${t('pop.detail')}<kbd>D</kbd></button>` : ''}
-    ${NAMEABLE.has(c.k) ? `<button role="menuitem" data-a="name">${t('pop.name')}<kbd>N</kbd></button>` : ''}
+    ${NAMEABLE.has(c.k) && paid() ? `<button role="menuitem" data-a="name">${t('pop.name')}<kbd>N</kbd></button>` : ''}
     ${LOOKUP[c.k] ? `<button role="menuitem" data-a="lookup">${t('pop.lookup')}</button>` : ''}`;
   pop.style.display = 'block';
   const pr = pop.getBoundingClientRect();
@@ -1151,6 +1180,7 @@ function bindFindings(el) {
   });
 }
 views.findings = async (el) => {
+  if (!paid()) return paidPage(el, 'findings');
   const all = state.fd === 'all';
   const d = await api('findings', {status: all ? 'all' : 'open'});
   const fs = d.findings || [], det = d.detector || {};
@@ -1866,6 +1896,7 @@ let billRange = 'month';
 const billRanges = ro => ro ? ['today', '1d', '3d', '7d', '14d', 'custom'] : ['today', '1d', '3d', '7d', '30d', 'month', 'lastmonth', 'custom'];
 const fmtStep = sec => !sec ? '' : sec < 3600 ? t('bill.min', {n: sec / 60}) : sec < 86400 ? t('bill.hour', {n: sec / 3600}) : t('bill.day', {n: sec / 86400});
 views.billing = async (el) => {
+  if (!paid() && !(me && me.readonly)) return paidPage(el, 'billing');
   const ro = !!(me && me.readonly);
   const inv = ro ? {text: ''} : await fetch('/api/inventory').then(r => r.json()).catch(() => ({text: ''}));
   if (ro) billObj = {kind: me.kind, name: me.object};
@@ -2381,6 +2412,7 @@ function ifVerdict(r, rc, dirIn) {
   return {text: t(dev < 0 ? 'if.low' : 'if.high', {dev: nf(Math.abs(dev) * 100, 1) + '%', causes: causes.join('; ')}), kind: 'warn', dev, err};
 }
 views.ifaces = async (el) => {
+  if (!paid()) return paidPage(el, 'ifaces');
   const d = await api('ifaces');
   (d.ifaces || []).forEach(f => ifaceNames.set(f.exporter + '/' + f.ifindex, ifName(f) + ' · ' + (f.device || f.exporter)));
   // only the interfaces flows were sampled on: the other ends of those
@@ -2711,6 +2743,7 @@ views.integrations = async (el) => {
   if (g && !g.children.length) g.innerHTML = `<div class="panel c12"><div class="empty">${t('integ.none')}</div></div>`;
 };
 views.names = async (el) => {
+  if (!paid()) { el.innerHTML = setTabs('names'); const d = document.createElement('div'); el.appendChild(d); return paidPage(d, 'names'); }
   const inv = await api('inventory').catch(() => ({text: ''}));
   el.innerHTML = `${setTabs('names')}<div class="grid">
     ${panel('c12', t('src.names'), t('src.names_sub'), `${admOnly(`<div class="nmform" id="nmForm">
@@ -3009,6 +3042,8 @@ async function loadStatus() {
     fillSelf();
     $('#srcBadge').hidden = !s.source_warnings; $('#srcBadge').textContent = s.source_warnings;
     $('#findBadge').hidden = !s.findings_open; $('#findBadge').textContent = s.findings_open;
+    paidFlag = !!s.paid;
+    markPaidNav();
   } catch (e) {}
 }
 

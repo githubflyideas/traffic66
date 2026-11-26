@@ -5,6 +5,7 @@ heading is the version number.
 
 ## Unreleased
 
+- Registered pages: traffic statistics, interface check, findings and the inventory are registered features. Unregistered, they stay in the menu with a Pro tag and open on a page that says what they do and leads to registration; their API answers not_registered, reads and writes alike. Naming an address from its menu needs the inventory, so it is offered on registered installations. What the inventory already holds keeps applying, and the detection rules keep running. The demo shows every page.
 - Reverse DNS: lookups stay in every installation; tuning them (-dns-upstream, -dns-rate, -dns-cache) is a registered feature. Unregistered, the flags are ignored for the system resolver, 20 lookups a second and a 2-minute cache, and the log says which were ignored. -no-dns works everywhere.
 - Traffic statistics are a registered feature as a whole: an unregistered installation is refused every query, one VIP as much as a group or a subnet, on the page, its CSV and the read-only accounts alike. The three-VIP allowance for unregistered installations is gone.
 - Inventory: `sampling=` on device lines is gone. The sampling rate is always the one the device declares (sFlow in every sample, NetFlow v9 and IPFIX in their sampler options); a device that exports every packet is still marked `unsampled`. An older inventory with `sampling=` still loads: the word is ignored.

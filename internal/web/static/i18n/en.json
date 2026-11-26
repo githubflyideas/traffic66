@@ -899,5 +899,12 @@
 "nm.ph_vips": "VIPs, separated by commas",
 "nm.group_name": "Group name",
 "nm.group_vips": "VIPs",
-"bill.too_long": "One query covers a month at most. Pick a shorter range."
+"bill.too_long": "One query covers a month at most. Pick a shorter range.",
+"pay.tag": "Pro",
+"pay.btn": "Register or buy",
+"pay.note": "A registered feature. Collection and the free pages keep working in full.",
+"pay.lead_billing": "The traffic of one VIP, a VIP group or a subnet, inbound and outbound added together: the figure a bill is written from, with the 95th percentile, the usage per day and this month's GB.",
+"pay.lead_recon": "Compare each interface's flow estimate with the device's own counters, see which interfaces disagree and why, and add up the ones you pick.",
+"pay.lead_findings": "What the detection rules found in your traffic — scans, beaconing, unusual outbound volume, exposed services — as sentences you can act on.",
+"pay.lead_inventory": "Name your hosts, networks, devices and interfaces, group VIPs for billing and place devices in rooms and racks; every page then shows your names."
 }

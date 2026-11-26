@@ -899,5 +899,12 @@
 "nm.ph_vips": "VIPs, durch Kommas getrennt",
 "nm.group_name": "Gruppenname",
 "nm.group_vips": "VIPs",
-"bill.too_long": "Eine Abfrage umfasst höchstens einen Monat. Bitte einen kürzeren Zeitraum wählen."
+"bill.too_long": "Eine Abfrage umfasst höchstens einen Monat. Bitte einen kürzeren Zeitraum wählen.",
+"pay.tag": "Pro",
+"pay.btn": "Registrieren oder kaufen",
+"pay.note": "Eine Funktion der registrierten Version. Die Erfassung und die freien Seiten arbeiten vollständig weiter.",
+"pay.lead_billing": "Der Verkehr einer VIP, einer VIP-Gruppe oder eines Subnetzes, ein- und ausgehend addiert: die Zahl, nach der abgerechnet wird, mit 95. Perzentil, Verbrauch pro Tag und GB dieses Monats.",
+"pay.lead_recon": "Vergleichen Sie die Flow-Schätzung jeder Schnittstelle mit den Zählern des Geräts, sehen Sie, welche abweichen und warum, und addieren Sie die gewählten.",
+"pay.lead_findings": "Was die Erkennungsregeln im Verkehr gefunden haben – Scans, regelmäßige Rückrufe, ungewöhnliche ausgehende Mengen, offene Dienste – in Sätzen, nach denen Sie handeln können.",
+"pay.lead_inventory": "Benennen Sie Hosts, Netze, Geräte und Schnittstellen, gruppieren Sie VIPs für die Abrechnung und ordnen Sie Geräte Räumen und Racks zu; jede Seite zeigt dann Ihre Namen."
 }

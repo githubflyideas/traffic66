@@ -899,5 +899,12 @@
 "nm.ph_vips": "VIP, pisahkan dengan koma",
 "nm.group_name": "Nama grup",
 "nm.group_vips": "VIP",
-"bill.too_long": "Satu kueri paling lama satu bulan. Pilih rentang yang lebih pendek."
+"bill.too_long": "Satu kueri paling lama satu bulan. Pilih rentang yang lebih pendek.",
+"pay.tag": "Pro",
+"pay.btn": "Daftar atau beli",
+"pay.note": "Fitur versi terdaftar. Pengumpulan data dan halaman gratis tetap berjalan penuh.",
+"pay.lead_billing": "Lalu lintas satu VIP, grup VIP, atau subnet, masuk dan keluar dijumlahkan: angka dasar penagihan, dengan persentil ke-95, pemakaian per hari, dan GB bulan ini.",
+"pay.lead_recon": "Bandingkan estimasi flow tiap antarmuka dengan penghitung perangkat, lihat mana yang berbeda dan mengapa, lalu jumlahkan yang dipilih.",
+"pay.lead_findings": "Temuan aturan deteksi di lalu lintas Anda — pemindaian, koneksi berkala, volume keluar tak wajar, layanan terbuka — dalam kalimat yang bisa langsung ditindaklanjuti.",
+"pay.lead_inventory": "Beri nama host, jaringan, perangkat, dan antarmuka, kelompokkan VIP untuk penagihan, dan tempatkan perangkat di ruang dan rak; semua halaman lalu menampilkan nama Anda."
 }
