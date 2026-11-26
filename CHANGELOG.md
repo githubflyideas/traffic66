@@ -3,7 +3,7 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## Unreleased
+## 2.12.0
 
 - Registered pages: traffic statistics, interface check, findings and the inventory are registered features. Unregistered, they stay in the menu with a Pro tag and open on a page that says what they do and leads to registration; their API answers not_registered, reads and writes alike. Naming an address from its menu needs the inventory, so it is offered on registered installations. What the inventory already holds keeps applying, and the detection rules keep running. The demo shows every page.
 - Reverse DNS: lookups stay in every installation; tuning them (-dns-upstream, -dns-rate, -dns-cache) is a registered feature. Unregistered, the flags are ignored for the system resolver, 20 lookups a second and a 2-minute cache, and the log says which were ignored. -no-dns works everywhere.
