@@ -62,11 +62,15 @@ type Server struct {
 	// PublicURL is the address the browser uses (-public-url), when it is
 	// set: behind a reverse proxy, the origin of a change must be it.
 	PublicURL *url.URL
-	Demo      bool
-	Users     map[string]string          // fixed passwords (tests)
-	Check     func(user, pw string) bool // login check; replaces Users when set
-	Exists    func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
-	LocalTok  string                     // token for the TUI on this machine
+	// TrustedProxies are the reverse proxies whose X-Forwarded-For is
+	// believed when naming the client a request came from
+	// (-trusted-proxies). The zero value trusts nobody.
+	TrustedProxies TrustedProxies
+	Demo           bool
+	Users          map[string]string          // fixed passwords (tests)
+	Check          func(user, pw string) bool // login check; replaces Users when set
+	Exists         func(user string) bool     // whether a user still exists; signed-in sessions of deleted users end
+	LocalTok       string                     // token for the TUI on this machine
 	// Accounts is the password file: changing passwords and managing users
 	// from the web UI. Nil in tests and when it does not apply.
 	Accounts *auth.FileChecker
@@ -362,7 +366,11 @@ func (s *Server) apiFallback(w http.ResponseWriter, r *http.Request) {
 	writeErr(w, http.StatusNotFound, "not_found", nil)
 }
 
-// failLimiter locks out a client address after repeated failed logins.
+// failLimiter locks out one account from one client address after
+// repeated failed logins. The account is part of the key: failures
+// against one user never lock another user out, not even from the
+// same address — behind a reverse proxy that address may be every
+// user's.
 type failLimiter struct {
 	mu  sync.Mutex
 	m   map[string]*failState
@@ -380,7 +388,27 @@ const (
 	lockFor    = time.Minute
 )
 
-func clientIP(r *http.Request) string {
+// clientIP names the client a request is accounted to: the address
+// its failed logins are charged to and a read-only account is
+// rate-limited by. Normally that is the direct peer. When the peer is
+// a trusted proxy (-trusted-proxies), it is the first address in
+// X-Forwarded-For — the one the first proxy in the chain recorded.
+// Any other peer's X-Forwarded-For is ignored: it could say anything.
+func (s *Server) clientIP(r *http.Request) string {
+	peer := remoteHost(r)
+	if s.TrustedProxies.trusted(peer) {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			first, _, _ := strings.Cut(xff, ",")
+			if ip := net.ParseIP(strings.TrimSpace(first)); ip != nil {
+				return ip.String()
+			}
+		}
+	}
+	return peer
+}
+
+// remoteHost is the host part of the request's direct peer address.
+func remoteHost(r *http.Request) string {
 	h, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr
@@ -395,16 +423,19 @@ func (f *failLimiter) clock() time.Time {
 	return time.Now()
 }
 
-// blocked reports whether ip is locked out.
-func (f *failLimiter) blocked(ip string) bool {
+// failKey is the map key one account at one address is counted under.
+func failKey(ip, user string) string { return ip + "\x00" + user }
+
+// blocked reports whether this account from this address is locked out.
+func (f *failLimiter) blocked(ip, user string) bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	st := f.m[ip]
+	st := f.m[failKey(ip, user)]
 	return st != nil && f.clock().Before(st.lock)
 }
 
 // fail records a failed attempt.
-func (f *failLimiter) fail(ip string) {
+func (f *failLimiter) fail(ip, user string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	now := f.clock()
@@ -418,10 +449,11 @@ func (f *failLimiter) fail(ip string) {
 			}
 		}
 	}
-	st := f.m[ip]
+	key := failKey(ip, user)
+	st := f.m[key]
 	if st == nil || now.Sub(st.first) > failWindow {
 		st = &failState{first: now}
-		f.m[ip] = st
+		f.m[key] = st
 	}
 	st.n++
 	if st.n >= maxFails {
@@ -430,9 +462,9 @@ func (f *failLimiter) fail(ip string) {
 	}
 }
 
-func (f *failLimiter) ok(ip string) {
+func (f *failLimiter) ok(ip, user string) {
 	f.mu.Lock()
-	delete(f.m, ip)
+	delete(f.m, failKey(ip, user))
 	f.mu.Unlock()
 }
 
@@ -474,17 +506,17 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 			return
 		}
 		if u, p, ok := r.BasicAuth(); ok {
-			ip := clientIP(r)
-			if s.fails.blocked(ip) {
+			ip := s.clientIP(r)
+			if s.fails.blocked(ip, u) {
 				tooMany(w)
 				return
 			}
 			if !s.checkPassword(u, p) {
-				s.fails.fail(ip)
+				s.fails.fail(ip, u)
 				writeErr(w, http.StatusUnauthorized, "login", nil)
 				return
 			}
-			s.fails.ok(ip)
+			s.fails.ok(ip, u)
 			// The forced change applies here as well. It used to be checked
 			// only on the cookie path, where it is carried by the session,
 			// so Basic auth walked straight past it: the whole API answered
@@ -555,20 +587,20 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", nil)
 		return
 	}
-	ip := clientIP(r)
-	if s.fails.blocked(ip) {
+	ip := s.clientIP(r)
+	if s.fails.blocked(ip, in.User) {
 		s.audit("login refused (locked out) user=%s from=%s", in.User, ip)
 		tooMany(w)
 		return
 	}
 	if !s.checkPassword(in.User, in.Password) {
-		s.fails.fail(ip)
+		s.fails.fail(ip, in.User)
 		s.audit("login failed user=%s from=%s", in.User, ip)
 		time.Sleep(500 * time.Millisecond)
 		writeErr(w, http.StatusUnauthorized, "bad_credentials", nil)
 		return
 	}
-	s.fails.ok(ip)
+	s.fails.ok(ip, in.User)
 	if ro, isRO := s.roRole(in.User); isRO && ro.Disabled {
 		s.audit("login refused (account disabled) user=%s from=%s", in.User, ip)
 		writeErr(w, http.StatusForbidden, "account_disabled", nil)

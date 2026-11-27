@@ -536,6 +536,14 @@ traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
 
 默认端口（https 的 `:443`、http 的 `:80`）写不写都可以。traffic66 必须位于主机名的根路径，不能放在 `/traffic66/` 这样的子路径下。因此被拒绝的请求，登录页和其他页面会明确说明原因，而不是显示“密码不对”。把 Web 界面限制在本机（`-addr 127.0.0.1:8066`），这样只能通过代理访问。
 
+登录失败按「账户 + 客户端地址」计数：一分钟内失败五次，只锁定该地址上的那一个账户一分钟，不影响其他账户。直连时，客户端地址就是连接的来源地址。放在代理后面时，所有连接都来自代理本身，需要用 `-trusted-proxies` 指明代理，并让代理传递 `X-Forwarded-For`；这时该头里的第一个地址就是客户端地址：
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com -trusted-proxies 127.0.0.1
+```
+
+可以写单个地址，也可以写 CIDR 网段，逗号分隔（`-trusted-proxies 127.0.0.1,10.0.0.0/8`）。不配的话，traffic66 分不清代理后面的各个用户：针对某个账户的失败登录会全部记在代理地址名下累加，只读账户的限速也会被代理后面的所有人共享。只填写你自己控制的代理——受信任对端发来的这个头会被直接采信、不做核对，不是你的代理的对端一旦被信任，就能任意填报客户端地址。其他任何对端发来的这个头都会被忽略，这也是它默认关闭的原因。
+
 **nginx**（默认的 `proxy_set_header Host $proxy_host;` 会发送内部地址，所以要设置）：
 
 ```
@@ -549,6 +557,7 @@ server {
         proxy_pass http://127.0.0.1:8066;
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
 ```

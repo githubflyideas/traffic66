@@ -292,6 +292,15 @@ func NewChecker(plain map[string]string, hashed []Entry) *Checker {
 	return c
 }
 
+// dummyHash is a PBKDF2 hash, made with the same iteration count as a
+// real one, of a password nobody has. Checking a password against it
+// costs exactly what checking against a real user's hash costs.
+const dummyHash = "pbkdf2-sha256$600000$dDY2LWR1bW15LXNhbHQxNg$8MMvGxFCV0wCzbs7hF3Nvic0yG0BKr+BoQpR58XV1ao"
+
+// verifyDummy runs a password against dummyHash and throws the answer
+// away. A variable so a test can see that the work happened.
+var verifyDummy = func(pw string) bool { return Verify(dummyHash, pw) }
+
 // Check reports whether user and pw are valid.
 func (c *Checker) Check(user, pw string) bool {
 	if want, ok := c.plain[user]; ok {
@@ -299,6 +308,10 @@ func (c *Checker) Check(user, pw string) bool {
 	}
 	h, ok := c.hashes[user]
 	if !ok {
+		// No such user. Do the same work a wrong password for a real
+		// user costs, so how long a check takes does not say whether
+		// the user exists.
+		verifyDummy(pw)
 		return false
 	}
 	k := sha256.Sum256([]byte(user + "\x00" + pw + "\x00" + h))
@@ -343,16 +356,18 @@ func NewFileChecker(dir string, fixed map[string]string) *FileChecker {
 	return f
 }
 
-// Check reports whether user and pw are valid.
-func (f *FileChecker) Check(user, pw string) bool {
+// checker returns the checker for the password file as it now stands,
+// reloading it when the file changed.
+func (f *FileChecker) checker() *Checker {
 	if f.fixed != nil {
-		return f.c.Check(user, pw)
+		return f.c
 	}
 	stamp := ""
 	if fi, err := os.Stat(filepath.Join(f.dir, FileName)); err == nil {
 		stamp = fmt.Sprint(fi.ModTime().UnixNano(), fi.Size())
 	}
 	f.mu.Lock()
+	defer f.mu.Unlock()
 	if f.c == nil || stamp != f.stamp {
 		es, err := Load(f.dir)
 		if err != nil {
@@ -360,8 +375,15 @@ func (f *FileChecker) Check(user, pw string) bool {
 		}
 		f.c, f.stamp = NewChecker(nil, es), stamp
 	}
-	c := f.c
-	f.mu.Unlock()
+	return f.c
+}
+
+// Check reports whether user and pw are valid.
+func (f *FileChecker) Check(user, pw string) bool {
+	if f.fixed != nil {
+		return f.c.Check(user, pw)
+	}
+	c := f.checker()
 	if !c.Check(user, pw) {
 		return false
 	}
@@ -444,10 +466,6 @@ func (f *FileChecker) Exists(user string) bool {
 		_, ok := f.fixed[user]
 		return ok
 	}
-	f.Check("", "") // reload the file if it changed
-	f.mu.Lock()
-	c := f.c
-	f.mu.Unlock()
-	_, ok := c.hashes[user]
+	_, ok := f.checker().hashes[user]
 	return ok
 }

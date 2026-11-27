@@ -326,12 +326,12 @@ func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billing
 			writeErr(w, http.StatusBadRequest, "bad_range", nil)
 			return billingObject{}, store.Query{}, false
 		}
-		if ok, retry := s.roRL.allow(ro.User, clientIP(r), time.Now()); !ok {
+		if ok, retry := s.roRL.allow(ro.User, s.clientIP(r), time.Now()); !ok {
 			w.Header().Set("Retry-After", strconv.Itoa(retry))
 			writeErr(w, http.StatusTooManyRequests, "rate_limited", nil)
 			return billingObject{}, store.Query{}, false
 		}
-		s.audit("billing query user=%s from=%s for %s %s", ro.User, clientIP(r), obj.Kind, obj.Name)
+		s.audit("billing query user=%s from=%s for %s %s", ro.User, s.clientIP(r), obj.Kind, obj.Name)
 	}
 	return obj, q, true
 }

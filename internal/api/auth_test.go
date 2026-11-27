@@ -6,7 +6,31 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/githubflyideas/traffic66/internal/auth"
 )
+
+// TestLoginAnswersAlike: a login for a user that does not exist is
+// answered exactly like a wrong password for one that does — same
+// status, same body — and the checker does the same work for both
+// (see auth.TestUnknownUserCostsTheSameWork), so neither the answer
+// nor its timing names the accounts on an installation.
+func TestLoginAnswersAlike(t *testing.T) {
+	c := auth.NewChecker(nil, []auth.Entry{{User: "admin", Hash: auth.Hash("right")}})
+	s := &Server{Check: c.Check}
+	login := func(user, pw string) (int, string) {
+		r := httptest.NewRequest("POST", "/api/login", strings.NewReader(`{"user":"`+user+`","password":"`+pw+`"}`))
+		r.RemoteAddr = "192.0.2.9:1"
+		w := httptest.NewRecorder()
+		s.login(w, r)
+		return w.Code, w.Body.String()
+	}
+	codeKnown, bodyKnown := login("admin", "wrong")
+	codeUnknown, bodyUnknown := login("nosuchuser", "wrong")
+	if codeKnown != http.StatusUnauthorized || codeUnknown != codeKnown || bodyUnknown != bodyKnown {
+		t.Errorf("known user, wrong password: %d %s; unknown user: %d %s", codeKnown, bodyKnown, codeUnknown, bodyUnknown)
+	}
+}
 
 func TestFailedLoginsLockOut(t *testing.T) {
 	now := time.Unix(1700000000, 0)

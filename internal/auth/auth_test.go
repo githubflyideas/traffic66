@@ -40,6 +40,41 @@ func TestSetLoadCheck(t *testing.T) {
 	}
 }
 
+// TestUnknownUserCostsTheSameWork: a check for a user that does not
+// exist runs the same PBKDF2 verification a wrong password for a real
+// user runs — against the dummy hash — so the time a login takes does
+// not reveal whether the account exists.
+func TestUnknownUserCostsTheSameWork(t *testing.T) {
+	c := NewChecker(nil, []Entry{{User: "admin", Hash: Hash("right")}})
+	dummies := 0
+	orig := verifyDummy
+	verifyDummy = func(pw string) bool { dummies++; return Verify(dummyHash, pw) }
+	defer func() { verifyDummy = orig }()
+
+	if c.Check("nosuchuser", "whatever") {
+		t.Fatal("an unknown user checked out")
+	}
+	if dummies != 1 {
+		t.Fatalf("unknown user: dummy verification ran %d times, want 1", dummies)
+	}
+	if c.Check("admin", "wrong") {
+		t.Fatal("a wrong password checked out")
+	}
+	if dummies != 1 {
+		t.Fatalf("known user, wrong password: dummy verification ran %d times total, want still 1", dummies)
+	}
+	// Both failures are the same answer: false, nothing else to tell
+	// them apart.
+	if c.Check("nosuchuser", "whatever") != c.Check("admin", "wrong") {
+		t.Fatal("unknown user and wrong password answered differently")
+	}
+	// The dummy hash is a real hash at the full cost: a verification
+	// against it must not simply fail fast on a malformed string.
+	if Iterations(dummyHash) != iterations {
+		t.Fatalf("dummy hash has %d iterations, want %d", Iterations(dummyHash), iterations)
+	}
+}
+
 func TestPlainOverrides(t *testing.T) {
 	c := NewChecker(map[string]string{"admin": "flag"}, []Entry{{"admin", Hash("file")}})
 	if !c.Check("admin", "flag") || c.Check("admin", "file") {
