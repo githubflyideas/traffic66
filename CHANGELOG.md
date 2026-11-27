@@ -3,6 +3,11 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.15.1
+
+- Strengthened sign-in handling behind reverse proxies: failed sign-ins are counted per account and per client address, so one person's failures no longer lock anyone else out. A new `-trusted-proxies` option names the proxies (addresses or CIDR ranges) whose `X-Forwarded-For` header names the client; from every other peer the header is still ignored. The manual's reverse-proxy section explains it.
+- Sign-in responses no longer reveal whether an account exists: an unknown user is answered exactly like a wrong password.
+
 ## 2.15.0
 
 - A non-GET request to `/logo`, `/auto` or `/tls.crt` now answers 405 JSON with an `Allow: GET` header and the same `API-Version` and security headers as `/healthz`, instead of the static server's plain-text 404.
