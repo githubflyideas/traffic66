@@ -22,7 +22,7 @@ func (s *Server) manual(w http.ResponseWriter, r *http.Request) {
 	}
 	b, err := fs.ReadFile(docs.FS, name)
 	if err != nil {
-		http.Error(w, "no manual", http.StatusNotFound)
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
 		return
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")

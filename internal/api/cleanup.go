@@ -78,7 +78,10 @@ func (s *Server) postCleanup(w http.ResponseWriter, r *http.Request) {
 // checker at all (the offline sandbox) is treated as unregistered: the
 // answer is never more permissive than a missing licence.
 //
-// The registered build's features call it; this build has none that do.
+// The registered build's features call it (-tags=pro); this build has
+// none that do.
+//
+//lint:ignore U1000 used by the registered build
 func (s *Server) allowed(w http.ResponseWriter, feature string) bool {
 	if s.License != nil && s.License.State().Allowed(feature) {
 		return true

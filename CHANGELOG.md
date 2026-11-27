@@ -3,6 +3,11 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## Unreleased
+
+- Build checks: the pipeline now fails on unformatted code (gofmt), on staticcheck findings and on the race detector, beside vet, the vulnerability scan and the tests; staticcheck and govulncheck are pinned to a version. The route table that answers 405 and builds the OpenAPI description is checked against the registered routes by a test.
+- The manual's 404 answers JSON like every other error.
+
 ## 2.12.0
 
 - Registered pages: traffic statistics, interface check, findings and the inventory are registered features. Unregistered, they stay in the menu with a Pro tag and open on a page that says what they do and leads to registration; their API answers not_registered, reads and writes alike. Naming an address from its menu needs the inventory, so it is offered on registered installations. What the inventory already holds keeps applying, and the detection rules keep running. The demo shows every page.

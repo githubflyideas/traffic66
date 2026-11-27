@@ -76,10 +76,20 @@ jobs:
         run: go mod tidy
       - name: Vet
         run: go vet ./...
+      - name: Format
+        if: ${{ matrix.target == 'linux-amd64' }}
+        run: |
+          out="$(gofmt -l . | grep -v '^\.pro/' || true)"
+          if [[ -n "$out" ]]; then echo "::error::gofmt: $(echo "$out" | tr '\n' ' ')"; exit 1; fi
+      - name: Static analysis
+        if: ${{ matrix.target == 'linux-amd64' }}
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@v0.8.2
+          "$(go env GOPATH)/bin/staticcheck" ./...
       - name: Vulnerability scan
         if: ${{ matrix.target == 'linux-amd64' }}
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
           "$(go env GOPATH)/bin/govulncheck" ./...
       - name: Test
         run: |
@@ -97,6 +107,9 @@ jobs:
             { echo '### Failed tests'; echo '```'; grep -vE '^(ok|\?) ' test.log | tail -60; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           }
+      - name: Race detector
+        if: ${{ matrix.target == 'linux-amd64' && !cancelled() }}
+        run: go test -race -count=1 ./...
       - name: Build
         if: ${{ !cancelled() }}
         run: |
