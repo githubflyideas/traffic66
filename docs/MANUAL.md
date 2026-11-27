@@ -643,6 +643,14 @@ traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com
 
 The default port (`:443` for https, `:80` for http) may be written or left out. traffic66 must be at the root of its host name, not under a path such as `/traffic66/`. When a request is refused for this reason, the sign-in page and the other pages say so, instead of "wrong password". Keep the web UI on this machine (`-addr 127.0.0.1:8066`) so that it is reached only through the proxy.
 
+Failed sign-ins are counted per account and per client address: five failures in a minute lock that one account from that one address for a minute, and no other account. Directly connected, the client address is the address the connection comes from. Behind a proxy every connection comes from the proxy itself, so name the proxy with `-trusted-proxies` and have it pass `X-Forwarded-For`; the first address in that header is then the client:
+
+```
+traffic66 serve -addr 127.0.0.1:8066 -public-url https://traffic66.example.com -trusted-proxies 127.0.0.1
+```
+
+Single addresses and CIDR ranges both work, comma separated (`-trusted-proxies 127.0.0.1,10.0.0.0/8`). Without it, traffic66 cannot tell the users behind the proxy apart: failed sign-ins against one account from anywhere behind the proxy add up under the proxy's address, and a read-only account's rate limit is shared by everyone behind it. Name only proxies you control — the header from a trusted peer is believed without checking, so a peer that is not really your proxy could name any client address it likes. From every other peer the header is ignored, which is why it is off by default.
+
 **nginx** (the default `proxy_set_header Host $proxy_host;` sends the internal address, so set it):
 
 ```
@@ -656,6 +664,7 @@ server {
         proxy_pass http://127.0.0.1:8066;
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
 ```

@@ -273,7 +273,7 @@ func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
 
 type serveFlags struct {
 	addr, data, listen, user, password, asn, inventory string
-	tlsCert, tlsKey, publicURL                         string
+	tlsCert, tlsKey, publicURL, trustedProxies         string
 	tls                                                bool
 	dnsUpstream                                        string
 	dnsRate                                            float64
@@ -319,6 +319,7 @@ func serve(args []string, demo bool) {
 	fs.StringVar(&f.tlsCert, "tls-cert", "", "serve the web UI over HTTPS with this certificate")
 	fs.StringVar(&f.tlsKey, "tls-key", "", "the private key for -tls-cert")
 	fs.StringVar(&f.publicURL, "public-url", "", "the address browsers use behind a reverse proxy, e.g. https://traffic66.example.org (see the manual)")
+	fs.StringVar(&f.trustedProxies, "trusted-proxies", "", "reverse proxies whose X-Forwarded-For names the client, as IP addresses or CIDR ranges, comma separated (see the manual)")
 	for _, x := range extFlags {
 		x(fs)
 	}
@@ -607,6 +608,7 @@ func serve(args []string, demo bool) {
 		Demo: demo, Check: checker.Check, Exists: checker.Exists, Accounts: checker, LocalTok: tok, DataDir: f.data, Started: time.Now(), Listen: listens}
 	srv.SNMP = poller.Status
 	srv.PublicURL, _ = parsePublicURL(f.publicURL)
+	srv.TrustedProxies, _ = api.ParseTrustedProxies(f.trustedProxies)
 	publicURL = f.publicURL
 	srv.License = lic
 	if lic != nil {
@@ -1219,6 +1221,11 @@ func (f *serveFlags) check() error {
 	}
 	if f.publicURL != "" {
 		if _, err := parsePublicURL(f.publicURL); err != nil {
+			return err
+		}
+	}
+	if f.trustedProxies != "" {
+		if _, err := api.ParseTrustedProxies(f.trustedProxies); err != nil {
 			return err
 		}
 	}

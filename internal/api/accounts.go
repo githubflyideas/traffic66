@@ -93,7 +93,7 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	u := userOf(r)
 	if u == "" || !s.checkPassword(u, in.Old) {
-		s.audit("password change failed user=%s from=%s", u, clientIP(r))
+		s.audit("password change failed user=%s from=%s", u, s.clientIP(r))
 		writeErr(w, http.StatusForbidden, "wrong_old", nil)
 		return
 	}
