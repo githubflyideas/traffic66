@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -104,6 +106,39 @@ func startHelper(t *testing.T, kind string, args []string, extraEnv ...string) *
 	)
 	cmd.Env = append(env, extraEnv...)
 	return cmd
+}
+
+// stopHelper asks the child to exit: SIGTERM on Unix (serve listens for
+// it), Kill on Windows (Signal is not delivered to NotifyContext).
+func stopHelper(cmd *exec.Cmd) error {
+	if cmd == nil || cmd.Process == nil {
+		return nil
+	}
+	if runtime.GOOS == "windows" {
+		return cmd.Process.Kill()
+	}
+	return cmd.Process.Signal(syscall.SIGTERM)
+}
+
+func waitHelper(t *testing.T, cmd *exec.Cmd, timeout time.Duration) error {
+	t.Helper()
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(timeout):
+		_ = cmd.Process.Kill()
+		select {
+		case err := <-done:
+			if err != nil {
+				return err
+			}
+			return nil
+		case <-time.After(5 * time.Second):
+			return fmt.Errorf("child did not exit after %s", timeout)
+		}
+	}
 }
 
 func TestPasswdGenerateAndList(t *testing.T) {
@@ -228,36 +263,36 @@ func TestServeStartsAndStops(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
+	stopped := false
 	defer func() {
-		_ = cmd.Process.Signal(syscall.SIGTERM)
+		if stopped {
+			return
+		}
+		// Kill, not Signal: on Windows SIGTERM is not delivered and Wait would hang.
+		_ = cmd.Process.Kill()
 		_, _ = cmd.Process.Wait()
 	}()
 	url := "http://" + addr + "/healthz"
+	client := &http.Client{Timeout: 2 * time.Second}
 	deadline := time.Now().Add(30 * time.Second)
 	var last error
 	for time.Now().Before(deadline) {
-		res, err := http.Get(url)
+		res, err := client.Get(url)
 		if err == nil {
 			body, _ := io.ReadAll(res.Body)
 			res.Body.Close()
 			if res.StatusCode == 200 && bytes.Contains(body, []byte(`"status":"ok"`)) {
-				if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-					t.Fatalf("signal: %v", err)
+				if err := stopHelper(cmd); err != nil {
+					t.Fatalf("stop: %v", err)
 				}
-				done := make(chan error, 1)
-				go func() { done <- cmd.Wait() }()
-				select {
-				case err := <-done:
-					if err != nil {
-						t.Fatalf("serve exit: %v\n%s%s", err, stdout.String(), stderr.String())
-					}
-				case <-time.After(15 * time.Second):
-					_ = cmd.Process.Kill()
-					t.Fatal("serve did not exit after SIGTERM")
+				err := waitHelper(t, cmd, 15*time.Second)
+				stopped = true
+				if err != nil && runtime.GOOS != "windows" {
+					t.Fatalf("serve exit: %v\n%s%s", err, stdout.String(), stderr.String())
 				}
 				return
 			}
-			last = err
+			last = fmt.Errorf("GET %s: %d %s", url, res.StatusCode, body)
 		} else {
 			last = err
 		}
