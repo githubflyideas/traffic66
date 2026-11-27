@@ -3,6 +3,13 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.15.0
+
+- A non-GET request to `/logo`, `/auto` or `/tls.crt` now answers 405 JSON with an `Allow: GET` header and the same `API-Version` and security headers as `/healthz`, instead of the static server's plain-text 404.
+- `GET /tls.crt` when no certificate is configured, or the certificate file is missing, answers JSON 404 (`not_found`). A missing built-in logo file does the same.
+- Traditional Chinese (繁體中文) is listed immediately after Korean in the web interface and embed language menus.
+- Tests: the command package covers `serve` starting and stopping, `passwd` and `gen-token`; the terminal UI covers keyboard navigation, filters, the help overlay and window sizing.
+
 ## 2.14.0
 
 - **Breaking (API):** every error answer now has the one shape the product family uses: `{"error": "short message", "code": "stable_code"}`. The stable code moved from `error` to `code`, and `error` now carries a short English message; programs must read `code` for the stable value (the web UI does). The version header is spelled `API-Version`, as in fogping and pingping.
