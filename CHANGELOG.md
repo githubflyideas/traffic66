@@ -3,8 +3,10 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
-## Unreleased
+## 2.13.0
 
+- Traditional Chinese (繁體中文) is a sixteenth interface language, written in Taiwan usage and a formal register, available in the web interface and in embedded pages.
+- Interface text revised in Simplified Chinese, English, Japanese, German and Spanish: sentences that were still shown in English are translated, mistranslations are corrected, and the core terms (traffic, sampling rate, VIP groups and others) now read the same everywhere in each language. The wording is more formal throughout.
 - Build checks: the pipeline now fails on unformatted code (gofmt), on staticcheck findings and on the race detector, beside vet, the vulnerability scan and the tests; staticcheck and govulncheck are pinned to a version. The route table that answers 405 and builds the OpenAPI description is checked against the registered routes by a test.
 - The manual's 404 answers JSON like every other error.
 
