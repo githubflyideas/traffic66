@@ -81,6 +81,7 @@ type Server struct {
 	sessions map[string]session
 	fails    failLimiter
 	rates    rates
+	src      srcRates
 	// acctMu serialises changes to the account file, so the user limit
 	// is checked against the same file the write then lands in.
 	acctMu sync.Mutex

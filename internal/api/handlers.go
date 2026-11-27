@@ -533,11 +533,17 @@ type sourceOut struct {
 	Blocked bool `json:"blocked,omitempty"`
 }
 
-var srcRate = struct {
+// srcRates is the per-exporter record-rate state between samples. It
+// lives on the Server, guarded by the Server's mutex like the rest of
+// its state: as a package variable it was written by the sampling
+// goroutine of every Server in the process, each holding only its own
+// Server's lock, so two Servers raced on it — and two collectors'
+// exporters could collide in it.
+type srcRates struct {
 	last map[string]uint64
 	at   time.Time
 	ps   map[string]float64
-}{last: map[string]uint64{}, ps: map[string]float64{}}
+}
 
 func srcKey(si collector.SourceInfo) string {
 	return si.Exporter + "|" + si.Proto + "|" + strconv.Itoa(int(si.Domain))
@@ -550,19 +556,23 @@ func (s *Server) sampleSources(now time.Time) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	dt := now.Sub(srcRate.at).Seconds()
+	if s.src.last == nil {
+		s.src.last = map[string]uint64{}
+		s.src.ps = map[string]float64{}
+	}
+	dt := now.Sub(s.src.at).Seconds()
 	for _, si := range s.Col.Sources() {
 		k := srcKey(si)
-		if last, ok := srcRate.last[k]; ok && dt > 0.5 {
+		if last, ok := s.src.last[k]; ok && dt > 0.5 {
 			r := float64(si.Records-last) / dt
-			if old, ok := srcRate.ps[k]; ok {
+			if old, ok := s.src.ps[k]; ok {
 				r = old*0.6 + r*0.4
 			}
-			srcRate.ps[k] = r
+			s.src.ps[k] = r
 		}
-		srcRate.last[k] = si.Records
+		s.src.last[k] = si.Records
 	}
-	srcRate.at = now
+	s.src.at = now
 }
 
 func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
@@ -594,7 +604,7 @@ func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		o := sourceOut{SourceInfo: si, Status: "ok"}
-		o.RecPS = srcRate.ps[srcKey(si)]
+		o.RecPS = s.src.ps[srcKey(si)]
 		if a, err := netip.ParseAddr(si.Exporter); err == nil {
 			o.Name = s.Inv.Device(a)
 		}
