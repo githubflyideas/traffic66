@@ -15,7 +15,7 @@ func TestCSPFitsIndex(t *testing.T) {
 			t.Errorf("CSP lacks %q: %s", want, CSP)
 		}
 	}
-	for _, bad := range []string{"unsafe-eval", "http:", "https:", "*", "frame-ancestors"} {
+	for _, bad := range []string{"unsafe-eval", "http:", "https:", "*"} {
 		if strings.Contains(CSP, bad) {
 			t.Errorf("CSP should not contain %q: %s", bad, CSP)
 		}
@@ -44,5 +44,13 @@ func TestCSPFitsIndex(t *testing.T) {
 		if regexp.MustCompile(`\beval\(|new Function\(|\son(click|load|error|change|input|submit)=`).Match(js) {
 			t.Errorf("%s uses eval or inline handlers, which the policy blocks", f)
 		}
+	}
+}
+
+// No other site may frame the UI's pages: the sign-in page framed
+// invisibly is a click away from a password typed into someone else's page.
+func TestCSPForbidsFraming(t *testing.T) {
+	if !strings.Contains(CSP, "frame-ancestors 'none'") {
+		t.Errorf("CSP does not forbid framing: %s", CSP)
 	}
 }

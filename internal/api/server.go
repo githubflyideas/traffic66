@@ -263,6 +263,7 @@ func (s *Server) Handler() http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Content-Security-Policy", web.CSP)
+		w.Header().Set("X-Frame-Options", "DENY") // browsers that predate frame-ancestors
 		// no-cache on every file: after an upgrade the browser must not keep
 		// the old app.js or app.css (the embedded files carry no date to
 		// revalidate against, so a cached copy could outlive the program)

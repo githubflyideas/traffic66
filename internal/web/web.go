@@ -20,8 +20,11 @@ func FS() fs.FS {
 // no inline event handlers, which the test checks); the pages build markup
 // with style attributes, so inline styles stay allowed; images are the
 // program's own (the logo), data: (the watermark and icons) and blob:.
-// Nothing is loaded from another host. frame-ancestors is left out on
-// purpose: the embed pages are meant to be framed by other platforms.
+// Nothing is loaded from another host, and no other site may frame these
+// pages, the sign-in page among them: a page that can be framed can be
+// laid invisibly under a click. The embed pages are not these pages: they
+// are served on their own path with their own policy, which names the
+// sites that may frame them.
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
 	"img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; " +
-	"object-src 'none'; base-uri 'self'; form-action 'self'"
+	"object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
