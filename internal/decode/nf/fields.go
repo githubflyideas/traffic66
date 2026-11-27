@@ -330,6 +330,12 @@ func parseTemplateSet(s *session, b []byte, src flow.Source, options bool) []uin
 				break
 			}
 			t := &template{options: true, nf9Scope: true}
+			// a field takes four bytes: counts that the rest of the set
+			// cannot hold are a lie, and looping to them costs memory
+			// (a 24-byte datagram claiming 65535 fields made 4 MB)
+			if int(scopeLen)/4+int(optLen)/4 > r.Len()/4 {
+				break
+			}
 			for i := 0; i < int(scopeLen)/4; i++ {
 				t.fields = append(t.fields, fieldSpec{id: r.U16(), len: r.U16(), scope: true})
 			}
@@ -373,6 +379,9 @@ func parseTemplateSet(s *session, b []byte, src flow.Source, options bool) []uin
 			scopeCount = r.U16()
 		}
 		t := &template{options: options}
+		if int(count) > r.Len()/4 {
+			break // more fields than the set has bytes for
+		}
 		for i := 0; i < int(count); i++ {
 			fid := r.U16()
 			flen := r.U16()
