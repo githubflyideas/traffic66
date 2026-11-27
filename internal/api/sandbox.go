@@ -47,16 +47,20 @@ func (s *Server) putSandboxFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.ContentLength > s.SB.Lim.FileSize {
-		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": "too_big", "max": s.SB.Lim.FileSize})
+		writeErr(w, http.StatusRequestEntityTooLarge, "too_big", map[string]any{"max": s.SB.Lim.FileSize})
 		return
 	}
 	f, err := s.SB.Add(r.URL.Query().Get("name"), r.Body, false)
+	if errors.Is(err, sandbox.ErrTooManyFiles) {
+		writeErr(w, http.StatusRequestEntityTooLarge, "too_many_files", map[string]any{"max": s.SB.Lim.FileSize, "max_files": s.SB.Lim.Files})
+		return
+	}
 	if errors.Is(err, sandbox.ErrLimit) {
-		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": err.Error(), "max": s.SB.Lim.FileSize, "max_files": s.SB.Lim.Files})
+		writeErr(w, http.StatusRequestEntityTooLarge, "file_limit", map[string]any{"max": s.SB.Lim.FileSize, "max_files": s.SB.Lim.Files})
 		return
 	}
 	if errors.Is(err, sandbox.ErrNotCapture) {
-		writeJSON(w, http.StatusUnsupportedMediaType, map[string]any{"error": err.Error(), "code": "not_capture"})
+		writeErr(w, http.StatusUnsupportedMediaType, "not_capture", nil)
 		return
 	}
 	if err != nil {

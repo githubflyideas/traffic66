@@ -40,7 +40,7 @@ func TestParseQuerySpanCap(t *testing.T) {
 	s := &Server{Store: st}
 	w := httptest.NewRecorder()
 	s.topn(w, httptest.NewRequest("GET", url(31*24*time.Hour)+"&dim=app", nil))
-	if w.Code != 400 || w.Body.String() != "{\"error\":\"bad_range\"}\n" {
+	if w.Code != 400 || w.Body.String() != "{\"code\":\"bad_range\",\"error\":\"bad range\"}\n" {
 		t.Fatalf("31 days over the handler: %d %s", w.Code, w.Body)
 	}
 }

@@ -88,6 +88,11 @@ type Sandbox struct {
 // ErrLimit is returned when a file would exceed the limits.
 var ErrLimit = errors.New("limit")
 
+// ErrTooManyFiles is the count half of ErrLimit, wrapped alongside it so
+// a caller can tell "too many files" from "too much data" without
+// reading the sentence.
+var ErrTooManyFiles = errors.New("file count limit")
+
 // ErrNotCapture is returned for files that are not pcap or pcapng.
 var ErrNotCapture = errors.New("not a capture file: use .pcap or .pcapng as saved by Wireshark or tcpdump (not compressed)")
 
@@ -409,7 +414,7 @@ func (sb *Sandbox) room(sample bool) (int64, error) {
 		}
 	}
 	if n >= sb.Lim.Files {
-		return 0, fmt.Errorf("%w: at most %d files; delete one first", ErrLimit, sb.Lim.Files)
+		return 0, fmt.Errorf("%w: %w: at most %d files; delete one first", ErrLimit, ErrTooManyFiles, sb.Lim.Files)
 	}
 	room := min(sb.Lim.FileSize, sb.Lim.TotalSize-used)
 	if room <= 0 {

@@ -22,7 +22,7 @@ func (s *Server) manual(w http.ResponseWriter, r *http.Request) {
 	}
 	b, err := fs.ReadFile(docs.FS, name)
 	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+		writeErr(w, http.StatusNotFound, "not_found", nil)
 		return
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
@@ -31,12 +31,14 @@ func (s *Server) manual(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-// manualImage serves one of the manual's screenshots.
+// manualImage serves one of the manual's screenshots. A name that is
+// not there is an API answer like any other: JSON with a stable code,
+// not the text page.
 func (s *Server) manualImage(w http.ResponseWriter, r *http.Request) {
 	name := path.Base(r.PathValue("name"))
 	b, err := fs.ReadFile(docs.FS, "images/"+name)
 	if err != nil || path.Ext(name) != ".png" {
-		http.NotFound(w, r)
+		writeErr(w, http.StatusNotFound, "not_found", nil)
 		return
 	}
 	w.Header().Set("Content-Type", "image/png")

@@ -85,7 +85,7 @@ func TestAPIMethodNotAllowedAndJSON404(t *testing.T) {
 	if allow := w.Header().Get("Allow"); !strings.Contains(allow, "GET") {
 		t.Fatalf("Allow = %q", allow)
 	}
-	if !strings.Contains(w.Body.String(), `"error":"method_not_allowed"`) {
+	if !strings.Contains(w.Body.String(), `"code":"method_not_allowed"`) {
 		t.Fatalf("405 body: %s", w.Body)
 	}
 	w = apiCall(h, "PUT", "/api/users", `{}`, ck, "")
@@ -98,7 +98,7 @@ func TestAPIMethodNotAllowedAndJSON404(t *testing.T) {
 		}
 	}
 	w = apiCall(h, "GET", "/api/no-such-thing", "", ck, "")
-	if w.Code != http.StatusNotFound || !strings.Contains(w.Body.String(), `"error":"not_found"`) {
+	if w.Code != http.StatusNotFound || !strings.Contains(w.Body.String(), `"code":"not_found"`) {
 		t.Fatalf("unknown path: %d %s", w.Code, w.Body)
 	}
 }
@@ -148,7 +148,7 @@ func TestBadRangeIsAnError(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	fail(w, errBadRange)
-	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), `"error":"bad_range"`) {
+	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), `"code":"bad_range"`) {
 		t.Fatalf("fail(bad_range): %d %s", w.Code, w.Body)
 	}
 }

@@ -23,12 +23,17 @@ func (s *Server) notice() string {
 	return s.License.State().Notice()
 }
 
+// noticeHeaderValue is the header's short form of the notice. The full
+// sentence belongs on things that leave the installation (files, CSV);
+// a header rides on every response, so it carries only the fact.
+const noticeHeaderValue = "evaluation copy - not registered"
+
 // markHeader puts the notice on a response. It is called for every API
 // route from one place rather than per handler, so a route added later
 // carries it without anybody remembering to.
 func (s *Server) markHeader(w http.ResponseWriter) {
-	if n := s.notice(); n != "" {
-		w.Header().Set(noticeHeader, n)
+	if s.notice() != "" {
+		w.Header().Set(noticeHeader, noticeHeaderValue)
 	}
 }
 

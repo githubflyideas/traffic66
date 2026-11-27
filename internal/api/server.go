@@ -151,9 +151,10 @@ const cookieName = "t66s"
 
 // apiVersion is the version of the HTTP API — the family's "API rules
 // v1", the same rules fogping, pingping, vrf-ping and vyos-sflow follow:
-// every /api answer carries it in the Api-Version header, the current
-// version also answers under /api/v1/, errors are one JSON shape with a
-// stable code, a wrong method is a 405 that says what is allowed, and
+// every /api answer carries it in the API-Version header, the current
+// version also answers under /api/v1/, errors are one JSON shape —
+// {"error", "code"}: a sentence for a person, a stable code for a
+// program — a wrong method is a 405 that says what is allowed, and
 // programs authenticate with scoped tokens, not a browser session.
 const apiVersion = "1"
 
@@ -172,6 +173,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/loginhint", s.loginHint)
 	mux.HandleFunc("GET /tls.crt", s.certDownload)
 	mux.HandleFunc("GET /healthz", s.healthz)
+	// Any other method on /healthz is an API-shaped refusal, not the
+	// static server's plain-text 404: the mux would otherwise hand the
+	// path to the "/" file handler, which knows nothing about it.
+	mux.HandleFunc("/healthz", s.healthzMethod)
 	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
 	// adminAPI is api plus the administrator check. The permission belongs
 	// in this table rather than inside each handler: a new route's gate is
@@ -190,7 +195,11 @@ func (s *Server) Handler() http.Handler {
 	adminAPI("GET /api/tokens", s.listTokens)
 	adminAPI("POST /api/tokens", s.createToken)
 	adminAPI("DELETE /api/tokens", s.deleteToken)
-	api("GET /api/openapi.json", s.openapi)
+	// The API description is public: a program deciding whether it can
+	// talk to this server has nothing to sign in with yet. It is in
+	// apiRouteTable like every other route, so the table test still
+	// guards it; only the sign-in wrapper is skipped.
+	mux.HandleFunc("GET /api/openapi.json", s.openapi)
 	api("GET /api/overview", s.data((*Server).overview))
 	api("GET /api/topn", s.data((*Server).topn))
 	api("GET /api/sankey", s.data((*Server).sankey))
@@ -266,7 +275,7 @@ func (s *Server) Handler() http.Handler {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 		}
 		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/metrics" {
-			w.Header().Set("Api-Version", apiVersion)
+			w.Header().Set("API-Version", apiVersion)
 			// /api/v1/… names the version in the address; it is the same
 			// API, so the prefix is rewritten away and the table above
 			// answers. The unprefixed address stays the current version.
@@ -343,10 +352,10 @@ func (s *Server) apiFallback(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(allow) > 0 {
 		w.Header().Set("Allow", strings.Join(allow, ", "))
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
+		writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed", nil)
 		return
 	}
-	writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+	writeErr(w, http.StatusNotFound, "not_found", nil)
 }
 
 // failLimiter locks out a client address after repeated failed logins.
@@ -425,14 +434,14 @@ func (f *failLimiter) ok(ip string) {
 
 func tooMany(w http.ResponseWriter) {
 	w.Header().Set("Retry-After", "60")
-	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too_many_logins"})
+	writeErr(w, http.StatusTooManyRequests, "too_many_logins", nil)
 }
 
 func (s *Server) auth(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.markHeader(w)
 		if !s.sameOrigin(r) {
-			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
+			writeErr(w, http.StatusForbidden, "cross_origin", nil)
 			return
 		}
 		bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -447,11 +456,11 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 		if strings.HasPrefix(bearer, "t66_") {
 			ent, ok := s.tokenAuth(bearer)
 			if !ok {
-				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "token_invalid"})
+				writeErr(w, http.StatusUnauthorized, "token_invalid", nil)
 				return
 			}
 			if ent.Scope != "write" && r.Method != http.MethodGet && r.Method != http.MethodHead {
-				writeJSON(w, http.StatusForbidden, map[string]string{"error": "token_scope"})
+				writeErr(w, http.StatusForbidden, "token_scope", nil)
 				return
 			}
 			if !s.roAllowed(w, r, ent.User) {
@@ -468,7 +477,7 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 			}
 			if !s.checkPassword(u, p) {
 				s.fails.fail(ip)
-				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login"})
+				writeErr(w, http.StatusUnauthorized, "login", nil)
 				return
 			}
 			s.fails.ok(ip)
@@ -478,7 +487,7 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 			// to admin and the password every installation starts with, for
 			// as long as nobody got round to changing it.
 			if s.mustChangeNow(p) && !allowedBeforeChange[r.URL.Path] {
-				writeJSON(w, http.StatusForbidden, map[string]string{"error": "change_password"})
+				writeErr(w, http.StatusForbidden, "change_password", nil)
 				return
 			}
 			if !s.roAllowed(w, r, u) {
@@ -499,7 +508,7 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 				s.sessions[c.Value] = se
 				s.mu.Unlock()
 				if se.mustChange && !allowedBeforeChange[r.URL.Path] {
-					writeJSON(w, http.StatusForbidden, map[string]string{"error": "change_password"})
+					writeErr(w, http.StatusForbidden, "change_password", nil)
 					return
 				}
 				if !s.roAllowed(w, r, se.user) {
@@ -510,7 +519,7 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 			}
 			s.mu.Unlock()
 		}
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login"})
+		writeErr(w, http.StatusUnauthorized, "login", nil)
 	})
 }
 
@@ -534,7 +543,7 @@ func (s *Server) checkPassword(u, p string) bool {
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	var in struct{ User, Password string }
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+		writeErr(w, http.StatusBadRequest, "bad_request", nil)
 		return
 	}
 	ip := clientIP(r)
@@ -547,13 +556,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		s.fails.fail(ip)
 		s.audit("login failed user=%s from=%s", in.User, ip)
 		time.Sleep(500 * time.Millisecond)
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "bad_credentials"})
+		writeErr(w, http.StatusUnauthorized, "bad_credentials", nil)
 		return
 	}
 	s.fails.ok(ip)
 	if ro, isRO := s.roRole(in.User); isRO && ro.Disabled {
 		s.audit("login refused (account disabled) user=%s from=%s", in.User, ip)
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "account_disabled"})
+		writeErr(w, http.StatusForbidden, "account_disabled", nil)
 		return
 	}
 	s.audit("login user=%s from=%s", in.User, ip)
@@ -637,18 +646,98 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	}
 }
 
+// errMessages is the short English sentence for each stable error code —
+// the "error" half of the family's one error shape, {"error", "code"}:
+// the sentence is for a person, the code is for a program and never
+// changes meaning once published. Pages translate by code; a client that
+// only reads the sentence still gets told what happened.
+var errMessages = map[string]string{
+	"account_disabled":   "account disabled",
+	"bad_credentials":    "bad credentials",
+	"bad_exporter":       "invalid exporter",
+	"bad_kind":           "invalid kind",
+	"bad_name":           "invalid name",
+	"bad_range":          "bad range",
+	"bad_request":        "bad request",
+	"bad_scope":          "invalid scope",
+	"bad_subnet":         "bad subnet",
+	"bad_user":           "invalid user name",
+	"bad_vip":            "invalid address",
+	"change_password":    "password change required",
+	"cross_origin":       "cross-origin request refused",
+	"database":           "database error",
+	"default":            "the password must not be the default one",
+	"exists":             "already exists",
+	"file":               "file error",
+	"file_limit":         "file limit exceeded",
+	"fixed":              "accounts are fixed by the command line",
+	"last_user":          "this is the only user; add another user first",
+	"lic_bad_signature":  "the licence signature does not verify",
+	"lic_expired":        "the licence has expired",
+	"lic_invalid":        "the licence is not valid",
+	"lic_key_disabled":   "the licence key is disabled",
+	"lic_no_keys":        "this release carries no licence keys",
+	"lic_not_issued":     "the licence was not issued for this product",
+	"lic_other_install":  "the licence was issued for another installation",
+	"lic_unavailable":    "no licence state on this installation",
+	"lic_unknown_key":    "the licence was signed by an unknown key",
+	"lic_unreadable":     "the licence could not be read",
+	"lic_unsigned":       "the licence is not signed",
+	"login":              "sign-in failed",
+	"method_not_allowed": "method not allowed",
+	"no_collector":       "no collector is running",
+	"no_object":          "no billing object given",
+	"no_token":           "no such token",
+	"no_user":            "no such user",
+	"not_admin":          "administrator only",
+	"not_blocked":        "not blocked",
+	"not_capture":        "not a capture file: use .pcap or .pcapng",
+	"not_found":          "not found",
+	"not_registered":     "not registered",
+	"rate_limited":       "rate limited",
+	"readonly_scope":     "outside this read-only account's scope",
+	"self":               "you cannot delete your own account",
+	"storage_unhealthy":  "storage unhealthy",
+	"token_invalid":      "invalid token",
+	"token_scope":        "the token's scope does not allow this",
+	"too_big":            "file too big",
+	"too_many_files":     "too many files",
+	"too_many_logins":    "too many sign-in attempts",
+	"too_short":          "password too short",
+	"unknown_product":    "no such product line",
+	"user_limit":         "user limit reached",
+	"wrong_old":          "the current password is wrong",
+}
+
+// writeErr answers with the family's one error shape: {"error", "code"}
+// plus any extra fields the caller adds (a limit, a feature name, the
+// kind of a database failure). Every error the API sends goes through
+// here, so the shape cannot drift between handlers.
+func writeErr(w http.ResponseWriter, status int, code string, extra map[string]any) {
+	msg, ok := errMessages[code]
+	if !ok {
+		msg = "request failed"
+	}
+	body := map[string]any{"error": msg, "code": code}
+	for k, v := range extra {
+		body[k] = v
+	}
+	writeJSON(w, status, body)
+}
+
 // duckErr matches DuckDB's error format ("Out of Memory Error: …").
 var duckErr = regexp.MustCompile(`\b[A-Z][A-Za-z]* Error: `)
 
-// fail answers a failed request. The error is always a stable code —
-// programs switch on it, pages translate it — and where the detail is
-// the point (which filter, which field) it rides along as a message.
-// Database failures are logged in full and the browser gets only their
-// kind, so pages can say "the database is at its memory limit" instead
-// of showing SQL.
+// fail answers a failed request. The client always gets a stable code —
+// programs switch on it, pages translate it — never the error's own
+// text: an unclassified error's wording is the server's business (it can
+// name paths, SQL and addresses), so it goes to the log and the client
+// gets the generic code. Database failures are logged in full and the
+// browser gets only their kind, so pages can say "the database is at its
+// memory limit" instead of showing SQL.
 func fail(w http.ResponseWriter, err error) {
 	if errors.Is(err, errBadRange) {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_range"})
+		writeErr(w, http.StatusBadRequest, "bad_range", nil)
 		return
 	}
 	msg := err.Error()
@@ -665,16 +754,17 @@ func fail(w http.ResponseWriter, err error) {
 		// a file could not be read or written: the reason goes to the log,
 		// not the server's paths to the browser
 		log.Printf("api: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "file"})
+		writeErr(w, http.StatusInternalServerError, "file", nil)
 		return
 	}
 	if kind == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "message": msg})
+		log.Printf("api: %v", err)
+		writeErr(w, http.StatusBadRequest, "bad_request", nil)
 		return
 	}
 	log.Printf("api: database (%s): %v", kind, err)
 	w.Header().Set("Retry-After", "30")
-	writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database", "kind": kind})
+	writeErr(w, http.StatusServiceUnavailable, "database", map[string]any{"kind": kind})
 }
 
 // rates samples pipeline counters once per second.
@@ -702,14 +792,29 @@ func (s *Server) sampleRates() {
 
 // healthz is for probes and load balancers: no sign-in, no data. 200 while
 // the database answers and nothing failed to be written, 503 otherwise.
+// It is outside /api/, so it sets the version and safety headers itself
+// rather than getting them from the API wrapper.
 func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("API-Version", apiVersion)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Referrer-Policy", "no-referrer")
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	if s.Store == nil || s.Store.DB.PingContext(ctx) != nil || (s.Pipe != nil && s.Pipe.WriteErrs.Load() != 0) {
-		http.Error(w, "storage unhealthy", http.StatusServiceUnavailable)
+		writeErr(w, http.StatusServiceUnavailable, "storage_unhealthy", nil)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": s.Version})
+}
+
+// healthzMethod answers any non-GET method on /healthz: 405, the one
+// allowed method named, in the family's error shape.
+func (s *Server) healthzMethod(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("API-Version", apiVersion)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Allow", http.MethodGet)
+	writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed", nil)
 }
 
 // sameOrigin refuses a change requested by a page from another origin: a
@@ -793,7 +898,7 @@ func forwardedHost(v string) string {
 func (s *Server) sameOriginOnly(h http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !s.sameOrigin(r) {
-			writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross_origin"})
+			writeErr(w, http.StatusForbidden, "cross_origin", nil)
 			return
 		}
 		h(w, r)

@@ -119,14 +119,14 @@ func (s *Server) roAllowed(w http.ResponseWriter, r *http.Request, user string) 
 		return true
 	}
 	if ro.Disabled {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "account_disabled"})
+		writeErr(w, http.StatusForbidden, "account_disabled", nil)
 		return false
 	}
 	switch r.Method + " " + r.URL.Path {
 	case "GET /api/me", "GET /api/billing", "GET /api/billing/export":
 		return true
 	}
-	writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+	writeErr(w, http.StatusForbidden, "readonly_scope", nil)
 	return false
 }
 
@@ -211,7 +211,7 @@ type roBody struct {
 func decodeRO(w http.ResponseWriter, r *http.Request) (roBody, bool) {
 	var in roBody
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+		writeErr(w, http.StatusBadRequest, "bad_request", nil)
 		return in, false
 	}
 	in.User = strings.TrimSpace(in.User)
@@ -242,27 +242,27 @@ func (s *Server) createReadonly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !validROUser(in.User) {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_user"})
+		writeErr(w, http.StatusBadRequest, "bad_user", nil)
 		return
 	}
 	if err := checkNew(in.Password); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeErr(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	obj, err := s.resolveKindObject(in.Kind, in.Object)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeErr(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	s.acctMu.Lock()
 	if s.hasUser(in.User) {
 		s.acctMu.Unlock()
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "exists"})
+		writeErr(w, http.StatusConflict, "exists", nil)
 		return
 	}
 	if limit := s.userLimit(); limit > 0 && len(s.Accounts.Users()) >= limit {
 		s.acctMu.Unlock()
-		writeJSON(w, http.StatusForbidden, map[string]any{"error": "user_limit", "limit": limit})
+		writeErr(w, http.StatusForbidden, "user_limit", map[string]any{"limit": limit})
 		return
 	}
 	if err := auth.Set(s.DataDir, in.User, in.Password); err != nil {
@@ -305,7 +305,7 @@ func (s *Server) updateReadonly(w http.ResponseWriter, r *http.Request) {
 	}
 	obj, err := s.resolveKindObject(in.Kind, in.Object)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeErr(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	s.roMu.Lock()
@@ -322,7 +322,7 @@ func (s *Server) updateReadonly(w http.ResponseWriter, r *http.Request) {
 	}
 	s.roMu.Unlock()
 	if !found {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+		writeErr(w, http.StatusNotFound, "no_user", nil)
 		return
 	}
 	if err != nil {
@@ -348,11 +348,11 @@ func (s *Server) resetReadonlyPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, exists := s.roRole(in.User); !exists {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+		writeErr(w, http.StatusNotFound, "no_user", nil)
 		return
 	}
 	if err := checkNew(in.Password); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeErr(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	s.acctMu.Lock()
@@ -375,7 +375,7 @@ func (s *Server) deleteReadonly(w http.ResponseWriter, r *http.Request) {
 	}
 	u := r.URL.Query().Get("user")
 	if _, exists := s.roRole(u); !exists {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+		writeErr(w, http.StatusNotFound, "no_user", nil)
 		return
 	}
 	s.acctMu.Lock()

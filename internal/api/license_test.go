@@ -114,9 +114,9 @@ func TestLicenseRefusedIsNotWritten(t *testing.T) {
 		}
 		// a code the page says in the reader's language, and the
 		// checker's sentence for support
-		var j struct{ Error, Detail string }
+		var j struct{ Error, Code, Detail string }
 		json.Unmarshal(w.Body.Bytes(), &j)
-		if !strings.HasPrefix(j.Error, tc.want) || j.Error == "lic_invalid" || j.Detail == "" {
+		if !strings.HasPrefix(j.Code, tc.want) || j.Code == "lic_invalid" || j.Detail == "" {
 			t.Errorf("%s: %s, want code %q and a detail", tc.name, strings.TrimSpace(w.Body.String()), tc.want)
 		}
 		if c.State().Registered() {

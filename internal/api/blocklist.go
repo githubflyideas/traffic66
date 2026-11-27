@@ -14,7 +14,7 @@ import (
 // nothing to block and saying so beats a nil dereference.
 func (s *Server) blocklist(w http.ResponseWriter) bool {
 	if s.Col == nil || s.Col.Block == nil {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "no_collector"})
+		writeErr(w, http.StatusConflict, "no_collector", nil)
 		return false
 	}
 	return true
@@ -63,7 +63,7 @@ func (s *Server) deleteBlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !had {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_blocked"})
+		writeErr(w, http.StatusNotFound, "not_blocked", nil)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"blocked": s.Col.Block.List()})
