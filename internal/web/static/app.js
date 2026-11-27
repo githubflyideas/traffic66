@@ -137,8 +137,8 @@ document.addEventListener('copy', onCopy);
 
 // ------------------------------------------------------------ i18n
 // Ordered by total number of speakers (Ethnologue).
-const LANGS = [['en','English'],['zh','中文'],['zh-tw','繁體中文'],['hi','हिन्दी'],['es','Español'],['ar','العربية'],['fr','Français'],
-  ['bn','বাংলা'],['pt','Português'],['ru','Русский'],['id','Bahasa Indonesia'],['ur','اردو'],['de','Deutsch'],['ja','日本語'],['vi','Tiếng Việt'],['ko','한국어']];
+const LANGS = [['en','English'],['zh','中文'],['hi','हिन्दी'],['es','Español'],['ar','العربية'],['fr','Français'],
+  ['bn','বাংলা'],['pt','Português'],['ru','Русский'],['id','Bahasa Indonesia'],['ur','اردو'],['de','Deutsch'],['ja','日本語'],['vi','Tiếng Việt'],['ko','한국어'],['zh-tw','繁體中文']];
 const RTL = new Set(['ar', 'ur']);
 let LANG = 'en', DICT = {}, EN = {};
 const t = (k, p) => {

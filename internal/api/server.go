@@ -173,10 +173,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/loginhint", s.loginHint)
 	mux.HandleFunc("GET /tls.crt", s.certDownload)
 	mux.HandleFunc("GET /healthz", s.healthz)
-	// Any other method on /healthz is an API-shaped refusal, not the
+	// Any other method on these paths is an API-shaped refusal, not the
 	// static server's plain-text 404: the mux would otherwise hand the
 	// path to the "/" file handler, which knows nothing about it.
-	mux.HandleFunc("/healthz", s.healthzMethod)
+	mux.HandleFunc("/healthz", s.methodNotAllowedGET)
+	mux.HandleFunc("/auto", s.methodNotAllowedGET)
+	mux.HandleFunc("/logo", s.methodNotAllowedGET)
+	mux.HandleFunc("/tls.crt", s.methodNotAllowedGET)
 	api := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, s.auth(h)) }
 	// adminAPI is api plus the administrator check. The permission belongs
 	// in this table rather than inside each handler: a new route's gate is
@@ -781,6 +784,9 @@ func (s *Server) sampleRates() {
 		if n++; n%5 == 0 {
 			s.sampleSources(now)
 		}
+		if s.Pipe == nil {
+			continue
+		}
 		rec, row := s.Pipe.Records.Load(), s.Pipe.Rows.Load()
 		s.rates.mu.Lock()
 		s.rates.recPerSec = s.rates.recPerSec*0.8 + float64(rec-s.rates.lastRec)*0.2
@@ -795,9 +801,7 @@ func (s *Server) sampleRates() {
 // It is outside /api/, so it sets the version and safety headers itself
 // rather than getting them from the API wrapper.
 func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("API-Version", apiVersion)
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Referrer-Policy", "no-referrer")
+	utilHeaders(w)
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	if s.Store == nil || s.Store.DB.PingContext(ctx) != nil || (s.Pipe != nil && s.Pipe.WriteErrs.Load() != 0) {
@@ -807,12 +811,18 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": s.Version})
 }
 
-// healthzMethod answers any non-GET method on /healthz: 405, the one
-// allowed method named, in the family's error shape.
-func (s *Server) healthzMethod(w http.ResponseWriter, r *http.Request) {
+// utilHeaders sets the version and safety headers on paths outside
+// /api/, which do not go through the API wrapper.
+func utilHeaders(w http.ResponseWriter) {
 	w.Header().Set("API-Version", apiVersion)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "no-referrer")
+}
+
+// methodNotAllowedGET answers any non-GET method on a documented
+// GET-only path: 405, Allow: GET, in the family's error shape.
+func (s *Server) methodNotAllowedGET(w http.ResponseWriter, r *http.Request) {
+	utilHeaders(w)
 	w.Header().Set("Allow", http.MethodGet)
 	writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed", nil)
 }

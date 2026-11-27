@@ -67,7 +67,8 @@ func (s *Server) logo(w http.ResponseWriter, r *http.Request) {
 	}
 	b, err := fs.ReadFile(s.Static, "logo.svg")
 	if err != nil {
-		http.NotFound(w, r)
+		utilHeaders(w)
+		writeErr(w, http.StatusNotFound, "not_found", nil)
 		return
 	}
 	if r.URL.Query().Get("dark") == "1" {

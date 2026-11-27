@@ -3,7 +3,7 @@
 // the key from its own link, redrawn every minute.
 (function () {
   'use strict';
-  const LANGS = ['en', 'zh', 'zh-tw', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'ru', 'ar', 'hi', 'bn', 'ur', 'id', 'vi'];
+  const LANGS = ['en', 'zh', 'ja', 'ko', 'zh-tw', 'de', 'fr', 'es', 'pt', 'ru', 'ar', 'hi', 'bn', 'ur', 'id', 'vi'];
   const RANGES = ['1h', '24h', '7d', '30d'];
   const qs = new URLSearchParams(location.search);
   const root = document.getElementById('em'), ip = root.dataset.ip, key = qs.get('k') || '';

@@ -821,12 +821,14 @@ func (s *Server) series(w http.ResponseWriter, r *http.Request) {
 // trust the certificate yet cannot sign in to fetch it.
 func (s *Server) certDownload(w http.ResponseWriter, r *http.Request) {
 	if s.Cert == nil || !s.Cert.SelfSigned || s.Cert.CertPath == "" {
-		http.NotFound(w, r)
+		utilHeaders(w)
+		writeErr(w, http.StatusNotFound, "not_found", nil)
 		return
 	}
 	b, err := os.ReadFile(s.Cert.CertPath)
 	if err != nil {
-		http.NotFound(w, r)
+		utilHeaders(w)
+		writeErr(w, http.StatusNotFound, "not_found", nil)
 		return
 	}
 	w.Header().Set("Content-Type", "application/x-pem-file")
