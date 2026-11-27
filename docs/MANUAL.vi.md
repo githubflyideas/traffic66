@@ -18,7 +18,7 @@ Elasticsearch, Kafka hay một cơ sở dữ liệu riêng.
 - Đối chiếu số liệu với bộ đếm giao diện (sFlow hoặc SNMP) và giải thích vì sao chúng chênh lệch.
 - Phát hiện quét mạng, dò mật khẩu, di chuyển ngang (lateral movement), tải lên bất thường, tấn công flood và lưu lượng liên quan đến danh sách mối đe dọa, kể cả khi lấy mẫu.
 - `traffic66 capture.pcap` phân tích file bắt gói tin mà không cần cấu hình gì.
-- 15 ngôn ngữ. Miễn phí để dùng thử và cho tổ chức dưới 50 người ([giấy phép](#licence)).
+- 16 ngôn ngữ. Miễn phí để dùng thử và cho tổ chức dưới 50 người ([giấy phép](#licence)).
 
 ![Tổng quan: các phát hiện đang mở, băng thông theo ứng dụng so với cùng thời điểm hôm qua, các client và dịch vụ hàng đầu](images/overview.png)
 

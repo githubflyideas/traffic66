@@ -18,7 +18,7 @@ pcap, tanpa Elasticsearch, Kafka, atau database terpisah.
 - Mencocokkan angkanya dengan counter interface (sFlow atau SNMP) dan menjelaskan penyebab selisihnya.
 - Menemukan pemindaian, tebakan kata sandi, pergerakan lateral, unggahan tidak biasa, flood, dan trafik daftar ancaman, juga melalui sampling.
 - `traffic66 capture.pcap` menganalisis tangkapan paket tanpa pengaturan apa pun.
-- 15 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 50 orang ([lisensi](#licence)).
+- 16 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 50 orang ([lisensi](#licence)).
 
 ![Ringkasan: temuan terbuka, bandwidth per aplikasi dibanding waktu yang sama kemarin, klien dan layanan teratas](images/overview.png)
 

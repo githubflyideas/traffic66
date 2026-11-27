@@ -19,7 +19,7 @@ Kafka ni base de données séparée.
 - Vérifie ses chiffres par rapport aux compteurs d'interface (sFlow ou SNMP) et explique pourquoi ils diffèrent.
 - Repère les scans, les essais de mots de passe, les mouvements latéraux, les envois inhabituels, les inondations et le trafic des listes de menaces, y compris à travers l'échantillonnage.
 - `traffic66 capture.pcap` analyse des captures de paquets sans rien configurer.
-- 15 langues. Gratuit pour l'évaluation et pour les organisations de moins de 50 personnes ([licence](#licence)).
+- 16 langues. Gratuit pour l'évaluation et pour les organisations de moins de 50 personnes ([licence](#licence)).
 
 ![Vue d'ensemble : détections ouvertes, bande passante par application comparée à la même heure hier, principaux clients et services](images/overview.png)
 

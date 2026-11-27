@@ -17,7 +17,7 @@ Elasticsearch, Kafka या अलग database के।
 - अपने आँकड़ों को interface counters (sFlow या SNMP) से मिलाकर जाँचता है और बताता है कि फ़र्क़ क्यों है।
 - scans, पासवर्ड का अनुमान, lateral movement, असामान्य uploads, floods और threat list वाला ट्रैफ़िक ढूँढता है, sampling के बावजूद भी।
 - `traffic66 capture.pcap` बिना किसी सेटअप के पैकेट कैप्चर का विश्लेषण करता है।
-- 15 भाषाएँ। evaluation के लिए और 50 से कम लोगों वाले संगठनों के लिए मुफ़्त ([लाइसेंस](#licence))।
+- 16 भाषाएँ। evaluation के लिए और 50 से कम लोगों वाले संगठनों के लिए मुफ़्त ([लाइसेंस](#licence))।
 
 ![सारांश: खुली संदिग्ध गतिविधियाँ, कल इसी समय की तुलना में application के हिसाब से bandwidth, top clients और services](images/overview.png)
 

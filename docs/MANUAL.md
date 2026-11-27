@@ -16,7 +16,7 @@ analysis, without Elasticsearch, Kafka or a separate database.
 - Checks its numbers against interface counters (sFlow or SNMP) and says why they differ.
 - Finds scans, password guessing, lateral movement, unusual uploads, floods and threat list traffic, also through sampling.
 - `traffic66 capture.pcap` analyses packet captures with nothing to set up.
-- 15 languages. Free for evaluation and for organizations under 50 people ([licence](#licence)).
+- 16 languages. Free for evaluation and for organizations under 50 people ([licence](#licence)).
 
 ![Overview: open findings, bandwidth by application compared with the same time yesterday, top clients and services](images/overview.png)
 
@@ -54,6 +54,13 @@ macOS: first run `xattr -dr com.apple.quarantine .` in the folder.
 
 Then:
 
+- **Linux, required before the first start:** raise the kernel's UDP receive buffer. The default (`net.core.rmem_max`, usually 212992 — about 208 KB) is far too small for flow export: at busy moments the kernel drops datagrams before traffic66 can read them, and that traffic is simply gone. Set 16 MB and make it permanent:
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+```
+
+Verify with `sysctl net.core.rmem_max` — it must print `16777216`. Later, `netstat -su` should keep showing `0 receive buffer errors`; a growing number there means the buffer is still too small (or was not applied).
 - Web UI: `http://<server IP>:8066`. It listens on all network interfaces.
 - Sign in: user `admin`, password `traffic66`. The first sign-in makes you set a new password.
 - Point your devices at the server IP: sFlow UDP 6343, NetFlow v5/v9 UDP 2055, IPFIX UDP 4739 (all interfaces; every port accepts every protocol).
@@ -209,8 +216,11 @@ MemoryMax=2G
 WantedBy=multi-user.target
 ```
 
+The receive-buffer step from [Quick start](#1-quick-start) is required here too — without it the kernel drops flow datagrams under load:
+
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sysctl net.core.rmem_max   # must print 16777216
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
 journalctl -u traffic66 -f
 ```

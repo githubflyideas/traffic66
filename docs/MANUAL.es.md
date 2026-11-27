@@ -19,7 +19,7 @@ datos aparte.
 - Contrasta sus cifras con los contadores de interfaz (sFlow o SNMP) y explica por qué difieren.
 - Detecta escaneos, adivinación de contraseñas, movimiento lateral, subidas inusuales, inundaciones y tráfico de listas de amenazas, también a través del muestreo.
 - `traffic66 capture.pcap` analiza capturas de paquetes sin configurar nada.
-- 15 idiomas. Gratis para evaluación y para organizaciones de menos de 50 personas ([licencia](#licence)).
+- 16 idiomas. Gratis para evaluación y para organizaciones de menos de 50 personas ([licencia](#licence)).
 
 ![Resumen: hallazgos abiertos, ancho de banda por aplicación frente a la misma hora de ayer, principales clientes y servicios](images/overview.png)
 

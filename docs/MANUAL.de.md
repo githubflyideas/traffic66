@@ -17,7 +17,7 @@ pcap-Analyse, ohne Elasticsearch, Kafka oder eine separate Datenbank.
 - Prüft seine Zahlen gegen die Schnittstellenzähler (sFlow oder SNMP) und erklärt, warum sie abweichen.
 - Erkennt Scans, Passwortraten, Lateral Movement, ungewöhnliche Uploads, Floods und Verkehr mit Adressen aus Bedrohungslisten, auch durch Sampling hindurch.
 - `traffic66 capture.pcap` analysiert Paketmitschnitte ohne jede Einrichtung.
-- 15 Sprachen. Kostenlos zur Evaluierung und für Organisationen mit weniger als 50 Personen ([Lizenz](#licence)).
+- 16 Sprachen. Kostenlos zur Evaluierung und für Organisationen mit weniger als 50 Personen ([Lizenz](#licence)).
 
 ![Übersicht: offene Befunde, Bandbreite nach Anwendung im Vergleich zur gleichen Zeit gestern, wichtigste Clients und Dienste](images/overview.png)
 
