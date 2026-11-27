@@ -63,7 +63,7 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 // accounts returns the password file when it can be changed from here.
 func (s *Server) accounts(w http.ResponseWriter) *auth.FileChecker {
 	if s.Accounts == nil || s.Accounts.Fixed() || s.DataDir == "" {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "fixed"})
+		writeErr(w, http.StatusConflict, "fixed", nil)
 		return nil
 	}
 	return s.Accounts
@@ -88,17 +88,17 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	var in struct{ Old, New string }
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+		writeErr(w, http.StatusBadRequest, "bad_request", nil)
 		return
 	}
 	u := userOf(r)
 	if u == "" || !s.checkPassword(u, in.Old) {
 		s.audit("password change failed user=%s from=%s", u, clientIP(r))
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "wrong_old"})
+		writeErr(w, http.StatusForbidden, "wrong_old", nil)
 		return
 	}
 	if err := checkNew(in.New); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeErr(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	s.acctMu.Lock()
@@ -140,7 +140,7 @@ func (s *Server) admin(w http.ResponseWriter, r *http.Request) *auth.FileChecker
 		return nil
 	}
 	if u := userOf(r); u == "" || u != a.Admin() {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "not_admin"})
+		writeErr(w, http.StatusForbidden, "not_admin", nil)
 		return nil
 	}
 	return a
@@ -166,16 +166,16 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 		Reset          bool
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+		writeErr(w, http.StatusBadRequest, "bad_request", nil)
 		return
 	}
 	in.User = strings.TrimSpace(in.User)
 	if in.User == "" || strings.ContainsAny(in.User, ": \t\r\n") || strings.HasPrefix(in.User, "#") || len(in.User) > 64 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_user"})
+		writeErr(w, http.StatusBadRequest, "bad_user", nil)
 		return
 	}
 	if err := checkNew(in.Password); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeErr(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	// The check and the write happen under one lock: side by side,
@@ -186,11 +186,11 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 	switch exists := s.hasUser(in.User); {
 	case exists && !in.Reset:
 		s.acctMu.Unlock()
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "exists"})
+		writeErr(w, http.StatusConflict, "exists", nil)
 		return
 	case !exists && in.Reset:
 		s.acctMu.Unlock()
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+		writeErr(w, http.StatusNotFound, "no_user", nil)
 		return
 	}
 	// The limit is on how many people share an installation, so it applies
@@ -200,7 +200,7 @@ func (s *Server) putUser(w http.ResponseWriter, r *http.Request) {
 	// covers keeps all of them and simply cannot add another.
 	if limit := s.userLimit(); limit > 0 && !s.hasUser(in.User) && len(s.Accounts.Users()) >= limit {
 		s.acctMu.Unlock()
-		writeJSON(w, http.StatusForbidden, map[string]any{"error": "user_limit", "limit": limit})
+		writeErr(w, http.StatusForbidden, "user_limit", map[string]any{"limit": limit})
 		return
 	}
 	err := auth.Set(s.DataDir, in.User, in.Password)
@@ -267,7 +267,7 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		u = in.User
 	}
 	if u == userOf(r) {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "self"})
+		writeErr(w, http.StatusBadRequest, "self", nil)
 		return
 	}
 	s.acctMu.Lock()
@@ -275,10 +275,16 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	s.acctMu.Unlock()
 	if err != nil {
 		if errors.Is(err, auth.ErrNoUser) {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+			writeErr(w, http.StatusNotFound, "no_user", nil)
 			return
 		}
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		if errors.Is(err, auth.ErrLastUser) {
+			// its own code, not the auth package's sentence: the client
+			// gets the stable shape like every other refusal
+			writeErr(w, http.StatusBadRequest, "last_user", nil)
+			return
+		}
+		fail(w, err)
 		return
 	}
 	s.audit("user deleted user=%s by=%s", u, userOf(r))

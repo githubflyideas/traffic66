@@ -85,7 +85,7 @@ Dann:
 
 In der Weboberfläche: **Hilfe** im Menü. Auf GitHub: [MANUAL.de.md](MANUAL.de.md)
 
-15 Sprachen. Kostenlos zur Evaluierung und für Organisationen mit weniger als 50 Personen ([Lizenz](../LICENSE.md)).
+16 Sprachen. Kostenlos zur Evaluierung und für Organisationen mit weniger als 50 Personen ([Lizenz](../LICENSE.md)).
 
 - **Kostenlos**: Evaluierung, Tests und Demos für jede Organisation ohne Zeitlimit; Produktivbetrieb für Organisationen mit weniger als 50 Personen (Angestellte und Auftragnehmer) und für nichtkommerzielle Nutzung. Größere Organisationen: 30 Tage Produktivbetrieb, danach Registrierung. Details: [LICENSE.md](../LICENSE.md), [Additional Use Grant](../ADDITIONAL-USE-GRANT.md).
 - **Nicht registriert**: Berichte und Diagramme tragen das Zeichen „TESTVERSION“; höchstens 3 Web-Konten.

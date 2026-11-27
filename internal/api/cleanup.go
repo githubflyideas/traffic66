@@ -86,7 +86,7 @@ func (s *Server) allowed(w http.ResponseWriter, feature string) bool {
 	if s.License != nil && s.License.State().Allowed(feature) {
 		return true
 	}
-	writeJSON(w, http.StatusForbidden, map[string]string{"error": "not_registered", "feature": feature})
+	writeErr(w, http.StatusForbidden, "not_registered", map[string]any{"feature": feature})
 	return false
 }
 
@@ -96,7 +96,7 @@ func (s *Server) allowed(w http.ResponseWriter, feature string) bool {
 func (s *Server) postPurgeExporter(w http.ResponseWriter, r *http.Request) {
 	typ, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if typ != "application/json" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "message": "application/json required"})
+		writeErr(w, http.StatusBadRequest, "bad_request", map[string]any{"message": "application/json required"})
 		return
 	}
 	var in struct {
@@ -104,12 +104,12 @@ func (s *Server) postPurgeExporter(w http.ResponseWriter, r *http.Request) {
 		Confirm  bool   `json:"confirm"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1024)).Decode(&in); err != nil || !in.Confirm {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "message": "exporter and confirm=true required"})
+		writeErr(w, http.StatusBadRequest, "bad_request", map[string]any{"message": "exporter and confirm=true required"})
 		return
 	}
 	a, err := netip.ParseAddr(strings.TrimSpace(in.Exporter))
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_exporter"})
+		writeErr(w, http.StatusBadRequest, "bad_exporter", nil)
 		return
 	}
 	disk := s.Store.Usage().DiskBytes

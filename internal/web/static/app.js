@@ -287,27 +287,27 @@ function toast(msg, ms = 1800) {
 const fetch0 = window.fetch.bind(window);
 window.fetch = async (...a) => {
   const res = await fetch0(...a);
-  if (res.status === 403 && !$('#app').hidden) res.clone().json().then(j => { if (j && j.error === 'cross_origin') toast(t('err.cross_origin'), 12000); }).catch(() => {});
+  if (res.status === 403 && !$('#app').hidden) res.clone().json().then(j => { if (j && j.code === 'cross_origin') toast(t('err.cross_origin'), 12000); }).catch(() => {});
   return res;
 };
 // failText says why a request failed: in words for the reasons the server
-// names with a code, and the server's own sentence for the rest (those say
-// which line or field is wrong).
+// names with a code, and the server's short sentence (the "error" half of
+// the shape) for the rest.
 function failText(res, j = {}) {
-  const c = typeof j.error === 'string' ? j.error : '';
+  const c = typeof j.code === 'string' ? j.code : '';
   if (c === 'cross_origin') return t('err.cross_origin');
   if (c === 'not_admin') return t('err.not_admin');
-  if (c === 'bad_request' || c === 'bad request') return t('err.bad_request');
+  if (c === 'bad_request') return t('err.bad_request');
   if (c === 'user_limit') return t('acct.err_user_limit', {n: j.limit});
   if (c === 'file') return t('acct.err_file');
   if (c.startsWith('lic_')) return t('lic.err.' + c.slice(4), {d: ((j.detail || '').match(/\d{4}-\d{2}-\d{2}/) || [''])[0], e: j.detail || c});
   if (res.status >= 500) return t('err.server', {e: res.status + (c ? ' ' + c : '')});
-  return j.message || c || res.statusText || String(res.status);
+  return j.message || j.error || res.statusText || String(res.status);
 }
 // loginError is what the sign-in form says for a refused sign-in.
 async function loginError(res) {
   const j = await res.json().catch(() => ({}));
-  if (res.status === 403 && j.error === 'cross_origin') return t('err.cross_origin');
+  if (res.status === 403 && j.code === 'cross_origin') return t('err.cross_origin');
   if (res.status === 429) return t('login.too_many');
   if (res.status >= 500) return failText(res, j);
   return t('login.bad');
@@ -499,7 +499,7 @@ async function api(path, extra = {}, filters = state.f) {
   if (filters.length) p.set('f', JSON.stringify(filters.map(x => ({f: x.f, v: x.v, neg: x.neg}))));
   const res = await fetch('/api/' + path + '?' + p).catch(() => { const e = new Error(t('err.network')); e.kind = 'network'; throw e; });
   if (res.status === 401) { showLogin(); throw new Error('login'); }
-  if (res.status === 403 && me) { const j = await res.clone().json().catch(() => ({})); if (j.error === 'change_password') { me.must_change = true; go('account'); throw new Error('login'); } }
+  if (res.status === 403 && me) { const j = await res.clone().json().catch(() => ({})); if (j.code === 'change_password') { me.must_change = true; go('account'); throw new Error('login'); } }
   const j = await res.json().catch(() => ({}));
   if (!res.ok) { const e = new Error(failText(res, j)); e.kind = j.kind; throw e; }
   return j;
@@ -1229,7 +1229,7 @@ async function syslogPanel(el) {
   const post = async (path, b) => {
     const r = await fetch('/api/syslog' + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: b ? JSON.stringify(b) : undefined});
     const j = await r.json().catch(() => ({}));
-    return r.ok ? null : j.error === 'not_registered' ? t('sl.locked') : (failText(r, j));
+    return r.ok ? null : j.code === 'not_registered' ? t('sl.locked') : (failText(r, j));
   };
   $('#slSave').onclick = async () => {
     const err = await post('', body());
@@ -1817,7 +1817,7 @@ async function embedPanel(el) {
   const send = async (method, path, body) => {
     const r = await fetch('/api/embeds' + path, {method, headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { toast(j.error === 'not_registered' ? t('emb.locked') : (failText(r, j))); return null; }
+    if (!r.ok) { toast(j.code === 'not_registered' ? t('emb.locked') : (failText(r, j))); return null; }
     return j;
   };
   // the key, shown this once, as the link the platform builds
@@ -1987,11 +1987,11 @@ views.billing = async (el) => {
     const res = await fetch('/api/billing?' + p).catch(() => null);
     const j = res ? await res.json().catch(() => ({})) : {};
     if (!res || !res.ok) {
-      body.innerHTML = j.error === 'not_registered'
+      body.innerHTML = j.code === 'not_registered'
         ? `<div class="verdict warn">${esc(t('bill.locked'))}</div>`
-          : j.error === 'bad_range'
+          : j.code === 'bad_range'
             ? `<div class="empty">${esc(t('bill.too_long'))}</div>`
-          : j.error === 'bad_subnet'
+          : j.code === 'bad_subnet'
             ? `<div class="empty">${esc(t('bill.bad_subnet'))}</div>`
             : `<div class="empty">${esc(res ? failText(res, j) : t('err.network'))}</div>`;
       return;
@@ -2057,7 +2057,7 @@ async function roPanel(el) {
   const send = async (method, path, body) => {
     const r = await fetch('/api/readonly' + path, {method, headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { toast(j.error === 'not_registered' ? t('ro.locked') : failText(r, j)); return null; }
+    if (!r.ok) { toast(j.code === 'not_registered' ? t('ro.locked') : failText(r, j)); return null; }
     return j;
   };
   const create = async () => {
@@ -2162,7 +2162,7 @@ views.sandbox = async (el) => {
         x.onload = () => {
           if (x.status === 200) return done(true);
           let j = {}; try { j = JSON.parse(x.responseText); } catch (err) {}
-          msg(false, x.status === 413 ? (j.max_files && !/MB/.test(j.error) ? t('sb.too_many', {n: sbInfo.max_files}) : t('sb.too_big', {f: f.name, mb})) : j.code === 'not_capture' ? t('sb.not_capture', {f: f.name}) : (j.error || x.statusText)); done(false);
+          msg(false, x.status === 413 ? (j.code === 'too_many_files' ? t('sb.too_many', {n: j.max_files || sbInfo.max_files}) : t('sb.too_big', {f: f.name, mb})) : j.code === 'not_capture' ? t('sb.not_capture', {f: f.name}) : (j.error || x.statusText)); done(false);
         };
         x.onerror = () => { msg(false, t('sb.failed')); done(false); };
         x.send(f);
@@ -2226,7 +2226,7 @@ views.account = async (el) => {
     if (pf.new.value !== pf.again.value) return say('#pwMsg', false, t('acct.err_mismatch'));
     const r = await fetch('/api/password', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({old, new: pf.new.value})});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return say('#pwMsg', false, errText(j.error));
+    if (!r.ok) return say('#pwMsg', false, errText(j.code));
     sessionStorage.removeItem('t66.old');
     toast(t('acct.saved'));
     if (m.must_change) { me.must_change = false; go('overview'); } else render();
@@ -2234,7 +2234,7 @@ views.account = async (el) => {
   const putUser = async (user, password, reset = false) => {
     const r = await fetch('/api/users', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user, password, reset})});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { say('#userMsg', false, errText(j.error)); return false; }
+    if (!r.ok) { say('#userMsg', false, errText(j.code)); return false; }
     toast(t('acct.added')); render(); return true;
   };
   const au = $('#addUser');
@@ -2245,7 +2245,7 @@ views.account = async (el) => {
     if (!confirm(t('acct.confirm_del', {u: b.dataset.udel}))) return;
     const r = await fetch('/api/users?user=' + encodeURIComponent(b.dataset.udel), {method: 'DELETE'});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return say('#userMsg', false, errText(j.error));
+    if (!r.ok) return say('#userMsg', false, errText(j.code));
     render();
   });
   const paintToks = list => {
@@ -2255,7 +2255,7 @@ views.account = async (el) => {
     n.querySelectorAll('[data-tokrev]').forEach(b => b.onclick = async () => {
       const r = await fetch('/api/tokens?id=' + encodeURIComponent(b.dataset.tokrev), {method: 'DELETE'});
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) return say('#tokMsg', false, errText(j.error));
+      if (!r.ok) return say('#tokMsg', false, errText(j.code));
       say('#tokMsg', true, t('acct.tok_revoked'));
       const r2 = await fetch('/api/tokens');
       if (r2.ok) paintToks((await r2.json()).tokens || []);
@@ -2268,7 +2268,7 @@ views.account = async (el) => {
       e.preventDefault();
       const r = await fetch('/api/tokens', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: $('#tokName').value.trim(), user: $('#tokUser').value, scope: $('#tokScope').value})});
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) return say('#tokMsg', false, errText(j.error));
+      if (!r.ok) return say('#tokMsg', false, errText(j.code));
       say('#tokMsg', true, t('acct.tok_made'));
       $('#tokOnce').innerHTML = `<p style="font-size:var(--fs-5);margin:8px 0 4px">${esc(t('acct.tok_once'))}</p><input readonly value="${esc(j.token)}" size="52" aria-label="${esc(t('acct.tok_once'))}">`;
       const ti = $('#tokOnce input');
@@ -2590,7 +2590,7 @@ views.sources = async (el) => {
   const reblock = async (method, path, okMsg) => {
     const res = await fetch(path, {method});
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) { toast(j.error === 'no_collector' ? t('blk.no_collector') : (failText(res, j))); return; }
+    if (!res.ok) { toast(j.code === 'no_collector' ? t('blk.no_collector') : (failText(res, j))); return; }
     toast(okMsg);
     render();
   };
@@ -2599,7 +2599,7 @@ views.sources = async (el) => {
     if (!confirm(t('blk.confirm', {a}))) return;
     const res = await fetch('/api/sources/block', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({exporter: a})});
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) { toast(j.error === 'no_collector' ? t('blk.no_collector') : (failText(res, j))); return; }
+    if (!res.ok) { toast(j.code === 'no_collector' ? t('blk.no_collector') : (failText(res, j))); return; }
     // The honest part: this stops a known nuisance, not somebody who does
     // not want to be stopped, so the message says where the real fix is.
     toast(t('blk.done_firewall', {a}));

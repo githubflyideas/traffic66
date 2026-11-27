@@ -42,6 +42,6 @@ func (s *Server) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	if s.isAdmin(r) {
 		return true
 	}
-	writeJSON(w, http.StatusForbidden, map[string]string{"error": "not_admin"})
+	writeErr(w, http.StatusForbidden, "not_admin", nil)
 	return false
 }

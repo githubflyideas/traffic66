@@ -71,7 +71,7 @@ func (s *Server) registeredOnly(w http.ResponseWriter, feature string) bool {
 	if s.registered() {
 		return true
 	}
-	writeJSON(w, http.StatusForbidden, map[string]string{"error": "not_registered", "feature": feature})
+	writeErr(w, http.StatusForbidden, "not_registered", map[string]any{"feature": feature})
 	return false
 }
 
@@ -273,31 +273,31 @@ func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billing
 			// a subnet is not an object a read-only account can be
 			// bound to, so asking for one is outside its scope,
 			// whatever the installation's registration state
-			writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+			writeErr(w, http.StatusForbidden, "readonly_scope", nil)
 			return billingObject{}, store.Query{}, false
 		}
 		bound, err := s.resolveKindObject(ro.Kind, ro.Object)
 		if err != nil {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+			writeErr(w, http.StatusNotFound, err.Error(), nil)
 			return billingObject{}, store.Query{}, false
 		}
 		// The scope is settled on what was asked for, before any of it
 		// is resolved: another object is a refusal, whether or not it
 		// exists, and only the bound object may pass.
 		if p := params["product"]; p != "" && (bound.Kind != "product" || p != bound.Name) {
-			writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+			writeErr(w, http.StatusForbidden, "readonly_scope", nil)
 			return billingObject{}, store.Query{}, false
 		}
 		if a := params["vip"]; a != "" {
 			// a read-only account is bound to one address; a list is
 			// never its object, whatever it holds
 			if strings.ContainsAny(a, ",， ") {
-				writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+				writeErr(w, http.StatusForbidden, "readonly_scope", nil)
 				return billingObject{}, store.Query{}, false
 			}
 			addr, perr := netip.ParseAddr(a)
 			if perr == nil && (bound.Kind != "vip" || addr.Unmap().String() != bound.Name) {
-				writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+				writeErr(w, http.StatusForbidden, "readonly_scope", nil)
 				return billingObject{}, store.Query{}, false
 			}
 		}
@@ -309,11 +309,11 @@ func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billing
 	}
 	obj, err := s.resolveBillingObject(params)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeErr(w, http.StatusBadRequest, err.Error(), nil)
 		return billingObject{}, store.Query{}, false
 	}
 	if isRO && (obj.Kind != ro.Kind || obj.Name != ro.Object) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "readonly_scope"})
+		writeErr(w, http.StatusForbidden, "readonly_scope", nil)
 		return billingObject{}, store.Query{}, false
 	}
 	q, err := billingRange(r)
@@ -323,12 +323,12 @@ func (s *Server) billingRequest(w http.ResponseWriter, r *http.Request) (billing
 	}
 	if isRO {
 		if q.To.Sub(q.From) > roMaxSpan {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_range"})
+			writeErr(w, http.StatusBadRequest, "bad_range", nil)
 			return billingObject{}, store.Query{}, false
 		}
 		if ok, retry := s.roRL.allow(ro.User, clientIP(r), time.Now()); !ok {
 			w.Header().Set("Retry-After", strconv.Itoa(retry))
-			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "rate_limited"})
+			writeErr(w, http.StatusTooManyRequests, "rate_limited", nil)
 			return billingObject{}, store.Query{}, false
 		}
 		s.audit("billing query user=%s from=%s for %s %s", ro.User, clientIP(r), obj.Kind, obj.Name)

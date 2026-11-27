@@ -11,7 +11,7 @@
 - 用接口计数器（sFlow 或 SNMP）校验自己的统计结果，并说明对不上的原因。
 - 找出扫描、暴力破解、横向移动、异常上传、泛洪和威胁情报流量，采样数据同样适用。
 - `traffic66 capture.pcap` 直接分析抓包文件，无需任何配置。
-- 支持 15 种语言。评估免费，少于 50 人的组织免费（[许可](#licence)）。
+- 支持 16 种语言。评估免费，少于 50 人的组织免费（[许可](#licence)）。
 
 ![概览：未处理的发现、按应用划分的带宽与昨天同一时间对比、主要客户端和服务](images/overview.png)
 
@@ -55,6 +55,13 @@ macOS：先在该目录运行 `xattr -dr com.apple.quarantine .`。
 
 然后：
 
+- **Linux 必做，首次启动前完成：** 调大内核 UDP 接收缓冲。默认值（`net.core.rmem_max`，通常 212992，约 208 KB）对流量导出远远不够：繁忙时内核会在 traffic66 读到之前直接丢弃数据报，丢掉的流量就没了。设为 16 MB 并永久生效：
+
+```
+echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+```
+
+验证：`sysctl net.core.rmem_max` 必须输出 `16777216`。运行后看 `netstat -su`，`receive buffer errors` 应保持 0；这个数字在涨，说明缓冲还是太小（或设置没有生效）。
 - Web 界面：`http://<服务器IP>:8066`，监听所有网卡。
 - 登录：用户 `admin`，密码 `traffic66`。首次登录必须设置新密码。
 - 把设备的流量导出指向服务器 IP：sFlow UDP 6343，NetFlow v5/v9 UDP 2055，IPFIX UDP 4739（监听所有网卡；每个端口都接收所有协议）。
@@ -218,8 +225,11 @@ MemoryMax=2G
 WantedBy=multi-user.target
 ```
 
+接收缓冲这一步（见[快速开始](#1-quick-start)）在这里同样必做——不做的话，负载一高内核就丢弃流数据报：
+
 ```
 echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/90-traffic66.conf && sudo sysctl --system
+sysctl net.core.rmem_max   # 必须输出 16777216
 sudo systemctl daemon-reload && sudo systemctl enable --now traffic66
 journalctl -u traffic66 -f
 ```

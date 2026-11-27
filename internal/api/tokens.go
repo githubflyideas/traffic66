@@ -96,12 +96,12 @@ func (s *Server) listTokens(w http.ResponseWriter, r *http.Request) {
 func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 	var in struct{ Name, Scope, User string }
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+		writeErr(w, http.StatusBadRequest, "bad_request", nil)
 		return
 	}
 	in.Name = strings.TrimSpace(in.Name)
 	if in.Name == "" || len(in.Name) > 64 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_name"})
+		writeErr(w, http.StatusBadRequest, "bad_name", nil)
 		return
 	}
 	if in.Scope == "" {
@@ -112,12 +112,12 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 		user = userOf(r)
 	}
 	if s.Accounts != nil && !s.hasUser(user) {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_user"})
+		writeErr(w, http.StatusNotFound, "no_user", nil)
 		return
 	}
 	tok, secret, err := auth.NewToken(user, in.Name, in.Scope)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_scope"})
+		writeErr(w, http.StatusBadRequest, "bad_scope", nil)
 		return
 	}
 	s.tokMu.Lock()
@@ -147,7 +147,7 @@ func (s *Server) deleteToken(w http.ResponseWriter, r *http.Request) {
 	}
 	if gone == nil {
 		s.tokMu.Unlock()
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no_token"})
+		writeErr(w, http.StatusNotFound, "no_token", nil)
 		return
 	}
 	s.toks = kept

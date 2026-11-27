@@ -66,6 +66,11 @@ func detectLang(explicit string) string {
 		if len(c) < 2 {
 			continue
 		}
+		// Traditional Chinese locales use the zh-tw dictionary; the
+		// two-letter code alone would land on Simplified.
+		if strings.HasPrefix(c, "zh") && (strings.Contains(c, "tw") || strings.Contains(c, "hk") || strings.Contains(c, "mo") || strings.Contains(c, "hant")) {
+			return "zh-tw"
+		}
 		code := c[:2]
 		for _, l := range []string{"en", "zh", "hi", "es", "ar", "fr", "bn", "pt", "ru", "id", "ur", "de", "ja", "vi", "ko"} {
 			if code == l {

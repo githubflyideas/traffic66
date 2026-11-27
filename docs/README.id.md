@@ -85,7 +85,7 @@ Lalu:
 
 Di antarmuka web: **Bantuan** di menu. Di GitHub: [MANUAL.id.md](MANUAL.id.md)
 
-15 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 50 orang ([lisensi](../LICENSE.md)).
+16 bahasa. Gratis untuk evaluasi dan untuk organisasi dengan kurang dari 50 orang ([lisensi](../LICENSE.md)).
 
 - **Gratis**: evaluasi, pengujian, dan demo untuk organisasi mana pun tanpa batas waktu; penggunaan produksi untuk organisasi dengan kurang dari 50 orang (karyawan dan kontraktor) dan untuk penggunaan nonkomersial. Organisasi lebih besar: 30 hari penggunaan produksi, lalu registrasi. Rincian: [LICENSE.md](../LICENSE.md), [Additional Use Grant](../ADDITIONAL-USE-GRANT.md).
 - **Belum terdaftar**: laporan dan grafik diberi tanda "EVALUASI"; paling banyak 3 akun web.

@@ -56,7 +56,7 @@ func (s *Server) putLicense(w http.ResponseWriter, r *http.Request) {
 // says in the reader's language, and the checker's own sentence beside it
 // for support.
 func refuse(w http.ResponseWriter, code, detail string) {
-	writeJSON(w, http.StatusBadRequest, map[string]string{"error": code, "detail": detail})
+	writeErr(w, http.StatusBadRequest, code, map[string]any{"detail": detail})
 }
 
 // refusal names why the checker turned a licence down.
