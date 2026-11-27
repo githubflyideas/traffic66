@@ -58,7 +58,7 @@ done
 login() {
   curl -s -o "$tmp/out.json" -w '%{http_code}' -H "Origin: $2" -H 'Content-Type: application/json' \
     -d '{"user":"admin","password":"ci"}' "http://localhost:$1/api/login"
-  sed -n 's/.*"error":"\([a-z_]*\)".*/ \1/p' "$tmp/out.json"
+  sed -n 's/.*"code":"\([a-z_]*\)".*/ \1/p' "$tmp/out.json"
 }
 want() { # name got want
   if [[ "$2" == "$3" ]]; then echo "ok   $1: $2"; else fail "$1: got '$2', want '$3'"; fi
