@@ -545,6 +545,11 @@ func (s *Server) checkPassword(u, p string) bool {
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	// nobody is signed in yet, so nothing stops a client from sending the
+	// headers and then the body one byte an hour; the body is 4 KB at most
+	// and gets seconds. (Not every writer can set a deadline: a test's
+	// recorder cannot, and that is no reason to refuse.)
+	http.NewResponseController(w).SetReadDeadline(time.Now().Add(15 * time.Second))
 	var in struct{ User, Password string }
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", nil)

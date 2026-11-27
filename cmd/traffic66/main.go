@@ -651,7 +651,10 @@ func serve(args []string, demo bool) {
 			log.Printf("your browser will warn about it once; check that fingerprint, or add %s to your trusted certificates", info.CertPath)
 		}
 	}
-	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	// No overall read timeout: a capture upload legitimately takes long.
+	// Idle connections are dropped, and the one unauthenticated route that
+	// reads a body (sign-in) puts its own deadline on it.
+	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute}
 	go hs.Serve(ln)
 	log.Printf("web UI: %s://%s", scheme, displayAddr(ln.Addr()))
 	if offline != nil {
