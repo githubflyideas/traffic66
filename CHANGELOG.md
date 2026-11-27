@@ -3,6 +3,17 @@
 The release notes on GitHub are taken from this file: the section whose
 heading is the version number.
 
+## 2.14.0
+
+- **Breaking (API):** every error answer now has the one shape the product family uses: `{"error": "short message", "code": "stable_code"}`. The stable code moved from `error` to `code`, and `error` now carries a short English message; programs must read `code` for the stable value (the web UI does). The version header is spelled `API-Version`, as in fogping and pingping.
+- The OpenAPI description at `/api/openapi.json` can be fetched without signing in, and it now also documents `/healthz`, `/auto`, `/logo` and `/tls.crt`.
+- Errors that used to answer plain text now answer JSON with a stable code: a non-GET request to `/healthz` gets 405 with an `Allow: GET` header, an unhealthy `/healthz` gets a JSON 503 (`storage_unhealthy`), a missing manual image gets a JSON 404, and uploading a file that is not a capture — or too many files — to the sandbox gets `not_capture` / `too_many_files` instead of a sentence.
+- An error the API does not classify no longer echoes its internal text to the client; the detail is written to the server log only, and the client gets a generic code.
+- `/healthz` now carries the same headers as every other answer (`API-Version` and the security headers), and the evaluation header of an unregistered installation is short ("evaluation copy - not registered"); the full evaluation notice still appears as the page watermark.
+- Documentation: the interface language count is 16 everywhere, Traditional Chinese included. The Linux install steps now make raising `net.core.rmem_max` a required step, with the command and how to verify it.
+- Terminal UI: Traditional Chinese locales (zh_TW, zh_HK, zh_MO, zh-Hant) select the Traditional Chinese dictionary instead of Simplified.
+- Test coverage where there was little or none: the flow record types, the traffic simulator, the wire reader and the packet encoders are now covered, and the local capture, terminal UI and command packages gained substantial tests.
+
 ## 2.13.0
 
 - Traditional Chinese (繁體中文) is a sixteenth interface language, written in Taiwan usage and a formal register, available in the web interface and in embedded pages.
