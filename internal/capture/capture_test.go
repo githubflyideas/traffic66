@@ -31,9 +31,22 @@ func TestOpener(t *testing.T) {
 	}
 }
 
-type sliceSink struct{ recs []flow.Record }
+type sliceSink struct {
+	mu   sync.Mutex
+	recs []flow.Record
+}
 
-func (s *sliceSink) Submit(rs []flow.Record) { s.recs = append(s.recs, rs...) }
+func (s *sliceSink) Submit(rs []flow.Record) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.recs = append(s.recs, rs...)
+}
+
+func (s *sliceSink) all() []flow.Record {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]flow.Record{}, s.recs...)
+}
 
 var (
 	capA = netip.MustParseAddr("10.0.0.1")
@@ -71,8 +84,8 @@ func TestFlushLifecycle(t *testing.T) {
 	c.table[kEmpty] = &entry{first: now.Add(-time.Minute), last: now.Add(-idleTimeout - time.Second)}
 
 	c.flush(now, false)
-	if len(sink.recs) != 1 || sink.recs[0].Packets != 3 {
-		t.Fatalf("idle flush exported %+v", sink.recs)
+	if len(sink.all()) != 1 || sink.all()[0].Packets != 3 {
+		t.Fatalf("idle flush exported %+v", sink.all())
 	}
 	if _, ok := c.table[kIdle]; ok {
 		t.Error("idle entry still in the table after its export")
@@ -89,8 +102,8 @@ func TestFlushLifecycle(t *testing.T) {
 
 	// a full flush exports what is left and empties the table
 	c.flush(now, true)
-	if len(sink.recs) != 2 || len(c.table) != 0 {
-		t.Errorf("after full flush: %d records, %d entries", len(sink.recs), len(c.table))
+	if len(sink.all()) != 2 || len(c.table) != 0 {
+		t.Errorf("after full flush: %d records, %d entries", len(sink.all()), len(c.table))
 	}
 }
 
@@ -108,7 +121,7 @@ func TestFlushInfersOpenerFromReverse(t *testing.T) {
 	c.table[kBA] = &entry{first: now.Add(-time.Minute), last: now.Add(-idleTimeout - time.Second), pkts: 2, bytes: 200, opener: 1}
 	c.flush(now, false)
 	bySrc := map[netip.Addr]int8{}
-	for _, r := range sink.recs {
+	for _, r := range sink.all() {
 		bySrc[r.Src] = r.Opener
 	}
 	if bySrc[capB] != 1 {
@@ -167,11 +180,11 @@ func TestReadLoopEndToEnd(t *testing.T) {
 		t.Fatalf("Active = %d, want the two directions as two entries", c.Active())
 	}
 	c.flush(time.Now(), true)
-	if len(sink.recs) != 2 {
-		t.Fatalf("flushed %d records", len(sink.recs))
+	if len(sink.all()) != 2 {
+		t.Fatalf("flushed %d records", len(sink.all()))
 	}
 	bySrc := map[netip.Addr]flow.Record{}
-	for _, r := range sink.recs {
+	for _, r := range sink.all() {
 		bySrc[r.Src] = r
 	}
 	if r := bySrc[capA]; r.Opener != 1 || r.Packets != 1 || r.Bytes != uint64(synLen)+4 {
@@ -193,11 +206,11 @@ func TestExpireLoopFlushesOnStop(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	cancel()
 	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) && len(sink.recs) == 0 {
+	for time.Now().Before(deadline) && len(sink.all()) == 0 {
 		time.Sleep(5 * time.Millisecond)
 	}
-	if len(sink.recs) != 1 {
-		t.Errorf("stopping the capture flushed %d records, want the open flow", len(sink.recs))
+	if len(sink.all()) != 1 {
+		t.Errorf("stopping the capture flushed %d records, want the open flow", len(sink.all()))
 	}
 }
 
