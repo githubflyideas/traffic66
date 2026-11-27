@@ -400,6 +400,7 @@ func (s *Server) deleteReadonly(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	s.dropTokensOf(u)
 	s.endSessions(u)
 	s.audit("readonly account deleted user=%s by=%s", u, userOf(r))
 	writeJSON(w, http.StatusOK, map[string]string{})

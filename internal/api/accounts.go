@@ -287,6 +287,7 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	s.dropTokensOf(u)
 	s.audit("user deleted user=%s by=%s", u, userOf(r))
 	writeJSON(w, http.StatusOK, map[string]string{})
 }

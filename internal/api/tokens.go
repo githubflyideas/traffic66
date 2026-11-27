@@ -160,3 +160,31 @@ func (s *Server) deleteToken(w http.ResponseWriter, r *http.Request) {
 	s.audit("token revoked name=%q user=%s by=%s", gone.Name, gone.User, userOf(r))
 	writeJSON(w, http.StatusOK, map[string]string{})
 }
+
+// dropTokensOf deletes every API token of a user. A token belongs to an
+// account, not to a name: without this, the next account made under the
+// same name would be what the old token opens.
+func (s *Server) dropTokensOf(user string) {
+	s.tokMu.Lock()
+	defer s.tokMu.Unlock()
+	var keep []auth.Token
+	n := 0
+	for _, t := range s.loadTokensLocked() {
+		if t.User == user {
+			n++
+			continue
+		}
+		keep = append(keep, t)
+	}
+	if n == 0 {
+		return
+	}
+	if err := auth.SaveTokens(s.DataDir, keep); err != nil {
+		// the account is gone either way, and a token whose user does not
+		// exist opens nothing until a new account takes the name; say so
+		s.audit("tokens of deleted user %s could not be removed: %v", user, err)
+		return
+	}
+	s.toks, s.tokLoaded = keep, true
+	s.audit("tokens of deleted user %s removed (%d)", user, n)
+}
