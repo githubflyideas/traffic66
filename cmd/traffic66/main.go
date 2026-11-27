@@ -322,7 +322,7 @@ func serve(args []string, demo bool) {
 	for _, x := range extFlags {
 		x(fs)
 	}
-	fs.StringVar(&f.listen, "listen", "sflow=:6343,netflow=:2055,ipfix=:4739", "UDP collectors as name=addr, comma separated; every port accepts every protocol; empty disables")
+	fs.StringVar(&f.listen, "listen", defaultListen, "UDP collectors as name=addr, comma separated; every port accepts every protocol; empty disables")
 	fs.StringVar(&f.user, "user", "admin", "login user")
 	fs.StringVar(&f.password, "password", "", "login password for this run instead of the stored ones (or set TRAFFIC66_PASSWORD); only -user can sign in and accounts cannot be managed from the web UI")
 	fs.StringVar(&f.asn, "asn", "", "ASN/country table (TSV: start end asn cc org, optionally .gz); default <data>/asn.tsv[.gz] if present")
@@ -339,6 +339,23 @@ func serve(args []string, demo bool) {
 	fs.BoolVar(&f.noDNS, "no-dns", false, "disable reverse lookups")
 	fs.BoolVar(&f.tuiAfter, "tui", false, "also open the terminal UI in this terminal")
 	fs.Parse(args)
+	if demo {
+		// The demo shows every page, because what it shows is simulated.
+		// That only holds if nothing real can reach it: it takes no flows
+		// from devices and captures from no interface, whatever the flags
+		// say. Otherwise "traffic66 demo" would be the registered pages
+		// on real traffic with no licence.
+		if f.listen != "" && f.listen != defaultListen || len(f.captures) > 0 {
+			fmt.Fprintln(os.Stderr, "traffic66: the demo uses simulated traffic only; -listen and -capture are ignored")
+		}
+		f.listen, f.captures = "", nil
+	}
+	if demo {
+		if err := claimDemoDir(f.data); err != nil {
+			fmt.Fprintf(os.Stderr, "traffic66: %v\n", err)
+			os.Exit(2)
+		}
+	}
 	if err := f.check(); err != nil {
 		fmt.Fprintf(os.Stderr, "traffic66: %v\n", err)
 		fmt.Fprintln(os.Stderr, "traffic66: older versions may have ignored this and started anyway; fix the option (see traffic66 -h) and start again")
@@ -1275,4 +1292,28 @@ func dnsOptions(f serveFlags, registered bool) (dnsres.Options, []string) {
 		ignored = append(ignored, "-dns-cache")
 	}
 	return dnsres.Options{PerSecond: dnsDefaultRate, TTL: dnsDefaultTTL}, ignored
+}
+
+// defaultListen is the UDP collectors a serving installation opens.
+const defaultListen = "sflow=:6343,netflow=:2055,ipfix=:4739"
+
+// demoMarker marks a data directory as one the demo made. The demo opens
+// every page with a published password, so it must never be pointed at an
+// installation's own data: that would be its history, readable by anyone,
+// with the registered pages open.
+const demoMarker = ".demo"
+
+// claimDemoDir lets the demo use dir if it is new, empty or already the
+// demo's, and marks it; a directory with anything else in it is refused.
+func claimDemoDir(dir string) error {
+	if _, err := os.Stat(filepath.Join(dir, demoMarker)); err == nil {
+		return nil
+	}
+	if ents, err := os.ReadDir(dir); err == nil && len(ents) > 0 {
+		return fmt.Errorf("%s already holds data that is not the demo's; the demo uses a published password and would open it to anyone. Use an empty directory (-data), or run \"traffic66 serve\" for real data", dir)
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, demoMarker), []byte("created by traffic66 demo\n"), 0o600)
 }
